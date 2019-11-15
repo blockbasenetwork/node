@@ -1,0 +1,48 @@
+﻿syntax = "proto3";
+package BlockBase.Domain.Protos;
+
+message NetworkMessageProto {
+  
+  enum NetworkMessageTypeEnum {
+    Unknown = 0;
+
+    RequestInfo = 1;
+    RequestProducerIdentification = 2;
+    RequestNodesInfo = 3;
+    RequestBlocks = 4;
+    RequestBlockHeaders = 5;
+    RequestTransactions = 6;
+    RequestCurrentHeight = 7;
+    RequestMaxBlockSize = 8;
+    RequestProducers = 9;
+    RequestProducersList = 10;
+
+    SendBlock = 11;
+    SendSelectedCandidatesInfo = 12;
+    SendProducerIdentification = 13;
+    SendNodeInfo = 14;
+    SendNodesInfo = 15;
+    SendMinedBlock = 16;
+    SendBlocks = 17;
+    SendBlockHeaders = 18;
+    SendTransaction = 19;
+    SendTransactions = 20;
+    SendCurrentHeight = 21;
+    SendCurrentMaxBlockSize = 22;
+
+    SearchQueryRequest = 23;
+    SendQueryResult = 24;
+    Ping = 25;
+    Pong = 26;
+  }
+
+
+  NetworkMessageTypeEnum NetworkMessageType = 1;
+  int32 Version = 2;
+  bytes Payload = 3;
+  string PublicKey = 4;
+  string Signature = 5;
+  bytes MessageHash = 6;
+  string Destination = 7;
+  
+}

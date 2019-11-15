@@ -1,0 +1,14 @@
+﻿syntax = "proto3";
+package BlockBase.Domain.Protos;
+
+message TransactionProto {
+  
+  bytes TransactionHash = 1;
+  string Signature = 2;
+  string TransactionType = 3;
+  uint64 Timestamp = 5; 
+  uint64 SequenceNumber = 6; 
+  string Json = 7;
+  bytes BlockHash = 8;
+  string DatabaseName = 9;
+}

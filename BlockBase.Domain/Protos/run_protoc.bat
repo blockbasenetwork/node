@@ -1,0 +1,1 @@
+C:\Users\%username%\.nuget\packages\google.protobuf.tools\3.6.1\tools\windows_x64\protoc -I=.\IO\Protos --csharp_out=.\IO\Protos .\IO\Protos\NetworkMessageProto.proto .\IO\Protos\BlockHeaderProto.proto .\IO\Protos\TransactionProto.proto .\IO\Protos\BlockProto.proto

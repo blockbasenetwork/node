@@ -1,0 +1,38 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using BlockBase.Domain.Blockchain;
+using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
+
+namespace BlockBase.DataPersistence.ProducerData
+{
+    public interface IMongoDbProducerService
+    {
+        Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence);
+        Task AddTransactionToSidechainDatabaseAsync(string databaseName, TransactionDB transaction);
+
+        Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName);
+        Task<Block> GetLastValidSidechainBlockAsync(string databaseName);
+        Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
+        Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber);
+        Task RemoveBlockFromDatabaseAsync(string databaseName, string blockHash);
+        Task RemoveUnconfirmedBlocks(string databaseName);
+        Task<bool> SynchronizeDatabaseWithSmartContract(string databaseName, string blockHash, long lastProductionTime);
+        Task<bool> IsBlockConfirmed(string databaseName, string blockHash);
+        Task ConfirmBlock(string databaseName, string blockHash);
+        Task<bool> IsTransactionInDB(string databaseName, Transaction transaction);
+        Task SaveTransaction(string databaseName, Transaction transaction);
+        Task<IList<Transaction>> RetrieveLastLooseTransactions(string databaseName);
+        Task<Transaction> LastIncludedTransaction(string databaseName);
+        Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash);
+
+        Task AddProducingSidechainToDatabaseAsync(string sidechain);
+        Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
+        Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
+        Task<IList<SidechainDB>> GetAllProducingSidechainsAsync();
+        Task AddMaintainedSidechainToDatabaseAsync(string sidechain);
+        Task RemoveMaintainedSidechainFromDatabaseAsync(string sidechain);
+        Task<bool> CheckIfMaintainedSidechainAlreadyExists(string sidechain);
+        Task<IList<SidechainDB>> GetAllMaintainedSidechainsAsync();
+    }
+}

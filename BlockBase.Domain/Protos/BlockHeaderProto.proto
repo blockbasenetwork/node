@@ -1,0 +1,12 @@
+﻿syntax = "proto3";
+package BlockBase.Domain.Protos;
+
+message BlockHeaderProto {
+	bytes BlockHash = 1;
+	bytes PreviousBlockHash = 2;
+	string Producer = 3;
+	string ProducerSignature = 4;
+	bytes MerkleRoot = 5;
+	uint64 Timestamp = 6;
+	uint64 SequenceNumber = 7;
+}

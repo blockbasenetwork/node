@@ -1,0 +1,10 @@
+﻿syntax = "proto3";
+package BlockBase.Domain.Protos;
+import "BlockHeaderProto.proto";
+import "TransactionProto.proto";
+
+
+message BlockProto {
+	BlockHeaderProto BlockHeader = 1;
+	repeated TransactionProto Transactions = 2;
+	}
