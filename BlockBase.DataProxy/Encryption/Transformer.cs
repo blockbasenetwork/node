@@ -335,6 +335,7 @@ namespace BlockBase.DataProxy.Encryption
                         columnValues.Value[i] = TransformUniqueValue(columnValues.Value[i], columnName.Value, tableName);
                     }
                     additionalColumnsPerColumn[bktColumnName].Add("'xxxxx'");
+                    //CalculateUpperBound(int N, int min, int max, int value)
                 }
 
                 if (columnDataType == "text")  columnValues.Value[i] = "'" + columnValues.Value[i] + "'";
@@ -522,5 +523,19 @@ namespace BlockBase.DataProxy.Encryption
             return allTableColumns.ToList();
         }
 
+
+        private int CalculateUpperBound(int N, int min, int max, int value)
+        {
+            if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+
+            for (int i = min + N; i <= max; i += N)
+            {
+                if (value <= i)
+                {
+                    return i;
+                }
+            }
+            throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+        }
     }
 }
