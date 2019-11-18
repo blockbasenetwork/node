@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.2042
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29020.237
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlockBase.Runtime", "BlockBase.Runtime\BlockBase.Runtime.csproj", "{FF950801-613B-4339-99E4-2F3A58D1E9E6}"
 EndProject
@@ -20,6 +20,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlockBase.DataProxy", "BlockBase.DataProxy\BlockBase.DataProxy.csproj", "{A504DE8D-1066-4738-AA59-119FCD9EB907}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlockBase.Node", "BlockBase.Node\BlockBase.Node.csproj", "{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Blockbase.ProducerD", "Blockbase.ProducerD\Blockbase.ProducerD.csproj", "{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -139,6 +141,18 @@ Global
 		{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}.Release|x64.Build.0 = Release|Any CPU
 		{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}.Release|x86.ActiveCfg = Release|Any CPU
 		{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}.Release|x86.Build.0 = Release|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Debug|x64.Build.0 = Debug|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Debug|x86.Build.0 = Debug|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Release|x64.ActiveCfg = Release|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Release|x64.Build.0 = Release|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Release|x86.ActiveCfg = Release|Any CPU
+		{0B5537E3-29AF-4DF3-8E0F-3320E3BF8BF1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
