@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
@@ -37,7 +37,6 @@
     <ProjectReference Include="..\BlockBase.DataPersistence\BlockBase.DataPersistence.csproj" />
     <ProjectReference Include="..\BlockBase.DataProxy\BlockBase.DataProxy.csproj" />
     <ProjectReference Include="..\BlockBase.Runtime\BlockBase.Runtime.csproj" />
-    <ProjectReference Include="..\Blockbase.Tests\Blockbase.Tests.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json">
