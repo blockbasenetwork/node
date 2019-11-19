@@ -11,15 +11,17 @@ namespace BlockBase.DataProxy.Encryption
 
         //TODO: deal with password, let user choose it and save it
         private static string _password = "qwerty123";
+        public const int AES_BLOCK_SIZE = 16;
+        private const int AES_KEY_SIZE = 32;
         private static byte[] _salt = { 4, 7, 1, 5, 6, 3, 3, 9 };
-        private byte[] _masterKey;
+        public byte[] MasterKey;
 
         public KeyAndIVGenerator()
         {
             using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
             {
-                _masterKey = new byte[32];
-                rngCryptoServiceProvider.GetBytes(_masterKey);
+                MasterKey = new byte[AES_KEY_SIZE];
+                rngCryptoServiceProvider.GetBytes(MasterKey);
             }
             
         }
@@ -33,7 +35,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
             {
-                byte[] randomIV = new byte[16];
+                byte[] randomIV = new byte[AES_BLOCK_SIZE];
                 rngCryptoServiceProvider.GetBytes(randomIV);
                 return randomIV;
             }
@@ -61,7 +63,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private byte[] CreateKey(byte[] data)
         {
-            return Utils.Crypto.Utils.SHA256(AES256.EncryptWithECB(data, _masterKey));
+            return Utils.Crypto.Utils.SHA256(AES256.EncryptWithECB(data, MasterKey));
         }
 
         private byte[] CreateKey(string data)
