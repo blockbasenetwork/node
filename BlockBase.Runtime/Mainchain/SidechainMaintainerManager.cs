@@ -149,7 +149,7 @@ namespace BlockBase.Runtime.Mainchain
         private void UpdateAverageTrxTime()
         {
             _latestTrxTimes = _latestTrxTimes.TakeLast(20);
-            _timeToExecuteTrx = _latestTrxTimes.Sum() / _latestTrxTimes.Count();
+            _timeToExecuteTrx = _latestTrxTimes.Any() ? _latestTrxTimes.Sum() / _latestTrxTimes.Count() : 0;
         }
 
         #endregion Auxiliar Methods
