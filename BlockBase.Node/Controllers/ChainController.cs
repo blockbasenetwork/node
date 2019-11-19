@@ -85,6 +85,8 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                var tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
+
                 var sidechainMaintainer = new SidechainMaintainerManager(
                     new SidechainPool(NodeConfigurations.AccountName),
                     _logger, 
@@ -92,7 +94,7 @@ namespace BlockBase.Node.Controllers
                 
                 sidechainMaintainer.Start();
 
-                return Ok(new OperationResponse<bool>(true));
+                return Ok(new OperationResponse<bool>(true, $"Chain maintainance started and start candidature sent: Tx: {tx}"));
             }
             catch(Exception e)
             {

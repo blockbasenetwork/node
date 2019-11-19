@@ -38,6 +38,7 @@ namespace BlockBase.Domain.Eos
     {
         public static readonly string START_CHAIN = "startchain";
         public static readonly string CONFIG_CHAIN = "configchain";
+        public static readonly string START_CANDIDATURE_TIME = "startcandtime";
         public static readonly string START_SEND_TIME = "startsendtime";
         public static readonly string START_RECEIVE_TIME = "startrectime";
         public static readonly string START_SECRET_TIME = "secrettime";

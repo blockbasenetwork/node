@@ -148,6 +148,16 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
+        public async Task<string> StartCandidatureTime(string owner, string permission = "active") =>
+            await Repeater.TryAgain(async() => await EosStub.SendTransaction(
+                EosMethodNames.START_CANDIDATURE_TIME, 
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                owner, 
+                CreateDataForDeferredTransaction(owner), 
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
         public async Task<string> ExitRequest(string owner, string permission = "active") =>
             await Repeater.TryAgain(async() => await EosStub.SendTransaction(
                 EosMethodNames.EXIT_REQUEST, 
