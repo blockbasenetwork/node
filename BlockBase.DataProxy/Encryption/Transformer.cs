@@ -149,7 +149,7 @@ namespace BlockBase.DataProxy.Encryption
 
             var additionalColumns = new List<RenameColumnStatement>();
 
-            foreach (var column in GetTableColumnsWithoutBkt(allTableColumns))
+            foreach (var column in GetTableColumnsWithoutBktAndIV(allTableColumns))
             {
                 //Console.WriteLine(_encryptor.DecryptColumnName(plainDatabaseName, plainTableName, column.Substring(1)));
                 var renameColumnStatement = new RenameColumnStatement()
@@ -201,7 +201,7 @@ namespace BlockBase.DataProxy.Encryption
 
                 var newBktColumnName = bktSizeAndRange.Item2 == null ?
                     CreateBKTColumnName(renameColumnStatement.NewColumnName.GetFinalString(), bktSizeAndRange.Item1, null, null, databaseName.Value, renameColumnStatement.TableName.Value)
-                    : CreateBKTColumnName(renameColumnStatement.NewColumnName.GetFinalString(), bktSizeAndRange.Item1, bktSizeAndRange.Item2.Item1, bktSizeAndRange.Item2.Item2, databaseName.Value, renameColumnStatement.TableName.GetFinalString());
+                    : CreateBKTColumnName(renameColumnStatement.NewColumnName.GetFinalString(), bktSizeAndRange.Item1, bktSizeAndRange.Item2.Item1, bktSizeAndRange.Item2.Item2, databaseName.Value, renameColumnStatement.TableName.Value);
 
                 additionalStatements.Add(new RenameColumnStatement()
                 {
@@ -293,14 +293,14 @@ namespace BlockBase.DataProxy.Encryption
             }
 
         }
-        private IDictionary<estring, IList<string>> TransformColumnValues(KeyValuePair<estring, IList<string>> columnValues, string tableName, string plainDatabaseName, IDictionary<string, string> allTableColumnsAndDataTypes)
+        private IDictionary<estring, IList<string>> TransformColumnValues(KeyValuePair<estring, IList<string>> columnValues, string plainTableName, string plainDatabaseName, IDictionary<string, string> allTableColumnsAndDataTypes)
         {
 
             var columnName = columnValues.Key;
 
             var additionalColumnsPerColumn = new Dictionary<estring, IList<string>>();
 
-            TransformColumnName(columnName, tableName, plainDatabaseName);
+            TransformColumnName(columnName, plainTableName, plainDatabaseName);
 
             if (!allTableColumnsAndDataTypes.Keys.Contains(columnName.GetFinalString())) throw new FieldAccessException("No column with that name.");
 
@@ -324,18 +324,17 @@ namespace BlockBase.DataProxy.Encryption
 
                 if (isEncrypted)
                 {
+                    additionalColumnsPerColumn[bktColumnName].Add(CreateBKTValue(bktColumnNameString, columnValues.Value[i], plainDatabaseName, plainTableName, columnName.Value));
+
                     if (isNotUnique)
                     {
-                        byte[] generatedIV = new byte[16];
-                        columnValues.Value[i] = TransformNormalValue(columnValues.Value[i], columnName.Value, tableName, out generatedIV);
+                        columnValues.Value[i] = TransformNormalValue(columnValues.Value[i], columnName.Value, plainTableName, out byte[] generatedIV);
                         additionalColumnsPerColumn[ivColumnName].Add("'" + Base32Encoding.ZBase32.GetString(generatedIV) + "'");
                     }
 
                     else {
-                        columnValues.Value[i] = TransformUniqueValue(columnValues.Value[i], columnName.Value, tableName);
+                        columnValues.Value[i] = TransformUniqueValue(columnValues.Value[i], columnName.Value, plainTableName);
                     }
-                    additionalColumnsPerColumn[bktColumnName].Add("'xxxxx'");
-                    //CalculateUpperBound(int N, int min, int max, int value)
                 }
 
                 if (columnDataType == "text")  columnValues.Value[i] = "'" + columnValues.Value[i] + "'";
@@ -446,16 +445,46 @@ namespace BlockBase.DataProxy.Encryption
             }
         }
 
-
         private string TransformNormalValue(string value, string columnName, string tableName, out byte[] generatedIV)
         {
             return _encryptor.EncryptNormalValue(value, columnName, tableName, out generatedIV);
         }
-
         private string TransformUniqueValue(string value, string columnName, string tableName)
         {
             return _encryptor.EncryptUniqueValue(tableName, columnName, value);
         }
+
+        private string CreateBKTValue(string bktColumnName, string value, string plainDatabaseName, string plainTableName, string plainColumnName)
+        {
+            var sizeAndRange = GetBktSizeAndRangeFromBktColumnName(bktColumnName, plainDatabaseName, plainTableName);
+            var bktValue = "'" + _encryptor.GetEqualityBucket(plainTableName, plainColumnName, value, sizeAndRange.Item1);
+
+            if (sizeAndRange.Item2 != null)
+            {
+                if (double.TryParse(value, out double valueResult))
+                {
+                    var upperBoundValue = CalculateUpperBound(sizeAndRange.Item1, sizeAndRange.Item2.Item1, sizeAndRange.Item2.Item2, valueResult);
+                    bktValue += _encryptionAuxiliarChar + _encryptor.GetRangeBucket(plainTableName, plainColumnName, upperBoundValue + "");
+                }
+
+                else throw new ArgumentException("Value was supposed to be a number.");
+            }
+            return bktValue + "'";
+        }
+        private int CalculateUpperBound(int N, int min, int max, double value)
+        {
+            if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+
+            for (int i = min + N-1; i <= max; i += N)
+            {
+                if (value <= i)
+                {
+                    return i;
+                }
+            }
+            throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+        }
+
 
         private ColumnDefinition CreateBucketColumnDefinition(ColumnDefinition columnDef, string plainTableName, string plainDatabaseName)
         {
@@ -492,7 +521,7 @@ namespace BlockBase.DataProxy.Encryption
                 bucketColumnNameString += _encryptionAuxiliarChar + min + _encryptionAuxiliarChar + max;
 
             var encryptedSizeAndRange = _encryptor.EncrypColumnName(plainDatabaseName, plainTableName, bucketColumnNameString);
-            Console.WriteLine("Bkt final string: " + _bucketPrefix + columnName + _encryptionAuxiliarChar + encryptedSizeAndRange);
+            //Console.WriteLine("Bkt final string: " + _bucketPrefix + columnName + _encryptionAuxiliarChar + encryptedSizeAndRange);
             return _bucketPrefix + columnName + _encryptionAuxiliarChar + encryptedSizeAndRange;
 
         }
@@ -518,24 +547,12 @@ namespace BlockBase.DataProxy.Encryption
             return allTableColumns.Where(c => c == _ivPrefix + columnName).SingleOrDefault();
         }
 
-        public IList<string> GetTableColumnsWithoutBkt(IList<string> allTableColumns)
+        public IList<string> GetTableColumnsWithoutBktAndIV(IList<string> allTableColumns)
         {
-            return allTableColumns.ToList();
+            return allTableColumns.Where(c => !c.StartsWith(_ivPrefix) && !c.StartsWith(_bucketPrefix)).ToList();
         }
 
 
-        private int CalculateUpperBound(int N, int min, int max, int value)
-        {
-            if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
-
-            for (int i = min + N; i <= max; i += N)
-            {
-                if (value <= i)
-                {
-                    return i;
-                }
-            }
-            throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
-        }
+        
     }
 }

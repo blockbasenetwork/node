@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text;
 using Wiry.Base32;
 
+
 namespace BlockBase.DataProxy.Encryption
 {
     class Encryptor
@@ -61,22 +62,20 @@ namespace BlockBase.DataProxy.Encryption
             return Encoding.ASCII.GetString(AES256.DecryptWithCBC(encryptedNameInBytes, key, _keyAndIVGenerator.CreateMasterIV()));
         }
 
-        public byte[] GetEqualityBucket(string tableName, string columnName, string value, int N)
+
+        public string GetEqualityBucket(string tableName, string columnName, string value, int N)
         {
             var valueBytes = Encoding.ASCII.GetBytes(value);
             var valueKey = _keyAndIVGenerator.CreateValueKey(tableName, columnName);
-            var bucket = new BigInteger(Utils.Crypto.Utils.SHA256(AES256.EncryptWithECB(valueBytes, valueKey))) % N;
-            return bucket.ToByteArray();
-
+            var bucket = new BigInteger(Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(valueBytes, valueKey, _keyAndIVGenerator.CreateMasterIV()))) % N;
+            return Base32Encoding.ZBase32.GetString(bucket.ToByteArray());
         }
-        public byte[] GetRangeBucket(string tableName, string columnName, string bucketUpperBoundValue)
-        {
+        public string GetRangeBucket(string tableName, string columnName, string bucketUpperBoundValue)
+        {  
             var valueBytes = Encoding.ASCII.GetBytes(bucketUpperBoundValue);
             var valueKey = _keyAndIVGenerator.CreateValueKey(tableName, columnName);
-            var bucket = Utils.Crypto.Utils.SHA256(AES256.EncryptWithECB(valueBytes, valueKey));
-            return bucket;
+            var bucket = Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(valueBytes, valueKey, _keyAndIVGenerator.CreateMasterIV()));
+            return Base32Encoding.ZBase32.GetString(bucket);
         }
-
-
     }
 }
