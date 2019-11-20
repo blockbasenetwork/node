@@ -113,12 +113,12 @@ data_type: (
 		| K_DECIMAL
 		| K_DOUBLE
 		| K_TEXT
-		| K_ENCRYPTED bucket_size (K_RANGE bucket_range)?
+		| K_ENCRYPTED bucket_size? (K_RANGE bucket_range)?
 	);
 
 bucket_size: NUMERIC_LITERAL;
 
-bucket_range: '(' NUMERIC_LITERAL ',' NUMERIC_LITERAL ')';
+bucket_range: '(' NUMERIC_LITERAL ',' NUMERIC_LITERAL ',' NUMERIC_LITERAL ')';
 
 //type_name
 // : name+ ( '(' signed_number ')' | '(' signed_number ',' signed_number ')' )? ;

@@ -1,16 +1,15 @@
-﻿using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
+﻿using BlockBase.DataPersistence.Sidechain.Connectors;
+using BlockBase.Domain.Database.Sql.QueryBuilder;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using BlockBase.Domain.Database.Sql.QueryBuilder;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using System.Linq;
-using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.ColumnConstraint;
 using Wiry.Base32;
-using BlockBase.DataPersistence.Sidechain.Connectors;
+using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.ColumnConstraint;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -20,6 +19,8 @@ namespace BlockBase.DataProxy.Encryption
         private static string _encryptionAuxiliarChar = "_";
         private static string _ivPrefix = "iv";
         private static string _bucketPrefix = "bkt";
+        private static string _equalityBucketPrefix = _bucketPrefix + "e";
+        private static string _rangeBucketPrefix = _bucketPrefix + "r";
 
         private PSqlConnector _psqlConnector;
         private Encryptor _encryptor;
@@ -174,50 +175,27 @@ namespace BlockBase.DataProxy.Encryption
 
             TransformColumnName(renameColumnStatement.NewColumnName, renameColumnStatement.TableName.Value, databaseName.Value);
 
-            var bktColumnName = GetColumnCorrespondentBKTColumnName(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns);
-
-            var ivColumnName = GetColumnCorrespondentIVColumnName(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns);
+            var equalityBktColumnName = GetColumnWithPrefix(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns, _equalityBucketPrefix);
+            var rangeBktColumnName = GetColumnWithPrefix(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns, _rangeBucketPrefix);
+            var ivColumnName = GetColumnWithPrefix(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns, _ivPrefix);
 
             if (ivColumnName != null)
+                additionalStatements.Add(new RenameColumnStatement(renameColumnStatement.TableName, new estring(ivColumnName), new estring(CreateIVColumnName(renameColumnStatement.NewColumnName.GetFinalString()))));
+
+            if (equalityBktColumnName != null)
             {
-                additionalStatements.Add(new RenameColumnStatement()
-                {
-                    TableName = renameColumnStatement.TableName,
-                    ColumnName = new estring()
-                    {
-                        ToEncrypt = false,
-                        Value = ivColumnName
-                    },
-                    NewColumnName = new estring()
-                    {
-                        ToEncrypt = false,
-                        Value = CreateIVColumnName(renameColumnStatement.NewColumnName.GetFinalString())
-                    }
-                });
+                var bktEqualitySize = GetBktSizeFromEqualityBktColumnName(equalityBktColumnName, databaseName.Value, oldTableName != null ? oldTableName.Value : renameColumnStatement.TableName.Value);
+                var newBktEqualityColumnName = CreateEqualityBktColumnName(renameColumnStatement.NewColumnName.GetFinalString(), bktEqualitySize, databaseName.Value, renameColumnStatement.TableName.Value);
+
+                additionalStatements.Add(new RenameColumnStatement(renameColumnStatement.TableName, new estring(equalityBktColumnName), new estring(newBktEqualityColumnName)));
             }
-            if (bktColumnName != null)
+
+            if (rangeBktColumnName != null)
             {
-                var bktSizeAndRange = GetBktSizeAndRangeFromBktColumnName(bktColumnName, databaseName.Value, oldTableName != null ? oldTableName.Value : renameColumnStatement.TableName.Value);
+                var bktSizeRange = GetBktSizeAndRangeFromRangeBktColumnName(rangeBktColumnName, databaseName.Value, oldTableName != null ? oldTableName.Value : renameColumnStatement.TableName.Value);
+                var newBktRangeColumnName = CreateRangeBktColumnName(renameColumnStatement.NewColumnName.GetFinalString(), bktSizeRange.Item1, bktSizeRange.Item2, bktSizeRange.Item3, databaseName.Value, renameColumnStatement.TableName.Value);
 
-                var newBktColumnName = bktSizeAndRange.Item2 == null ?
-                    CreateBKTColumnName(renameColumnStatement.NewColumnName.GetFinalString(), bktSizeAndRange.Item1, null, null, databaseName.Value, renameColumnStatement.TableName.Value)
-                    : CreateBKTColumnName(renameColumnStatement.NewColumnName.GetFinalString(), bktSizeAndRange.Item1, bktSizeAndRange.Item2.Item1, bktSizeAndRange.Item2.Item2, databaseName.Value, renameColumnStatement.TableName.Value);
-
-                additionalStatements.Add(new RenameColumnStatement()
-                {
-                    TableName = renameColumnStatement.TableName,
-                    ColumnName = new estring()
-                    {
-                        ToEncrypt = false,
-                        Value = bktColumnName
-                    },
-                    NewColumnName = new estring()
-                    {
-                        ToEncrypt = false,
-                        Value = newBktColumnName
-                    }
-                });
-
+                additionalStatements.Add(new RenameColumnStatement(renameColumnStatement.TableName, new estring(rangeBktColumnName), new estring(newBktRangeColumnName)));
             }
 
             return additionalStatements;
@@ -238,33 +216,13 @@ namespace BlockBase.DataProxy.Encryption
 
             var additionalStatements = new List<DropColumnStatement>();
 
-            var bktColumnName = GetColumnCorrespondentBKTColumnName(dropColumnStatement.ColumnName.GetFinalString(), allTableColumns);
-            var ivColumnName = GetColumnCorrespondentIVColumnName(dropColumnStatement.ColumnName.GetFinalString(), allTableColumns);
+            var equalityBktColumnName = GetColumnWithPrefix(dropColumnStatement.ColumnName.GetFinalString(), allTableColumns, _equalityBucketPrefix);
+            var rangeBktColumnName = GetColumnWithPrefix(dropColumnStatement.ColumnName.GetFinalString(), allTableColumns, _rangeBucketPrefix);
+            var ivColumnName = GetColumnWithPrefix(dropColumnStatement.ColumnName.GetFinalString(), allTableColumns, _ivPrefix);
 
-            if (ivColumnName != null)
-            {
-                additionalStatements.Add(new DropColumnStatement()
-                {
-                    TableName = dropColumnStatement.TableName,
-                    ColumnName = new estring()
-                    {
-                        ToEncrypt = false,
-                        Value = ivColumnName
-                    }
-                });
-            }
-            if (bktColumnName != null)
-            {
-                additionalStatements.Add(new DropColumnStatement()
-                {
-                    TableName = dropColumnStatement.TableName,
-                    ColumnName = new estring()
-                    {
-                        ToEncrypt = false,
-                        Value = bktColumnName
-                    }
-                });
-            }
+            if (ivColumnName != null) additionalStatements.Add(new DropColumnStatement(dropColumnStatement.TableName, new estring(ivColumnName)));
+            if (equalityBktColumnName != null) additionalStatements.Add(new DropColumnStatement(dropColumnStatement.TableName, new estring(equalityBktColumnName)));
+            if (rangeBktColumnName != null) additionalStatements.Add(new DropColumnStatement(dropColumnStatement.TableName, new estring(rangeBktColumnName)));
 
             return additionalStatements;
         }
@@ -306,16 +264,22 @@ namespace BlockBase.DataProxy.Encryption
 
             var columnDataType = allTableColumnsAndDataTypes[columnName.GetFinalString()];
 
-            var bktColumnNameString = GetColumnCorrespondentBKTColumnName(columnName.GetFinalString(), allTableColumnsAndDataTypes.Keys.ToList());
-            var bktColumnName = bktColumnNameString != null ? new estring(bktColumnNameString) : null;
+            var equalityBktColumnNameString = GetColumnWithPrefix(columnName.GetFinalString(), allTableColumnsAndDataTypes.Keys.ToList(), _equalityBucketPrefix);
+            var equalityBktColumnName = equalityBktColumnNameString != null ? new estring(equalityBktColumnNameString) : null;
 
-            var ivColumnNameString = GetColumnCorrespondentIVColumnName(columnName.GetFinalString(), allTableColumnsAndDataTypes.Keys.ToList());
+            var rangeBktColumnNameString = GetColumnWithPrefix(columnName.GetFinalString(), allTableColumnsAndDataTypes.Keys.ToList(), _rangeBucketPrefix);
+            var rangeBktColumnName = rangeBktColumnNameString != null ? new estring(rangeBktColumnNameString) : null;
+
+            var ivColumnNameString = GetColumnWithPrefix(columnName.GetFinalString(), allTableColumnsAndDataTypes.Keys.ToList(), _ivPrefix);
             var ivColumnName = ivColumnNameString != null ? new estring(ivColumnNameString) : null;
 
-            bool isEncrypted = bktColumnName != null;
+            // TODO: Is it okay to check by the table name? Or will there be columns with the name encrypted and data unencrypted?
+            bool isEncrypted = columnName.EncryptedValue != null;
+
             bool isNotUnique = ivColumnName != null;
 
-            if (isEncrypted) additionalColumnsPerColumn[bktColumnName] = new List<string>();
+            if (equalityBktColumnName != null) additionalColumnsPerColumn[equalityBktColumnName] = new List<string>();
+            if (rangeBktColumnName != null) additionalColumnsPerColumn[rangeBktColumnName] = new List<string>();
             if (isNotUnique) additionalColumnsPerColumn[ivColumnName] = new List<string>();
 
             for (int i = 0; i < columnValues.Value.Count; i++)
@@ -324,65 +288,94 @@ namespace BlockBase.DataProxy.Encryption
 
                 if (isEncrypted)
                 {
-                    additionalColumnsPerColumn[bktColumnName].Add(CreateBKTValue(bktColumnNameString, columnValues.Value[i], plainDatabaseName, plainTableName, columnName.Value));
+                    if (rangeBktColumnName != null)
+                        additionalColumnsPerColumn[rangeBktColumnName].Add(CreateRangeBktValue(rangeBktColumnNameString, columnValues.Value[i], plainDatabaseName, plainTableName, columnName.Value));
 
                     if (isNotUnique)
                     {
+                        additionalColumnsPerColumn[equalityBktColumnName].Add(CreateEqualityBktValue(equalityBktColumnNameString, columnValues.Value[i], plainDatabaseName, plainTableName, columnName.Value));
                         columnValues.Value[i] = TransformNormalValue(columnValues.Value[i], columnName.Value, plainTableName, out byte[] generatedIV);
                         additionalColumnsPerColumn[ivColumnName].Add("'" + Base32Encoding.ZBase32.GetString(generatedIV) + "'");
                     }
 
-                    else {
+                    else
+                    {
                         columnValues.Value[i] = TransformUniqueValue(columnValues.Value[i], columnName.Value, plainTableName);
                     }
                 }
 
-                if (columnDataType == "text")  columnValues.Value[i] = "'" + columnValues.Value[i] + "'";
+                if (columnDataType == "text") columnValues.Value[i] = "'" + columnValues.Value[i] + "'";
             }
 
             return additionalColumnsPerColumn;
 
         }
 
-        public void Transform(UpdateRecordStatement updateRecordStatement, string plainDatabaseName)
+        //TODO: Continue...
+        public void Transform(UpdateRecordStatement updateRecordStatement, estring databaseName)
         {
-            TransformTableName(updateRecordStatement.TableName, plainDatabaseName);
+            TransformTableName(updateRecordStatement.TableName, databaseName.Value);
 
             byte[] generatedIV = new byte[16];
 
             foreach (var entry in updateRecordStatement.ColumnNamesAndUpdateValues)
             {
-            
-                TransformColumnName(entry.Key, updateRecordStatement.TableName.Value, plainDatabaseName);
+
+                TransformColumnName(entry.Key, updateRecordStatement.TableName.Value, databaseName.Value);
 
                 updateRecordStatement.ColumnNamesAndUpdateValues[entry.Key] = TransformNormalValue(entry.Value, entry.Key.Value, updateRecordStatement.TableName.Value, out generatedIV);
 
             }
 
-            TransformExpression(updateRecordStatement.WhereClause, null, updateRecordStatement.TableName.Value, plainDatabaseName);
+            TransformExpression(updateRecordStatement.WhereClause, null, updateRecordStatement.TableName.Value, databaseName);
         }
 
-       
 
-
-        private void TransformExpression(AbstractExpression expression, string columnName, string tableName, string plainDatabaseName)
+        private void TransformExpression(AbstractExpression expression, string columnName, string plainTableName, estring databaseName)
         {
             switch (expression)
             {
                 case ComparisonExpression comparisonExpression:
-                    TransformTableName(comparisonExpression.TableName, plainDatabaseName);
-
-                    TransformColumnName(comparisonExpression.ColumnName, comparisonExpression.TableName.Value, plainDatabaseName);
-
-                    comparisonExpression.Value = TransformNormalValue(comparisonExpression.Value, comparisonExpression.ColumnName.Value, comparisonExpression.TableName.Value, out byte[] generatedIV);
+                    TransformComparisonExpression(comparisonExpression, databaseName);
                     break;
 
                 case LogicalExpression logicalExpression:
-                    TransformExpression(logicalExpression.LeftExpression, columnName, tableName, plainDatabaseName);
-                    TransformExpression(logicalExpression.RightExpression, columnName, tableName, plainDatabaseName);
+                    TransformExpression(logicalExpression.LeftExpression, columnName, plainTableName, databaseName);
+                    TransformExpression(logicalExpression.RightExpression, columnName, plainTableName, databaseName);
                     break;
 
             }
+        }
+
+
+        private void TransformComparisonExpression(ComparisonExpression comparisonExpression, estring databaseName)
+        {
+            TransformTableName(comparisonExpression.TableName, databaseName.Value);
+
+            TransformColumnName(comparisonExpression.ColumnName, comparisonExpression.TableName.Value, databaseName.Value);
+
+            var alltablecolumns = _psqlConnector.GetAllTableColumns(comparisonExpression.TableName.GetFinalString(), databaseName.GetFinalString());
+
+            var ivColumn = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), alltablecolumns, _ivPrefix);
+            var equalityBktColumn = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), alltablecolumns, _equalityBucketPrefix);
+            var rangeBktColumn = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), alltablecolumns, _rangeBucketPrefix);
+
+            comparisonExpression.Value = TransformNormalValue(comparisonExpression.Value, comparisonExpression.ColumnName.Value, comparisonExpression.TableName.Value, out byte[] generatedIV);
+
+
+        }
+
+        private List<ComparisonExpression> TransformEqualityExpression(ComparisonExpression comparisonExpression, string ivColumn, string bktColumn, estring databaseName)
+        {
+            var additionalComparisonExpressions = new List<ComparisonExpression>();
+
+            if (ivColumn != null)
+            {
+
+
+            }
+
+            return additionalComparisonExpressions;
         }
 
         private IList<ColumnDefinition> TransformColumnDefinitionAndGetAdditionalColumns(ColumnDefinition columnDefinition, string plainTableName, string plainDatabaseName)
@@ -395,8 +388,10 @@ namespace BlockBase.DataProxy.Encryption
 
             if (columnDefinition.DataType.DataTypeName == DataTypeEnum.ENCRYPTED)
             {
-                if (!columnDefinition.ColumnConstraints.Select(c => c.ColumnConstraintType).Contains(ColumnConstraintTypeEnum.PrimaryKey)
-                    && !columnDefinition.ColumnConstraints.Select(c => c.ColumnConstraintType).Contains(ColumnConstraintTypeEnum.Unique))
+                bool isUnique = columnDefinition.ColumnConstraints.Select(c => c.ColumnConstraintType).Contains(ColumnConstraintTypeEnum.PrimaryKey)
+                    || columnDefinition.ColumnConstraints.Select(c => c.ColumnConstraintType).Contains(ColumnConstraintTypeEnum.Unique);
+
+                if (!isUnique)
                 {
                     additionalColumns.Add(new ColumnDefinition()
                     {
@@ -405,9 +400,7 @@ namespace BlockBase.DataProxy.Encryption
                         ColumnConstraints = new List<ColumnConstraint>()
                     });
                 }
-
-                if (columnDefinition.DataType.BucketSize != null)
-                    additionalColumns.Add(CreateBucketColumnDefinition(columnDefinition, plainTableName, plainDatabaseName));
+                additionalColumns.AddRange(CreateBucketColumnDefinitions(columnDefinition, plainTableName, plainDatabaseName, isUnique));
             }
 
             foreach (var foreignKeyClause in columnDefinition.ColumnConstraints.Select(c => c.ForeignKeyClause).Where(f => f != null))
@@ -454,28 +447,29 @@ namespace BlockBase.DataProxy.Encryption
             return _encryptor.EncryptUniqueValue(tableName, columnName, value);
         }
 
-        private string CreateBKTValue(string bktColumnName, string value, string plainDatabaseName, string plainTableName, string plainColumnName)
+        private string CreateEqualityBktValue(string bktColumnName, string value, string plainDatabaseName, string plainTableName, string plainColumnName)
         {
-            var sizeAndRange = GetBktSizeAndRangeFromBktColumnName(bktColumnName, plainDatabaseName, plainTableName);
-            var bktValue = "'" + _encryptor.GetEqualityBucket(plainTableName, plainColumnName, value, sizeAndRange.Item1);
-
-            if (sizeAndRange.Item2 != null)
-            {
-                if (double.TryParse(value, out double valueResult))
-                {
-                    var upperBoundValue = CalculateUpperBound(sizeAndRange.Item1, sizeAndRange.Item2.Item1, sizeAndRange.Item2.Item2, valueResult);
-                    bktValue += _encryptionAuxiliarChar + _encryptor.GetRangeBucket(plainTableName, plainColumnName, upperBoundValue + "");
-                }
-
-                else throw new ArgumentException("Value was supposed to be a number.");
-            }
-            return bktValue + "'";
+            int bktSize = GetBktSizeFromEqualityBktColumnName(bktColumnName, plainDatabaseName, plainTableName);
+            return "'" + _encryptor.GetEqualityBucket(plainTableName, plainColumnName, value, bktSize) + "'";
         }
+
+        private string CreateRangeBktValue(string bktColumnName, string value, string plainDatabaseName, string plainTableName, string plainColumnName)
+        {
+            var sizeAndRange = GetBktSizeAndRangeFromRangeBktColumnName(bktColumnName, plainDatabaseName, plainTableName);
+            if (double.TryParse(value, out double valueResult))
+            {
+                var upperBoundValue = CalculateUpperBound(sizeAndRange.Item1, sizeAndRange.Item2, sizeAndRange.Item3, valueResult);
+                return "'" + _encryptionAuxiliarChar + _encryptor.GetRangeBucket(plainTableName, plainColumnName, upperBoundValue + "") + "'";
+            }
+            else throw new ArgumentException("Value was supposed to be a number.");
+        }
+
+
         private int CalculateUpperBound(int N, int min, int max, double value)
         {
             if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
 
-            for (int i = min + N-1; i <= max; i += N)
+            for (int i = min + N - 1; i <= max; i += N)
             {
                 if (value <= i)
                 {
@@ -486,17 +480,37 @@ namespace BlockBase.DataProxy.Encryption
         }
 
 
-        private ColumnDefinition CreateBucketColumnDefinition(ColumnDefinition columnDef, string plainTableName, string plainDatabaseName)
+        private IList<ColumnDefinition> CreateBucketColumnDefinitions(ColumnDefinition columnDef, string plainTableName, string plainDatabaseName, bool isUnique)
         {
-            var bucketColumnName = CreateBKTColumnName(columnDef.ColumnName.GetFinalString(), columnDef.DataType.BucketSize,
-                columnDef.DataType.BucketMinRange, columnDef.DataType.BucketMaxRange, plainDatabaseName, plainTableName);
+            var bktColumnDefs = new List<ColumnDefinition>();
 
-            return new ColumnDefinition()
+            if (columnDef.DataType.BucketInfo.EqualityBucketSize != null)
             {
-                ColumnName = new estring(bucketColumnName),
-                DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
-                ColumnConstraints = new List<ColumnConstraint>()
-            };
+                var equalityBktColumnName = CreateEqualityBktColumnName(columnDef.ColumnName.GetFinalString(), columnDef.DataType.BucketInfo.EqualityBucketSize,
+                     plainDatabaseName, plainTableName);
+
+                bktColumnDefs.Add(new ColumnDefinition()
+                {
+                    ColumnName = new estring(equalityBktColumnName),
+                    DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
+                    ColumnConstraints = new List<ColumnConstraint>()
+                });
+            }
+
+            if (columnDef.DataType.BucketInfo.RangeBucketSize != null)
+            {
+                var rangeBktColumnName = CreateRangeBktColumnName(columnDef.ColumnName.GetFinalString(), columnDef.DataType.BucketInfo.RangeBucketSize,
+                     columnDef.DataType.BucketInfo.BucketMinRange, columnDef.DataType.BucketInfo.BucketMaxRange, plainDatabaseName, plainTableName);
+
+                bktColumnDefs.Add(new ColumnDefinition()
+                {
+                    ColumnName = new estring(rangeBktColumnName),
+                    DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
+                    ColumnConstraints = new List<ColumnConstraint>()
+                });
+            }
+
+            return bktColumnDefs;
         }
 
         private void TransformForeignKeyClause(ForeignKeyClause foreignKeyClause, string plainDatabaseName)
@@ -513,38 +527,41 @@ namespace BlockBase.DataProxy.Encryption
         {
             return _ivPrefix + columnName;
         }
-        private string CreateBKTColumnName(string columnName, int? size, int? min, int? max, string plainDatabaseName, string plainTableName)
+        private string CreateEqualityBktColumnName(string columnName, int? size, string plainDatabaseName, string plainTableName)
         {
             var bucketColumnNameString = columnName.Substring(1, 4) + _encryptionAuxiliarChar + size;
-
-            if (min != null && max != null)
-                bucketColumnNameString += _encryptionAuxiliarChar + min + _encryptionAuxiliarChar + max;
-
             var encryptedSizeAndRange = _encryptor.EncrypColumnName(plainDatabaseName, plainTableName, bucketColumnNameString);
-            //Console.WriteLine("Bkt final string: " + _bucketPrefix + columnName + _encryptionAuxiliarChar + encryptedSizeAndRange);
-            return _bucketPrefix + columnName + _encryptionAuxiliarChar + encryptedSizeAndRange;
+            return _equalityBucketPrefix + columnName + _encryptionAuxiliarChar + encryptedSizeAndRange;
+        }
 
+        private string CreateRangeBktColumnName(string columnName, int? size, int? min, int? max, string plainDatabaseName, string plainTableName)
+        {
+            var bucketColumnNameString = columnName.Substring(1, 4) + _encryptionAuxiliarChar + size + _encryptionAuxiliarChar
+                                        + min + _encryptionAuxiliarChar + max;
+            var encryptedSizeAndRange = _encryptor.EncrypColumnName(plainDatabaseName, plainTableName, bucketColumnNameString);
+            return _rangeBucketPrefix + columnName + _encryptionAuxiliarChar + encryptedSizeAndRange;
         }
 
 
-        private Tuple<int, Tuple<int, int>> GetBktSizeAndRangeFromBktColumnName(string bktColumnName, string databaseName, string tableName)
+        private int GetBktSizeFromEqualityBktColumnName(string bktColumnName, string databaseName, string tableName)
         {
             var encryptedBktSizeAndRange = bktColumnName.Split(_encryptionAuxiliarChar)[2];
-            var bktSizeAndRangeString = _encryptor.DecryptColumnName(databaseName, tableName, encryptedBktSizeAndRange).Split(_encryptionAuxiliarChar);
+            var bktSize = _encryptor.DecryptColumnName(databaseName, tableName, encryptedBktSizeAndRange).Split(_encryptionAuxiliarChar);
 
-            if (bktSizeAndRangeString.Count() != 4) return new Tuple<int, Tuple<int, int>>(Int32.Parse(bktSizeAndRangeString[1]), null);
-
-            return new Tuple<int, Tuple<int, int>>(Int32.Parse(bktSizeAndRangeString[1]), new Tuple<int, int>(Int32.Parse(bktSizeAndRangeString[2]), Int32.Parse(bktSizeAndRangeString[3])));
+            return Int32.Parse(bktSize[1]);
         }
 
-        public string GetColumnCorrespondentBKTColumnName(string columnName, IList<string> allTableColumns)
+        private Tuple<int, int, int> GetBktSizeAndRangeFromRangeBktColumnName(string bktColumnName, string databaseName, string tableName)
         {
-            return allTableColumns.Where(c => c.StartsWith(_bucketPrefix + columnName)).SingleOrDefault();
+            var encryptedBktSizeAndRange = bktColumnName.Split(_encryptionAuxiliarChar)[2];
+            var bktSizeAndRange = _encryptor.DecryptColumnName(databaseName, tableName, encryptedBktSizeAndRange).Split(_encryptionAuxiliarChar);
+
+            return new Tuple<int, int, int>(Int32.Parse(bktSizeAndRange[1]), Int32.Parse(bktSizeAndRange[2]), Int32.Parse(bktSizeAndRange[3]));
         }
 
-        public string GetColumnCorrespondentIVColumnName(string columnName, IList<string> allTableColumns)
+        public string GetColumnWithPrefix(string columnName, IList<string> allTableColumns, string prefix)
         {
-            return allTableColumns.Where(c => c == _ivPrefix + columnName).SingleOrDefault();
+            return allTableColumns.Where(c => c.StartsWith(prefix + columnName)).SingleOrDefault();
         }
 
         public IList<string> GetTableColumnsWithoutBktAndIV(IList<string> allTableColumns)
@@ -553,6 +570,6 @@ namespace BlockBase.DataProxy.Encryption
         }
 
 
-        
+
     }
 }

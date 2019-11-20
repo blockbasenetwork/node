@@ -8,18 +8,14 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
     {
         public DataTypeEnum DataTypeName { get; set; }
 
-        public int? BucketSize { get; set; }
-        public int? BucketMinRange { get; set; }
-        public int? BucketMaxRange { get; set; }
+        public BucketInfo BucketInfo { get; set; }
 
         public DataType Clone()
         {
             return new DataType()
             {
                 DataTypeName = DataTypeName,
-                BucketMaxRange = BucketMaxRange,
-                BucketMinRange = BucketMinRange,
-                BucketSize = BucketSize
+                BucketInfo  = BucketInfo.Clone()
             };
         }
     }

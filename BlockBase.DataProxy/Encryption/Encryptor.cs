@@ -62,7 +62,6 @@ namespace BlockBase.DataProxy.Encryption
             return Encoding.ASCII.GetString(AES256.DecryptWithCBC(encryptedNameInBytes, key, _keyAndIVGenerator.CreateMasterIV()));
         }
 
-
         public string GetEqualityBucket(string tableName, string columnName, string value, int N)
         {
             var valueBytes = Encoding.ASCII.GetBytes(value);

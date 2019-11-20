@@ -247,12 +247,29 @@ namespace BlockBase.Domain.Database.QueryParser
         {
             CheckIfParserThrowedException(columnDefContext);
 
-            return new ColumnDefinition
+            var columnDef = new ColumnDefinition
             {
                 ColumnName = (estring)Visit(columnDefContext.column_name().complex_name()),
                 DataType = (DataType)Visit(columnDefContext.data_type()),
                 ColumnConstraints = columnDefContext.column_constraint().Select(c => (ColumnConstraint)Visit(c)).ToList()
             };
+
+            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED && columnDef.DataType.BucketInfo.EqualityBucketSize == null
+                && columnDef.ColumnConstraints.Count(c => c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey ||
+                c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.Unique) == 0)
+            {
+                throw new FormatException("If the column is not unique or primary key you need to specify the number of equality buckets you desire.");
+            }
+
+            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED && columnDef.DataType.BucketInfo.EqualityBucketSize != null
+                && columnDef.ColumnConstraints.Count(c => c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey ||
+                c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.Unique) != 0)
+            {
+                throw new FormatException("If the column is unique or primary key it doesn't need equality bucket size.");
+            }
+
+            return columnDef;
+
         }
         public override object VisitColumn_constraint(Column_constraintContext columnConstraintContext)
         {
@@ -308,20 +325,37 @@ namespace BlockBase.Domain.Database.QueryParser
             if (dataTypeContext.K_TEXT() != null) return new DataType() { DataTypeName = DataTypeEnum.TEXT };
             if (dataTypeContext.K_ENCRYPTED() != null)
             {
-                var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED };
+                var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED, BucketInfo = new BucketInfo() };
                 if (dataTypeContext.bucket_size() != null)
                 {
-                    dataType.BucketSize = Int32.Parse(dataTypeContext.bucket_size().NUMERIC_LITERAL().GetText());
-                    if (dataTypeContext.K_RANGE() != null)
-                    {
-                        dataType.BucketMinRange = Int32.Parse(dataTypeContext.bucket_range().NUMERIC_LITERAL()[0].GetText());
-                        dataType.BucketMaxRange = Int32.Parse(dataTypeContext.bucket_range().NUMERIC_LITERAL()[1].GetText());
-                    }
+                    dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_size().NUMERIC_LITERAL().GetText());                    
+                }
+
+                if (dataTypeContext.K_RANGE() != null)
+                {
+                    var bktSizeRange = (Tuple<int, int, int>)Visit(dataTypeContext.bucket_range());
+                    dataType.BucketInfo.RangeBucketSize = bktSizeRange.Item1;
+                    dataType.BucketInfo.BucketMinRange = bktSizeRange.Item2;
+                    dataType.BucketInfo.BucketMaxRange = bktSizeRange.Item3;
+                    if (dataType.BucketInfo.BucketMinRange >= dataType.BucketInfo.BucketMaxRange)
+                        throw new FormatException("Bucket min range cannot be bigger than max range. (bucketSize, minRange, maxRange)");
                 }
                 return dataType;
             }
 
             throw new FormatException("DataType not recognized.");
+        }
+
+        public override object VisitBucket_range(Bucket_rangeContext bucketRangeContext)
+        {
+            CheckIfParserThrowedException(bucketRangeContext);
+         
+            var size = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[0].GetText());
+            var min = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[1].GetText());
+            var max = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[2].GetText());
+
+            return new Tuple<int, int, int> (size, min, max);
+         
         }
 
         public override object VisitExpr(ExprContext expr)
