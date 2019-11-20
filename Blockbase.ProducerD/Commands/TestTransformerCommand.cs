@@ -35,18 +35,19 @@ namespace Blockbase.ProducerD.Commands
         {
             RunSqlCommand("CREATE DATABASE database1;");
 
-            RunSqlCommand("CREATE TABLE table1 ( column1 ENCRYPTED 2 RANGE (1,10) PRIMARY KEY, column2 ENCRYPTED 30 NOT NULL);");
-            RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED 2 RANGE (2,10) PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 5 );");
+            RunSqlCommand("CREATE TABLE table1 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, column2 ENCRYPTED 30 NOT NULL);");
+            RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
+            RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
+            RunSqlCommand("DROP TABLE table2;");
 
             RunSqlCommand("ALTER TABLE table1 RENAME TO newtable11");
             RunSqlCommand("ALTER TABLE newtable11 RENAME TO newtable1");
             RunSqlCommand("ALTER TABLE newtable1 RENAME column2 TO newcolumn2");
             RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN !column3 int");
-            RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN column4 ENCRYPTED 2 NOT NULL");
+            RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
             RunSqlCommand("ALTER TABLE newtable1 DROP COLUMN column4");
 
             RunSqlCommand("INSERT INTO newtable1(column1, newcolumn2, !column3) VALUES ( 1, 'bulha', 7 )");
-
             RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 2, 'bulha', 5 )");
             RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 3, 'pires', 10 )");
             RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 4, 'fernando', 25 )");
