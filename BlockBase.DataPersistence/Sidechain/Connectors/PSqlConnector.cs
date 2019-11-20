@@ -9,11 +9,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 {
     public class PSqlConnector
     {
-        //TODO: refactor this to go to configs
-        private static string _ivPrefix = "iv";
-        private static string _bucketPrefix = "bkt";
-        private static string _joiningInfoChar = "_";
-
         private string _serverConnectionString;
         private ILogger _logger;
 
@@ -40,7 +35,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
                 return columnNames;
             }
-
         }
 
 
