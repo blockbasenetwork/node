@@ -22,7 +22,6 @@ using Microsoft.Extensions.Options;
 using System.Net;
 using BlockBase.DataPersistence;
 using BlockBase.Network.Mainchain;
-using BlockBase.Network.History;
 using BlockBase.DataPersistence.ProducerData;
 using Serilog.Sinks.SystemConsole.Themes;
 using Microsoft.OpenApi.Models;
@@ -116,7 +115,6 @@ namespace Blockbase.Api
              {
                  services.AddSingleton<INetworkService, NetworkService>();
                  services.AddSingleton<IMainchainService, MainchainService>();
-                 services.AddSingleton<IHistoryService, HistoryService>();
                  services.AddSingleton<MessageSender>();
                  services.AddSingleton<MessageReceiver>();
                  services.AddSingleton<MessageAnalyser>();
