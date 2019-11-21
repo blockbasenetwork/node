@@ -113,7 +113,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
             var psqlString = "DELETE FROM " + deleteRecordStatement.TableName.GetFinalString();
             if (deleteRecordStatement.WhereClause != null)
             {
-                psqlString += "WHERE " + BuildString(deleteRecordStatement.WhereClause);
+                psqlString += " WHERE " + BuildString(deleteRecordStatement.WhereClause);
             }
             return psqlString;
         }
@@ -241,7 +241,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
         {
             if (expression is ComparisonExpression comparisonExpression)
                 return comparisonExpression.TableName.GetFinalString()+ "." + comparisonExpression.ColumnName.GetFinalString() + " "
-                    + BuildString(comparisonExpression.LogicalOperator) + " "
+                    + BuildString(comparisonExpression.ComparisonOperator) + " "
                     + comparisonExpression.Value;
 
             if (expression is LogicalExpression logicalExpression)
@@ -318,7 +318,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
                     return "!=";
 
                 case ComparisonExpression.ComparisonOperatorEnum.Equal:
-                    return "==";
+                    return "=";
 
                 case ComparisonExpression.ComparisonOperatorEnum.SmallerOrEqualThan:
                     return "<=";

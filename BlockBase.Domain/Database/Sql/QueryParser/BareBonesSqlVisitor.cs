@@ -392,7 +392,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     TableName = (estring) Visit(expr.table_name().complex_name()),
                     ColumnName = (estring)Visit(expr.column_name().complex_name()),
                     Value = expr.literal_value().GetText(),
-                    LogicalOperator = GetLogicalOperatorFromString(exprString)
+                    ComparisonOperator = GetLogicalOperatorFromString(exprString)
                 };
                 return comparisonExpression;
             }
