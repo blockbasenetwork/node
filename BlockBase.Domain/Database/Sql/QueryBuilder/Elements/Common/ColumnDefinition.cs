@@ -11,6 +11,15 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
         
         public IList<ColumnConstraint> ColumnConstraints { get; set; }
 
+        public ColumnDefinition() { }
+
+        public ColumnDefinition(estring columnName, DataType dataType, List<ColumnConstraint> columnConstraints = null)
+        {
+            ColumnName = columnName;
+            DataType = dataType;             
+            if (columnConstraints == null) ColumnConstraints = new List<ColumnConstraint>();
+            else ColumnConstraints = columnConstraints;
+        }
 
 
         public ColumnDefinition Clone()

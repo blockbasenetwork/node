@@ -12,6 +12,15 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
 
         public AbstractExpression WhereClause { get; set; }
 
+        public UpdateRecordStatement() { }
+
+        public UpdateRecordStatement(estring tableName, Dictionary<estring, string> columnNamesAndUpdateValues, AbstractExpression whereClause)
+        {
+            TableName = tableName;
+            ColumnNamesAndUpdateValues = columnNamesAndUpdateValues;
+            WhereClause = whereClause;
+        }
+
         public ISqlStatement Clone()
         {
             var updateRecordStatementClone = new UpdateRecordStatement()

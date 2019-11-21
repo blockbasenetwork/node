@@ -10,6 +10,19 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
 
         public BucketInfo BucketInfo { get; set; }
 
+        public DataType() { }
+
+        public DataType(DataTypeEnum dataTypeEnum)
+        {
+            DataTypeName = dataTypeEnum;
+        }
+
+        public DataType(DataTypeEnum dataTypeEnum, BucketInfo bucketInfo)
+        {
+            DataTypeName = dataTypeEnum;
+            BucketInfo = bucketInfo;
+        }
+
         public DataType Clone()
         {
             return new DataType()

@@ -8,11 +8,21 @@
 
         public string Value { get; set; }
 
-        public ComparisonOperatorEnum LogicalOperator { get; set; }
+        public ComparisonOperatorEnum ComparisonOperator { get; set; }
+
+        public ComparisonExpression() { }
+
+        public ComparisonExpression(estring tableName, estring columnName, string value, ComparisonOperatorEnum comparisonOperator)
+        {
+            TableName = tableName;
+            ColumnName = columnName;
+            Value = value;
+            ComparisonOperator = comparisonOperator;
+        }
 
         public AbstractExpression Clone()
         {
-            return new ComparisonExpression() { TableName = TableName.Clone(), ColumnName = ColumnName.Clone(), Value = Value, LogicalOperator = LogicalOperator };
+            return new ComparisonExpression() { TableName = TableName.Clone(), ColumnName = ColumnName.Clone(), Value = Value, ComparisonOperator = ComparisonOperator };
         }
 
         public enum ComparisonOperatorEnum
