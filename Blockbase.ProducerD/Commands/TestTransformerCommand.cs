@@ -35,7 +35,7 @@ namespace Blockbase.ProducerD.Commands
         {
             RunSqlCommand("CREATE DATABASE database1;");
 
-            RunSqlCommand("CREATE TABLE table1 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, column2 ENCRYPTED 30 NOT NULL);");
+            RunSqlCommand("CREATE TABLE table1 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 30 NOT NULL);");
             RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
             RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
             RunSqlCommand("DROP TABLE table2;");
