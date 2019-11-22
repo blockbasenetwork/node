@@ -81,7 +81,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
                 for (int j = 0; j < columnNames.Count; j++)
                 {
                     if (j != 0) psqlString += ", ";
-                    psqlString += insertRecordStatement.ValuesPerColumn[columnNames[j]][i];
+                    psqlString += BuildString(insertRecordStatement.ValuesPerColumn[columnNames[j]][i]);
                 }
                 psqlString += " )";
             }
@@ -97,7 +97,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
             {
                 if (first) first = false;
                 else psqlString += ", ";
-                psqlString += keyValuePair.Key.GetFinalString() + " = " + keyValuePair.Value;
+                psqlString += keyValuePair.Key.GetFinalString() + " = " + BuildString(keyValuePair.Value);
             }
 
             if (updateRecordStatement.WhereClause != null)
@@ -242,7 +242,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
             if (expression is ComparisonExpression comparisonExpression)
                 return comparisonExpression.TableName.GetFinalString()+ "." + comparisonExpression.ColumnName.GetFinalString() + " "
                     + BuildString(comparisonExpression.ComparisonOperator) + " "
-                    + comparisonExpression.Value;
+                    + BuildString(comparisonExpression.Value);
 
             if (expression is LogicalExpression logicalExpression)
                 return BuildString(logicalExpression.LeftExpression) + " "
@@ -302,6 +302,12 @@ namespace BlockBase.Domain.Database.Sql.Generators
                 psqlString += ", " + foreignKeyClause.ColumnNames[i].GetFinalString();
             }
             return psqlString + " )";
+        }
+
+        public string BuildString(Value value)
+        {
+            if ((bool) value.IsText) return "'" + value.ValueToInsert + "'";
+            return value.ValueToInsert;
         }
 
         public string BuildString(ComparisonExpression.ComparisonOperatorEnum comparisonOperator)

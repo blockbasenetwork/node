@@ -145,7 +145,7 @@ namespace BlockBase.Domain.Database.QueryParser
             var insertRecordStatement = new InsertRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
-                ValuesPerColumn = new Dictionary<estring, IList<string>>()
+                ValuesPerColumn = new Dictionary<estring, IList<Value>>()
             };
 
             if (context.literal_value().Length % context.column_name().Length != 0)
@@ -155,11 +155,11 @@ namespace BlockBase.Domain.Database.QueryParser
             {
                 var columnName = (estring)Visit(context.column_name()[i].complex_name());
 
-                insertRecordStatement.ValuesPerColumn[columnName] = new List<string>();
+                insertRecordStatement.ValuesPerColumn[columnName] = new List<Value>();
 
                 for (int j = i; j < context.literal_value().Length; j += context.column_name().Length)
                 {
-                    insertRecordStatement.ValuesPerColumn[columnName].Add(context.literal_value()[j].GetText());
+                    insertRecordStatement.ValuesPerColumn[columnName].Add( new Value(context.literal_value()[j].GetText()));
                 }
             }
             return insertRecordStatement;
@@ -172,7 +172,7 @@ namespace BlockBase.Domain.Database.QueryParser
             var updateRecordStatement = new UpdateRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
-                ColumnNamesAndUpdateValues = new Dictionary<estring, string>()
+                ColumnNamesAndUpdateValues = new Dictionary<estring, Value>()
             };
 
             if (context.K_WHERE() != null)
@@ -186,7 +186,7 @@ namespace BlockBase.Domain.Database.QueryParser
             {
                 updateRecordStatement.ColumnNamesAndUpdateValues.Add(
                     (estring)Visit(context.column_name()[i].complex_name()),
-                    context.literal_value()[i].GetText()
+                    new Value(context.literal_value()[i].GetText())
                     );
             }
 
@@ -391,7 +391,7 @@ namespace BlockBase.Domain.Database.QueryParser
                 {
                     TableName = (estring) Visit(expr.table_name().complex_name()),
                     ColumnName = (estring)Visit(expr.column_name().complex_name()),
-                    Value = expr.literal_value().GetText(),
+                    Value = new Value(expr.literal_value().GetText()),
                     ComparisonOperator = GetLogicalOperatorFromString(exprString)
                 };
                 return comparisonExpression;

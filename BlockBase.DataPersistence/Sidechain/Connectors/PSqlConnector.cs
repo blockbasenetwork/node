@@ -78,7 +78,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
                 reader.Close();
                 
-                sqlQuery = @"DROP VIEW column_data_type_" + tableName + ";";
+                sqlQuery = $@"DROP VIEW {viewName};";
                 command = new NpgsqlCommand(sqlQuery, conn);
                 command.ExecuteNonQuery();
 
