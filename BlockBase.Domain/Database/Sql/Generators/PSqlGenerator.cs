@@ -81,7 +81,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
                 for (int j = 0; j < columnNames.Count; j++)
                 {
                     if (j != 0) psqlString += ", ";
-                    psqlString += insertRecordStatement.ValuesPerColumn[columnNames[j]][i];
+                    psqlString += BuildString(insertRecordStatement.ValuesPerColumn[columnNames[j]][i]);
                 }
                 psqlString += " )";
             }
@@ -97,7 +97,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
             {
                 if (first) first = false;
                 else psqlString += ", ";
-                psqlString += keyValuePair.Key.GetFinalString() + " = " + keyValuePair.Value;
+                psqlString += keyValuePair.Key.GetFinalString() + " = " + BuildString(keyValuePair.Value);
             }
 
             if (updateRecordStatement.WhereClause != null)
@@ -113,7 +113,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
             var psqlString = "DELETE FROM " + deleteRecordStatement.TableName.GetFinalString();
             if (deleteRecordStatement.WhereClause != null)
             {
-                psqlString += "WHERE " + BuildString(deleteRecordStatement.WhereClause);
+                psqlString += " WHERE " + BuildString(deleteRecordStatement.WhereClause);
             }
             return psqlString;
         }
@@ -241,8 +241,8 @@ namespace BlockBase.Domain.Database.Sql.Generators
         {
             if (expression is ComparisonExpression comparisonExpression)
                 return comparisonExpression.TableName.GetFinalString()+ "." + comparisonExpression.ColumnName.GetFinalString() + " "
-                    + BuildString(comparisonExpression.LogicalOperator) + " "
-                    + comparisonExpression.Value;
+                    + BuildString(comparisonExpression.ComparisonOperator) + " "
+                    + BuildString(comparisonExpression.Value);
 
             if (expression is LogicalExpression logicalExpression)
                 return BuildString(logicalExpression.LeftExpression) + " "
@@ -304,6 +304,12 @@ namespace BlockBase.Domain.Database.Sql.Generators
             return psqlString + " )";
         }
 
+        public string BuildString(Value value)
+        {
+            if ((bool) value.IsText) return "'" + value.ValueToInsert + "'";
+            return value.ValueToInsert;
+        }
+
         public string BuildString(ComparisonExpression.ComparisonOperatorEnum comparisonOperator)
         {
             switch (comparisonOperator)
@@ -318,7 +324,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
                     return "!=";
 
                 case ComparisonExpression.ComparisonOperatorEnum.Equal:
-                    return "==";
+                    return "=";
 
                 case ComparisonExpression.ComparisonOperatorEnum.SmallerOrEqualThan:
                     return "<=";
