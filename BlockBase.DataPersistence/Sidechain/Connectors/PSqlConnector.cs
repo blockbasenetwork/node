@@ -53,18 +53,19 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(databaseName)))
             {
                 conn.Open();
-                var sqlQuery = "CREATE VIEW column_data_type_" + tableName + @" AS SELECT c.column_name, c.data_type FROM pg_catalog.pg_statio_all_tables as st 
+                var viewName = "column_data_type_" + tableName;
+                var sqlQuery = $@"CREATE VIEW {viewName} AS SELECT c.column_name, c.data_type FROM pg_catalog.pg_statio_all_tables as st 
                     inner join pg_catalog.pg_description pgd on(pgd.objoid = st.relid)
                     right outer join information_schema.columns c on(pgd.objsubid = c.ordinal_position and c.table_schema = st.schemaname and c.table_name = st.relname)
-                    where table_schema = 'public' and table_name = '" + tableName + "';";
+                    where table_schema = 'public' and table_name = '{tableName}';";
 
 
                 var command = new NpgsqlCommand(sqlQuery, conn);
                 command.ExecuteNonQuery();
 
                 
-                sqlQuery = @"SELECT columnNameAndDataType.column_name,  CASE WHEN name_encrypted = true THEN 'encrypted' ELSE data_type END FROM columnNameAndDataType LEFT JOIN " + COLUMN_INFO_TABLE_NAME +
-                    " ON columnNameAndDataType.column_name = " + COLUMN_INFO_TABLE_NAME + "." + COLUMN_INFO_COLUMN_NAME;
+                sqlQuery = $@"SELECT {viewName}.column_name,  CASE WHEN name_encrypted = TRUE THEN 'encrypted' ELSE data_type END FROM {viewName} LEFT JOIN {COLUMN_INFO_TABLE_NAME}
+                        ON {viewName}.column_name = {COLUMN_INFO_TABLE_NAME}.{COLUMN_INFO_COLUMN_NAME};";
 
                 command = new NpgsqlCommand(sqlQuery, conn);
                 var reader = command.ExecuteReader();
@@ -75,7 +76,8 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 {
                     columnNamesAndDataTypes.Add(reader[0].ToString(), reader[1].ToString());
                 }
-
+                reader.Close();
+                
                 sqlQuery = @"DROP VIEW column_data_type_" + tableName + ";";
                 command = new NpgsqlCommand(sqlQuery, conn);
                 command.ExecuteNonQuery();

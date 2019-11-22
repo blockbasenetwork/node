@@ -204,17 +204,19 @@ namespace BlockBase.DataProxy.Encryption
             foreach (var column in GetTableColumnsWithoutBktAndIV(allTableColumnsAndEncryptedNameIndicator.Keys.ToList()))
             {
                 var isNameEncrypted = allTableColumnsAndEncryptedNameIndicator[column];
-
-                var renameColumnStatement = new RenameColumnStatement()
-                {
-                    TableName = renameTableStatement.NewTableName,
-                    ColumnName = new estring() { Value = isNameEncrypted ? null : column, EncryptedValue = isNameEncrypted ? column : null, ToEncrypt = false },
-                    NewColumnName = new estring( isNameEncrypted ? _encryptor.DecryptColumnName(databaseName.Value, renameTableStatement.TableName.Value, column.Substring(1)) : column,
-                                                 isNameEncrypted)
-                };
-
+                
+               
+                    var renameColumnStatement = new RenameColumnStatement()
+                    {
+                        TableName = renameTableStatement.NewTableName,
+                        ColumnName = new estring() { Value = isNameEncrypted ? null : column, EncryptedValue = isNameEncrypted ? column : null, ToEncrypt = false },
+                        NewColumnName = new estring(isNameEncrypted ? _encryptor.DecryptColumnName(databaseName.Value, renameTableStatement.TableName.Value, column.Substring(1)) : column,
+                                                     isNameEncrypted)
+                    };
+                
                 additionalColumns.AddRange(TransformAndGetAdditionalStatements(renameColumnStatement, databaseName, allTableColumnsAndEncryptedNameIndicator.Keys.ToList(), renameTableStatement.TableName));
-                additionalColumns.Add(renameColumnStatement);
+                if (isNameEncrypted) additionalColumns.Add(renameColumnStatement);
+                
                 
             }
             return additionalColumns;
@@ -227,13 +229,15 @@ namespace BlockBase.DataProxy.Encryption
 
             TransformColumnName(renameColumnStatement.NewColumnName, renameColumnStatement.TableName.Value, databaseName.Value);
 
-            additionalStatements.Add(GetUpdateColumnInfo(renameColumnStatement.NewColumnName, renameColumnStatement.ColumnName));
+            bool hasDifferentName = renameColumnStatement.ColumnName.GetFinalString() != renameColumnStatement.NewColumnName.GetFinalString();
+
+            if (hasDifferentName) additionalStatements.Add(GetUpdateColumnInfo(renameColumnStatement.NewColumnName, renameColumnStatement.ColumnName));
 
             var equalityBktColumnName = GetColumnWithPrefix(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns, _equalityBucketPrefix);
             var rangeBktColumnName = GetColumnWithPrefix(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns, _rangeBucketPrefix);
             var ivColumnName = GetColumnWithPrefix(renameColumnStatement.ColumnName.GetFinalString(), allTableColumns, _ivPrefix);
 
-            if (ivColumnName != null)
+            if (ivColumnName != null && hasDifferentName)
                 additionalStatements.Add(new RenameColumnStatement(renameColumnStatement.TableName, new estring(ivColumnName), new estring(CreateIVColumnName(renameColumnStatement.NewColumnName.GetFinalString()))));
 
             if (equalityBktColumnName != null)
@@ -285,7 +289,7 @@ namespace BlockBase.DataProxy.Encryption
 
             additionalStatements.Add( 
                 new DeleteRecordStatement(
-                COLUMN_INFO_TABLE_NAME, new ComparisonExpression(COLUMN_INFO_TABLE_NAME, COLUMN_INFO_COLUMN_NAME, dropColumnStatement.ColumnName.GetFinalString(), ComparisonOperatorEnum.Equal)
+                COLUMN_INFO_TABLE_NAME, new ComparisonExpression(COLUMN_INFO_TABLE_NAME, COLUMN_INFO_COLUMN_NAME, "'" + dropColumnStatement.ColumnName.GetFinalString() + "'", ComparisonOperatorEnum.Equal)
                 ));
 
             return additionalStatements;
@@ -438,8 +442,6 @@ namespace BlockBase.DataProxy.Encryption
         private Tuple<IList<ColumnDefinition>, InsertRecordStatement> TransformColumnDefinitionAndGetAdditionalColumnsAndInsertInfo(ColumnDefinition columnDefinition, estring tableName, string plainDatabaseName)
         {
             var additionalColumns = new List<ColumnDefinition>();
-            var plainColumnName = columnDefinition.ColumnName.Value;
-
             TransformColumnName(columnDefinition.ColumnName, tableName.Value, plainDatabaseName);
 
             var infoInsert = new InsertRecordStatement(COLUMN_INFO_TABLE_NAME);
@@ -588,33 +590,33 @@ namespace BlockBase.DataProxy.Encryption
 
         private string CreateIVColumnName(string columnName)
         {
-            return _ivPrefix + columnName;
+            return _ivPrefix + _separatingChar + columnName;
         }
         private string CreateEqualityBktColumnName(string columnName, int? size, string plainDatabaseName, string plainTableName)
         {
             var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size;
             var encryptedSizeAndRange = _encryptor.EncrypColumnName(plainDatabaseName, plainTableName, bucketColumnNameString);
-            return _equalityBucketPrefix + columnName + _separatingChar + encryptedSizeAndRange;
+            return _equalityBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange;
         }
         private string CreateRangeBktColumnName(string columnName, int? size, int? min, int? max, string plainDatabaseName, string plainTableName)
         {
             var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size + _separatingChar + min + _separatingChar + max;
             var encryptedSizeAndRange = _encryptor.EncrypColumnName(plainDatabaseName, plainTableName, bucketColumnNameString);
 
-            return _rangeBucketPrefix + columnName + _separatingChar + encryptedSizeAndRange;
+            return _rangeBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange;
         }
 
 
         private int GetBktSizeFromEqualityBktColumnName(string bktColumnName, string databaseName, string tableName)
         {
-            var encryptedBktSizeAndRange = bktColumnName.Split(_separatingChar)[2];
+            var encryptedBktSizeAndRange = bktColumnName.Split(new string[] { _separatingChar + _separatingChar, _separatingChar }, StringSplitOptions.None)[2];
             var bktSize = _encryptor.DecryptColumnName(databaseName, tableName, encryptedBktSizeAndRange).Split(_separatingChar);
 
             return Int32.Parse(bktSize[1]);
         }
         private Tuple<int, int, int> GetBktSizeAndRangeFromRangeBktColumnName(string bktColumnName, string databaseName, string tableName)
         {
-            var encryptedBktSizeAndRange = bktColumnName.Split(_separatingChar)[2];
+            var encryptedBktSizeAndRange = bktColumnName.Split(new string[] { _separatingChar + _separatingChar, _separatingChar }, StringSplitOptions.None)[2];
             var bktSizeAndRange = _encryptor.DecryptColumnName(databaseName, tableName, encryptedBktSizeAndRange).Split(_separatingChar);
 
             return new Tuple<int, int, int>(Int32.Parse(bktSizeAndRange[1]), Int32.Parse(bktSizeAndRange[2]), Int32.Parse(bktSizeAndRange[3]));
@@ -622,7 +624,7 @@ namespace BlockBase.DataProxy.Encryption
 
         public string GetColumnWithPrefix(string columnName, IList<string> allTableColumns, string prefix)
         {
-            return allTableColumns.Where(c => c.StartsWith(prefix + columnName)).SingleOrDefault();
+            return allTableColumns.Where(c => c.StartsWith(prefix + _separatingChar + columnName)).SingleOrDefault();
         }
         public IList<string> GetTableColumnsWithoutBktAndIV(IList<string> allTableColumns)
         {
