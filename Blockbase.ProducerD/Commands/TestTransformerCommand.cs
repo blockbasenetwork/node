@@ -42,17 +42,17 @@ namespace Blockbase.ProducerD.Commands
 
             RunSqlCommand("ALTER TABLE table1 RENAME TO newtable11");
             RunSqlCommand("ALTER TABLE newtable11 RENAME TO newtable1");
-            RunSqlCommand("ALTER TABLE newtable1 RENAME column2 TO newcolumn2");
+            RunSqlCommand("ALTER TABLE newtable1 RENAME !column2 TO column2");
             RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN !column3 int");
             RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
             RunSqlCommand("ALTER TABLE newtable1 DROP COLUMN column4");
 
-            RunSqlCommand("INSERT INTO newtable1(column1, newcolumn2, !column3) VALUES ( 1, 'bulha', 7 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 2, 'bulha', 5 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 3, 'pires', 10 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 4, 'fernando', 25 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 5, 'marcia', 26 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, newcolumn2, !column3) VALUES ( 6, 'marcia', 2 6)");
+            RunSqlCommand("INSERT INTO newtable1(column1, column2, !column3) VALUES ( 1, 'bulha', 7 )");
+            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 2, 'bulha', 5 )");
+            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 3, 'pires', 10 )");
+            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 4, 'fernando', 25 )");
+            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 5, 'marcia', 26 )");
+            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 6, 'marcia', 2 6)");
 
 
 
