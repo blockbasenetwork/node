@@ -19,6 +19,8 @@ namespace BlockBase.Network.Mainchain
         Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, string permission = "active");
         Task<string> StartCandidatureTime(string owner, string permission = "active");
         Task<int> ExecuteChainMaintainerAction(string actionname, string accountname, string permission = "active");
+        Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames,string permission = "active");
+        Task<string> LinkAuthorization(string actionName ,string accountname, string permission = "active");
 
         Task<ClientTable> RetrieveClientTable(string smartContractAccount);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string smartContractAccount);
@@ -37,6 +39,5 @@ namespace BlockBase.Network.Mainchain
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string account);
         Task<TokenAccountTable> RetrieveTokenBalance(string account);
-        bool IsCandidateInTable(List<CandidateTable> candidatesInTable);
     }
 }

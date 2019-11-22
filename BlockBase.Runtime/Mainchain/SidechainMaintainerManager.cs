@@ -50,13 +50,15 @@ namespace BlockBase.Runtime.Mainchain
                 {
                     _timeDiff = (_sidechain.NextStateWaitEndTime * 1000) - _timeToExecuteTrx - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     _logger.LogDebug($"timediff: {_timeDiff}");
-
+                    
                     if(_timeDiff <= 0) 
                     {
                         if (_previousWaitTime != _sidechain.NextStateWaitEndTime) await CheckContractEndState();
                         UpdateAverageTrxTime();
                         await CheckContractAndUpdateStates();
                         await CheckContractAndUpdateWaitTimes();
+                        //if(_sidechain.State == SidechainPoolStateEnum.IPSendTime) await UpdateAuthorization(_sidechain.SmartContractAccount);
+                        //if(_sidechain.State == SidechainPoolStateEnum.IPReceiveTime) await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SmartContractAccount);
                     }
                     else await Task.Delay((int)_timeDiff);
 
@@ -144,6 +146,15 @@ namespace BlockBase.Runtime.Mainchain
                 if (contractState.ProductionTime) _sidechain.State = SidechainPoolStateEnum.InitMining;
                 _sidechain.ProducingBlocks = contractState.ProductionTime;
             }
+        }
+
+        private async Task UpdateAuthorization(string accountName){
+            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.SmartContractAccount);
+            await _mainchainService.AuthorizationAssign(accountName, producerList);
+            
+        }
+        private async Task LinkAuthorizarion(string actionsName, string owner){
+            await _mainchainService.LinkAuthorization(actionsName, owner);
         }
 
         private void UpdateAverageTrxTime()

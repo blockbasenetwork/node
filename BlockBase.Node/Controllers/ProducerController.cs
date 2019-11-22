@@ -10,6 +10,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
 using System.Text;
+using System.Linq;
 using BlockBase.Utils.Crypto;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain.Pocos;
@@ -112,8 +113,7 @@ namespace BlockBase.Node.Controllers
                 var candidatureTable = await _mainchainService.RetrieveCandidates(chainName);
 
                 if (!contractStates.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time!"));
-
-                return Ok(new OperationResponse<bool>(_mainchainService.IsCandidateInTable(candidatureTable)));
+                return Ok(new OperationResponse<bool>(candidatureTable.Select(m => m.Key).Contains(NodeConfigurations.AccountName)));
             }
             catch (Exception e)
             {

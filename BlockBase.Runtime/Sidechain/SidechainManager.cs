@@ -510,9 +510,8 @@ namespace BlockBase.Runtime.Sidechain
         {
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SmartContractAccount);
             var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.SmartContractAccount);
-
-            if (Sidechain.State == SidechainPoolStateEnum.ConfigTime ||
-                (!IsProducerInTable(producersInTable) && ! _mainchainService.IsCandidateInTable(candidatesInTable)))
+            
+            if (Sidechain.State == SidechainPoolStateEnum.ConfigTime ||(!IsProducerInTable(producersInTable) && ! candidatesInTable.Select(m => m.Key).Contains(_nodeConfigurations.AccountName)))
             {
                 _logger.LogInformation("Smart Contract Ended");
 

@@ -184,7 +184,39 @@ namespace BlockBase.Network.Mainchain
 
             return (int)(timeAfterSend - timeBeforeSend);
         }
-            
+
+        public async Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string permission = "active"){
+            List<AuthorityAccount> accList = new List<AuthorityAccount>();
+            foreach(var producer in producersNames) {
+                AuthorityAccount authAcc = new AuthorityAccount();
+                authAcc.account = producer.Key; //TODO EOS SHARP WITH ERRORS, CHANGE TO PERMISSION_LEVEL WHEN CODE IS FIXED.
+                authAcc.weight = 1;
+                accList.Add(authAcc);
+            }
+            Authority newAutorization = new Authority();
+            newAutorization.keys = new List<AuthorityKey>();
+            newAutorization.waits = new List<AuthorityWait>();
+            newAutorization.accounts = accList;
+            newAutorization.threshold = 2;
+            return await Repeater.TryAgain(async() => await EosStub.SendTransaction(
+                EosMethodNames.UPDATEAUTH,
+                EosAtributeNames.EOSIO, 
+                accountname, 
+                CreateDataForUpdateAuthorization(accountname,EosMsigConstants.VERIFY_BLOCK_PERMISSION, permission, newAutorization),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+        }
+
+        public async Task<string> LinkAuthorization(string actionName ,string accountname, string permission = "active") =>
+            await Repeater.TryAgain(async() => await EosStub.SendTransaction(
+                EosMethodNames.LINKAUTH,
+                EosAtributeNames.EOSIO, 
+                accountname, 
+                CreateDataForLinkAuthorization(accountname,actionName),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );        
 
         #endregion
 
@@ -445,17 +477,26 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        #endregion
-
-        #region Auxiliar Methods
-        
-        public bool IsCandidateInTable(List<CandidateTable> candidatesInTable)
+        private Dictionary<string, object> CreateDataForUpdateAuthorization(string owner, string newPermission, string parentPermission, Authority newAuth)
         {
-            if (!candidatesInTable.Select(m => m.Key).Contains(NodeConfigurations.AccountName))
+            return new Dictionary<string, object>()
             {
-                return false;
-            }
-            return true;
+                { EosParameterNames.ACCOUNT, owner },
+                { EosParameterNames.PERMISSION, newPermission },
+                { EosParameterNames.PARENT, parentPermission },
+                { EosParameterNames.AUTH, newAuth },
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForLinkAuthorization(string owner,  string action )
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.ACCOUNT, owner },
+                { EosParameterNames.CODE, EosParameterNames.CONTRACT },
+                { EosParameterNames.TYPE, action },
+                { EosParameterNames.REQUIREMENT, EosMsigConstants.VERIFY_BLOCK_PERMISSION },
+            };
         }
 
         #endregion

@@ -54,6 +54,8 @@ namespace BlockBase.Domain.Eos
         public static readonly string I_AM_READY = "iamready";
         public static readonly string CLAIM_REWARD = "claimreward";
         public static readonly string EXIT_REQUEST = "exitrequest";
+        public static readonly string LINKAUTH = "linkauth";
+        public static readonly string UPDATEAUTH = "updateauth";
     }
 
     public class EosParameterNames
@@ -105,11 +107,19 @@ namespace BlockBase.Domain.Eos
         public static readonly string ENCRYPTED_IPS = "encryptedips";
         public static readonly string PROPOSAL_HASH = "proposal_hash";
         public static readonly string CLAIMER = "claimer";
-         public static readonly string CONTRACT = "contract";
+        public static readonly string CONTRACT = "contract";
+        public static readonly string ACCOUNT = "account";
+        public static readonly string PERMISSION = "permission";
+        public static readonly string PARENT = "parent";
+        public static readonly string AUTH = "auth";
+        public static readonly string CODE = "code";
+        public static readonly string TYPE = "type";
+        public static readonly string REQUIREMENT = "requirement";
     }
     public class EosAtributeNames
     {
         public static readonly string STATE_PRODUCTION_TIME = "productiontime";
         public static readonly string BLOCKBASE_TOKEN_ACRONYM = " BBT";
+        public static readonly string EOSIO = "eosio";
     }
 }
