@@ -13,6 +13,5 @@ namespace BlockBase.Domain.Configurations
         public int MaxNumberOfConnectionRetries { get; set; }
         public string BlockBaseOperationsContract { get; set; }
         public string BlockBaseTokenContract { get; set; }
-        public string HistoryNodeEndPoint { get; set; }
     }
 }
