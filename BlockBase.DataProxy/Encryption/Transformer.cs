@@ -380,15 +380,13 @@ namespace BlockBase.DataProxy.Encryption
                     columnValues.Value[i] = new Value(columnValues.Value[i].ValueToInsert, columnDataType == TEXT_KEY_WORD);
                 }
             }
-
             return additionalColumnsPerColumn;
-
         }
 
+        public void Transform(SimpleSelectStatement simpleSelectStatement, estring databaseName)
+        {
 
-
-
-        
+        }
 
         public void Transform(UpdateRecordStatement updateRecordStatement, estring databaseName)
         {
@@ -614,7 +612,6 @@ namespace BlockBase.DataProxy.Encryption
 
             return _rangeBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange;
         }
-
 
         private int GetBktSizeFromEqualityBktColumnName(string bktColumnName, string databaseName, string tableName)
         {

@@ -399,7 +399,9 @@ namespace BlockBase.Domain.Database.QueryParser
 
             if (exprString.Contains("(") && exprString.Contains(")"))
             {
-                return (AbstractExpression)Visit(expr.expr()[0]);
+                var exprWithParenthesis = (AbstractExpression)Visit(expr.expr()[0]);
+                exprWithParenthesis.HasParenthesis = true;
+                return exprWithParenthesis;
             }
 
             throw new FormatException("Expression not recognized.");

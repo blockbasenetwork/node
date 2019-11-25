@@ -36,12 +36,15 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                     " WHERE table_schema = 'public' AND table_name = '" + tableName + "';";
 
                 var command = new NpgsqlCommand(sqlQuery, conn);
-                var reader = command.ExecuteReader();
 
                 var columnNamesAndNameEncryptedIndicator = new Dictionary<string, bool>();
-                while (reader.Read())
+
+                using (var reader = command.ExecuteReader())
                 {
-                    columnNamesAndNameEncryptedIndicator.Add(reader[0].ToString(), bool.TryParse(reader[1].ToString(), out bool result) ? result : false);
+                    while (reader.Read())
+                    {
+                        columnNamesAndNameEncryptedIndicator.Add(reader[0].ToString(), bool.TryParse(reader[1].ToString(), out bool result) ? result : false);
+                    }
                 }
                 return columnNamesAndNameEncryptedIndicator;
             }
@@ -68,15 +71,17 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                         ON {viewName}.column_name = {COLUMN_INFO_TABLE_NAME}.{COLUMN_INFO_COLUMN_NAME};";
 
                 command = new NpgsqlCommand(sqlQuery, conn);
-                var reader = command.ExecuteReader();
+               
 
                 var columnNamesAndDataTypes = new Dictionary<string, string>();
 
-                while (reader.Read())
+                using (var reader = command.ExecuteReader())
                 {
-                    columnNamesAndDataTypes.Add(reader[0].ToString(), reader[1].ToString());
+                    while (reader.Read())
+                    {
+                        columnNamesAndDataTypes.Add(reader[0].ToString(), reader[1].ToString());
+                    }
                 }
-                reader.Close();
                 
                 sqlQuery = $@"DROP VIEW {viewName};";
                 command = new NpgsqlCommand(sqlQuery, conn);

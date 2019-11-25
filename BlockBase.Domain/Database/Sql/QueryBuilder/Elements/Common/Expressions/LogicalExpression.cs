@@ -4,13 +4,15 @@
     {
         public AbstractExpression LeftExpression { get; set; }
 
+        public bool HasParenthesis { get; set; }
+
         public AbstractExpression RightExpression { get; set; }
 
         public LogicalOperatorEnum LogicalOperator { get; set; }
 
         public AbstractExpression Clone()
         {
-            return new LogicalExpression() { LeftExpression = LeftExpression.Clone(), RightExpression = RightExpression.Clone(), LogicalOperator = LogicalOperator };
+            return new LogicalExpression() { LeftExpression = LeftExpression.Clone(), RightExpression = RightExpression.Clone(), LogicalOperator = LogicalOperator, HasParenthesis = HasParenthesis };
         }
 
         public enum LogicalOperatorEnum
