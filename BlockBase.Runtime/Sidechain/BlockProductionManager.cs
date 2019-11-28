@@ -177,6 +177,7 @@ namespace BlockBase.Runtime.Sidechain
                 PreviousBlockHash = previousBlockhash,
                 SequenceNumber = currentSequenceNumber,
                 Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
+                TransactionCount = (uint)transactions.Count(),
                 ProducerSignature = "",
                 MerkleRoot = MerkleTreeHelper.CalculateMerkleRootHash(transactions.Select(t => t.TransactionHash).ToList())
             };
