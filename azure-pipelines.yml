@@ -19,3 +19,9 @@ steps:
     publishWebProjects: false
     arguments: '--output $(build.artifactstagingdirectory)'
     zipAfterPublish: false
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'BlockBaseNode'
+    publishLocation: 'Container'
