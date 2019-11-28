@@ -24,9 +24,9 @@ namespace BlockBase.Domain.Protos {
     static NetworkMessageProtoReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChlOZXR3b3JrTWVzc2FnZVByb3RvLnByb3RvEhdCbG9ja2Jhc2UuRG9tYWlu",
+            "ChlOZXR3b3JrTWVzc2FnZVByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWlu",
             "LlByb3RvcyLQBgoTTmV0d29ya01lc3NhZ2VQcm90bxJfChJOZXR3b3JrTWVz",
-            "c2FnZVR5cGUYASABKA4yQy5CbG9ja2Jhc2UuRG9tYWluLlByb3Rvcy5OZXR3",
+            "c2FnZVR5cGUYASABKA4yQy5CbG9ja0Jhc2UuRG9tYWluLlByb3Rvcy5OZXR3",
             "b3JrTWVzc2FnZVByb3RvLk5ldHdvcmtNZXNzYWdlVHlwZUVudW0SDwoHVmVy",
             "c2lvbhgCIAEoBRIPCgdQYXlsb2FkGAMgASgMEhEKCVB1YmxpY0tleRgEIAEo",
             "CRIRCglTaWduYXR1cmUYBSABKAkSEwoLTWVzc2FnZUhhc2gYBiABKAwSEwoL",

@@ -24,7 +24,7 @@ namespace BlockBase.Domain.Protos {
     static TransactionProtoReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChZUcmFuc2FjdGlvblByb3RvLnByb3RvEhdCbG9ja2Jhc2UuRG9tYWluLlBy",
+            "ChZUcmFuc2FjdGlvblByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWluLlBy",
             "b3RvcyK5AQoQVHJhbnNhY3Rpb25Qcm90bxIXCg9UcmFuc2FjdGlvbkhhc2gY",
             "ASABKAwSEQoJU2lnbmF0dXJlGAIgASgJEhcKD1RyYW5zYWN0aW9uVHlwZRgD",
             "IAEoCRIRCglUaW1lc3RhbXAYBSABKAQSFgoOU2VxdWVuY2VOdW1iZXIYBiAB",

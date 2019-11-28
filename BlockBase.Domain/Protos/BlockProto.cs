@@ -24,11 +24,11 @@ namespace BlockBase.Domain.Protos {
     static BlockProtoReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChBCbG9ja1Byb3RvLnByb3RvEhdCbG9ja2Jhc2UuRG9tYWluLlByb3RvcxoW",
+            "ChBCbG9ja1Byb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWluLlByb3RvcxoW",
             "QmxvY2tIZWFkZXJQcm90by5wcm90bxoWVHJhbnNhY3Rpb25Qcm90by5wcm90",
             "byKNAQoKQmxvY2tQcm90bxI+CgtCbG9ja0hlYWRlchgBIAEoCzIpLkJsb2Nr",
-            "YmFzZS5Eb21haW4uUHJvdG9zLkJsb2NrSGVhZGVyUHJvdG8SPwoMVHJhbnNh",
-            "Y3Rpb25zGAIgAygLMikuQmxvY2tiYXNlLkRvbWFpbi5Qcm90b3MuVHJhbnNh",
+            "QmFzZS5Eb21haW4uUHJvdG9zLkJsb2NrSGVhZGVyUHJvdG8SPwoMVHJhbnNh",
+            "Y3Rpb25zGAIgAygLMikuQmxvY2tCYXNlLkRvbWFpbi5Qcm90b3MuVHJhbnNh",
             "Y3Rpb25Qcm90b2IGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::BlockBase.Domain.Protos.BlockHeaderProtoReflection.Descriptor, global::BlockBase.Domain.Protos.TransactionProtoReflection.Descriptor, },

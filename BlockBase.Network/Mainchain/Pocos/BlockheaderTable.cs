@@ -21,6 +21,9 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty("timestamp")]
         public uint Timestamp { get; set; }
 
+        [JsonProperty("transactionnumber")]
+        public uint NumberOfTransactions { get; set; }
+
         [JsonProperty("producer")]
         public string Producer { get; set; }
 

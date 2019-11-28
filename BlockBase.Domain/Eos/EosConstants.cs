@@ -91,6 +91,7 @@ namespace BlockBase.Domain.Eos
         public static readonly string PREVIOUS_BLOCK_HASH = "previousblockhash";
         public static readonly string SEQUENCE_NUMBER = "sequencenumber";
         public static readonly string TIMESTAMP = "timestamp";
+        public static readonly string NUMBER_OF_TRANSACTIONS = "transactionnumber";
         public static readonly string PRODUCER_SIGNATURE = "producersignature";
         public static readonly string IS_VERIFIED = "isverified";
         public static readonly string IS_LAST_BLOCK = "islastblock";
