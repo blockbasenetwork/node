@@ -25,6 +25,7 @@ steps:
   inputs:
     command: 'build'
     arguments: '--output $(build.artifactstagingdirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)/BlockBase.Node/'
 
 - task: CopyFiles@2
   inputs:
