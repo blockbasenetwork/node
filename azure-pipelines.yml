@@ -27,6 +27,13 @@ steps:
     arguments: '--output $(build.artifactstagingdirectory)'
     zipAfterPublish: false
 
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)/BlockBase.Node/'
+    Contents: 'appsettings.json'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/BlockBase.Node/'
+    OverWrite: true
+
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
