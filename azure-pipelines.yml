@@ -16,16 +16,15 @@ steps:
     feedsToUse: 'select'
     noCache: true
 
-- task: DotNetCoreCLI@2
+- task: UseDotNet@2
   inputs:
-    command: 'restore'
-  
+    packageType: 'sdk'
+    version: '2.1'
+
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
-    publishWebProjects: false
     arguments: '--output $(build.artifactstagingdirectory)'
-    zipAfterPublish: false
 
 - task: CopyFiles@2
   inputs:
