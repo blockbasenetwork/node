@@ -11,7 +11,10 @@ steps:
 
 - task: NuGetCommand@2
   inputs:
-    restoreSolution: '$(solution)'
+    command: 'restore'
+    restoreSolution: '**/*.sln'
+    feedsToUse: 'select'
+    noCache: true
 
 - task: DotNetCoreCLI@2
   inputs:
