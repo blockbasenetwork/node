@@ -1,5 +1,5 @@
 pool:
-  vmImage: 'windows-latest'
+  vmImage: 'ubuntu-latest'
 
 variables:
   solution: '**/*.sln'
@@ -24,7 +24,7 @@ steps:
   inputs:
     command: 'build'
     publishWebProjects: false
-    arguments: '--output $(build.artifactstagingdirectory) -r linux-x64'
+    arguments: '--output $(build.artifactstagingdirectory)'
     zipAfterPublish: false
 
 - task: PublishBuildArtifacts@1
