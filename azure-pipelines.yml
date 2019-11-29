@@ -15,6 +15,10 @@ steps:
 
 - task: DotNetCoreCLI@2
   inputs:
+    command: 'restore'
+  
+- task: DotNetCoreCLI@2
+  inputs:
     command: 'build'
     publishWebProjects: false
     arguments: '--output $(build.artifactstagingdirectory)'
