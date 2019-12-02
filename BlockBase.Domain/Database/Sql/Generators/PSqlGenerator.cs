@@ -100,9 +100,9 @@ namespace BlockBase.Domain.Database.Sql.Generators
                 psqlString += keyValuePair.Key.GetFinalString() + " = " + BuildString(keyValuePair.Value);
             }
 
-            if (updateRecordStatement.WhereClause != null)
+            if (updateRecordStatement.WhereExpression != null)
             {
-                psqlString += " WHERE " + BuildString(updateRecordStatement.WhereClause);
+                psqlString += " WHERE " + BuildString(updateRecordStatement.WhereExpression);
             }
 
             return psqlString;
@@ -239,17 +239,19 @@ namespace BlockBase.Domain.Database.Sql.Generators
         }
         public string BuildString(AbstractExpression expression)
         {
+            string exprString = "";
             if (expression is ComparisonExpression comparisonExpression)
-                return comparisonExpression.TableName.GetFinalString()+ "." + comparisonExpression.ColumnName.GetFinalString() + " "
+                exprString = comparisonExpression.TableName.GetFinalString()+ "." + comparisonExpression.ColumnName.GetFinalString() + " "
                     + BuildString(comparisonExpression.ComparisonOperator) + " "
                     + BuildString(comparisonExpression.Value);
 
-            if (expression is LogicalExpression logicalExpression)
-                return BuildString(logicalExpression.LeftExpression) + " "
+            else if (expression is LogicalExpression logicalExpression)
+                exprString = BuildString(logicalExpression.LeftExpression) + " "
                    + logicalExpression.LogicalOperator + " "
                    + BuildString(logicalExpression.RightExpression);
 
-            throw new FormatException("Expression type not recognized");
+            if (expression.HasParenthesis) return "(" + exprString + ")";
+            else return exprString;
         }
 
         public string BuildString(ColumnDefinition columnDefinition)
@@ -306,7 +308,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(Value value)
         {
-            if ((bool) value.IsText) return "'" + value.ValueToInsert + "'";
+            if (value.IsText ?? false) return "'" + value.ValueToInsert + "'";
             return value.ValueToInsert;
         }
 

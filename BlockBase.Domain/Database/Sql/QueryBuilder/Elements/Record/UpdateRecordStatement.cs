@@ -10,7 +10,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
         public estring TableName { get; set; }
         public Dictionary<estring, Value> ColumnNamesAndUpdateValues { get; set; }
 
-        public AbstractExpression WhereClause { get; set; }
+        public AbstractExpression WhereExpression { get; set; }
 
         public UpdateRecordStatement() { }
 
@@ -18,7 +18,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
         {
             TableName = tableName;
             ColumnNamesAndUpdateValues = columnNamesAndUpdateValues;
-            WhereClause = whereClause;
+            WhereExpression = whereClause;
         }
 
         public ISqlStatement Clone()
@@ -26,7 +26,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
             var updateRecordStatementClone = new UpdateRecordStatement()
             {
                 TableName = TableName.Clone(),
-                WhereClause = WhereClause.Clone(),
+                WhereExpression = WhereExpression.Clone(),
                 ColumnNamesAndUpdateValues = new Dictionary<estring, Value>()
             };
 
