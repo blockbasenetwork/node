@@ -22,7 +22,7 @@ namespace BlockBase.Network.Mainchain.Pocos
         public uint Timestamp { get; set; }
 
         [JsonProperty("transactionnumber")]
-        public uint NumberOfTransactions { get; set; }
+        public uint TransactionCount { get; set; }
 
         [JsonProperty("producer")]
         public string Producer { get; set; }

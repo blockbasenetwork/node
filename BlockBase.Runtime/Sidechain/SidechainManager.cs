@@ -136,6 +136,10 @@ namespace BlockBase.Runtime.Sidechain
             {
                 _logger.LogWarning("Sidechain Service stopped.", ex);
             }
+            catch (Exception ex)
+            {
+                _logger.LogCritical($"Sidechain Manager crashed. Exception: {ex}");
+            }
         }
 
         #region Switch Methods
@@ -492,10 +496,10 @@ namespace BlockBase.Runtime.Sidechain
             var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.SmartContractAccount);
             var lastBlockFromSettlement = await _mainchainService.RetrieveLastBlockFromLastSettlement(Sidechain.SmartContractAccount);
             if (Sidechain.State == SidechainPoolStateEnum.ConfigTime) Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (contractInfo.CandidatureTime / 2);
-            if (contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
-            if (contractInfo.SecretEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SecretEndDate;
-            if (contractInfo.SendEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SendEndDate;
-            if (contractInfo.ReceiveEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.ReceiveEndDate;
+            if (Sidechain.State == SidechainPoolStateEnum.CandidatureTime && contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
+            if (Sidechain.State == SidechainPoolStateEnum.SecretTime && contractInfo.SecretEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SecretEndDate;
+            if (Sidechain.State == SidechainPoolStateEnum.IPSendTime && contractInfo.SendEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SendEndDate;
+            if (Sidechain.State == SidechainPoolStateEnum.IPReceiveTime && contractInfo.ReceiveEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.ReceiveEndDate;
 
             if (!Sidechain.ProducingBlocks) return;
 

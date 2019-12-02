@@ -1,32 +1,28 @@
+using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Connectors;
 using BlockBase.Network.IO.Analysis;
+using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
-using BlockBase.Runtime.SidechainProducer;
+using BlockBase.Node;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
+using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
+using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Threading.Tasks;
-using Serilog;
-using System;
-using Serilog.Events;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore;
-using BlockBase.Node;
 using Microsoft.Extensions.Options;
-using System.Net;
-using BlockBase.DataPersistence;
-using BlockBase.Network.Mainchain;
-using BlockBase.DataPersistence.ProducerData;
-using Serilog.Sinks.SystemConsole.Themes;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Sinks.SystemConsole.Themes;
+using System;
+using System.IO;
+using System.Net;
 
-namespace Blockbase.Api
+namespace BlockBase.Api
 {
     public class ApiWebHostBuilder
     {
@@ -41,7 +37,7 @@ namespace Blockbase.Api
         {
             _webHostBuider.UseStartup<Startup>();
             _webHostBuider.UseSerilog();
-            
+
             _webHostBuider.ConfigureAppConfiguration((hostingContext, config) =>
              {
                  config.AddEnvironmentVariables();
@@ -67,7 +63,7 @@ namespace Blockbase.Api
                 services.Configure<NodeConfigurations>(configuration.GetSection("NodeConfigurations"));
                 services.Configure<MongoDBConfigurations>(configuration.GetSection("MongoDBConfigurations"));
                 services.AddOptions();
-                services.AddSingleton<SystemConfig>(s => 
+                services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(
                         IPAddress.Parse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.LocalIpAddress),
                         s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.LocalTcpPort
@@ -88,7 +84,7 @@ namespace Blockbase.Api
                 });
             });
 
-            _webHostBuider.ConfigureLogging((logging) => 
+            _webHostBuider.ConfigureLogging((logging) =>
             {
                 var configuration = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
@@ -102,7 +98,7 @@ namespace Blockbase.Api
                     .WriteTo.Console(theme: AnsiConsoleTheme.Code)
                     .WriteTo.File($"logs/ProducerD_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
                     .CreateLogger();
-                
+
                 logging.AddSerilog();
             });
 

@@ -33,7 +33,7 @@ namespace BlockBase.Domain.Protos {
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.BlockHeaderProto), global::BlockBase.Domain.Protos.BlockHeaderProto.Parser, new[]{ "BlockHash", "PreviousBlockHash", "Producer", "ProducerSignature", "MerkleRoot", "Timestamp", "SequenceNumber", "NumberOfTransactions" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.BlockHeaderProto), global::BlockBase.Domain.Protos.BlockHeaderProto.Parser, new[]{ "BlockHash", "PreviousBlockHash", "Producer", "ProducerSignature", "MerkleRoot", "Timestamp", "SequenceNumber", "TransactionCount" }, null, null, null)
           }));
     }
     #endregion
@@ -72,7 +72,7 @@ namespace BlockBase.Domain.Protos {
       merkleRoot_ = other.merkleRoot_;
       timestamp_ = other.timestamp_;
       sequenceNumber_ = other.sequenceNumber_;
-      numberOfTransactions_ = other.numberOfTransactions_;
+      transactionCount_ = other.transactionCount_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -158,14 +158,14 @@ namespace BlockBase.Domain.Protos {
       }
     }
 
-    /// <summary>Field number for the "NumberOfTransactions" field.</summary>
-    public const int NumberOfTransactionsFieldNumber = 8;
-    private uint numberOfTransactions_;
+    /// <summary>Field number for the "TransactionCount" field.</summary>
+    public const int TransactionCountFieldNumber = 8;
+    private uint transactionCount_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public uint NumberOfTransactions {
-      get { return numberOfTransactions_; }
+    public uint TransactionCount {
+      get { return transactionCount_; }
       set {
-        numberOfTransactions_ = value;
+        transactionCount_ = value;
       }
     }
 
@@ -189,7 +189,7 @@ namespace BlockBase.Domain.Protos {
       if (MerkleRoot != other.MerkleRoot) return false;
       if (Timestamp != other.Timestamp) return false;
       if (SequenceNumber != other.SequenceNumber) return false;
-      if (NumberOfTransactions != other.NumberOfTransactions) return false;
+      if (TransactionCount != other.TransactionCount) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -203,7 +203,7 @@ namespace BlockBase.Domain.Protos {
       if (MerkleRoot.Length != 0) hash ^= MerkleRoot.GetHashCode();
       if (Timestamp != 0UL) hash ^= Timestamp.GetHashCode();
       if (SequenceNumber != 0UL) hash ^= SequenceNumber.GetHashCode();
-      if (NumberOfTransactions != 0) hash ^= NumberOfTransactions.GetHashCode();
+      if (TransactionCount != 0) hash ^= TransactionCount.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -245,9 +245,9 @@ namespace BlockBase.Domain.Protos {
         output.WriteRawTag(56);
         output.WriteUInt64(SequenceNumber);
       }
-      if (NumberOfTransactions != 0) {
+      if (TransactionCount != 0) {
         output.WriteRawTag(64);
-        output.WriteUInt32(NumberOfTransactions);
+        output.WriteUInt32(TransactionCount);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -278,8 +278,8 @@ namespace BlockBase.Domain.Protos {
       if (SequenceNumber != 0UL) {
         size += 1 + pb::CodedOutputStream.ComputeUInt64Size(SequenceNumber);
       }
-      if (NumberOfTransactions != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(NumberOfTransactions);
+      if (TransactionCount != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(TransactionCount);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -313,8 +313,8 @@ namespace BlockBase.Domain.Protos {
       if (other.SequenceNumber != 0UL) {
         SequenceNumber = other.SequenceNumber;
       }
-      if (other.NumberOfTransactions != 0) {
-        NumberOfTransactions = other.NumberOfTransactions;
+      if (other.TransactionCount != 0) {
+        TransactionCount = other.TransactionCount;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -356,7 +356,7 @@ namespace BlockBase.Domain.Protos {
             break;
           }
           case 64: {
-            NumberOfTransactions = input.ReadUInt32();
+            TransactionCount = input.ReadUInt32();
             break;
           }
         }
