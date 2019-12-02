@@ -29,7 +29,7 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'publish'
-    arguments: '-c release --self-contained --runtime linux-x64 --framework netcoreapp2.1 --output $(build.artifactstagingdirectory)'
+    arguments: '--configuration release --runtime linux-x64 --framework netcoreapp2.1 --output $(build.artifactstagingdirectory)'
     workingDirectory: '$(Build.SourcesDirectory)/BlockBase.Node/'
 
 - task: CopyFiles@2
