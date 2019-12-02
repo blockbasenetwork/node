@@ -47,16 +47,19 @@ namespace Blockbase.ProducerD.Commands
             RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
             RunSqlCommand("ALTER TABLE newtable1 DROP COLUMN column4");
 
-            RunSqlCommand("INSERT INTO newtable1(column1, column2, !column3) VALUES ( 1, 'bulha', 7 )");
+            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 1, 'bulha', 7 )");
             RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 2, 'bulha', 5 )");
             RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 3, 'pires', 10 )");
             RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 4, 'fernando', 25 )");
             RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 5, 'marcia', 26 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 6, 'marcia', 2 6)");
+            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 6, 'marcia', 290)");
+
+            RunSqlCommand("UPDATE newtable1 SET !column3 = 20 where newtable1.column2 == 'bulha'");
+
+            //RunSqlCommand("SELECT newtable1.column1 FROM newtable1 WHERE newtable1.column2 == 'bulha';");
 
 
-
-            RunSqlCommand("DROP DATABASE database1;");
+            //RunSqlCommand("DROP DATABASE database1;");
         }
 
 
