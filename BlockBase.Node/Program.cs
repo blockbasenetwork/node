@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using Blockbase.Api;
+﻿using BlockBase.Api;
 using BlockBase.Extensions;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.SidechainProducer;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace BlockBase.Node
 {
@@ -27,11 +21,12 @@ namespace BlockBase.Node
 
             networkService.Run();
             sidechainProducerService.Run(!noRecover);
-            
+
             webHost.Run();
         }
 
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args){
+        public static IWebHostBuilder CreateWebHostBuilder(string[] args)
+        {
             var webHostBuilder = new ApiWebHostBuilder(args);
 
             var builder = webHostBuilder
