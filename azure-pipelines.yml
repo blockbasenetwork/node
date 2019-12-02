@@ -24,6 +24,11 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
+    workingDirectory: '$(Build.SourcesDirectory)/BlockBase.Node/'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'publish'
     arguments: '--output $(build.artifactstagingdirectory)'
     workingDirectory: '$(Build.SourcesDirectory)/BlockBase.Node/'
 
