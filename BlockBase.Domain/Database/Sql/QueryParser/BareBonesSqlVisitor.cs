@@ -179,11 +179,12 @@ namespace BlockBase.Domain.Database.QueryParser
                 if (context.K_WHERE() != null)
                 {
      
-                    updateRecordStatement.WhereClause = (AbstractExpression)Visit(context.expr());
+                    updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
                 }
 
             for (int i = 0; i < context.literal_value().Length; i++)
             {
+
                 updateRecordStatement.ColumnNamesAndUpdateValues.Add(
                     (estring)Visit(context.column_name()[i].complex_name()),
                     new Value(context.literal_value()[i].GetText())
@@ -418,11 +419,11 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitResult_column(Result_columnContext resultColumnContext)
         {
             CheckIfParserThrowedException(resultColumnContext);
-            var allColumns = resultColumnContext.column_name() == null;
+            var allColumns = resultColumnContext.table_column_name().column_name() == null;
             return new ResultColumn()
             {
-                ColumnName = !allColumns ? (estring)Visit(resultColumnContext.column_name().complex_name()) : null,
-                TableName = !allColumns ? (estring)Visit(resultColumnContext.table_name().complex_name()) : null,
+                ColumnName = !allColumns ? (estring)Visit(resultColumnContext.table_column_name().column_name().complex_name()) : null,
+                TableName = !allColumns ? (estring)Visit(resultColumnContext.table_column_name().table_name().complex_name()) : null,
                 AllColumnsfFlag = allColumns
             };
         }

@@ -79,7 +79,7 @@ select_core:
 
 ordering_term: expr ( K_ASC | K_DESC)?;
 
-result_column: '*' | table_name '.' column_name;
+result_column: '*' | table_column_name;
 
 table_or_subquery:
 	table_name
@@ -219,6 +219,8 @@ new_column_name: complex_name;
 database_name: complex_name;
 
 foreign_table: complex_name;
+
+table_column_name: table_name '.' column_name;
 
 any_name:
 	IDENTIFIER
