@@ -11,12 +11,19 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public JoinClause JoinClause { get; set; }
         public SimpleSelectStatement SimpleSelectStatement { get; set; }
 
+        public TableOrSubquery() { }
+
+        public TableOrSubquery(estring tableName)
+        {
+            TableName = tableName;
+        }
+
         public TableOrSubquery Clone()
         {
             return new TableOrSubquery()
             {
                 TableName = TableName?.Clone(),
-                TablesOrSubqueries = TablesOrSubqueries?.Select(t => (TableOrSubquery) t.Clone()).ToList(),
+                TablesOrSubqueries = TablesOrSubqueries?.Select(t => t.Clone()).ToList(),
                 JoinClause = JoinClause?.Clone(),
                 SimpleSelectStatement = (SimpleSelectStatement) SimpleSelectStatement?.Clone()
             };

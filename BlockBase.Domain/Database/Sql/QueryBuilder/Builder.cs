@@ -18,30 +18,6 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
             SqlStatementsPerDatabase = new Dictionary<estring, IList<ISqlStatement>>();
         }
 
-        public Builder Clone()
-        {
-            var builderClone = new Builder();
-
-            builderClone.SqlStatementsPerDatabase = new Dictionary<estring, IList<ISqlStatement>>();
-
-            foreach (var entry in SqlStatementsPerDatabase)
-            {
-                builderClone.SqlStatementsPerDatabase.Add(entry.Key.Clone(), new List<ISqlStatement>());
-                foreach (var sqlStatement in entry.Value)
-                {
-                    builderClone.SqlStatementsPerDatabase[entry.Key].Add(sqlStatement.Clone());
-                }
-            }
-
-            return builderClone;
-        }
-
-        // public SimpleSelectStatement AddSimpleSelectStatement(SimpleSelectStatement statment)
-        // {
-        //     _sqlStatements.Add(statment);
-        //     return statment;
-        // }
-
         public Builder AddStatement(ISqlStatement statment, estring databaseName)
         {
             if (!SqlStatementsPerDatabase.ContainsKey(databaseName))
