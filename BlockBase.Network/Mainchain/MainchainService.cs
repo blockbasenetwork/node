@@ -28,7 +28,7 @@ namespace BlockBase.Network.Mainchain
             NodeConfigurations = nodeConfigurations.Value;
             NetworkConfigurations = networkConfigurations.Value;
             MongoDBConfigurations = mongoDBConfigurations.Value;
-            
+
             _logger = logger;
             EosStub = new EosStub(NetworkConfigurations.ConnectionExpirationTimeInSeconds, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
         }
@@ -313,7 +313,7 @@ namespace BlockBase.Network.Mainchain
             var blocks = await RetrieveBlockCount(chain);
             return blocks;
         }
-        
+
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)
         {
             var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, proposerName), MAX_NUMBER_OF_TRIES);
@@ -521,9 +521,9 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<T> TryAgain<T>(Func<Task<OpResult<T>>> func, int maxTry)
         {
-            ApiErrorException exception = null;
+            Exception exception = null;
 
-            for (int i = 0; i < maxTry-1; i++)
+            for (int i = 0; i < maxTry - 1; i++)
             {
                 var opResult = await func.Invoke();
 
@@ -533,12 +533,15 @@ namespace BlockBase.Network.Mainchain
                 }
                 else
                 {
-                    exception = (ApiErrorException)opResult.Exception;
-                    _logger.LogDebug($"Send Transaction Try #{i+1} failed with error: {exception.error.name}");
+                    exception = opResult.Exception;
                 }
             }
 
-            _logger.LogCritical($"Error sending transaction: {exception.error.name}");
+            var errorMessage = exception is ApiErrorException apiException ?
+                        $"Error sending transaction: {apiException.error.name}" :
+                        $"Error sending transaction: {exception}";
+
+            _logger.LogCritical(errorMessage);
 
             throw exception;
         }
