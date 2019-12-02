@@ -1,9 +1,8 @@
-﻿using BlockBase.Domain.Configurations;
+﻿using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Domain.Configurations;
 using BlockBase.Extensions;
-using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain;
-using Blockbase.ProducerD.Commands;
+using BlockBase.TestsConsole.Commands;
 using BlockBase.Utils;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Hosting;
@@ -12,10 +11,8 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence;
-using BlockBase.DataPersistence.ProducerData;
 
-namespace Blockbase.ProducerD
+namespace BlockBase.TestsConsole
 {
     public class ProducerNode : IHostedService, IDisposable
     {
@@ -24,7 +21,7 @@ namespace Blockbase.ProducerD
         private readonly IOptions<DaemonConfig> _config;
         private readonly TaskContainer _commandManagerTask;
         private readonly IMongoDbProducerService _mongoDbProducerService;
-        private NodeConfigurations _nodeConfigurations;
+        private readonly NodeConfigurations _nodeConfigurations;
 
         public ProducerNode(IServiceProvider serviceProvider, ILogger<ProducerNode> logger, IOptions<DaemonConfig> config, IMongoDbProducerService mongoDbProducerService, IOptions<NodeConfigurations> nodeConfigurations)
         {
@@ -38,7 +35,7 @@ namespace Blockbase.ProducerD
 
             var networkService = _serviceProvider.Get<INetworkService>();
 
-            var commandManager = new CommandManager(_serviceProvider.Get<IOptions<ProducerTestConfigurations>>(),_serviceProvider.Get<IOptions<NetworkConfigurations>>(), _logger, systemConfig, networkService, _serviceProvider, _mongoDbProducerService, _nodeConfigurations);
+            var commandManager = new CommandManager(_serviceProvider.Get<IOptions<ProducerTestConfigurations>>(), _serviceProvider.Get<IOptions<NetworkConfigurations>>(), _logger, systemConfig, networkService, _serviceProvider, _mongoDbProducerService, _nodeConfigurations);
             _commandManagerTask = TaskContainer.Create(async () => await commandManager.RunAsync(), typeof(CommandManager).ToString());
         }
 

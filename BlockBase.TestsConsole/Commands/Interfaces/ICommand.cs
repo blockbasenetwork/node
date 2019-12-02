@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Blockbase.ProducerD.Commands.Interfaces
+namespace BlockBase.TestsConsole.Commands.Interfaces
 {
     public interface ICommand
     {

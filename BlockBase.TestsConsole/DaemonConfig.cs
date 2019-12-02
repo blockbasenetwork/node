@@ -1,4 +1,4 @@
-﻿namespace Blockbase.ProducerD
+﻿namespace BlockBase.TestsConsole
 {
     public class DaemonConfig
     {

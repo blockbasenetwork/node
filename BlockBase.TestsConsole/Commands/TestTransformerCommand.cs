@@ -1,26 +1,23 @@
 ﻿using Antlr4.Runtime;
-using BlockBase.Domain.Database.QueryParser;
-using BlockBase.Domain.Database.Sql.QueryParser;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy.Encryption;
-using Blockbase.ProducerD.Commands.Interfaces;
+using BlockBase.Domain.Database.QueryParser;
+using BlockBase.Domain.Database.Sql.Generators;
+using BlockBase.Domain.Database.Sql.QueryBuilder;
+using BlockBase.Domain.Database.Sql.QueryParser;
+using BlockBase.TestsConsole.Commands.Interfaces;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
-using BlockBase.Domain.Database.Sql.QueryBuilder;
-using BlockBase.Domain.Database.Sql.Generators;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 
-namespace Blockbase.ProducerD.Commands
+namespace BlockBase.TestsConsole.Commands
 {
-    class TestTransformerCommand : IHelperCommand
+    internal class TestTransformerCommand : IHelperCommand
     {
         private Transformer _transformer;
         private BareBonesSqlBaseVisitor<object> _visitor;
         private PSqlConnector _psqlConnector;
-        private ILogger _logger;
+        private readonly ILogger _logger;
 
         public TestTransformerCommand(ILogger logger)
         {
@@ -29,7 +26,6 @@ namespace Blockbase.ProducerD.Commands
             _transformer = new Transformer(_psqlConnector);
             _visitor = new BareBonesSqlVisitor();
         }
-
 
         public async Task ExecuteAsync()
         {
@@ -58,10 +54,8 @@ namespace Blockbase.ProducerD.Commands
 
             //RunSqlCommand("SELECT newtable1.column1 FROM newtable1 WHERE newtable1.column2 == 'bulha';");
 
-
             //RunSqlCommand("DROP DATABASE database1;");
         }
-
 
         private void RunSqlCommand(string plainSqlCommand)
         {

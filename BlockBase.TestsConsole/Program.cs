@@ -1,19 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using Microsoft.Extensions.Hosting;
 using System.Threading.Tasks;
-using BlockBase.Domain.Configurations;
-using BlockBase.Runtime;
-using BlockBase.Utils;
-using BlockBase.Utils.Threading;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Serilog;
-using Serilog.Events;
 
-namespace Blockbase.ProducerD
+namespace BlockBase.TestsConsole
 {
     internal class Program
     {

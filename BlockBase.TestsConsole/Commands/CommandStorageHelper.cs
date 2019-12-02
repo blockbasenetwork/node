@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Blockbase.ProducerD.Commands
+namespace BlockBase.TestsConsole.Commands
 {
     public class CommandStorageHelper
     {

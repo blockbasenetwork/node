@@ -1,7 +1,7 @@
-﻿using BlockBase.Domain.Configurations;
-using BlockBase.DataPersistence.ProducerData;
+﻿using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Domain.Configurations;
 using BlockBase.Runtime.Network;
-using Blockbase.ProducerD.Commands.Interfaces;
+using BlockBase.TestsConsole.Commands.Interfaces;
 using BlockBase.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Blockbase.ProducerD.Commands
+namespace BlockBase.TestsConsole.Commands
 {
     public class CommandManager
     {

@@ -1,28 +1,26 @@
-﻿using BlockBase.Domain.Configurations;
+﻿using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Domain.Configurations;
 using BlockBase.Network.Connectors;
 using BlockBase.Network.IO.Analysis;
+using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
-using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
+using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Threading.Tasks;
-using Serilog;
-using System;
-using Serilog.Events;
-using Blockbase.ProducerD.Commands;
 using Microsoft.Extensions.Options;
+using Serilog;
+using Serilog.Events;
+using System;
+using System.IO;
 using System.Net;
-using BlockBase.DataPersistence;
-using BlockBase.Network.Mainchain;
-using BlockBase.DataPersistence.ProducerData;
+using System.Threading.Tasks;
 
-namespace Blockbase.ProducerD
+namespace BlockBase.TestsConsole
 {
     public class RuntimeBuilder
     {
@@ -59,7 +57,7 @@ namespace Blockbase.ProducerD
                 services.Configure<NetworkConfigurations>(configuration.GetSection("NetworkConfigurations"));
                 services.Configure<NodeConfigurations>(configuration.GetSection("NodeConfigurations"));
                 services.AddOptions();
-                services.AddSingleton<SystemConfig>(s => 
+                services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(
                         IPAddress.Parse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.LocalIpAddress),
                         s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.LocalTcpPort
@@ -71,7 +69,7 @@ namespace Blockbase.ProducerD
                 });
             });
 
-            _hostBuider.ConfigureLogging((logging) => 
+            _hostBuider.ConfigureLogging((logging) =>
             {
                 Log.Logger = new LoggerConfiguration()
                     .MinimumLevel.Debug()
@@ -80,7 +78,7 @@ namespace Blockbase.ProducerD
                     .WriteTo.Console()
                     .WriteTo.File($"logs/ProducerD_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
                     .CreateLogger();
-                
+
                 logging.SetMinimumLevel(LogLevel.Debug);
                 logging.AddSerilog();
             });
@@ -114,7 +112,7 @@ namespace Blockbase.ProducerD
                 services.AddSingleton<BlockSender>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<PeerConnectionsHandler>();
-                services.AddSingleton<SidechainKeeper>(); 
+                services.AddSingleton<SidechainKeeper>();
                 services.AddSingleton<BlockValidator>();
                 services.AddSingleton<TransactionValidator>();
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
