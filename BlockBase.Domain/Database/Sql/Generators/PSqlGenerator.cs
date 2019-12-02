@@ -100,9 +100,9 @@ namespace BlockBase.Domain.Database.Sql.Generators
                 psqlString += keyValuePair.Key.GetFinalString() + " = " + BuildString(keyValuePair.Value);
             }
 
-            if (updateRecordStatement.WhereClause != null)
+            if (updateRecordStatement.WhereExpression != null)
             {
-                psqlString += " WHERE " + BuildString(updateRecordStatement.WhereClause);
+                psqlString += " WHERE " + BuildString(updateRecordStatement.WhereExpression);
             }
 
             return psqlString;

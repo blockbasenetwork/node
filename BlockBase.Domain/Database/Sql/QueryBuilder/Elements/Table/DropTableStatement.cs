@@ -6,7 +6,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
     {
         public estring TableName { get; set; }
 
-        ISqlStatement ISqlStatement.Clone()
+        public DropTableStatement Clone()
         {
             return new DropTableStatement() { TableName = TableName.Clone() };
         }

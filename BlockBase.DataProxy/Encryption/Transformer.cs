@@ -1,5 +1,6 @@
 ﻿using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
@@ -82,20 +83,20 @@ namespace BlockBase.DataProxy.Encryption
                             Transform(insertRecordStatement, entry.Key);
                             break;
 
-                            //case UpdateRecordStatement updateRecordStatement:
-                            //    Transform(updateRecordStatement, entry.Key.Value);
-                            //    break;
+                        case UpdateRecordStatement updateRecordStatement:
+                            Transform(updateRecordStatement, entry.Key);
+                            break;
 
                             //case DeleteRecordStatement deleteRecordStatement:
                             //    Transform(deleteRecordStatement, entry.Key.Value);
                             //break;
 
                             //case SimpleSelectStatement simpleSelectStatement:
-                            //    _transformer.Transform(simpleSelectStatement);
+                            //    Transform(simpleSelectStatement, entry.Key);
                             //    break;
 
                             //case SelectCoreStatement selectCoreStatement:
-                            //    _transformer.Transform(selectCoreStatement);
+                            //    Transform(selectCoreStatement, entry.Key);
                             //    break;
 
 
@@ -204,20 +205,20 @@ namespace BlockBase.DataProxy.Encryption
             foreach (var column in GetTableColumnsWithoutBktAndIV(allTableColumnsAndEncryptedNameIndicator.Keys.ToList()))
             {
                 var isNameEncrypted = allTableColumnsAndEncryptedNameIndicator[column];
-                
-               
-                    var renameColumnStatement = new RenameColumnStatement()
-                    {
-                        TableName = renameTableStatement.NewTableName,
-                        ColumnName = new estring() { Value = isNameEncrypted ? null : column, EncryptedValue = isNameEncrypted ? column : null, ToEncrypt = false },
-                        NewColumnName = new estring(isNameEncrypted ? _encryptor.DecryptColumnName(databaseName.Value, renameTableStatement.TableName.Value, column.Substring(1)) : column,
-                                                     isNameEncrypted)
-                    };
-                
+
+
+                var renameColumnStatement = new RenameColumnStatement()
+                {
+                    TableName = renameTableStatement.NewTableName,
+                    ColumnName = new estring() { Value = isNameEncrypted ? null : column, EncryptedValue = isNameEncrypted ? column : null, ToEncrypt = false },
+                    NewColumnName = new estring(isNameEncrypted ? _encryptor.DecryptColumnName(databaseName.Value, renameTableStatement.TableName.Value, column.Substring(1)) : column,
+                                                 isNameEncrypted)
+                };
+
                 additionalColumns.AddRange(TransformAndGetAdditionalStatements(renameColumnStatement, databaseName, allTableColumnsAndEncryptedNameIndicator.Keys.ToList(), renameTableStatement.TableName));
                 if (isNameEncrypted) additionalColumns.Add(renameColumnStatement);
-                
-                
+
+
             }
             return additionalColumns;
         }
@@ -287,7 +288,7 @@ namespace BlockBase.DataProxy.Encryption
             if (equalityBktColumnName != null) additionalStatements.Add(new DropColumnStatement(dropColumnStatement.TableName, new estring(equalityBktColumnName)));
             if (rangeBktColumnName != null) additionalStatements.Add(new DropColumnStatement(dropColumnStatement.TableName, new estring(rangeBktColumnName)));
 
-            additionalStatements.Add( 
+            additionalStatements.Add(
                 new DeleteRecordStatement(
                 COLUMN_INFO_TABLE_NAME, new ComparisonExpression(COLUMN_INFO_TABLE_NAME, COLUMN_INFO_COLUMN_NAME, new Value(dropColumnStatement.ColumnName.GetFinalString(), true), ComparisonOperatorEnum.Equal)
                 ));
@@ -350,7 +351,7 @@ namespace BlockBase.DataProxy.Encryption
 
             for (int i = 0; i < columnValues.Value.Count; i++)
             {
-               columnValues.Value[i].ValueToInsert.Trim('\'', '"');
+                columnValues.Value[i].ValueToInsert.Trim('\'', '"');
 
                 if (isEncrypted)
                 {
@@ -365,13 +366,13 @@ namespace BlockBase.DataProxy.Encryption
                         var equalityBktValue = new Value(CreateEqualityBktValue(equalityBktColumnNameString, columnValues.Value[i].ValueToInsert, plainDatabaseName, plainTableName, columnName.Value), true);
                         additionalColumnsPerColumn[equalityBktColumnName].Add(equalityBktValue);
 
-                        columnValues.Value[i] = new Value(TransformNormalValue(columnValues.Value[i].ValueToInsert, columnName.Value, plainTableName, out byte[] generatedIV), true);
+                        columnValues.Value[i] = TransformNormalValue(columnValues.Value[i].ValueToInsert, columnName.Value, plainTableName, out byte[] generatedIV);
                         additionalColumnsPerColumn[ivColumnName].Add(new Value(Base32Encoding.ZBase32.GetString(generatedIV), true));
                     }
 
                     else
                     {
-                        columnValues.Value[i] = new Value(TransformUniqueValue(columnValues.Value[i].ValueToInsert, columnName.Value, plainTableName), true);
+                        columnValues.Value[i] = TransformUniqueValue(columnValues.Value[i].ValueToInsert, columnName.Value, plainTableName);
                     }
                 }
 
@@ -383,70 +384,119 @@ namespace BlockBase.DataProxy.Encryption
             return additionalColumnsPerColumn;
         }
 
-        public void Transform(SimpleSelectStatement simpleSelectStatement, estring databaseName)
+        public IList<UpdateRecordStatement> Transform(UpdateRecordStatement updateRecordStatement, estring databaseName)
         {
+            var additionalStatements = new List<UpdateRecordStatement>();
 
-        }
-
-        public void Transform(UpdateRecordStatement updateRecordStatement, estring databaseName)
-        {
             TransformTableName(updateRecordStatement.TableName, databaseName.Value);
 
             byte[] generatedIV = new byte[16];
+
+
+            //GetNewWhereExpression(AbstractExpression whereClause, estring databaseName)
+
+
+            var tableColumnsAndDataTypes = _psqlConnector.GetAllTableColumnsAndDataTypes(updateRecordStatement.TableName.GetFinalString(), databaseName.GetFinalString());
+
 
             foreach (var entry in updateRecordStatement.ColumnNamesAndUpdateValues)
             {
 
                 TransformColumnName(entry.Key, updateRecordStatement.TableName.Value, databaseName.Value);
 
-                //updateRecordStatement.ColumnNamesAndUpdateValues[entry.Key] = TransformNormalValue(entry.Value.ValueToInsert, entry.Key.Value, updateRecordStatement.TableName.Value, out generatedIV);
-            }
+                if (tableColumnsAndDataTypes[entry.Key.GetFinalString()] == ENCRYPTED_KEY_WORD)
+                {
+                    var ivColumn = GetColumnWithPrefix(entry.Key.GetFinalString(), tableColumnsAndDataTypes.Keys.ToList(), _ivPrefix);
+                    if (ivColumn != null)
+                    {
+                        updateRecordStatement.ColumnNamesAndUpdateValues[entry.Key] = TransformNormalValue(entry.Value.ValueToInsert, entry.Key.Value, updateRecordStatement.TableName.Value, out generatedIV);
+                    }
+                    else
+                        updateRecordStatement.ColumnNamesAndUpdateValues[entry.Key] = TransformUniqueValue(entry.Value.ValueToInsert, entry.Key.Value, updateRecordStatement.TableName.Value);
 
-            TransformExpression(updateRecordStatement.WhereClause, null, updateRecordStatement.TableName.Value, databaseName);
+                }
+            }
+            return additionalStatements;
         }
-        private void TransformExpression(AbstractExpression expression, string columnName, string plainTableName, estring databaseName)
+
+        private void GetNewWhereExpression(AbstractExpression whereExpression, estring databaseName)
+        {
+            var additionalSelectStatement = new SelectCoreStatement();
+            var selectWhereExpression = TransformExpression(whereExpression, databaseName, additionalSelectStatement);
+            additionalSelectStatement.WhereExpression = selectWhereExpression;
+            var selectStatement = _psqlConnector.TransformQuery(additionalSelectStatement, databaseName);
+            var result = _psqlConnector.ExecuteQuery(selectStatement.Item2, selectStatement.Item1);
+
+
+
+        }
+
+
+        private AbstractExpression TransformExpression(AbstractExpression expression, estring databaseName, SelectCoreStatement selectCoreStatement)
         {
             switch (expression)
             {
                 case ComparisonExpression comparisonExpression:
-                    TransformComparisonExpression(comparisonExpression, databaseName);
-                    break;
+                    return TransformComparisonExpression(comparisonExpression, databaseName, selectCoreStatement);
 
                 case LogicalExpression logicalExpression:
-                    TransformExpression(logicalExpression.LeftExpression, columnName, plainTableName, databaseName);
-                    TransformExpression(logicalExpression.RightExpression, columnName, plainTableName, databaseName);
-                    break;
+                    var newLogicalExpression = (LogicalExpression) logicalExpression.Clone();
+                    newLogicalExpression.LeftExpression = TransformExpression(logicalExpression.LeftExpression, databaseName, selectCoreStatement);
+                    newLogicalExpression.RightExpression = TransformExpression(logicalExpression.RightExpression, databaseName, selectCoreStatement);
+                    return newLogicalExpression;
 
             }
+            throw new FormatException("Expression not recognized.");
         }
-        private void TransformComparisonExpression(ComparisonExpression comparisonExpression, estring databaseName)
+        private AbstractExpression TransformComparisonExpression(ComparisonExpression comparisonExpression, estring databaseName, SelectCoreStatement selectCoreStatement)
         {
             TransformTableName(comparisonExpression.TableName, databaseName.Value);
 
             TransformColumnName(comparisonExpression.ColumnName, comparisonExpression.TableName.Value, databaseName.Value);
 
-            var alltablecolumns = _psqlConnector.GetAllTableColumnsAndNameEncryptedIndicator(comparisonExpression.TableName.GetFinalString(), databaseName.GetFinalString());
+            var tableColumnsAndDataTypes = _psqlConnector.GetAllTableColumnsAndDataTypes(comparisonExpression.TableName.GetFinalString(), databaseName.GetFinalString());
 
-            //var ivColumn = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), alltablecolumns, _ivPrefix);
-            //var equalityBktColumn = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), alltablecolumns, _equalityBucketPrefix);
-            //var rangeBktColumn = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), alltablecolumns, _rangeBucketPrefix);
-
-            //comparisonExpression.Value = TransformNormalValue(comparisonExpression.Value.ValueToInsert, comparisonExpression.ColumnName.Value, comparisonExpression.TableName.Value, out byte[] generatedIV);
-
-
-        }
-
-        private List<ComparisonExpression> TransformEqualityExpression(ComparisonExpression comparisonExpression, string ivColumn, string bktColumn, estring databaseName)
-        {
-            var additionalComparisonExpressions = new List<ComparisonExpression>();
-
-            if (ivColumn != null)
+            if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Equal)
             {
-
+                return TransformEqualityExpression(comparisonExpression, databaseName, tableColumnsAndDataTypes, selectCoreStatement);
 
             }
 
-            return additionalComparisonExpressions;
+            else throw new NotImplementedException();
+        }
+
+        private AbstractExpression TransformEqualityExpression(ComparisonExpression comparisonExpression, estring databaseName, IDictionary<string, string> tableColumnsAndDataTypes, SelectCoreStatement selectCoreStatement)
+        {
+            if (tableColumnsAndDataTypes[comparisonExpression.ColumnName.GetFinalString()] == ENCRYPTED_KEY_WORD)
+            {
+                var equalityBktColumnName = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), tableColumnsAndDataTypes.Keys.ToList(), _equalityBucketPrefix);
+                var ivColumnName = GetColumnWithPrefix(comparisonExpression.ColumnName.GetFinalString(), tableColumnsAndDataTypes.Keys.ToList(), _ivPrefix);
+
+                if (equalityBktColumnName != null)
+                {
+                    return BuildSelectForNormalColumnWhereClause(selectCoreStatement, comparisonExpression.ColumnName, comparisonExpression.TableName, databaseName, comparisonExpression.Value.ValueToInsert, equalityBktColumnName, ivColumnName);
+                }
+                else
+                {
+                    var newComparisonExpr = (ComparisonExpression) comparisonExpression.Clone();
+                    newComparisonExpr.Value = TransformUniqueValue(comparisonExpression.Value.ValueToInsert, comparisonExpression.ColumnName.Value, comparisonExpression.TableName.Value);
+                    return newComparisonExpr;
+                }
+            }
+            else return comparisonExpression.Clone();
+        }
+
+        private AbstractExpression BuildSelectForNormalColumnWhereClause(SelectCoreStatement selectCoreStatement, estring columnName, estring tableName, estring databaseName, string value, string equalityBktColumnName, string ivColumnName)
+        {
+            selectCoreStatement.TryAddTable(tableName);
+            selectCoreStatement.TryAddResultColumn(new TableAndColumnName(tableName, columnName));
+            selectCoreStatement.TryAddResultColumn(new TableAndColumnName(tableName, new estring(ivColumnName, false)));
+
+            return new ComparisonExpression(
+                tableName,
+                new estring(equalityBktColumnName, false),
+                new Value(CreateEqualityBktValue(equalityBktColumnName, value, databaseName.Value, tableName.Value, columnName.Value), true),
+                ComparisonOperatorEnum.Equal);
         }
 
         private Tuple<IList<ColumnDefinition>, InsertRecordStatement> TransformColumnDefinitionAndGetAdditionalColumnsAndInsertInfo(ColumnDefinition columnDefinition, estring tableName, string plainDatabaseName)
@@ -455,7 +505,7 @@ namespace BlockBase.DataProxy.Encryption
             TransformColumnName(columnDefinition.ColumnName, tableName.Value, plainDatabaseName);
 
             var infoInsert = new InsertRecordStatement(COLUMN_INFO_TABLE_NAME);
-            infoInsert.ValuesPerColumn[COLUMN_INFO_COLUMN_NAME] = new List<Value>() { new Value(columnDefinition.ColumnName.GetFinalString(), true)};
+            infoInsert.ValuesPerColumn[COLUMN_INFO_COLUMN_NAME] = new List<Value>() { new Value(columnDefinition.ColumnName.GetFinalString(), true) };
             infoInsert.ValuesPerColumn[COLUMN_INFO_NAME_ENCRYPTED] = new List<Value>() { new Value(((columnDefinition.ColumnName.EncryptedValue != null) + "").ToUpper(), false) };
 
 
@@ -513,19 +563,19 @@ namespace BlockBase.DataProxy.Encryption
             }
         }
 
-        private string TransformNormalValue(string value, string columnName, string tableName, out byte[] generatedIV)
+        private Value TransformNormalValue(string value, string columnName, string tableName, out byte[] generatedIV)
         {
-            return _encryptor.EncryptNormalValue(value, columnName, tableName, out generatedIV);
+            return new Value(_encryptor.EncryptNormalValue(value, columnName, tableName, out generatedIV), true);
         }
-        private string TransformUniqueValue(string value, string columnName, string tableName)
+        private Value TransformUniqueValue(string value, string columnName, string tableName)
         {
-            return _encryptor.EncryptUniqueValue(tableName, columnName, value);
+            return new Value(_encryptor.EncryptUniqueValue(tableName, columnName, value), true);
         }
 
         private string CreateEqualityBktValue(string bktColumnName, string value, string plainDatabaseName, string plainTableName, string plainColumnName)
         {
             int bktSize = GetBktSizeFromEqualityBktColumnName(bktColumnName, plainDatabaseName, plainTableName);
-            return  _encryptor.GetEqualityBucket(plainTableName, plainColumnName, value, bktSize);
+            return _encryptor.GetEqualityBucket(plainTableName, plainColumnName, value, bktSize);
         }
         private string CreateRangeBktValue(string bktColumnName, string value, string plainDatabaseName, string plainTableName, string plainColumnName)
         {
@@ -646,7 +696,7 @@ namespace BlockBase.DataProxy.Encryption
                     { COLUMN_INFO_COLUMN_NAME, new Value(newColumnName.GetFinalString(), true)},
                     { COLUMN_INFO_NAME_ENCRYPTED, new Value( ((newColumnName.EncryptedValue != null) + "").ToUpper(), false)  }
                 },
-                WhereClause = new ComparisonExpression(COLUMN_INFO_TABLE_NAME, COLUMN_INFO_COLUMN_NAME, new Value(columnName.GetFinalString(), true), ComparisonOperatorEnum.Equal)
+                WhereExpression = new ComparisonExpression(COLUMN_INFO_TABLE_NAME, COLUMN_INFO_COLUMN_NAME, new Value(columnName.GetFinalString(), true), ComparisonOperatorEnum.Equal)
             };
         }
 

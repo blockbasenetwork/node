@@ -1,10 +1,13 @@
 ﻿using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using Microsoft.Extensions.Logging;
+using BlockBase.Domain.Database.Sql.QueryBuilder;
 using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using BlockBase.Domain.Database.Sql.Generators;
 
 namespace BlockBase.DataPersistence.Sidechain.Connectors
 {
@@ -23,8 +26,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             _serverConnectionString = "Server=" + serverName + ";User ID=" + user + ";Port=" + port + ";Password=" + password;
             _logger = logger;
         }
-
-
 
         public IDictionary<string, bool> GetAllTableColumnsAndNameEncryptedIndicator(string tableName, string databaseName)
         {
@@ -49,7 +50,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 return columnNamesAndNameEncryptedIndicator;
             }
         }
-
 
         public IDictionary<string, string> GetAllTableColumnsAndDataTypes(string tableName, string databaseName)
         {
@@ -92,7 +92,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         }
 
-
         public void ExecuteCommand(string sqlCommand, string databaseName)
         {
             var connectionString = _serverConnectionString;
@@ -104,6 +103,39 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 command.ExecuteNonQuery();
                 conn.Close();
             }
+        }
+
+        //TODO: Temporary, need to remove later
+        public Tuple<string, string> TransformQuery(SelectCoreStatement selectCoreStatement, estring databaseName)
+        {
+            var builder = new Builder();
+            builder.AddStatement(selectCoreStatement, databaseName);
+            return new Tuple<string, string>( builder.BuildQueryStrings(new PSqlGenerator()).SingleOrDefault().Key, builder.BuildQueryStrings(new PSqlGenerator()).SingleOrDefault().Value[0].Value);
+
+        }
+
+
+        public IList<IList<string>> ExecuteQuery(string sqlQuery, string databaseName)
+        {
+            var records = new List<IList<string>>();
+            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(databaseName)))
+            {
+                conn.Open();
+                var command = new NpgsqlCommand(sqlQuery, conn);
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var recordValues = new List<string>();
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            recordValues.Add(reader[i].ToString());
+                        }
+                        records.Add(recordValues);
+                    }
+                }
+            }
+            return records;
         }
 
         private string AddDatabaseNameToServerConnectionString(string databaseName)
