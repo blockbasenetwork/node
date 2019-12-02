@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BlockBase.Domain.Eos;
 using BlockBase.Domain.Enums;
 using System.Collections.Generic;
+using EosSharp.Core.Exceptions;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -37,28 +38,26 @@ namespace BlockBase.Runtime.Mainchain
             _logger = logger;
             _latestTrxTimes = new List<int>();
         }
-        
+
         public async Task SuperMethod()
         {
-            try 
+            try
             {
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.SmartContractAccount);
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
 
-                while (true) 
+                while (true)
                 {
                     _timeDiff = (_sidechain.NextStateWaitEndTime * 1000) - _timeToExecuteTrx - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     _logger.LogDebug($"timediff: {_timeDiff}");
-                    
-                    if(_timeDiff <= 0) 
+
+                    if (_timeDiff <= 0)
                     {
                         if (_previousWaitTime != _sidechain.NextStateWaitEndTime) await CheckContractEndState();
                         UpdateAverageTrxTime();
                         await CheckContractAndUpdateStates();
                         await CheckContractAndUpdateWaitTimes();
-                        //if(_sidechain.State == SidechainPoolStateEnum.IPSendTime) await UpdateAuthorization(_sidechain.SmartContractAccount);
-                        //if(_sidechain.State == SidechainPoolStateEnum.IPReceiveTime) await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SmartContractAccount);
                     }
                     else await Task.Delay((int)_timeDiff);
 
@@ -69,9 +68,13 @@ namespace BlockBase.Runtime.Mainchain
                     }
                 }
             }
-            catch (OperationCanceledException ex)
+            catch (OperationCanceledException)
             {
-                _logger.LogWarning("Contract manager stopped.", ex);
+                _logger.LogWarning("Contract manager stopped.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical($"Contract manager crashed. {ex}");
             }
         }
 
@@ -84,30 +87,32 @@ namespace BlockBase.Runtime.Mainchain
             var stateTable = await _mainchainService.RetrieveContractState(_sidechain.SmartContractAccount);
             int latestTrxTime = 0;
 
-            if(stateTable.CandidatureTime && 
+            if (stateTable.CandidatureTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
                 latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.SmartContractAccount);
             }
-            if(stateTable.SecretTime &&
+            if (stateTable.SecretTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME,_sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.SmartContractAccount);
+                //await UpdateAuthorization(_sidechain.SmartContractAccount);
             }
-            if(stateTable.IPSendTime &&
+            if (stateTable.IPSendTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME,_sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.SmartContractAccount);
+                //await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SmartContractAccount);
             }
-            if(stateTable.IPReceiveTime && 
+            if (stateTable.IPReceiveTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME,_sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.SmartContractAccount);
             }
-            if(stateTable.ProductionTime && 
+            if (stateTable.ProductionTime &&
                (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER,_sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SmartContractAccount);
             }
 
             if (latestTrxTime != 0) _latestTrxTimes.Append(latestTrxTime);
@@ -148,13 +153,22 @@ namespace BlockBase.Runtime.Mainchain
             }
         }
 
-        private async Task UpdateAuthorization(string accountName){
+        private async Task UpdateAuthorization(string accountName)
+        {
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.SmartContractAccount);
             await _mainchainService.AuthorizationAssign(accountName, producerList);
-            
         }
-        private async Task LinkAuthorizarion(string actionsName, string owner){
-            await _mainchainService.LinkAuthorization(actionsName, owner);
+        
+        private async Task LinkAuthorizarion(string actionsName, string owner)
+        {
+            try
+            {
+                await _mainchainService.LinkAuthorization(actionsName, owner);
+            }
+            catch (ApiErrorException)
+            {
+                _logger.LogDebug("Already linked authorization");
+            }
         }
 
         private void UpdateAverageTrxTime()
