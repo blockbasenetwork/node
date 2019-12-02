@@ -420,6 +420,7 @@ namespace BlockBase.Network.Mainchain
             {
                 { EosParameterNames.PROPOSER, proposerName },
                 { EosParameterNames.PROPOSAL_NAME, proposedTransactionName },
+                { EosParameterNames.PROPOSAL_HASH, proposalHash },
                 { EosParameterNames.PERMISSION_LEVEL, new PermissionLevel(){
                     actor = accountName,
                     permission = permission
