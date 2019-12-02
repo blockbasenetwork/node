@@ -196,7 +196,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task ProposeBlock(Block block)
         {
-            var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).ToList();
+            var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
 
             var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName, blockheaderEOS);
