@@ -304,7 +304,7 @@ namespace BlockBase.Domain.Database.QueryParser
             CheckIfParserThrowedException(foreignKeyClauseContext);
             return new ForeignKeyClause()
             {
-                ForeignTableName = (estring)Visit(foreignKeyClauseContext.foreign_table().complex_name()),
+                TableName = (estring)Visit(foreignKeyClauseContext.foreign_table().complex_name()),
                 ColumnNames = foreignKeyClauseContext.column_name().Select(c => (estring)Visit(c.complex_name())).ToList()
             };
         }
