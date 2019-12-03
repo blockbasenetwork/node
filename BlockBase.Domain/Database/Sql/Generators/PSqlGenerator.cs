@@ -14,22 +14,22 @@ namespace BlockBase.Domain.Database.Sql.Generators
     {
         public string BuildString(CreateDatabaseStatement createDatabaseStatement)
         {
-            return "CREATE DATABASE " + createDatabaseStatement.DatabaseName.GetFinalString();
+            return "CREATE DATABASE " + createDatabaseStatement.DatabaseName.Value;
         }
 
         public string BuildString(DropDatabaseStatement dropDatabaseStatement)
         {
-            return "DROP DATABASE " + dropDatabaseStatement.DatabaseName.GetFinalString();
+            return "DROP DATABASE " + dropDatabaseStatement.DatabaseName.Value;
         }
 
         public string BuildString(UseDatabaseStatement useDatabaseStatement)
         {
-            return "USE " + useDatabaseStatement.DatabaseName.GetFinalString();
+            return "USE " + useDatabaseStatement.DatabaseName.Value;
         }
 
         public string BuildString(CreateTableStatement createTableStatement)
         {
-            var psqlString = "CREATE TABLE " + createTableStatement.TableName.GetFinalString() + " ( " + BuildString(createTableStatement.ColumnDefinitions[0]);
+            var psqlString = "CREATE TABLE " + createTableStatement.TableName.Value + " ( " + BuildString(createTableStatement.ColumnDefinitions[0]);
             for (int i = 1; i < createTableStatement.ColumnDefinitions.Count; i++)
             {
                 psqlString += ", " + BuildString(createTableStatement.ColumnDefinitions[i]);
@@ -39,35 +39,35 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(AbstractAlterTableStatement alterTableStatement)
         {
-            var psqlString = "ALTER TABLE " + alterTableStatement.TableName.GetFinalString();
+            var psqlString = "ALTER TABLE " + alterTableStatement.TableName.Value;
 
             if (alterTableStatement is RenameTableStatement renameTableStatement)
-                psqlString += " RENAME TO " + renameTableStatement.NewTableName.GetFinalString();
+                psqlString += " RENAME TO " + renameTableStatement.NewTableName.Value;
             else if (alterTableStatement is AddColumnStatement addColumnStatement)
                 psqlString += " ADD COLUMN " + BuildString(addColumnStatement.ColumnDefinition);
             else if (alterTableStatement is DropColumnStatement dropColumnStatement)
-                psqlString += " DROP COLUMN " + dropColumnStatement.ColumnName.GetFinalString();
+                psqlString += " DROP COLUMN " + dropColumnStatement.ColumnName.Value;
             else if (alterTableStatement is RenameColumnStatement renameColumnStatement)
-                psqlString += " RENAME " + renameColumnStatement.ColumnName.GetFinalString() + " TO " + renameColumnStatement.NewColumnName.GetFinalString();
+                psqlString += " RENAME " + renameColumnStatement.ColumnName.Value + " TO " + renameColumnStatement.NewColumnName.Value;
             return psqlString;
         }
 
         public string BuildString(DropTableStatement dropTableStatement)
         {
-            return "DROP TABLE " + dropTableStatement.TableName.GetFinalString();
+            return "DROP TABLE " + dropTableStatement.TableName.Value;
         }
         
         //TODO: need to know the type of column to know if I add " or not
         public string BuildString(InsertRecordStatement insertRecordStatement)
         {
-            var psqlString = "INSERT INTO " + insertRecordStatement.TableName.GetFinalString() + " ( ";
+            var psqlString = "INSERT INTO " + insertRecordStatement.TableName.Value + " ( ";
 
             var columnNames = new List<estring>(insertRecordStatement.ValuesPerColumn.Keys);
 
             for (int i = 0; i < columnNames.Count; i++)
             {
                 if (i != 0) psqlString += ", ";
-                psqlString += columnNames[i].GetFinalString();
+                psqlString += columnNames[i].Value;
             }
             psqlString += " ) VALUES ";
 
@@ -90,14 +90,14 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(UpdateRecordStatement updateRecordStatement)
         {
-            var psqlString = "UPDATE " + updateRecordStatement.TableName.GetFinalString() + " SET ";
+            var psqlString = "UPDATE " + updateRecordStatement.TableName.Value + " SET ";
 
             var first = true;
             foreach (var keyValuePair in updateRecordStatement.ColumnNamesAndUpdateValues)
             {
                 if (first) first = false;
                 else psqlString += ", ";
-                psqlString += keyValuePair.Key.GetFinalString() + " = " + BuildString(keyValuePair.Value);
+                psqlString += keyValuePair.Key.Value + " = " + BuildString(keyValuePair.Value);
             }
 
             if (updateRecordStatement.WhereExpression != null)
@@ -110,7 +110,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(DeleteRecordStatement deleteRecordStatement)
         {
-            var psqlString = "DELETE FROM " + deleteRecordStatement.TableName.GetFinalString();
+            var psqlString = "DELETE FROM " + deleteRecordStatement.TableName.Value;
             if (deleteRecordStatement.WhereClause != null)
             {
                 psqlString += " WHERE " + BuildString(deleteRecordStatement.WhereClause);
@@ -201,19 +201,19 @@ namespace BlockBase.Domain.Database.Sql.Generators
             for (int i = 0; i < joinConstraint.ColumnNames.Count; i++)
             {
                 if (i != 0) psqlString += ", ";
-                psqlString += joinConstraint.ColumnNames[i].GetFinalString();
+                psqlString += joinConstraint.ColumnNames[i].Value;
             }
             return psqlString;
         }
         public string BuildString(ResultColumn resultColumn)
         {
             if (resultColumn.AllColumnsfFlag) return "*";
-            return resultColumn.TableName != null ? resultColumn.TableName.GetFinalString() + "." + resultColumn.ColumnName.GetFinalString()
-                : resultColumn.ColumnName.GetFinalString();
+            return resultColumn.TableName != null ? resultColumn.TableName.Value + "." + resultColumn.ColumnName.Value
+                : resultColumn.ColumnName.Value;
         }
         public string BuildString(TableOrSubquery tableOrSubquery)
         {
-            if (tableOrSubquery.TableName != null) return tableOrSubquery.TableName.GetFinalString();
+            if (tableOrSubquery.TableName != null) return tableOrSubquery.TableName.Value;
             if (tableOrSubquery.SimpleSelectStatement != null) return "( " + BuildString(tableOrSubquery.SimpleSelectStatement) + " )";
 
             var psqlString = "( ";
@@ -239,22 +239,24 @@ namespace BlockBase.Domain.Database.Sql.Generators
         }
         public string BuildString(AbstractExpression expression)
         {
+            string exprString = "";
             if (expression is ComparisonExpression comparisonExpression)
-                return comparisonExpression.TableName.GetFinalString()+ "." + comparisonExpression.ColumnName.GetFinalString() + " "
+                exprString = comparisonExpression.TableName.Value+ "." + comparisonExpression.ColumnName.Value + " "
                     + BuildString(comparisonExpression.ComparisonOperator) + " "
                     + BuildString(comparisonExpression.Value);
 
-            if (expression is LogicalExpression logicalExpression)
-                return BuildString(logicalExpression.LeftExpression) + " "
+            else if (expression is LogicalExpression logicalExpression)
+                exprString = BuildString(logicalExpression.LeftExpression) + " "
                    + logicalExpression.LogicalOperator + " "
                    + BuildString(logicalExpression.RightExpression);
 
-            throw new FormatException("Expression type not recognized");
+            if (expression.HasParenthesis) return "(" + exprString + ")";
+            else return exprString;
         }
 
         public string BuildString(ColumnDefinition columnDefinition)
         {
-            var psqlString = columnDefinition.ColumnName.GetFinalString() + " " + BuildString(columnDefinition.DataType.DataTypeName);
+            var psqlString = columnDefinition.ColumnName.Value + " " + BuildString(columnDefinition.DataType.DataTypeName);
             foreach (var columnConstraint in columnDefinition.ColumnConstraints)
             {
                 psqlString += BuildString(columnConstraint);
@@ -274,7 +276,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
             var psqlString = "";
 
             if (columnConstraint.Name != null)
-                psqlString += " CONSTRAINT " + columnConstraint.Name.GetFinalString();
+                psqlString += " CONSTRAINT " + columnConstraint.Name.Value;
 
             if (columnConstraint.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey)
                 return psqlString + " PRIMARY KEY";
@@ -296,17 +298,17 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(ForeignKeyClause foreignKeyClause)
         {
-            var psqlString = " REFERENCES " + foreignKeyClause.ForeignTableName.GetFinalString() + " ( " + foreignKeyClause.ColumnNames[0].GetFinalString();
+            var psqlString = " REFERENCES " + foreignKeyClause.TableName.Value + " ( " + foreignKeyClause.ColumnNames[0].Value;
             for (int i = 1; i < foreignKeyClause.ColumnNames.Count; i++)
             {
-                psqlString += ", " + foreignKeyClause.ColumnNames[i].GetFinalString();
+                psqlString += ", " + foreignKeyClause.ColumnNames[i].Value;
             }
             return psqlString + " )";
         }
 
         public string BuildString(Value value)
         {
-            if ((bool) value.IsText) return "'" + value.ValueToInsert + "'";
+            if (value.IsText ?? false) return "'" + value.ValueToInsert + "'";
             return value.ValueToInsert;
         }
 

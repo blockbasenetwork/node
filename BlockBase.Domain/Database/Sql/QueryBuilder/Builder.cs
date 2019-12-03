@@ -18,15 +18,25 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
             SqlStatementsPerDatabase = new Dictionary<estring, IList<ISqlStatement>>();
         }
 
-        public Builder AddStatement(ISqlStatement statment, estring databaseName)
+        public Builder AddStatement(ISqlStatement statement, estring databaseName)
         {
             if (!SqlStatementsPerDatabase.ContainsKey(databaseName))
                 SqlStatementsPerDatabase.Add(databaseName, new List<ISqlStatement>());
-            SqlStatementsPerDatabase[databaseName].Add(statment);
+            SqlStatementsPerDatabase[databaseName].Add(statement);
             return this;
         }
 
+        public Builder AddStatements(IList<ISqlStatement> statements, estring databaseName)
+        {
+            if (!SqlStatementsPerDatabase.ContainsKey(databaseName))
+                SqlStatementsPerDatabase.Add(databaseName, new List<ISqlStatement>());
 
+            foreach (var statement in statements)
+            {
+                SqlStatementsPerDatabase[databaseName].Add(statement);
+            }
+            return this;
+        }
 
         public Dictionary<string, IList<SqlCommand>> BuildQueryStrings(IGenerator generator)
         {
@@ -98,7 +108,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
 
                         });
                 }
-                sqlCommandsPerDatabase.Add(keyValue.Key.GetFinalString(), sqlCommands);
+                sqlCommandsPerDatabase.Add(keyValue.Key.Value, sqlCommands);
             }
             return sqlCommandsPerDatabase;
         }

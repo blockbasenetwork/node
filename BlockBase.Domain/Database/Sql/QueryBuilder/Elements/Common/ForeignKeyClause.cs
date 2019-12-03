@@ -5,13 +5,20 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
 {
     public class ForeignKeyClause
     {
-        public estring ForeignTableName { get; set; }
+        public estring TableName { get; set; }
 
         public IList<estring> ColumnNames { get; set; }
 
+        public ForeignKeyClause() { }
+
+        public ForeignKeyClause(estring tableName)
+        {
+            TableName = tableName;
+        }
+
         public ForeignKeyClause Clone()
         {
-            return new ForeignKeyClause() { ForeignTableName = ForeignTableName.Clone(), ColumnNames = ColumnNames.Select(c => c.Clone()).ToList() };
+            return new ForeignKeyClause() { TableName = TableName.Clone(), ColumnNames = ColumnNames.Select(c => c.Clone()).ToList() };
         }
     }
 }
