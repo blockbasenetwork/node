@@ -17,9 +17,9 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
             ColumnName = columnName;
         }
 
-        public string GetFinalString()
+        public override string ToString()
         {
-            return TableName.GetFinalString() + "." + ColumnName.GetFinalString();
+            return TableName.Value + "." + ColumnName.Value;
         }
 
         public TableAndColumnName Clone()
