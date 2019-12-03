@@ -15,4 +15,8 @@
     <ProjectReference Include="..\BlockBase.DataPersistence\BlockBase.DataPersistence.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Test\" />
+  </ItemGroup>
+
 </Project>

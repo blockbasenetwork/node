@@ -1,6 +1,5 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
-using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
@@ -166,7 +165,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
                 for (int j = i; j < context.literal_value().Length; j += context.column_name().Length)
                 {
-                    insertRecordStatement.ValuesPerColumn[columnName].Add( new Value(context.literal_value()[j].GetText()));
+                    insertRecordStatement.ValuesPerColumn[columnName].Add(new Value(context.literal_value()[j].GetText()));
                 }
             }
             return insertRecordStatement;
@@ -183,10 +182,9 @@ namespace BlockBase.Domain.Database.QueryParser
             };
 
             if (context.K_WHERE() != null)
-                if (context.K_WHERE() != null)
-                {
-                    updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
-                }
+            {
+                updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+            }
 
             for (int i = 0; i < context.literal_value().Length; i++)
             {
@@ -360,7 +358,7 @@ namespace BlockBase.Domain.Database.QueryParser
             var min = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[1].GetText());
             var max = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[2].GetText());
 
-            return new Tuple<int, int, int> (size, min, max);
+            return new Tuple<int, int, int>(size, min, max);
         }
 
         public override object VisitExpr(ExprContext expr)
@@ -388,13 +386,13 @@ namespace BlockBase.Domain.Database.QueryParser
             }
 
             var exprString = expr.GetText();
-            if ( expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null
+            if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null
                 && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
                 || exprString.Contains(">=") || exprString.Contains("==") || exprString.Contains("!=")))
             {
                 var comparisonExpression = new ComparisonExpression()
                 {
-                    TableName = (estring) Visit(expr.table_name().complex_name()),
+                    TableName = (estring)Visit(expr.table_name().complex_name()),
                     ColumnName = (estring)Visit(expr.column_name().complex_name()),
                     Value = new Value(expr.literal_value().GetText()),
                     ComparisonOperator = GetLogicalOperatorFromString(exprString)
