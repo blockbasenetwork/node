@@ -65,6 +65,21 @@ namespace BlockBase.Node.Controllers
         }
 
         [HttpPost]
+        public async Task<ObjectResult> EndChain()
+        {
+            try
+            {
+                var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
+
+                return Ok(new OperationResponse<bool>(true, $"Ended chain. Tx: {tx}"));
+            }
+            catch(Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        [HttpPost]
         public async Task<ObjectResult> ConfigureChain([FromBody]ContractInformationTable configuration)
         {
             try
