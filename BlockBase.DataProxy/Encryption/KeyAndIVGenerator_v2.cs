@@ -1,32 +1,32 @@
 ﻿using BlockBase.Utils.Crypto;
-using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace BlockBase.DataProxy.Encryption
 {
-    class KeyAndIVGenerator_v2
+    internal class KeyAndIVGenerator_v2
     {
-
-        private static string _password = "qwerty123";
         public const int AES_BLOCK_SIZE = 16;
         private const int AES_KEY_SIZE = 32;
-        public byte[] MasterKey;
 
-        public KeyAndIVGenerator_v2()
+        public byte[] CreateRandomKey()
         {
             using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
             {
-                MasterKey = new byte[AES_KEY_SIZE];
-                rngCryptoServiceProvider.GetBytes(MasterKey);
+                var key = new byte[AES_KEY_SIZE];
+                rngCryptoServiceProvider.GetBytes(key);
+                return key;
             }
-
         }
 
-        public byte[] CreateMasterIV()
+        public byte[] CreateDerivateKey(byte[] parentKey, byte[] parentIV)
         {
-            return Utils.Crypto.Utils.MD5(Utils.Crypto.Utils.SHA256(Encoding.ASCII.GetBytes(_password)));
+            return Utils.Crypto.Utils.SHA256(AES256.EncryptWithECB(parentIV, parentKey));
+        }
+
+        public byte[] CreateMasterIV(string password)
+        {
+            return Utils.Crypto.Utils.MD5(Utils.Crypto.Utils.SHA256(Encoding.ASCII.GetBytes(password)));
         }
 
         public byte[] CreateRandomIV()
@@ -38,7 +38,6 @@ namespace BlockBase.DataProxy.Encryption
                 return randomIV;
             }
         }
-
 
         private byte[] CreateKey(byte[] data, string key)
         {
