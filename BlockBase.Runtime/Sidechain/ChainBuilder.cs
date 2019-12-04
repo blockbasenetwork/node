@@ -204,7 +204,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                 var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.SmartContractAccount, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
-                _sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
+                //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
                 await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             }
             _blocksReceived.Clear();

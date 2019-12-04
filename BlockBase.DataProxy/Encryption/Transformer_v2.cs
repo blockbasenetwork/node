@@ -27,14 +27,13 @@ namespace BlockBase.DataProxy.Encryption
         private static readonly string TRUE_KEY_WORD = "TRUE";
         private static readonly string FALSE_KEY_WORD = "FALSE";
 
-        private static readonly estring INFO_TABLE_NAME = new estring("info", false);
-        private static readonly estring NAME = new estring("name", false);
-        private static readonly estring NAME_ENCRYPTED = new estring("name_encrypted", false);
-        private static readonly estring DATA_ENCRYPTED = new estring("data_encrypted", false);
-        private static readonly estring KEY_READ = new estring("key_read", false);
-        private static readonly estring KEY_MANAGE = new estring("key_manage", false);
-        private static readonly estring PARENT = new estring("parent", false);
-        private static readonly estring IV = new estring("iv", false);
+        private static readonly estring INFO_TABLE_NAME = new estring(InfoTableConstants.INFO_TABLE_NAME);
+        private static readonly estring NAME = new estring(InfoTableConstants.NAME);
+        private static readonly estring DATA_ENCRYPTED = new estring(InfoTableConstants.DATA_ENCRYPTED);
+        private static readonly estring KEY_READ = new estring(InfoTableConstants.KEY_READ);
+        private static readonly estring KEY_MANAGE = new estring(InfoTableConstants.KEY_MANAGE);
+        private static readonly estring PARENT = new estring(InfoTableConstants.PARENT);
+        private static readonly estring IV = new estring(InfoTableConstants.IV);
 
         private PSqlConnector _psqlConnector;
         private Encryptor _encryptor;
@@ -61,18 +60,18 @@ namespace BlockBase.DataProxy.Encryption
                     {
                         case CreateDatabaseStatement createDatabaseStatement:
                             transformedBuilder.AddStatements(
-                                GetTransformedCreateDatabaseStatement(createDatabaseStatement, transformedDatabaseName),
+                                GetTransformedCreateDatabaseStatement(createDatabaseStatement),
                                 transformedDatabaseName);
                             break;
 
                         case DropDatabaseStatement dropDatabaseStatement:
-                            transformedBuilder.AddStatement(GetTransformedDropDatabaseStatement(dropDatabaseStatement, transformedDatabaseName),
+                            transformedBuilder.AddStatement(GetTransformedDropDatabaseStatement(dropDatabaseStatement),
                                 transformedDatabaseName);
                             break;
 
                         case UseDatabaseStatement useDatabaseStatement:
                             transformedBuilder.AddStatement(
-                                GetTransformedUseDatabaseStatement(useDatabaseStatement, transformedDatabaseName),
+                                GetTransformedUseDatabaseStatement(useDatabaseStatement),
                                 transformedDatabaseName);
                             break;
 
@@ -96,22 +95,23 @@ namespace BlockBase.DataProxy.Encryption
         }
 
         //TODO: fix redundancy
-        private List<ISqlStatement> GetTransformedCreateDatabaseStatement(CreateDatabaseStatement _, estring databaseName)
+        private List<ISqlStatement> GetTransformedCreateDatabaseStatement(CreateDatabaseStatement createDatabaseStatement)
         {
+            //var encrypt
             return new List<ISqlStatement>()
             {
-                 new CreateDatabaseStatement(databaseName),
-                 CreateInfoTable(),
+                 new CreateDatabaseStatement(createDatabaseStatement.DatabaseName),
+                CreateInfoTable(),
 
             };
         }
-        private DropDatabaseStatement GetTransformedDropDatabaseStatement(DropDatabaseStatement _, estring databaseName)
+        private DropDatabaseStatement GetTransformedDropDatabaseStatement(DropDatabaseStatement dropDatabaseStatement)
         {
-            return new DropDatabaseStatement(databaseName);
+            return new DropDatabaseStatement(dropDatabaseStatement.DatabaseName);
         }
-        private UseDatabaseStatement GetTransformedUseDatabaseStatement(UseDatabaseStatement _, estring databaseName)
+        private UseDatabaseStatement GetTransformedUseDatabaseStatement(UseDatabaseStatement useDatabaseStatement)
         {
-            return new UseDatabaseStatement(databaseName);
+            return new UseDatabaseStatement(useDatabaseStatement.DatabaseName);
         }
 
         private IList<ISqlStatement> GetTransformedCreateTableStatement(CreateTableStatement createTableStatement, string plainDatabaseName)
@@ -150,7 +150,7 @@ namespace BlockBase.DataProxy.Encryption
             var infoRecord = new InfoRecord()
             {
                 Name = transformedColumnDefinition.ColumnName.Value,
-                IsNameEncrypted = columnDefinition.ColumnName.ToEncrypt
+                //IsNameEncrypted = columnDefinition.ColumnName.ToEncrypt
             };
 
             if (columnDefinition.DataType.DataTypeName == DataTypeEnum.ENCRYPTED)
@@ -170,7 +170,7 @@ namespace BlockBase.DataProxy.Encryption
                     columnDefinitions.Add(CreateEqualityBucketColumnDefinition(columnDefinition, transformedColumnDefinition, tableName.Value, plainDatabaseName));
                 }
 
-                if(columnDefinition.DataType.BucketInfo?.RangeBucketSize != null)
+                if (columnDefinition.DataType.BucketInfo?.RangeBucketSize != null)
                     columnDefinitions.Add(CreateRangeBucketColumnDefinition(columnDefinition, transformedColumnDefinition, tableName.Value, plainDatabaseName));
             }
 
@@ -260,16 +260,24 @@ namespace BlockBase.DataProxy.Encryption
             {
                 TableName = INFO_TABLE_NAME,
                 ColumnDefinitions = new List<ColumnDefinition>() {
-                    new ColumnDefinition( NAME, new DataType(DataTypeEnum.TEXT), new List<ColumnConstraint>() { new ColumnConstraint { ColumnConstraintType = ColumnConstraintTypeEnum.PrimaryKey } }),
-                    new ColumnDefinition( IV, new DataType(DataTypeEnum.TEXT), new List<ColumnConstraint>() { new ColumnConstraint { ColumnConstraintType = ColumnConstraintTypeEnum.NotNull } }),
+                    new ColumnDefinition( NAME, new DataType(DataTypeEnum.TEXT), new List<ColumnConstraint>() { new ColumnConstraint { ColumnConstraintType = ColumnConstraintTypeEnum.NotNull } }),
+                    new ColumnDefinition( IV, new DataType(DataTypeEnum.TEXT), new List<ColumnConstraint>() { new ColumnConstraint { ColumnConstraintType = ColumnConstraintTypeEnum.PrimaryKey } }),
                     new ColumnDefinition( PARENT, new DataType(DataTypeEnum.TEXT)),
-                    new ColumnDefinition( KEY_READ, new DataType(DataTypeEnum.TEXT), new List<ColumnConstraint>() { new ColumnConstraint { ColumnConstraintType = ColumnConstraintTypeEnum.NotNull } }),
+                    new ColumnDefinition( KEY_READ, new DataType(DataTypeEnum.TEXT)),
                     new ColumnDefinition( KEY_MANAGE, new DataType(DataTypeEnum.TEXT), new List<ColumnConstraint>() { new ColumnConstraint { ColumnConstraintType = ColumnConstraintTypeEnum.NotNull } }),
-                    new ColumnDefinition( NAME_ENCRYPTED, new DataType(DataTypeEnum.BOOL)),
                     new ColumnDefinition( DATA_ENCRYPTED, new DataType(DataTypeEnum.BOOL))
-
-                    }
+                   }
             };
+        }
+        private InfoRecord CreateDatabaseInfoRecord(estring databaseName)
+        {
+            var infoRecord = new InfoRecord();
+
+            return infoRecord;
+
+
+
+
         }
         private InsertRecordStatement CreateInsertRecordStatementForInfoTable(InfoRecord infoRecord)
         {
@@ -283,7 +291,6 @@ namespace BlockBase.DataProxy.Encryption
                     { PARENT, infoRecord.Parent != null ? new List<Value>() { new Value(infoRecord.Parent, true) } : null },
                     { KEY_READ, new List<Value>() { new Value(infoRecord.KeyRead, true) }  },
                     { KEY_MANAGE, new List<Value>() { new Value(infoRecord.KeyManage, true) }  },
-                    { NAME_ENCRYPTED, new List<Value>() { new Value((infoRecord.IsNameEncrypted + "").ToUpper(), false) }  },
                     { KEY_READ, new List<Value>() { new Value((infoRecord.IsDataEncrypted + "").ToUpper(), false) }  }
                 }
             };

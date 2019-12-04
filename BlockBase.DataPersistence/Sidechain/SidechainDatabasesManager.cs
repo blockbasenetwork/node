@@ -49,7 +49,7 @@ namespace BlockBase.DataPersistence.Sidechain
                 //        break;
                 //}
             }
-            Execute();
+            //Execute();
         }
 
         public void Build<T>(Transaction transaction) where T : ISqlOperation
@@ -60,35 +60,35 @@ namespace BlockBase.DataPersistence.Sidechain
             //Enqueue(UpdateRecordOperation, transaction.DatabaseName);
         }
 
-        public bool CheckMetaInfoExist(string databaseName)
-        {
-            return _connector.CheckIfMetaInfoTableExist(databaseName);
-        }
+        //public bool CheckMetaInfoExist(string databaseName)
+        //{
+        //    return _connector.CheckIfMetaInfoTableExist(databaseName);
+        //}
 
-        public void Enqueue(ISqlOperation operation, string databaseName)
-        {
-            _commandsToExecute.TryAdd(databaseName, new LinkedList<ISqlOperation>());
-            _commandsToExecute[databaseName].AddLast(operation);
-        }
+        //public void Enqueue(ISqlOperation operation, string databaseName)
+        //{
+        //    _commandsToExecute.TryAdd(databaseName, new LinkedList<ISqlOperation>());
+        //    _commandsToExecute[databaseName].AddLast(operation);
+        //}
 
-        public async Task CreateDatabase(string databaseName)
-        {
-            await _connector.CreateDatabase(databaseName);
-        }
+        //public async Task CreateDatabase(string databaseName)
+        //{
+        //    await _connector.CreateDatabase(databaseName);
+        //}
 
-        public void CreateMetaInfo(string databaseName)
-        {
-            _connector.CreateMetaInfo(databaseName);
-        }
+        //public void CreateMetaInfo(string databaseName)
+        //{
+        //    _connector.CreateMetaInfo(databaseName);
+        //}
 
-        public async Task<bool> CheckDatabase(string databaseName)
-        {
-            return await _connector.CheckDatabase(databaseName);
-        }
+        //public async Task<bool> CheckDatabase(string databaseName)
+        //{
+        //    return await _connector.CheckDatabase(databaseName);
+        //}
 
-        public async Task Execute()
-        {
-            await _connector.Execute(_commandsToExecute);
-        }
+        //public async Task Execute()
+        //{
+        //    await _connector.Execute(_commandsToExecute);
+        //}
     }
 }

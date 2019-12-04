@@ -106,7 +106,7 @@ namespace BlockBase.Runtime.Sidechain
                                     if (!await _mongoDbProducerService.IsBlockConfirmed(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
                                     {
                                         var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash);
-                                        _sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
+                                        //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
                                         await _mongoDbProducerService.ConfirmBlock(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash);
                                     }
                                 }

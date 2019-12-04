@@ -8,7 +8,7 @@ using Wiry.Base32;
 
 namespace BlockBase.DataProxy.Encryption
 {
-    class Encryptor
+    public class Encryptor
     {
         private KeyAndIVGenerator _keyAndIVGenerator;
 
