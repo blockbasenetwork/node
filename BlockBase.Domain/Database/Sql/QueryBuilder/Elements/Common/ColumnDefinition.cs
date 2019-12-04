@@ -13,7 +13,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
 
         public ColumnDefinition() { }
 
-        public ColumnDefinition(estring columnName, DataType dataType, List<ColumnConstraint> columnConstraints = null)
+        public ColumnDefinition(estring columnName, DataType dataType, IList<ColumnConstraint> columnConstraints = null)
         {
             ColumnName = columnName;
             DataType = dataType;             
