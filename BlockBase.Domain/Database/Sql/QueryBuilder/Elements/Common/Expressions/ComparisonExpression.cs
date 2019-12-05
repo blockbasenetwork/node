@@ -6,6 +6,8 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions
     {
         public estring TableName { get; set; }
 
+        public bool HasParenthesis { get; set; }
+
         public estring ColumnName { get; set; }
 
         public Value Value { get; set; }
