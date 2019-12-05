@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace BlockBase.Utils.Crypto
 {
@@ -44,6 +42,7 @@ namespace BlockBase.Utils.Crypto
             }
             return hash;
         }
+
         public static byte[] XorByteArray(byte[] a, byte[] b, int size)
         {
             var array1 = a;
@@ -66,12 +65,24 @@ namespace BlockBase.Utils.Crypto
             }
             return resultBuffer;
         }
+
         public static byte[] ConcatenateByteArray(byte[] a1, byte[] a2)
         {
             byte[] rv = new byte[a1.Length + a2.Length];
             System.Buffer.BlockCopy(a1, 0, rv, 0, a1.Length);
             System.Buffer.BlockCopy(a2, 0, rv, a1.Length, a2.Length);
             return rv;
+        }
+
+        public static bool AreByteArraysEqual(byte[] a1, byte[] a2)
+        {
+            if (a1.Length != a2.Length) return false;
+            for (int i = 0; i < a1.Length; i++)
+            {
+                if (a1[i] != a2[i]) return false;
+            }
+
+            return true;
         }
     }
 }
