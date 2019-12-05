@@ -43,11 +43,5 @@ namespace BlockBase.DataProxy.Encryption
         {
             return Utils.Crypto.Utils.SHA256(AES256.EncryptWithECB(data, Wiry.Base32.Base32Encoding.ZBase32.ToBytes(key)));
         }
-
-        private byte[] CreateKey(string data, string salt, string key)
-        {
-            var dataCorrectSize = new Rfc2898DeriveBytes(data, Wiry.Base32.Base32Encoding.ZBase32.ToBytes(salt)).GetBytes(32);
-            return CreateKey(dataCorrectSize, key);
-        }
     }
 }
