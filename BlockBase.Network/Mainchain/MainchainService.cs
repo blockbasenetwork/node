@@ -153,6 +153,16 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
+        public async Task<string> EndChain(string owner, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.END_CHAIN,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForDeferredTransaction(owner),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
         public async Task<string> StartCandidatureTime(string owner, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.START_CANDIDATURE_TIME,
@@ -420,11 +430,11 @@ namespace BlockBase.Network.Mainchain
             {
                 { EosParameterNames.PROPOSER, proposerName },
                 { EosParameterNames.PROPOSAL_NAME, proposedTransactionName },
-                { EosParameterNames.PROPOSAL_HASH, proposalHash },
                 { EosParameterNames.PERMISSION_LEVEL, new PermissionLevel(){
                     actor = accountName,
                     permission = permission
-                }}
+                }},
+                { EosParameterNames.PROPOSAL_HASH, proposalHash }
             };
         }
 
@@ -539,7 +549,7 @@ namespace BlockBase.Network.Mainchain
             }
 
             var errorMessage = exception is ApiErrorException apiException ?
-                        $"Error sending transaction: {apiException.error.name}" :
+                        $"Error sending transaction: {apiException.error.name} Trace: {exception}" :
                         $"Error sending transaction: {exception}";
 
             _logger.LogCritical(errorMessage);
