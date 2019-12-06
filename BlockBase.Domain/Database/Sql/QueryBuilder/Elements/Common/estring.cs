@@ -3,10 +3,12 @@
     public class estring
     {
         public string Value { get; set; }
-        public string EncryptedValue { get; set; }
         public bool ToEncrypt { get; set; }
 
-        public estring() { }
+        public estring()
+        {
+            ToEncrypt = false;
+        }
 
         public estring(string value, bool toEncrypt)
         {
@@ -14,20 +16,34 @@
             ToEncrypt = toEncrypt;
         }
 
-        public estring(string encryptedValue)
+        public estring(string value)
         {
-            EncryptedValue = encryptedValue;
+            Value = value;
             ToEncrypt = false;
         }
 
+
         public estring Clone()
         {
-            return new estring() { Value = Value, ToEncrypt = ToEncrypt, EncryptedValue = EncryptedValue };
+            return new estring() { Value = Value, ToEncrypt = ToEncrypt};
         }
 
-        public string GetFinalString()
+        public override bool Equals(object obj)
         {
-            return EncryptedValue ?? Value;
+            if ((obj == null) || !this.GetType().Equals(obj.GetType()))
+            {
+                return false;
+            }
+            else
+            {
+                estring e = (estring)obj;
+                return Value == e.Value && ToEncrypt == e.ToEncrypt;
+            }
+        }
+
+        public override int GetHashCode()
+        {
+            return (Value + ToEncrypt).GetHashCode();
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
-using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
@@ -20,6 +19,7 @@ namespace BlockBase.Domain.Database.QueryParser
     public class BareBonesSqlVisitor : BareBonesSqlBaseVisitor<object>
     {
         public estring DatabaseName { get; set; }
+
         public override object VisitSql_stmt_list([NotNull] Sql.QueryParser.BareBonesSqlParser.Sql_stmt_listContext context)
         {
             var builder = new Builder();
@@ -44,40 +44,44 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitUse_database_stmt(Use_database_stmtContext context)
         {
-            CheckIfParserThrowedException(context);
+            ThrowIfParserHasException(context);
             DatabaseName = (estring)Visit(context.database_name().complex_name());
             return new UseDatabaseStatement() { DatabaseName = DatabaseName };
         }
+
         public override object VisitCurrent_database_stmt(Current_database_stmtContext context)
         {
             throw new NotImplementedException();
         }
+
         public override object VisitList_databases_stmt(List_databases_stmtContext context)
         {
             throw new NotImplementedException();
         }
+
         public override object VisitGet_structure_stmt(Get_structure_stmtContext context)
         {
             throw new NotImplementedException();
         }
+
         public override object VisitCreate_database_stmt([NotNull] Create_database_stmtContext context)
         {
-            CheckIfParserThrowedException(context);
+            ThrowIfParserHasException(context);
             DatabaseName = (estring)Visit(context.database_name().complex_name());
             return new CreateDatabaseStatement() { DatabaseName = DatabaseName };
         }
+
         public override object VisitDrop_database_stmt([NotNull] Drop_database_stmtContext context)
         {
-            CheckIfParserThrowedException(context);
+            ThrowIfParserHasException(context);
             DatabaseName = null;
             return new DropDatabaseStatement() { DatabaseName = (estring)Visit(context.database_name().complex_name()) };
         }
 
-
         public override object VisitCreate_table_stmt(Create_table_stmtContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
 
             return new CreateTableStatement()
             {
@@ -85,16 +89,18 @@ namespace BlockBase.Domain.Database.QueryParser
                 ColumnDefinitions = context.column_def().Select(c => (ColumnDefinition)Visit(c)).ToList()
             };
         }
+
         public override object VisitDrop_table_stmt(Drop_table_stmtContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
             return new DropTableStatement() { TableName = (estring)Visit(context.table_name().complex_name()) };
         }
+
         public override object VisitAlter_table_stmt(Alter_table_stmtContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
 
             var tableNameEstring = (estring)Visit(context.table_name().complex_name());
             var newTableName = context.new_table_name();
@@ -140,8 +146,8 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitInsert_stmt(Insert_stmtContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
             var insertRecordStatement = new InsertRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
@@ -159,16 +165,16 @@ namespace BlockBase.Domain.Database.QueryParser
 
                 for (int j = i; j < context.literal_value().Length; j += context.column_name().Length)
                 {
-                    insertRecordStatement.ValuesPerColumn[columnName].Add( new Value(context.literal_value()[j].GetText()));
+                    insertRecordStatement.ValuesPerColumn[columnName].Add(new Value(context.literal_value()[j].GetText()));
                 }
             }
             return insertRecordStatement;
-
         }
+
         public override object VisitUpdate_stmt(Update_stmtContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
             var updateRecordStatement = new UpdateRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
@@ -176,11 +182,9 @@ namespace BlockBase.Domain.Database.QueryParser
             };
 
             if (context.K_WHERE() != null)
-                if (context.K_WHERE() != null)
-                {
-     
-                    updateRecordStatement.WhereClause = (AbstractExpression)Visit(context.expr());
-                }
+            {
+                updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+            }
 
             for (int i = 0; i < context.literal_value().Length; i++)
             {
@@ -192,22 +196,22 @@ namespace BlockBase.Domain.Database.QueryParser
 
             return updateRecordStatement;
         }
+
         public override object VisitDelete_stmt(Delete_stmtContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
             return new DeleteRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
                 WhereClause = context.expr() != null ? (AbstractExpression)Visit(context.expr()) : null
             };
-
         }
 
         public override object VisitSimple_select_stmt([NotNull] Simple_select_stmtContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
             var simpleSelectStatement = new SimpleSelectStatement()
             {
                 SelectCoreStatement = (SelectCoreStatement)Visit(context.select_core()),
@@ -221,10 +225,11 @@ namespace BlockBase.Domain.Database.QueryParser
 
             return simpleSelectStatement;
         }
+
         public override object VisitSelect_core(Select_coreContext context)
         {
-            CheckIfDatabaseAlreadyChosen();
-            CheckIfParserThrowedException(context);
+            ThrowIfDatabaseNameIsNull();
+            ThrowIfParserHasException(context);
             var selectCoreStatement = new SelectCoreStatement();
             if (context.K_DISTINCT() != null) selectCoreStatement.DistinctFlag = true;
 
@@ -239,13 +244,11 @@ namespace BlockBase.Domain.Database.QueryParser
             if (context.join_clause() != null) selectCoreStatement.JoinClause = (JoinClause)Visit(context.join_clause());
             if (context.expr() != null) selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
             return selectCoreStatement;
-
         }
-
 
         public override object VisitColumn_def(Column_defContext columnDefContext)
         {
-            CheckIfParserThrowedException(columnDefContext);
+            ThrowIfParserHasException(columnDefContext);
 
             var columnDef = new ColumnDefinition
             {
@@ -269,11 +272,11 @@ namespace BlockBase.Domain.Database.QueryParser
             }
 
             return columnDef;
-
         }
+
         public override object VisitColumn_constraint(Column_constraintContext columnConstraintContext)
         {
-            CheckIfParserThrowedException(columnConstraintContext);
+            ThrowIfParserHasException(columnConstraintContext);
             var columnConstraint = new ColumnConstraint()
             {
                 Name = columnConstraintContext.name() != null && columnConstraintContext.name().complex_name() != null ?
@@ -296,26 +299,27 @@ namespace BlockBase.Domain.Database.QueryParser
             else
                 throw new FormatException("Badly formatted column constraint.");
             return columnConstraint;
-
         }
+
         public override object VisitForeign_key_clause(Foreign_key_clauseContext foreignKeyClauseContext)
         {
-            CheckIfParserThrowedException(foreignKeyClauseContext);
+            ThrowIfParserHasException(foreignKeyClauseContext);
             return new ForeignKeyClause()
             {
-                ForeignTableName = (estring)Visit(foreignKeyClauseContext.foreign_table().complex_name()),
+                TableName = (estring)Visit(foreignKeyClauseContext.foreign_table().complex_name()),
                 ColumnNames = foreignKeyClauseContext.column_name().Select(c => (estring)Visit(c.complex_name())).ToList()
             };
         }
+
         public override object VisitComplex_name(Complex_nameContext complexNameContext)
         {
-            CheckIfParserThrowedException(complexNameContext);
+            ThrowIfParserHasException(complexNameContext);
             return new estring() { Value = complexNameContext.any_name().GetText(), ToEncrypt = complexNameContext.K_NOT_TO_ENCRYPT() == null };
         }
 
         public override object VisitData_type(Data_typeContext dataTypeContext)
         {
-            CheckIfParserThrowedException(dataTypeContext);
+            ThrowIfParserHasException(dataTypeContext);
             if (dataTypeContext.K_BOOL() != null) return new DataType() { DataTypeName = DataTypeEnum.BOOL };
             if (dataTypeContext.K_DATETIME() != null) return new DataType() { DataTypeName = DataTypeEnum.DATETIME };
             if (dataTypeContext.K_DECIMAL() != null) return new DataType() { DataTypeName = DataTypeEnum.DECIMAL };
@@ -328,7 +332,7 @@ namespace BlockBase.Domain.Database.QueryParser
                 var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED, BucketInfo = new BucketInfo() };
                 if (dataTypeContext.bucket_size() != null)
                 {
-                    dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_size().NUMERIC_LITERAL().GetText());                    
+                    dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_size().NUMERIC_LITERAL().GetText());
                 }
 
                 if (dataTypeContext.K_RANGE() != null)
@@ -348,20 +352,19 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitBucket_range(Bucket_rangeContext bucketRangeContext)
         {
-            CheckIfParserThrowedException(bucketRangeContext);
-         
+            ThrowIfParserHasException(bucketRangeContext);
+
             var size = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[0].GetText());
             var min = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[1].GetText());
             var max = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[2].GetText());
 
-            return new Tuple<int, int, int> (size, min, max);
-         
+            return new Tuple<int, int, int>(size, min, max);
         }
 
         public override object VisitExpr(ExprContext expr)
         {
-            CheckIfParserThrowedException(expr);
-           
+            ThrowIfParserHasException(expr);
+
             if (expr.K_AND() != null && expr.expr().Length == 2)
             {
                 return new LogicalExpression()
@@ -383,13 +386,13 @@ namespace BlockBase.Domain.Database.QueryParser
             }
 
             var exprString = expr.GetText();
-            if ( expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null 
+            if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null
                 && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
                 || exprString.Contains(">=") || exprString.Contains("==") || exprString.Contains("!=")))
             {
                 var comparisonExpression = new ComparisonExpression()
                 {
-                    TableName = (estring) Visit(expr.table_name().complex_name()),
+                    TableName = (estring)Visit(expr.table_name().complex_name()),
                     ColumnName = (estring)Visit(expr.column_name().complex_name()),
                     Value = new Value(expr.literal_value().GetText()),
                     ComparisonOperator = GetLogicalOperatorFromString(exprString)
@@ -407,7 +410,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitOrdering_term(Ordering_termContext orderingTermContext)
         {
-            CheckIfParserThrowedException(orderingTermContext);
+            ThrowIfParserHasException(orderingTermContext);
             return new OrderingTerm()
             {
                 Expression = (AbstractExpression)Visit(orderingTermContext.expr()),
@@ -417,18 +420,19 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitResult_column(Result_columnContext resultColumnContext)
         {
-            CheckIfParserThrowedException(resultColumnContext);
-            var allColumns = resultColumnContext.column_name() == null;
+            ThrowIfParserHasException(resultColumnContext);
+            var allColumns = resultColumnContext.table_column_name().column_name() == null;
             return new ResultColumn()
             {
-                ColumnName = !allColumns ? (estring)Visit(resultColumnContext.column_name().complex_name()) : null,
-                TableName = !allColumns ? (estring)Visit(resultColumnContext.table_name().complex_name()) : null,
+                ColumnName = !allColumns ? (estring)Visit(resultColumnContext.table_column_name().column_name().complex_name()) : null,
+                TableName = !allColumns ? (estring)Visit(resultColumnContext.table_column_name().table_name().complex_name()) : null,
                 AllColumnsfFlag = allColumns
             };
         }
+
         public override object VisitTable_or_subquery(Table_or_subqueryContext tableOrSubqueryContext)
         {
-            CheckIfParserThrowedException(tableOrSubqueryContext);
+            ThrowIfParserHasException(tableOrSubqueryContext);
             return new TableOrSubquery()
             {
                 TableName = (estring)Visit(tableOrSubqueryContext.table_name().complex_name()),
@@ -440,7 +444,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitJoin_clause(Join_clauseContext joinClauseContext)
         {
-            CheckIfParserThrowedException(joinClauseContext);
+            ThrowIfParserHasException(joinClauseContext);
             var joinClause = new JoinClause()
             {
                 TableOrSubquery = (TableOrSubquery)Visit(joinClauseContext.table_or_subquery()[0]),
@@ -462,7 +466,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitJoin_operator(Join_operatorContext joinOperatorContext)
         {
-            CheckIfParserThrowedException(joinOperatorContext);
+            ThrowIfParserHasException(joinOperatorContext);
             var joinOperatorEnumList = new List<JoinClause.JoinOperatorEnum>();
             if (joinOperatorContext.K_NATURAL() != null) joinOperatorEnumList.Add(JoinClause.JoinOperatorEnum.NATURAL);
             if (joinOperatorContext.K_LEFT() != null) joinOperatorEnumList.Add(JoinClause.JoinOperatorEnum.LEFT);
@@ -473,7 +477,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitJoin_constraint(Join_constraintContext joinConstraintContext)
         {
-            CheckIfParserThrowedException(joinConstraintContext);
+            ThrowIfParserHasException(joinConstraintContext);
             return new JoinClause.JoinConstraint()
             {
                 Expression = (AbstractExpression)Visit(joinConstraintContext.expr()),
@@ -484,6 +488,7 @@ namespace BlockBase.Domain.Database.QueryParser
         #endregion Visit Statements
 
         #region Auxiliar Methods
+
         private ComparisonExpression.ComparisonOperatorEnum GetLogicalOperatorFromString(string exprString)
         {
             if (exprString.Contains("<="))
@@ -502,12 +507,12 @@ namespace BlockBase.Domain.Database.QueryParser
             throw new FormatException("No comparison operator in string.");
         }
 
-        private void CheckIfDatabaseAlreadyChosen()
+        private void ThrowIfDatabaseNameIsNull()
         {
             if (DatabaseName == null) throw new FormatException("Please use or create a database first.");
         }
 
-        private void CheckIfParserThrowedException(ParserRuleContext context)
+        private void ThrowIfParserHasException(ParserRuleContext context)
         {
             if (context.exception != null) throw context.exception;
         }

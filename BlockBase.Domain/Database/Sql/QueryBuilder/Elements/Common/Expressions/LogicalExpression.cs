@@ -2,6 +2,8 @@
 {
     public class LogicalExpression : AbstractExpression
     {
+        public bool HasParenthesis { get; set; }
+
         public AbstractExpression LeftExpression { get; set; }
 
         public AbstractExpression RightExpression { get; set; }

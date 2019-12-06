@@ -37,6 +37,7 @@ namespace BlockBase.Domain.Eos
     public class EosMethodNames
     {
         public static readonly string START_CHAIN = "startchain";
+        public static readonly string END_CHAIN = "endservice";
         public static readonly string CONFIG_CHAIN = "configchain";
         public static readonly string START_CANDIDATURE_TIME = "startcandtime";
         public static readonly string START_SEND_TIME = "startsendtime";

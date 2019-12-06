@@ -9,6 +9,12 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database
     {
         public estring DatabaseName { get; set; }
 
+        public DropDatabaseStatement() { }
+        public DropDatabaseStatement(estring databaseName)
+        {
+            DatabaseName = databaseName;
+        }
+
         public ISqlStatement Clone()
         {
             return new DropDatabaseStatement() { DatabaseName = DatabaseName.Clone() };

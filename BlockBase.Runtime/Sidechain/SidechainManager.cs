@@ -1,18 +1,17 @@
-﻿using BlockBase.Domain;
+﻿using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Sidechain;
+using BlockBase.DataPersistence.Sidechain.Connectors;
+using BlockBase.Domain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Enums;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
-using BlockBase.DataPersistence;
-using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
-using BlockBase.DataPersistence.Sidechain;
-using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.Runtime.Network;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using BlockBase.Utils.Threading;
+using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -20,7 +19,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using EosSharp.Core.Exceptions;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -32,20 +30,21 @@ namespace BlockBase.Runtime.Sidechain
         //rpinto - this isn't thread safe. Anything that may be accessed from a different running thread must be thread safe.  -> done - marciak
         //private SidechainKeeper _sidechainKeeper;
         public SidechainPool Sidechain { get; set; }
+
         public TaskContainer TaskContainer { get; private set; }
         public string EndPoint { get; set; }
 
         private BlockProductionManager _blockProductionManager;
         private PeerConnectionsHandler _peerConnectionsHandler;
-        private INetworkService _networkService;
+        private readonly INetworkService _networkService;
         private IMainchainService _mainchainService;
         private long _timeDiff;
         private double _previousWaitTime;
         private readonly NetworkConfigurations _networkConfigurations;
         private readonly NodeConfigurations _nodeConfigurations;
         private ILogger _logger;
-        private IMongoDbProducerService _mongoDbProducerService;
-        private BlockSender _blockSender;
+        private readonly IMongoDbProducerService _mongoDbProducerService;
+        private readonly BlockSender _blockSender;
 
         private const uint MINIMUM_NUMBER_OF_CONNECTIONS = 1;
         private const uint CONNECTION_EXPIRATION_TIME_IN_SECONDS_MAINCHAIN = 60;
@@ -71,7 +70,9 @@ namespace BlockBase.Runtime.Sidechain
             _nodeConfigurations = nodeConfigurations;
             _mongoDbProducerService = mongoDbProducerService;
             _blockSender = blockSender;
-            IConnector connector = new MySqlConnector(_nodeConfigurations.MySqlServer, _nodeConfigurations.MySqlUser, _nodeConfigurations.MySqlPort, _nodeConfigurations.MySqlPassword, logger);
+            //TODO - commented this code in order to be able to remove completely the old Query Builder and its direct dependencies
+            //TODO - it should receive an IConnector passed through dependency injection
+            IConnector connector = null; // new MySqlConnector(_nodeConfigurations.MySqlServer, _nodeConfigurations.MySqlUser, _nodeConfigurations.MySqlPort, _nodeConfigurations.MySqlPassword, logger);
             _blockProductionManager = new BlockProductionManager(Sidechain, _nodeConfigurations, _logger, _networkService, _mainchainService, _mongoDbProducerService, EndPoint, _blockSender, new SidechainDatabasesManager(connector));
         }
 
@@ -159,7 +160,6 @@ namespace BlockBase.Runtime.Sidechain
 
             if (IsProducerInTable(producersInTable))
             {
-
                 var producersInPool = producersInTable.Select(m => new ProducerInPool
                 {
                     ProducerInfo = new ProducerInfo
@@ -176,7 +176,6 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
 
             _logger.LogDebug("State " + Sidechain.State);
-
         }
 
         private async Task InitCandidature()
@@ -294,13 +293,12 @@ namespace BlockBase.Runtime.Sidechain
 
             if (Sidechain.CandidatureOnStandby) return;
             if (Sidechain.ProducersInPool.GetEnumerable().Count(m => m.ProducerInfo.IPEndPoint != null) == 0) await ExtractAndUpdateIPs();
-            
+
             _logger.LogDebug("Starting block production manager.");
             _blockProductionManager.Start();
         }
 
         #endregion Switch Methods
-
 
         #region Auxiliar Methods
 
@@ -387,7 +385,6 @@ namespace BlockBase.Runtime.Sidechain
         private async Task ExtractAndUpdateIPs()
         {
             var ipAddresses = await _mainchainService.RetrieveIPAddresses(Sidechain.SmartContractAccount);
-            
 
             UpdateIPsInSidechain(ipAddresses);
 
@@ -401,7 +398,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task EncryptAndSendIPToSmartContract(List<string> producersPublicKeys, string clientPublicKey, string smartContractAccount)
         {
-            int numberOfIpsToSend = (int) Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
+            int numberOfIpsToSend = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
             var keysToUse = ListHelper.GetListSortedCountingFrontFromIndex(producersPublicKeys, producersPublicKeys.IndexOf(_nodeConfigurations.ActivePublicKey)).Take(numberOfIpsToSend).ToList();
             keysToUse.Add(clientPublicKey);
 
@@ -448,8 +445,8 @@ namespace BlockBase.Runtime.Sidechain
 
         private void UpdateIPsInSidechain(List<IPAddressTable> IpsAddressTableEntries)
         {
-            foreach( var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
-            
+            foreach (var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
+
             var producerIndex = IpsAddressTableEntries.FindIndex(m => m.Key == _nodeConfigurations.AccountName);
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
             _logger.LogDebug($"Updating {numberOfIpsToUpdate} ips.");
@@ -514,8 +511,8 @@ namespace BlockBase.Runtime.Sidechain
         {
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SmartContractAccount);
             var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.SmartContractAccount);
-            
-            if (Sidechain.State == SidechainPoolStateEnum.ConfigTime ||(!IsProducerInTable(producersInTable) && ! candidatesInTable.Select(m => m.Key).Contains(_nodeConfigurations.AccountName)))
+
+            if (Sidechain.State == SidechainPoolStateEnum.ConfigTime || (!IsProducerInTable(producersInTable) && !candidatesInTable.Select(m => m.Key).Contains(_nodeConfigurations.AccountName)))
             {
                 _logger.LogInformation("Smart Contract Ended");
 

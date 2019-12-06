@@ -11,7 +11,7 @@
     </PackageReference>
     <PackageReference Include="Antlr4.Runtime" Version="4.6.6" />
     <PackageReference Include="Dapper" Version="1.50.5" />
-    <PackageReference Include="eos-sharp" Version="2.0.6" />
+    <PackageReference Include="eos-sharp" Version="2.1.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.1.1" />
     <PackageReference Include="Wiry.Base32.Patched" Version="1.0.6.1" />
   </ItemGroup>

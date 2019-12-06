@@ -20,7 +20,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
             TablesOrSubqueries = new List<TableOrSubquery>();
         }
 
-        public ISqlStatement Clone()
+        public SelectCoreStatement Clone()
         {
             return new SelectCoreStatement()
             {
@@ -31,6 +31,31 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
                 WhereExpression = WhereExpression?.Clone(),
                 DistinctFlag = DistinctFlag
             };
+        }
+
+        public bool TryAddTable(estring tableName)
+        {
+            if (TablesOrSubqueries.Count(t => t.TableName.Value == tableName.Value) == 0)
+            {
+                TablesOrSubqueries.Add(new TableOrSubquery(tableName));
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryAddResultColumn(TableAndColumnName tableAndColumnName)
+        {
+            if (ResultColumns.Count(c => c.TableName.Value == tableAndColumnName.TableName.Value && c.ColumnName.Value == tableAndColumnName.ToString()) == 0)
+            {
+                ResultColumns.Add(new ResultColumn(tableAndColumnName.TableName, tableAndColumnName.ColumnName));
+                return true;
+            }
+            return false;
+        }
+
+        public void AddWhereClause(AbstractExpression expression)
+        {
+            WhereExpression = expression;
         }
     }
 }
