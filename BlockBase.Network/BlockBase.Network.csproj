@@ -4,7 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Dapper" Version="1.50.5"/>
-    <PackageReference Include="eos-sharp" Version="2.1.2"/>
     <PackageReference Include="Google.Protobuf" Version="3.6.1"/>
     <PackageReference Include="Google.Protobuf.Tools" Version="3.6.1"/>
     <PackageReference Include="Grpc.Tools" Version="1.17.0">
@@ -18,6 +17,8 @@
     <PackageReference Include="MongoDB.Driver.Core" Version="2.9.2"/>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\eos-sharp\EosSharp\EosSharp\EosSharp.csproj"/>
+    <ProjectReference Include="..\eos-sharp\EosSharp\EosSharp.Core\EosSharp.Core.csproj" />
     <ProjectReference Include="..\BlockBase.Domain\BlockBase.Domain.csproj"/>
     <ProjectReference Include="..\BlockBase.Utils\BlockBase.Utils.csproj"/>
     <ProjectReference Include="..\Open.P2P\Open.P2P.csproj"/>

@@ -4,7 +4,6 @@ using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
 using BlockBase.DataPersistence.Sidechain;
 using BlockBase.Runtime.Network;
 using BlockBase.Utils.Crypto;
@@ -54,7 +53,7 @@ namespace BlockBase.Runtime.Sidechain
             _nextTimeToCheckSmartContract = DateTime.UtcNow;
             _sidechainDatabaseManager = sidechainDatabaseManager;
             _chainBuilder = new ChainBuilder(logger, sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, nodeConfigurations, networkService, mainchainService, endPoint);
-            
+
         }
 
         //TODO: Probably a good idea to protect from having a task already running in instance and replace taskcontainer with a new one and have multiple threads running per instance
@@ -143,18 +142,15 @@ namespace BlockBase.Runtime.Sidechain
             uint currentSequenceNumber;
             byte[] previousBlockhash;
 
-
-            //TODO: this will disappear when we deal with the genesis block generation
             if (lastBlock != null)
             {
                 previousBlockhash = HashHelper.FormattedHexaStringToByteArray(lastBlock.BlockHash);
                 currentSequenceNumber = lastBlock.SequenceNumber + 1;
             }
-
             else
             {
                 currentSequenceNumber = 1;
-                previousBlockhash = HashHelper.Sha256Data(new byte[4]);
+                previousBlockhash = new byte[32];
             }
 
             var databaseName = _sidechainPool.SmartContractAccount;
@@ -162,9 +158,9 @@ namespace BlockBase.Runtime.Sidechain
             ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(databaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
 
-            foreach(var looseTransaction in allLooseTransactions)
+            foreach (var looseTransaction in allLooseTransactions)
             {
-                if(looseTransaction.SequenceNumber != lastSequenceNumber+1) break;
+                if (looseTransaction.SequenceNumber != lastSequenceNumber + 1) break;
                 lastSequenceNumber = looseTransaction.SequenceNumber;
                 transactions.Add(looseTransaction);
                 _logger.LogDebug($"Including transaction {lastSequenceNumber}");
@@ -200,20 +196,17 @@ namespace BlockBase.Runtime.Sidechain
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
 
             var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName, blockheaderEOS);
-            //_logger.LogDebug($"Block Producer: Add Block Transaction {addBlockTransaction}");
-                                    
-            var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
-            if(proposal != null) await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName,  EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
-                                    
-            var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
-            //_logger.LogDebug($"Block Producer: Proposed Verify Block Transaction {proposedTransaction}");
 
-            //_logger.LogDebug("Block Producer: Approving and Executing transaction");
+            var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+            if (proposal != null) await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+
+            var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
+
             proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
             await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
 
-            if (_sidechainPool.ProducersInPool.Count() == 1) 
+            if (_sidechainPool.ProducersInPool.Count() == 1)
                 await _mainchainService.ExecuteTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName);
         }
 

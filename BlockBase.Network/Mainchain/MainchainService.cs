@@ -208,8 +208,7 @@ namespace BlockBase.Network.Mainchain
             foreach (var producer in producersNames)
             {
                 AuthorityAccount authAcc = new AuthorityAccount();
-                authAcc.account = producer.Key;
-                //authAcc.permission = new PermissionLevel() { permission = accountPermission, actor = producer.Key };
+                authAcc.permission = new PermissionLevel() { permission = accountPermission, actor = producer.Key };
                 authAcc.weight = 1;
                 accList.Add(authAcc);
             }
@@ -243,6 +242,9 @@ namespace BlockBase.Network.Mainchain
         #endregion
 
         #region Table Retrievers
+
+        public async Task<GetTransactionResponse> RetrieveTransaction(string transactionId, string blockNumberHint = null) => 
+            await TryAgain(async () => await EosStub.GetTransaction(transactionId, blockNumberHint), MAX_NUMBER_OF_TRIES);
 
         public async Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ProducerInTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PRODUCERS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);

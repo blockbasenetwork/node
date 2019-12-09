@@ -74,6 +74,12 @@ namespace BlockBase.Network.Mainchain
             return opResult;
         }
 
+        public async Task<OpResult<GetTransactionResponse>> GetTransaction(string transactionId, string blockNumberHint = null)
+        {
+            var opResult = await Op.RunAsync(async () => await _eosConnection.GetTransaction(transactionId, blockNumberHint));
+            return opResult;
+        }
+
         public async Task<OpResult<List<TPoco>>> GetRowsFromSmartContractTable<TPoco>(string smartContractAccountName, string tableName, string scope = null)
         {
             var opResult = await Op.RunAsync(async () => (await _eosConnection.GetTableRows<TPoco>(

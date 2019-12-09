@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlockBase.Network.Mainchain.Pocos;
+using EosSharp.Core.Api.v1;
 
 namespace BlockBase.Network.Mainchain
 {
@@ -23,6 +24,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string permission = "active", string accountPermission = "active");
         Task<string> LinkAuthorization(string actionName ,string accountname, string permission = "active");
 
+        Task<GetTransactionResponse> RetrieveTransaction(string transactionId, string blockNumberHint = null);
         Task<ClientTable> RetrieveClientTable(string smartContractAccount);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string smartContractAccount);
         Task<List<CurrentProducerTable>> RetrieveCurrentProducer(string smartContractAccount);
