@@ -217,7 +217,7 @@ namespace BlockBase.Network.Mainchain
             newAutorization.keys = new List<AuthorityKey>();
             newAutorization.waits = new List<AuthorityWait>();
             newAutorization.accounts = accList;
-            newAutorization.threshold = 3;
+            newAutorization.threshold = (uint)(producersNames.Count() / 2) + 1;
 
             return await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.UPDATEAUTH,
