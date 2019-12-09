@@ -30,8 +30,8 @@ namespace BlockBase.Runtime.Sidechain
         private string _endPoint;
         private BlockSender _blockSender;
         private ChainBuilder _chainBuilder;
-        private DateTime _nextTimeToCheckSmartContract;
-        private DateTime _previousTimeToCheck;
+        private long _nextTimeToCheckSmartContract;
+        private long _previousTimeToCheck;
         private ILogger _logger;
         private IMongoDbProducerService _mongoDbProducerService;
 
@@ -50,7 +50,6 @@ namespace BlockBase.Runtime.Sidechain
             _mongoDbProducerService = mongoDbProducerService;
             _endPoint = endPoint;
             _blockSender = blockSender;
-            _nextTimeToCheckSmartContract = DateTime.UtcNow;
             _sidechainDatabaseManager = sidechainDatabaseManager;
             _chainBuilder = new ChainBuilder(logger, sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, nodeConfigurations, networkService, mainchainService, endPoint);
 
@@ -72,25 +71,24 @@ namespace BlockBase.Runtime.Sidechain
             {
                 while (true)
                 {
-                    var _timeDiff = (_nextTimeToCheckSmartContract - DateTime.UtcNow).TotalMilliseconds;
-                    //_logger.LogDebug($"Next time to check {_nextTimeToCheckSmartContract} | Current {DateTime.UtcNow}");
-                    if (_timeDiff < 0)
+                    var _timeDiff = (_nextTimeToCheckSmartContract * 1000) - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    if (_timeDiff <= 0)
                     {
-                        if (_nextTimeToCheckSmartContract.CompareTo(_previousTimeToCheck) == 0) await Task.Delay(50);
+                        if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
                         {
                             var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.SmartContractAccount)).SingleOrDefault();
 
                             if (currentProducerTable != null)
                             {
-                                _nextTimeToCheckSmartContract = DateTimeOffset.FromUnixTimeSeconds(currentProducerTable.StartProductionTime).UtcDateTime.AddSeconds(_sidechainPool.BlockTimeDuration);
-                                _logger.LogDebug($" Start Mining Time: {DateTimeOffset.FromUnixTimeSeconds(currentProducerTable.StartProductionTime).UtcDateTime} Next time to check smart contract: {_nextTimeToCheckSmartContract}");
+                                _nextTimeToCheckSmartContract = currentProducerTable.StartProductionTime + _sidechainPool.BlockTimeDuration;
+                                _logger.LogDebug($"StartProductionTime: {currentProducerTable.StartProductionTime}");
+                                _logger.LogDebug($" Start Production Time: {DateTimeOffset.FromUnixTimeSeconds(currentProducerTable.StartProductionTime).UtcDateTime} Next time to check smart contract: {DateTimeOffset.FromUnixTimeSeconds(_nextTimeToCheckSmartContract).UtcDateTime}");
 
-                                if (_nextTimeToCheckSmartContract.CompareTo(_previousTimeToCheck) == 0) continue;
+                                if (_nextTimeToCheckSmartContract == _previousTimeToCheck) continue;
 
                                 _previousTimeToCheck = _nextTimeToCheckSmartContract;
 
-                                //_logger.LogDebug($"Next Producer to produce: {currentProducerTable.Producer}");
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
                                 var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.SmartContractAccount, currentProducerTable.StartProductionTime);
