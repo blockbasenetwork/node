@@ -201,26 +201,32 @@ namespace BlockBase.Runtime.Sidechain
 
             var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
 
-            proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+            while (proposal == null && (_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            {
+                proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+                if (proposal == null) await Task.Delay(50);
+            }
+            
             await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
 
-            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName, proposal);
-                await Task.Delay(100);
-            }
+            await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName, proposal);
         }
 
         private async Task TryVerifyAndExecuteTransaction(string proposer, TransactionProposal proposal)
         {
             try
             {
-                var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
-                if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count)
+                while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
-                    _logger.LogInformation("Executed block verification");
+                    var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
+                    if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count)
+                    {
+                        await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
+                        _logger.LogInformation("Executed block verification");
+                        return;
+                    }
+                    await Task.Delay(100);
                 }
             }
             catch(ApiErrorException)

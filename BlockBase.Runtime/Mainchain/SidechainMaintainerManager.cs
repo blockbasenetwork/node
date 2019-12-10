@@ -132,7 +132,7 @@ namespace BlockBase.Runtime.Mainchain
 
             if (!_sidechain.ProducingBlocks) return;
 
-            var nextBlockTime = currentProducer.StartProductionTime + _sidechain.BlockTimeDuration;
+            var nextBlockTime = currentProducer != null ? currentProducer.StartProductionTime + _sidechain.BlockTimeDuration : _sidechain.NextStateWaitEndTime;
             if (nextBlockTime < _sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= _sidechain.NextStateWaitEndTime)
                 _sidechain.NextStateWaitEndTime = nextBlockTime;
         }
