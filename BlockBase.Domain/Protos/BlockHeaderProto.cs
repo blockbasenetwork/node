@@ -25,11 +25,11 @@ namespace BlockBase.Domain.Protos {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChZCbG9ja0hlYWRlclByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWluLlBy",
-            "b3RvcyLKAQoQQmxvY2tIZWFkZXJQcm90bxIRCglCbG9ja0hhc2gYASABKAwS",
+            "b3RvcyLGAQoQQmxvY2tIZWFkZXJQcm90bxIRCglCbG9ja0hhc2gYASABKAwS",
             "GQoRUHJldmlvdXNCbG9ja0hhc2gYAiABKAwSEAoIUHJvZHVjZXIYAyABKAkS",
             "GQoRUHJvZHVjZXJTaWduYXR1cmUYBCABKAkSEgoKTWVya2xlUm9vdBgFIAEo",
             "DBIRCglUaW1lc3RhbXAYBiABKAQSFgoOU2VxdWVuY2VOdW1iZXIYByABKAQS",
-            "HAoUTnVtYmVyT2ZUcmFuc2FjdGlvbnMYCCABKA1iBnByb3RvMw=="));
+            "GAoQVHJhbnNhY3Rpb25Db3VudBgIIAEoDWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {

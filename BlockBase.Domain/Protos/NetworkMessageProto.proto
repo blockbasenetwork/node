@@ -41,8 +41,9 @@ message NetworkMessageProto {
   int32 Version = 2;
   bytes Payload = 3;
   string PublicKey = 4;
-  string Signature = 5;
-  bytes MessageHash = 6;
-  string Destination = 7;
+  string EosAccount = 5;
+  string Signature = 6;
+  bytes MessageHash = 7;
+  string Destination = 8;
   
 }

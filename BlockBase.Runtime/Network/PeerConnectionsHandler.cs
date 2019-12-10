@@ -68,7 +68,7 @@ namespace BlockBase.Runtime.Network
         {
             _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.SmartContractAccount);
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
-            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.PublicKey == _nodeConfigurations.ActivePublicKey));
+            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
 
             var numberOfConnections = (int) Math.Ceiling(producersInPoolList.Count/4.0);
             
@@ -101,7 +101,7 @@ namespace BlockBase.Runtime.Network
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
         {
-            _logger.LogDebug("Connect to Producer: " + producer.ProducerInfo.PublicKey);
+            _logger.LogDebug("Connect to Producer: " + producer.ProducerInfo.AccountName);
 
             if (producer.ProducerInfo.IPEndPoint != null)
             { 
@@ -180,7 +180,7 @@ namespace BlockBase.Runtime.Network
 
         private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
         {
-            var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.PublicKey == args.PublicKey)).FirstOrDefault();
+            var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount && m.ProducerInfo.PublicKey == args.PublicKey)).FirstOrDefault();
 
             var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.SenderIPEndPoint)).SingleOrDefault();
             if (peer == null) {
@@ -244,7 +244,7 @@ namespace BlockBase.Runtime.Network
         private async Task AskForKnownPeer(ProducerInfo producerInfo, IPAddress ipAddress, int tcpPort)
         {
             var payload = Encoding.ASCII.GetBytes("askforip " + producerInfo.PublicKey);
-            var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlockHeaders, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, new IPEndPoint(ipAddress, tcpPort));
+            var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlockHeaders, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, new IPEndPoint(ipAddress, tcpPort));
             await _networkService.SendMessageAsync(message);
         }
 
@@ -283,7 +283,7 @@ namespace BlockBase.Runtime.Network
         private async Task SendIdentificationMessage(IPEndPoint destinationEndPoint)
         {
             byte[] payload = new byte[0];
-            var message = new NetworkMessage(NetworkMessageTypeEnum.SendProducerIdentification, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, destinationEndPoint);
+            var message = new NetworkMessage(NetworkMessageTypeEnum.SendProducerIdentification, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, destinationEndPoint);
             await _networkService.SendMessageAsync(message);
             _logger.LogDebug("Identification message sent.");
         }

@@ -98,7 +98,7 @@ namespace BlockBase.Network.Rounting
 
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendBlock) RecoverBlockReceived?.Invoke(ParseMinedBlockMessage(message.Payload), message.Sender);
 
-                else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendProducerIdentification)IdentificationMessageReceived?.Invoke(new IdentificationMessageReceivedEventArgs {PublicKey = message.PublicKey, SenderIPEndPoint = message.Sender});
+                else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendProducerIdentification)IdentificationMessageReceived?.Invoke(new IdentificationMessageReceivedEventArgs {PublicKey = message.PublicKey, EosAccount = message.EosAccount, SenderIPEndPoint = message.Sender});
 
                 else if(message.NetworkMessageType == NetworkMessageTypeEnum.RequestBlocks) BlocksRequestReceived?.Invoke(ParseRequestBlocksMessage(message.Payload, message.Sender));
 
@@ -198,6 +198,7 @@ namespace BlockBase.Network.Rounting
         {
             public IPEndPoint SenderIPEndPoint { get; set; }
             public string PublicKey { get; set; }
+            public string EosAccount { get; set; }
         }
 
         public event TransactionReceivedEventHandler TransactionReceived;
