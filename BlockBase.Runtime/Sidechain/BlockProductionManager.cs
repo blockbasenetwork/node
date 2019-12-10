@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BlockBase.Network.Mainchain.Pocos;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -204,8 +205,27 @@ namespace BlockBase.Runtime.Sidechain
             await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
 
-            if (_sidechainPool.ProducersInPool.Count() == 1)
-                await _mainchainService.ExecuteTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName);
+            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            {
+                await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName, proposal);
+                await Task.Delay(100);
+            }
+        }
+
+        private async Task TryVerifyAndExecuteTransaction(string proposer, TransactionProposal proposal)
+        {
+            try
+            {
+                var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
+                if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count)
+                    await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
+                else 
+                    _logger.LogInformation("Not enough approvals to execute transaction");
+            }
+            catch(ApiErrorException)
+            {
+                _logger.LogInformation("Unable to execute, proposed transaction might have already been executed");
+            }
         }
 
         private async Task BuildChain()

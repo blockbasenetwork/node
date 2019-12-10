@@ -86,18 +86,11 @@ namespace BlockBase.Runtime.Sidechain
 
                 if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool.SmartContractAccount))
                 {
-                    //_logger.LogDebug("Block valid saving, sending and approving.");
-                    
                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
                     await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
 
                     var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
-
-                    if (proposal != null)
-                    {
-                        await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
-                        await TryVerifyAndExecuteTransaction(blockReceived.BlockHeader.Producer, proposal);
-                    }
+                    if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
                 }
             }
             catch (Exception e)
@@ -173,22 +166,6 @@ namespace BlockBase.Runtime.Sidechain
             catch(ApiErrorException)
             {
                 _logger.LogInformation("Unable to approve transaction, proposed transaction might have already been executed");
-            }
-        }
-
-        private async Task TryVerifyAndExecuteTransaction(string proposer, TransactionProposal proposal)
-        {
-            try
-            {
-                var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
-                if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count)
-                    await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
-                else 
-                    _logger.LogInformation("Not enough approvals to execute transaction");
-            }
-            catch(ApiErrorException)
-            {
-                _logger.LogInformation("Unable to execute, proposed transaction might have already been executed");
             }
         }
 
