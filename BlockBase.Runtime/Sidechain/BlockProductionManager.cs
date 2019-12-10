@@ -218,9 +218,10 @@ namespace BlockBase.Runtime.Sidechain
             {
                 var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
                 if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count)
+                {
                     await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
-                else 
-                    _logger.LogInformation("Not enough approvals to execute transaction");
+                    _logger.LogInformation("Executed block verification");
+                }
             }
             catch(ApiErrorException)
             {

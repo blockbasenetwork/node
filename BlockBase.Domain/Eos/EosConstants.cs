@@ -28,7 +28,7 @@ namespace BlockBase.Domain.Eos
         public static readonly string EOSIO_MSIG_APPROVE_ACTION = "approve";
         public static readonly string EOSIO_MSIG_EXEC_ACTION = "exec";
         public static readonly string EOSIO_MSIG_CANCEL_ACTION = "cancel";
-        public static readonly string EOSIO_MSIG_APPROVALS_TABLE_NAME = "approvals";
+        public static readonly string EOSIO_MSIG_APPROVALS_TABLE_NAME = "approvals2";
         public static readonly string EOSIO_MSIG_PROPOSAL_TABLE_NAME = "proposal";
         public static readonly string ADD_BLOCK_PROPOSAL_NAME = "bbaddblock";
         public static readonly string VERIFY_BLOCK_PERMISSION = "verifyblock";
