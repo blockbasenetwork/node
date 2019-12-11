@@ -70,9 +70,9 @@ namespace BlockBase.DataProxy.Encryption
                         transformedBuilder.AddStatements(GetTransformedCreateTableStatement(createTableStatement, currentDatabaseName));
                         break;
 
-                        //case AbstractAlterTableStatement abstractAlterTableStatement:
-                        //    additionalStatements.AddRange(TransformAndGetAdditionalStatements(abstractAlterTableStatement, entry.Key));
-                        //    break;
+                    case AbstractAlterTableStatement abstractAlterTableStatement:
+                        transformedBuilder.AddStatements(GetTransformedAlterTableStatement(abstractAlterTableStatement, currentDatabaseName));
+                        break;
 
                         //case DropTableStatement dropTableStatement:
                         //    additionalStatements.AddRange(Transform(dropTableStatement, entry.Key));
@@ -132,7 +132,50 @@ namespace BlockBase.DataProxy.Encryption
 
             return transformedStatements;
         }
-    
+
+        private IList<ISqlStatement> GetTransformedAlterTableStatement(AbstractAlterTableStatement alterTableStatement, string databaseName)
+        {
+            switch (alterTableStatement)
+            {
+                case RenameTableStatement renameTableStatement:
+                    return new List<ISqlStatement>(GetTransformedRenameTableStatement(renameTableStatement, databaseName));
+
+                //case RenameColumnStatement renameColumnStatement:
+                //    return new List<ISqlStatement>(TransformAndGetAdditionalStatements(renameColumnStatement, databaseName));
+
+                //case AddColumnStatement addColumnStatement:
+                //    return new List<ISqlStatement>(TransformAndGetAdditionalStatements(addColumnStatement, databaseName));
+
+                //case DropColumnStatement dropColumnStatement:
+                //    return new List<ISqlStatement>(TransformAndGetAdditionalStatements(dropColumnStatement, databaseName, ));
+            }
+
+            throw new FormatException("Alter table statement type not recognized.");
+        }
+        private IList<ISqlStatement> GetTransformedRenameTableStatement(RenameTableStatement renameTableStatement, string databaseName)
+        {
+            var sqlStatements = new List<ISqlStatement>();
+
+            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameTableStatement.TableName, renameTableStatement.NewTableName, databaseName);
+            var encryptedOldTableName = changeInfoRecordResults.Item1;
+            var encryptedNewTableName = changeInfoRecordResults.Item2;
+
+            sqlStatements.Add(new RenameTableStatement( new estring(encryptedOldTableName), new estring(encryptedNewTableName)));
+
+            sqlStatements.Add(
+                new UpdateRecordStatement(
+                    INFO_TABLE_NAME,
+                    new Dictionary<estring, Value>() { { new estring("name"), new Value(encryptedNewTableName, true) } },
+                    new ComparisonExpression(
+                        INFO_TABLE_NAME, 
+                        new estring("parent"), 
+                        new Value(encryptedOldTableName, true), 
+                        ComparisonExpression.ComparisonOperatorEnum.Equal)
+                    ));
+
+            return sqlStatements;
+        }
+
 
         private Tuple<IList<ColumnDefinition>, InsertRecordStatement> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableName, string databaseName)
         {
