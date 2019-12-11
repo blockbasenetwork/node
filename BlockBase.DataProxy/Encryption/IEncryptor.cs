@@ -13,9 +13,9 @@ namespace BlockBase.DataProxy.Encryption
         InfoRecord CreateInfoRecord(estring tableName, string databaseName);
         InfoRecord CreateInfoRecord(estring columnName, string tableName, string databaseName, bool isDataEncrypted);
 
-        InfoRecord RemoveInfoRecord(estring databaseName);
-        InfoRecord RemoveInfoRecord(estring tableName, string databaseName);
-        InfoRecord RemoveInfoRecord(estring columnName, string tableName, string databaseName);
+        string RemoveInfoRecord(estring databaseName);
+        string RemoveInfoRecord(estring tableName, string databaseName);
+        IList<string> RemoveInfoRecord(estring columnName, string tableName, string databaseName);
 
         Tuple<string, string> ChangeInfoRecord(estring oldTableName, estring newTableName, string databaseName);
 

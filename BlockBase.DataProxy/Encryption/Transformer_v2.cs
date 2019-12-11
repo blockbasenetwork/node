@@ -98,11 +98,11 @@ namespace BlockBase.DataProxy.Encryption
         }
         private List<ISqlStatement> GetTransformedDropDatabaseStatement(DropDatabaseStatement dropDatabaseStatement)
         {
-            var infoRecordToRemove = _encryptor.RemoveInfoRecord(dropDatabaseStatement.DatabaseName);
+            var databaseNameToRemove = _encryptor.RemoveInfoRecord(dropDatabaseStatement.DatabaseName);
             return new List<ISqlStatement>()
             {
-                CreateDeleteRecordStatementForInfoTable(infoRecordToRemove.IV),
-                new DropDatabaseStatement(new estring(infoRecordToRemove.Name))
+                CreateDeleteRecordStatementForInfoTable(databaseNameToRemove),
+                new DropDatabaseStatement(new estring(databaseNameToRemove))
             };
         }
         private UseDatabaseStatement GetTransformedUseDatabaseStatement(UseDatabaseStatement useDatabaseStatement, out string databaseName)
@@ -140,14 +140,14 @@ namespace BlockBase.DataProxy.Encryption
                 case RenameTableStatement renameTableStatement:
                     return new List<ISqlStatement>(GetTransformedRenameTableStatement(renameTableStatement, databaseName));
 
-                //case RenameColumnStatement renameColumnStatement:
-                //    return new List<ISqlStatement>(TransformAndGetAdditionalStatements(renameColumnStatement, databaseName));
+                case RenameColumnStatement renameColumnStatement:
+                    return new List<ISqlStatement>(GetTransformedRenameColumnStatement(renameColumnStatement, databaseName));
 
-                //case AddColumnStatement addColumnStatement:
-                //    return new List<ISqlStatement>(TransformAndGetAdditionalStatements(addColumnStatement, databaseName));
+                case AddColumnStatement addColumnStatement:
+                    return new List<ISqlStatement>(GetTransformedAddColumnStatement(addColumnStatement, databaseName));
 
-                //case DropColumnStatement dropColumnStatement:
-                //    return new List<ISqlStatement>(TransformAndGetAdditionalStatements(dropColumnStatement, databaseName, ));
+                case DropColumnStatement dropColumnStatement:
+                    return new List<ISqlStatement>(GetTransformedDropColumnStatement(dropColumnStatement, databaseName));
             }
 
             throw new FormatException("Alter table statement type not recognized.");
@@ -157,25 +157,89 @@ namespace BlockBase.DataProxy.Encryption
             var sqlStatements = new List<ISqlStatement>();
 
             var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameTableStatement.TableName, renameTableStatement.NewTableName, databaseName);
-            var encryptedOldTableName = changeInfoRecordResults.Item1;
-            var encryptedNewTableName = changeInfoRecordResults.Item2;
+            var transformedOldTableName = changeInfoRecordResults.Item1;
+            var transformedNewTableName = changeInfoRecordResults.Item2;
 
-            sqlStatements.Add(new RenameTableStatement( new estring(encryptedOldTableName), new estring(encryptedNewTableName)));
+            sqlStatements.Add(new RenameTableStatement( new estring(transformedOldTableName), new estring(transformedNewTableName)));
 
             sqlStatements.Add(
                 new UpdateRecordStatement(
                     INFO_TABLE_NAME,
-                    new Dictionary<estring, Value>() { { new estring("name"), new Value(encryptedNewTableName, true) } },
+                    new Dictionary<estring, Value>() { { NAME, new Value(transformedNewTableName, true) } },
+                    new ComparisonExpression(
+                        INFO_TABLE_NAME,
+                        NAME,
+                        new Value(transformedOldTableName, true),
+                        ComparisonExpression.ComparisonOperatorEnum.Equal)
+                    ));
+
+            sqlStatements.Add(
+                new UpdateRecordStatement(
+                    INFO_TABLE_NAME,
+                    new Dictionary<estring, Value>() { { PARENT, new Value(transformedNewTableName, true) } },
                     new ComparisonExpression(
                         INFO_TABLE_NAME, 
-                        new estring("parent"), 
-                        new Value(encryptedOldTableName, true), 
+                        PARENT, 
+                        new Value(transformedOldTableName, true), 
                         ComparisonExpression.ComparisonOperatorEnum.Equal)
                     ));
 
             return sqlStatements;
         }
+        private IList<ISqlStatement> GetTransformedRenameColumnStatement(RenameColumnStatement renameColumnStatement, string databaseName)
+        {
+            var sqlStatements = new List<ISqlStatement>();
 
+            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameColumnStatement.ColumnName, renameColumnStatement.NewColumnName, databaseName);
+            var transformedOldColumnName = changeInfoRecordResults.Item1;
+            var transformedNewColumnName = changeInfoRecordResults.Item2;
+
+            var transformedTableName  = _encryptor.GetEncryptedName(renameColumnStatement.TableName, databaseName);
+
+            sqlStatements.Add(
+                new RenameColumnStatement(
+                    new estring(transformedTableName),
+                    new estring(transformedOldColumnName),
+                    new estring(transformedNewColumnName)));
+
+            sqlStatements.Add(
+               new UpdateRecordStatement(
+                   INFO_TABLE_NAME,
+                   new Dictionary<estring, Value>() { { NAME, new Value(transformedNewColumnName, true) } },
+                   new ComparisonExpression(
+                       INFO_TABLE_NAME,
+                       NAME,
+                       new Value(transformedOldColumnName, true),
+                       ComparisonExpression.ComparisonOperatorEnum.Equal)
+                   ));
+            return sqlStatements;
+        }
+        private IList<ISqlStatement> GetTransformedAddColumnStatement(AddColumnStatement addColumnStatement, string databaseName)
+        {
+            var sqlStatements = new List<ISqlStatement>();
+            var transformedTableName = _encryptor.GetEncryptedName(addColumnStatement.TableName, databaseName);
+            var columnDefinitionsAndAdditionalInsert = GetTransformedColumnDefinition(addColumnStatement.ColumnDefinition, transformedTableName, databaseName);
+
+            foreach (var columnDef in columnDefinitionsAndAdditionalInsert.Item1)
+            {
+                sqlStatements.Add(new AddColumnStatement(new estring(transformedTableName), columnDef));
+            }
+            sqlStatements.Add(columnDefinitionsAndAdditionalInsert.Item2);
+            return sqlStatements;
+        }
+        private IList<ISqlStatement> GetTransformedDropColumnStatement(DropColumnStatement dropColumnStatement, string databaseName)
+        {
+            var sqlStatements = new List<ISqlStatement>();
+            var transformedTableName = _encryptor.GetEncryptedName(dropColumnStatement.TableName, databaseName);
+            var columnsToDelete = _encryptor.RemoveInfoRecord(dropColumnStatement.ColumnName, transformedTableName, databaseName);
+            foreach (var columnName in columnsToDelete)
+            {
+                sqlStatements.Add( new DropColumnStatement(new estring(transformedTableName), new estring(columnName)));
+                sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(columnName));
+            }
+
+            return sqlStatements;
+        }
 
         private Tuple<IList<ColumnDefinition>, InsertRecordStatement> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableName, string databaseName)
         {
@@ -303,13 +367,15 @@ namespace BlockBase.DataProxy.Encryption
                 }
             };
         }
-        private DeleteRecordStatement CreateDeleteRecordStatementForInfoTable(string recordIV)
+        private DeleteRecordStatement CreateDeleteRecordStatementForInfoTable(string name)
         {
-            return new DeleteRecordStatement()
-            {
-                TableName = INFO_TABLE_NAME,
-                WhereClause = new ComparisonExpression(INFO_TABLE_NAME, IV, new Value(recordIV, true), ComparisonExpression.ComparisonOperatorEnum.Equal)
-            };
+            return new DeleteRecordStatement(INFO_TABLE_NAME,
+                    new LogicalExpression(
+                        new ComparisonExpression(INFO_TABLE_NAME, NAME, new Value(name, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
+                        new ComparisonExpression(INFO_TABLE_NAME, PARENT, new Value(name, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
+                        LogicalExpression.LogicalOperatorEnum.OR
+                        )
+                    );
         }
 
     }
