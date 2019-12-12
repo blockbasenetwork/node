@@ -183,6 +183,16 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
+        public async Task<string> PunishProd(string owner, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.PUNISH_PRODUCERS,
+                NetworkConfigurations.BlockBaseTokenContract,
+                owner,
+                CreateDataForDeferredTransaction(owner),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
         public async Task<int> ExecuteChainMaintainerAction(string actionname, string accountname, string permission = "active")
         {
             var timeBeforeSend = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

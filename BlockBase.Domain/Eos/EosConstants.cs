@@ -57,6 +57,8 @@ namespace BlockBase.Domain.Eos
         public static readonly string EXIT_REQUEST = "exitrequest";
         public static readonly string LINKAUTH = "linkauth";
         public static readonly string UPDATEAUTH = "updateauth";
+        public static readonly string PUNISH_PRODUCERS = "prodpunish";
+        public static readonly string BLACKLIST_PRODUCERS = "blacklistprod";
     }
 
     public class EosParameterNames

@@ -19,6 +19,7 @@ namespace BlockBase.Runtime.Mainchain
         private IMainchainService _mainchainService;
         private long _timeDiff;
         private int _timeToExecuteTrx;
+        private int _roundsUntilSettlement;
         private IEnumerable<int> _latestTrxTimes;
         private double _previousWaitTime;
         private ILogger _logger;
@@ -35,6 +36,7 @@ namespace BlockBase.Runtime.Mainchain
         {
             _sidechain = sidechain;
             _mainchainService = mainchainService;
+            _roundsUntilSettlement = (int)sidechain.BlocksBetweenSettlement;
             _logger = logger;
             _latestTrxTimes = new List<int>();
         }
@@ -113,6 +115,8 @@ namespace BlockBase.Runtime.Mainchain
                (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
                 latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SmartContractAccount);
+                _roundsUntilSettlement--;
+                if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
             }
 
             if (latestTrxTime != 0) _latestTrxTimes.Append(latestTrxTime);
@@ -175,6 +179,13 @@ namespace BlockBase.Runtime.Mainchain
         {
             _latestTrxTimes = _latestTrxTimes.TakeLast(20);
             _timeToExecuteTrx = _latestTrxTimes.Any() ? _latestTrxTimes.Sum() / _latestTrxTimes.Count() : 0;
+        }
+
+        private async Task ExecuteSettlementActions()
+        {
+            _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
+            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.BLACKLIST_PRODUCERS, _sidechain.SmartContractAccount);
+            await _mainchainService.PunishProd(_sidechain.SmartContractAccount);
         }
 
         #endregion Auxiliar Methods
