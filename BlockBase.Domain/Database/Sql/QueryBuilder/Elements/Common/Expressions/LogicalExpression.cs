@@ -10,9 +10,19 @@
 
         public LogicalOperatorEnum LogicalOperator { get; set; }
 
+        public LogicalExpression() { }
+
+        public LogicalExpression(AbstractExpression leftExpression, AbstractExpression rightExpression, LogicalOperatorEnum logicalOperator, bool? hasParenthesis = null)
+        {
+            LeftExpression = leftExpression;
+            RightExpression = rightExpression;
+            LogicalOperator = logicalOperator;
+            HasParenthesis = hasParenthesis ?? false;
+        }
+
         public AbstractExpression Clone()
         {
-            return new LogicalExpression() { LeftExpression = LeftExpression.Clone(), RightExpression = RightExpression.Clone(), LogicalOperator = LogicalOperator };
+            return new LogicalExpression() { LeftExpression = LeftExpression.Clone(), RightExpression = RightExpression.Clone(), LogicalOperator = LogicalOperator, HasParenthesis = HasParenthesis };
         }
 
         public enum LogicalOperatorEnum

@@ -8,5 +8,6 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
     {
         public string Value { get; set; }
         public bool IsDatabaseStatement { get; set; }
+        public string DatabaseName { get; set; }
     }
 }

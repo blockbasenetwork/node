@@ -22,11 +22,12 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions
             ColumnName = columnName;
             Value = value;
             ComparisonOperator = comparisonOperator;
+            HasParenthesis = false;
         }
 
         public AbstractExpression Clone()
         {
-            return new ComparisonExpression() { TableName = TableName.Clone(), ColumnName = ColumnName.Clone(), Value = Value, ComparisonOperator = ComparisonOperator };
+            return new ComparisonExpression() { TableName = TableName.Clone(), ColumnName = ColumnName.Clone(), Value = Value, ComparisonOperator = ComparisonOperator, HasParenthesis = HasParenthesis };
         }
 
         public enum ComparisonOperatorEnum

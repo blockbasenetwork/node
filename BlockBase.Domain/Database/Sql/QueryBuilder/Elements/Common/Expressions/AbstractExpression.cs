@@ -3,7 +3,6 @@
     public interface AbstractExpression
     {
         bool HasParenthesis { get; set; }
-        
         AbstractExpression Clone();
     }
 }

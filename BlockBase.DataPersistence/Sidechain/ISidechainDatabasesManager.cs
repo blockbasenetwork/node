@@ -8,14 +8,14 @@ namespace BlockBase.DataPersistence.Sidechain
 {
     public interface ISidechainDatabasesManager
     {
-        bool CheckMetaInfoExist(string databaseName);
-        void Enqueue(ISqlOperation operation, string databaseName);
-        Task CreateDatabase(string databaseName);
-        void CreateMetaInfo(string databaseName);
-        Task<bool> CheckDatabase(string databaseName);
-        Task Execute();
-        void ExecuteBlockTransactions(IList<Transaction> blockTransactions);       
-        void Build<T>(Transaction transaction) where T : ISqlOperation;
+        //bool CheckMetaInfoExist(string databaseName);
+        //void Enqueue(ISqlOperation operation, string databaseName);
+        //Task CreateDatabase(string databaseName);
+        //void CreateMetaInfo(string databaseName);
+        //Task<bool> CheckDatabase(string databaseName);
+        //Task Execute();
+        //void ExecuteBlockTransactions(IList<Transaction> blockTransactions);       
+        //void Build<T>(Transaction transaction) where T : ISqlOperation;
 
     }
 
