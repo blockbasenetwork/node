@@ -57,7 +57,7 @@ namespace BlockBase.Runtime.Sidechain
         internal async Task SendBlockToSidechainMembers(SidechainPool sidechainPool, BlockProto blockProto, string endPoint)
         {
             
-            var data = BlockProtoToMessageData(blockProto, sidechainPool.SmartContractAccount);
+            var data = BlockProtoToMessageData(blockProto, sidechainPool.SidechainName);
             var connectedProducersInSidechain = sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection != null && m.PeerConnection.ConnectionState == ConnectionStateEnum.Connected);
             foreach(ProducerInPool producerConnected in connectedProducersInSidechain)
             {

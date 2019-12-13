@@ -61,10 +61,10 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task HandleReceivedBlock(SidechainPool sidechainPool, BlockProto blockProtoReceived)
         {
-            // var sidechainName = sidechainPool.SmartContractAccount;
-            var databaseName = sidechainPool.SmartContractAccount;
+            // var sidechainName = sidechainPool.SidechainName;
+            var databaseName = sidechainPool.SidechainName;
 
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.SmartContractAccount);
+            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.SidechainName);
 
             await sidechainSemaphore.WaitAsync();
             try
@@ -82,9 +82,9 @@ namespace BlockBase.Runtime.Sidechain
                     return;
                 }
 
-                BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.SmartContractAccount)).ConvertToBlockHeader();
+                BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.SidechainName)).ConvertToBlockHeader();
 
-                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool.SmartContractAccount))
+                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool.SidechainName))
                 {
                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
                     await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
@@ -117,7 +117,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task<bool> IsTimeForThisProducerToProduce(SidechainPool sidechainPool, string blockProducer)
         {
-            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(sidechainPool.SmartContractAccount)).SingleOrDefault();
+            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(sidechainPool.SidechainName)).SingleOrDefault();
             if (currentProducerTable.Producer == blockProducer) return true;
             return false;
         }
@@ -136,7 +136,7 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
-            var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPoolValuePair.Value.SmartContractAccount)).ProductionTime;
+            var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPoolValuePair.Value.SidechainName)).ProductionTime;
 
             if (!isProductionTime)
             {
@@ -144,11 +144,11 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
-            var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.SmartContractAccount)).SingleOrDefault().StartProductionTime;
+            var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.SidechainName)).SingleOrDefault().StartProductionTime;
 
-            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.SmartContractAccount, startProductionTime);
+            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.SidechainName, startProductionTime);
 
-            if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.SmartContractAccount, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
+            if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.SidechainName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
             {
                 _logger.LogDebug($"Mined block received but producer is not up to date.");
                 return;

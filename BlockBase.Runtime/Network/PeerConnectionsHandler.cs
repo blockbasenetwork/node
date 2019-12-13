@@ -66,7 +66,7 @@ namespace BlockBase.Runtime.Network
         #region Enter Points
         public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
         {
-            _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.SmartContractAccount);
+            _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.SidechainName);
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
 

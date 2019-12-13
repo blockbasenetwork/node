@@ -8,7 +8,7 @@ namespace BlockBase.Network.Sidechain
 {
     public class SidechainPool
     {
-        public string SmartContractAccount { get; set; }
+        public string SidechainName { get; set; }
         public ThreadSafeList<ProducerInPool> ProducersInPool { get; set; }
         public SidechainPoolStateEnum State { get; set; }
         public bool ProducingBlocks { get; set; }
@@ -23,16 +23,16 @@ namespace BlockBase.Network.Sidechain
         {
         }
 
-        public SidechainPool(string smartContractAccount)
+        public SidechainPool(string sidechainName)
         {
-            SmartContractAccount = smartContractAccount;
+            SidechainName = sidechainName;
             State = SidechainPoolStateEnum.RecoverInfo;
             ProducersInPool = new ThreadSafeList<ProducerInPool>();
         }
 
         public override int GetHashCode()
         {
-            return SmartContractAccount.GetHashCode();
+            return SidechainName.GetHashCode();
         }
 
 

@@ -45,7 +45,7 @@ namespace BlockBase.Runtime.Mainchain
         {
             try
             {
-                var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.SmartContractAccount);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.SidechainName);
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
 
@@ -85,36 +85,36 @@ namespace BlockBase.Runtime.Mainchain
 
         private async Task CheckContractEndState()
         {
-            var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechain.SmartContractAccount);
-            var stateTable = await _mainchainService.RetrieveContractState(_sidechain.SmartContractAccount);
+            var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechain.SidechainName);
+            var stateTable = await _mainchainService.RetrieveContractState(_sidechain.SidechainName);
             int latestTrxTime = 0;
 
             if (stateTable.CandidatureTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.SidechainName);
             }
             if (stateTable.SecretTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.SmartContractAccount);
-                await UpdateAuthorization(_sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.SidechainName);
+                await UpdateAuthorization(_sidechain.SidechainName);
             }
             if (stateTable.IPSendTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.SmartContractAccount);
-                await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.SidechainName);
+                await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SidechainName);
             }
             if (stateTable.IPReceiveTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.SidechainName);
             }
             if (stateTable.ProductionTime &&
                (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SmartContractAccount);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SidechainName);
                 _roundsUntilSettlement--;
                 if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
             }
@@ -125,8 +125,8 @@ namespace BlockBase.Runtime.Mainchain
         private async Task CheckContractAndUpdateWaitTimes()
         {
             _previousWaitTime = _sidechain.NextStateWaitEndTime;
-            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.SmartContractAccount);
-            var currentProducerList = await _mainchainService.RetrieveCurrentProducer(_sidechain.SmartContractAccount);
+            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.SidechainName);
+            var currentProducerList = await _mainchainService.RetrieveCurrentProducer(_sidechain.SidechainName);
             var currentProducer = currentProducerList.FirstOrDefault();
             if (_sidechain.State == SidechainPoolStateEnum.ConfigTime) _sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (contractInfo.CandidatureTime / 2);
             if (contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) _sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
@@ -143,7 +143,7 @@ namespace BlockBase.Runtime.Mainchain
 
         private async Task CheckContractAndUpdateStates()
         {
-            var contractState = await _mainchainService.RetrieveContractState(_sidechain.SmartContractAccount);
+            var contractState = await _mainchainService.RetrieveContractState(_sidechain.SidechainName);
             if (contractState.ConfigTime) _sidechain.State = SidechainPoolStateEnum.ConfigTime;
             if (contractState.CandidatureTime) _sidechain.State = SidechainPoolStateEnum.CandidatureTime;
             if (contractState.SecretTime) _sidechain.State = SidechainPoolStateEnum.SecretTime;
@@ -159,7 +159,7 @@ namespace BlockBase.Runtime.Mainchain
 
         private async Task UpdateAuthorization(string accountName)
         {
-            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.SmartContractAccount);
+            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
             await _mainchainService.AuthorizationAssign(accountName, producerList);
         }
         
@@ -184,8 +184,8 @@ namespace BlockBase.Runtime.Mainchain
         private async Task ExecuteSettlementActions()
         {
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
-            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.BLACKLIST_PRODUCERS, _sidechain.SmartContractAccount);
-            await _mainchainService.PunishProd(_sidechain.SmartContractAccount);
+            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.BLACKLIST_PRODUCERS, _sidechain.SidechainName);
+            await _mainchainService.PunishProd(_sidechain.SidechainName);
         }
 
         #endregion Auxiliar Methods

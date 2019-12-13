@@ -66,7 +66,7 @@ namespace BlockBase.Runtime.Sidechain
 
             var sidechainPool = sidechainPoolValuePair.Value;
 
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.SmartContractAccount);
+            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.SidechainName);
 
             await sidechainSemaphore.WaitAsync();
 
