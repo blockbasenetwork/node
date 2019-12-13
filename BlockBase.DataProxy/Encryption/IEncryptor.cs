@@ -19,9 +19,14 @@ namespace BlockBase.DataProxy.Encryption
 
         Tuple<string, string> ChangeInfoRecord(estring oldTableName, estring newTableName, string databaseName);
 
-        string GetEncryptedName(estring databaseName);
-        string GetEncryptedName(estring tableName, string databaseName);
-        string GetEncryptedName(estring columnName, string tableName, string databaseName);
+        string GetEncryptedDatabaseName(estring databaseName);
+        string GetEncryptedTableName(estring tableName, string databaseName);
+        string GetEncryptedColumnName(estring columnName, string tableName, string databaseName);
+        Tuple<string, string> GetEncryptedBktColumnNames(estring columnName, string tableName, string databaseName);
+
+        string GetRangeBucket(string columnName, int upperBound);
+
+        Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName);
 
         string GetEncryptedBucketColumn(string bktValues);
     }
