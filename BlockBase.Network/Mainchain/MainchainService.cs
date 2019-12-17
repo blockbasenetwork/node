@@ -358,7 +358,7 @@ namespace BlockBase.Network.Mainchain
         public async Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string chain)
         {
             var listLedger = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
-            TokenLedgerTable tokenTable = listLedger.Where(b => b.Owner == chain).SingleOrDefault();
+            TokenLedgerTable tokenTable = listLedger.Where(b => b.Sidechain == chain).SingleOrDefault();
 
             return tokenTable;
         }
