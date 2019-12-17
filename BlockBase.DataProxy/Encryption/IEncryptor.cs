@@ -12,36 +12,20 @@ namespace BlockBase.DataProxy.Encryption
         InfoRecord CreateInfoRecord(estring name, string parentIV);
     
         InfoRecord CreateEqualityBktColumnName(string columnName, int? size);
-        //{
-        //    var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size;
-        //    var encryptedSizeAndRange = _encryptor.GetEncryptedBucketColumn(bucketColumnNameString);
-        //    return new estring(_equalityBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange, false);
-        //}
         InfoRecord CreateRangeBktColumnName(string columnName, int? size, int? min, int? max);
-        //{
-        //    var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size + _separatingChar + min + _separatingChar + max;
-        //    var encryptedSizeAndRange = _encryptor.GetEncryptedBucketColumn(bucketColumnNameString);
 
-        //    return new estring(_rangeBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange, false);
-        //}
-
-        InfoRecord RemoveInfoRecord(estring name, string parentIV);
+        void RemoveInfoRecord(string iv);
 
         Tuple<string, string> ChangeInfoRecord(estring oldName, estring newName, string parentIV);
 
         InfoRecord FindInfoRecord(estring name, string parentIV);
 
-      
-        Tuple<string, string> GetEncryptedBktColumnNames(string columnIV);
+        List<InfoRecord> FindChildren(string parentIV, bool deepFind = false);
+
+
         estring GetIVColumnName(string columnName);
-        //{
-        //    return new estring(_ivPrefix + _separatingChar + columnName, false);
-        //}
 
         Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName);
-
-        
-        
 
         string CreateRangeBktValue(string rangeColumnName, string valueToInsert, string columnName);
         string CreateEqualityBktValue(string rangeColumnName, string valueToInsert, string columnName);

@@ -4,6 +4,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Wiry.Base32;
 
 namespace BlockBase.DataProxy
 {
@@ -35,14 +36,14 @@ namespace BlockBase.DataProxy
 
         public InfoRecord CreateInfoRecord(estring name, string parentIV)
         {
-            if (_databaseKeyManager.FindInfoRecord(name.Value, parentIV) == null)
+            if (_databaseKeyManager.FindInfoRecord(name, parentIV) == null)
             {
                 if (parentIV != null)
                 {
                     var parentManageKey = _keyStore.GetSecret(parentIV);
-                    //return _databaseKeyManager.AddInfoRecord(name, true, parentManageKey, parentIV);
+                    return _databaseKeyManager.AddInfoRecord(name, false, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV));
                 }
-                //return _databaseKeyManager.AddInfoRecord(name, true, _keyStore.GetSecret("master_key"), _keyStore.GetSecret("master_iv"));
+                return _databaseKeyManager.AddInfoRecord(name, true, _keyStore.GetSecret("master_key"), _keyStore.GetSecret("master_iv"));
             }
             return null;
         }
@@ -67,6 +68,11 @@ namespace BlockBase.DataProxy
             throw new NotImplementedException();
         }
 
+        public List<InfoRecord> FindChildren(string parentIV, bool deepFind = false)
+        {
+            throw new NotImplementedException();
+        }
+
         public InfoRecord FindInfoRecord(estring name, string parentIV)
         {
             throw new NotImplementedException();
@@ -77,17 +83,12 @@ namespace BlockBase.DataProxy
             throw new NotImplementedException();
         }
 
-        public Tuple<string, string> GetEncryptedBktColumnNames(string columnIV)
-        {
-            throw new NotImplementedException();
-        }
-
         public estring GetIVColumnName(string columnName)
         {
             throw new NotImplementedException();
         }
 
-        public InfoRecord RemoveInfoRecord(estring name, string parentIV)
+        public void RemoveInfoRecord(string iv)
         {
             throw new NotImplementedException();
         }

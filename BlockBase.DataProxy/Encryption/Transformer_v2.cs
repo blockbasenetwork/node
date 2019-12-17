@@ -101,13 +101,20 @@ namespace BlockBase.DataProxy.Encryption
             };
         }
         private List<ISqlStatement> GetTransformedDropDatabaseStatement(DropDatabaseStatement dropDatabaseStatement)
-        {
-            var infoRecord = _encryptor.RemoveInfoRecord(dropDatabaseStatement.DatabaseName, null);
-            return new List<ISqlStatement>()
+        {   
+            var infoRecord = _encryptor.FindInfoRecord(dropDatabaseStatement.DatabaseName, null);
+
+            var sqlStatements = new List<ISqlStatement>()
             {
-                CreateDeleteRecordStatementForInfoTable(infoRecord.IV),
                 new DropDatabaseStatement(new estring(infoRecord.Name))
             };
+
+            var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
+            _encryptor.RemoveInfoRecord(infoRecord.IV);
+
+            foreach (var child in childrenInfoRecords) sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(child.IV));
+
+            return sqlStatements; 
         }
         private UseDatabaseStatement GetTransformedUseDatabaseStatement(UseDatabaseStatement useDatabaseStatement, out InfoRecord databaseInfoRecord)
         {
@@ -138,10 +145,18 @@ namespace BlockBase.DataProxy.Encryption
         }
         private IList<ISqlStatement> GetTransformedDropTableStatement(DropTableStatement dropTableStatement, string databaseName)
         {
-            var sqlStatements = new List<ISqlStatement>();
-            var tableInfoRecord = _encryptor.RemoveInfoRecord(dropTableStatement.TableName, databaseName);
-            sqlStatements.Add(new DropTableStatement(new estring(tableInfoRecord.Name)));
-            sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(tableInfoRecord.IV));
+            var infoRecord = _encryptor.FindInfoRecord(dropTableStatement.TableName, databaseName);
+
+            var sqlStatements = new List<ISqlStatement>()
+            {
+                new DropTableStatement(new estring(infoRecord.Name))
+            };
+
+            var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
+            _encryptor.RemoveInfoRecord(infoRecord.IV);
+
+            foreach (var child in childrenInfoRecords) sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(child.IV));
+            
             return sqlStatements;
         }
 
@@ -243,19 +258,23 @@ namespace BlockBase.DataProxy.Encryption
             return sqlStatements;
         }
         
-        //TODO: NEEDS TO DROP ALSO BKT COLUMNS
+        
         private IList<ISqlStatement> GetTransformedDropColumnStatement(DropColumnStatement dropColumnStatement, string databaseIV)
         {
-            var sqlStatements = new List<ISqlStatement>();
             var tableInfoRecord = _encryptor.FindInfoRecord(dropColumnStatement.TableName, databaseIV);
 
-            var columnToDelete = _encryptor.RemoveInfoRecord(dropColumnStatement.ColumnName, tableInfoRecord.IV);
+            var infoRecord = _encryptor.FindInfoRecord(dropColumnStatement.ColumnName, tableInfoRecord.IV);
 
-            //foreach (var columnName in columnsToDelete)
-            //{
-            //    sqlStatements.Add( new DropColumnStatement(new estring(transformedTableName), new estring(columnName)));
-            //    sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(columnName));
-            //}
+            var sqlStatements = new List<ISqlStatement>()
+            {
+                new DropTableStatement(new estring(infoRecord.Name))
+            };
+
+            var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
+            sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(infoRecord.IV));
+            _encryptor.RemoveInfoRecord(infoRecord.IV);
+
+            foreach (var child in childrenInfoRecords) sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(child.IV));
 
             return sqlStatements;
         }
@@ -288,12 +307,13 @@ namespace BlockBase.DataProxy.Encryption
           
             if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
-            var bktColumnsNames = _encryptor.GetEncryptedBktColumnNames(columnInfoRecord.IV);
+            var bktColumnsInfoRecords = _encryptor.FindChildren(columnInfoRecord.IV);
 
             string columnDataType = columnDataTypes[columnInfoRecord.Name];
 
-            estring equalityBktColumnName = bktColumnsNames.Item1 != null ? new estring(bktColumnsNames.Item1) : null; 
-            estring rangeBktColumnName = bktColumnsNames.Item2 != null ? new estring(bktColumnsNames.Item2) : null;
+            //TODO: change to use json info
+            estring equalityBktColumnName = bktColumnsInfoRecords[0] != null ? new estring(bktColumnsInfoRecords[0].Name) : null; 
+            estring rangeBktColumnName = bktColumnsInfoRecords[1] != null ? new estring(bktColumnsInfoRecords[1].Name) : null;
             estring ivColumnName = null;
                 
             bool isEncrypted = columnDataType == ENCRYPTED_KEY_WORD;
@@ -467,18 +487,12 @@ namespace BlockBase.DataProxy.Encryption
                 }
             };
         }
-
-        //adicionar netos
+        
         private DeleteRecordStatement CreateDeleteRecordStatementForInfoTable(string iv)
         {
-            return new DeleteRecordStatement(INFO_TABLE_NAME,
-                    new LogicalExpression(
-                        new ComparisonExpression(INFO_TABLE_NAME, NAME, new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
-                        new ComparisonExpression(INFO_TABLE_NAME, PARENT, new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
-                        LogicalExpression.LogicalOperatorEnum.OR
-                        )
+            return new DeleteRecordStatement(INFO_TABLE_NAME, 
+                new ComparisonExpression(INFO_TABLE_NAME, NAME, new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal)
                     );
         }
-
     }
 }
