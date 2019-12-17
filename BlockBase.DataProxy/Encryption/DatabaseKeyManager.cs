@@ -1,6 +1,7 @@
 ﻿using BlockBase.Domain.Database.Info;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Utils.Crypto;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Text;
 using Wiry.Base32;
@@ -38,7 +39,7 @@ namespace BlockBase.DataProxy.Encryption
             return _infoRecordManager.FindChildren(iv, deepFind);
         }
 
-        public InfoRecord AddInfoRecord(estring name, bool isDatabaseRecord, byte[] parentManageKey, byte[] parentIV, string data = null)
+        public InfoRecord AddInfoRecord(estring name, InfoRecordTypeEnum recordTypeEnum, byte[] parentManageKey, byte[] parentIV, string data = null)
         {
             var keyGenerator = new KeyAndIVGenerator_v2();
 
@@ -50,10 +51,27 @@ namespace BlockBase.DataProxy.Encryption
             var iv = Base32Encoding.ZBase32.GetString(ivBytes);
             var keyManage = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyManageBytes, keyManageBytes, ivBytes));
             var keyName = !name.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyNameBytes, keyNameBytes, ivBytes));
-            string pIV = isDatabaseRecord ? null : Base32Encoding.ZBase32.GetString(parentIV);
+            string pIV = recordTypeEnum == InfoRecordTypeEnum.DatabaseRecord ? null : Base32Encoding.ZBase32.GetString(parentIV);
             string encryptedData = data == null ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(data), keyManageBytes, ivBytes));
 
-            var infoRecord = InfoRecordManager.CreateInfoRecord(name.Value, keyManage, keyName, iv, pIV);
+            InfoRecord.LocalData localData = null;
+            if (recordTypeEnum == InfoRecordTypeEnum.ColumnRecord)
+            {
+                localData = new InfoRecord.LocalData();
+                DataType dataType = JsonConvert.DeserializeObject<DataType>(data);
+                string template = "_{0}{1}";
+                if (dataType.BucketInfo.EqualityBucketSize.HasValue)
+                {
+                    localData.EncryptedEqualityColumnName = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "e", recordName)), keyManageBytes, ivBytes));
+                    localData.EncryptedIVColumnName = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "i", recordName)), keyManageBytes, ivBytes));
+                }
+                if (dataType.BucketInfo.RangeBucketSize.HasValue)
+                {
+                    localData.EncryptedRangeColumnName = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "r", recordName)), keyManageBytes, ivBytes));
+                }
+            }
+
+            var infoRecord = InfoRecordManager.CreateInfoRecord(name.Value, keyManage, keyName, iv, pIV, localData, encryptedData);
             _infoRecordManager.AddInfoRecord(infoRecord);
             return infoRecord;
         }
@@ -137,6 +155,14 @@ namespace BlockBase.DataProxy.Encryption
         {
             //queries the database server to retrieve the infotable
             return new List<InfoRecord>();
+        }
+
+        public enum InfoRecordTypeEnum
+        {
+            DatabaseRecord,
+            TableRecord,
+            ColumnRecord,
+            Unknown
         }
     }
 }

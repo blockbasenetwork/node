@@ -1,14 +1,14 @@
 ﻿using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Database.Info;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Wiry.Base32;
 
 namespace BlockBase.DataProxy
 {
-    class MiddleMan : IEncryptor
+    internal class MiddleMan : IEncryptor
     {
         private DatabaseKeyManager _databaseKeyManager;
         private SecretStore _keyStore;
@@ -26,7 +26,8 @@ namespace BlockBase.DataProxy
 
         public InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data)
         {
-            throw new NotImplementedException();
+            var parentManageKey = _keyStore.GetSecret(parentIV);
+            return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.ColumnRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV), JsonConvert.SerializeObject(data));
         }
 
         public string CreateEqualityBktValue(string rangeColumnName, string valueToInsert, string columnName)
@@ -41,14 +42,12 @@ namespace BlockBase.DataProxy
                 if (parentIV != null)
                 {
                     var parentManageKey = _keyStore.GetSecret(parentIV);
-                    return _databaseKeyManager.AddInfoRecord(name, false, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV));
+                    return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.TableRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV));
                 }
-                return _databaseKeyManager.AddInfoRecord(name, true, _keyStore.GetSecret("master_key"), _keyStore.GetSecret("master_iv"));
+                return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, _keyStore.GetSecret("master_key"), _keyStore.GetSecret("master_iv"));
             }
             return null;
         }
-
-
 
         public string CreateRangeBktValue(string rangeColumnName, string valueToInsert, string columnName)
         {
