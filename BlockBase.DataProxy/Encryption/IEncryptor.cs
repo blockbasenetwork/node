@@ -10,22 +10,22 @@ namespace BlockBase.DataProxy.Encryption
     public interface IEncryptor
     {
         InfoRecord CreateInfoRecord(estring name, string parentIV);
-    
-        InfoRecord CreateEqualityBktInfoRecord(string columnIV, int size);
-        InfoRecord CreateRangeBktInfoRecord(string columnIV, int size, int min, int max);
+
+        InfoRecord FindInfoRecord(estring name, string parentIV);
+        List<InfoRecord> FindChildren(string parentIV, bool deepFind = false);
 
         void RemoveInfoRecord(string iv);
 
+        InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data);
+
+        Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName);
+
+
         Tuple<string, string> ChangeInfoRecord(estring oldName, estring newName, string parentIV);
-
-        InfoRecord FindInfoRecord(estring name, string parentIV);
-
-        List<InfoRecord> FindChildren(string parentIV, bool deepFind = false);
-
 
         estring GetIVColumnName(string columnName);
 
-        Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName);
+        
 
         string CreateRangeBktValue(string rangeColumnName, string valueToInsert, string columnName);
         string CreateEqualityBktValue(string rangeColumnName, string valueToInsert, string columnName);

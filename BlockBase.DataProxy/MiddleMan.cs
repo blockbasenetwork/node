@@ -24,7 +24,10 @@ namespace BlockBase.DataProxy
             throw new NotImplementedException();
         }
 
-        
+        public InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data)
+        {
+            throw new NotImplementedException();
+        }
 
         public string CreateEqualityBktValue(string rangeColumnName, string valueToInsert, string columnName)
         {
@@ -45,15 +48,7 @@ namespace BlockBase.DataProxy
             return null;
         }
 
-        public InfoRecord CreateEqualityBktInfoRecord(string columnIV, int size)
-        {
-            throw new NotImplementedException();
-        }
 
-        public InfoRecord CreateRangeBktInfoRecord(string columnIV, int size, int min, int max)
-        {
-            throw new NotImplementedException();
-        }
 
         public string CreateRangeBktValue(string rangeColumnName, string valueToInsert, string columnName)
         {
