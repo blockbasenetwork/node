@@ -11,8 +11,8 @@ namespace BlockBase.DataProxy.Encryption
     {
         InfoRecord CreateInfoRecord(estring name, string parentIV);
     
-        InfoRecord CreateEqualityBktColumnName(string columnName, int? size);
-        InfoRecord CreateRangeBktColumnName(string columnName, int? size, int? min, int? max);
+        InfoRecord CreateEqualityBktInfoRecord(string columnIV, int size);
+        InfoRecord CreateRangeBktInfoRecord(string columnIV, int size, int min, int max);
 
         void RemoveInfoRecord(string iv);
 

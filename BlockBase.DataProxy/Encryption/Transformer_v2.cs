@@ -413,7 +413,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private CreateBktColumnResultPoco CreateEqualityBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
         {
-            var equalityBktInfoRecord = _encryptor.CreateEqualityBktColumnName(columnName, columnDef.DataType.BucketInfo.EqualityBucketSize);
+            var equalityBktInfoRecord = _encryptor.CreateEqualityBktInfoRecord(columnName, columnDef.DataType.BucketInfo.EqualityBucketSize.Value);
 
             return new CreateBktColumnResultPoco()
             {
@@ -429,8 +429,8 @@ namespace BlockBase.DataProxy.Encryption
         }
         private CreateBktColumnResultPoco CreateRangeBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
         {
-            var rangeBktInfoRecord = _encryptor.CreateRangeBktColumnName(columnName, columnDef.DataType.BucketInfo.RangeBucketSize,
-                 columnDef.DataType.BucketInfo.BucketMinRange, columnDef.DataType.BucketInfo.BucketMaxRange);
+            var rangeBktInfoRecord = _encryptor.CreateRangeBktInfoRecord(columnName, columnDef.DataType.BucketInfo.RangeBucketSize.Value,
+                 columnDef.DataType.BucketInfo.BucketMinRange.Value, columnDef.DataType.BucketInfo.BucketMaxRange.Value);
 
             return new CreateBktColumnResultPoco()
             {
