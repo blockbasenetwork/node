@@ -14,7 +14,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private const string ROOT_DUMMY_IV = "0";
 
-        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyName, string recordIV, string parentIV, string data = null)
+        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyName, string recordIV, string parentIV, InfoRecord.LocalData localData = null, string data = null)
         {
             return new InfoRecord
             {
@@ -23,7 +23,9 @@ namespace BlockBase.DataProxy.Encryption
                 KeyManage = encryptedKeyManage,
                 KeyName = encryptedKeyName,
                 LocalNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(Encoding.Unicode.GetBytes(recordName))),
-                ParentIV = parentIV
+                ParentIV = parentIV,
+                Data = data,
+                LData = localData
             };
         }
 

@@ -12,6 +12,7 @@ namespace BlockBase.Domain.Database.Info
         public bool? IsDataEncrypted { get; set; }
         public string LocalNameHash { get; set; }
         public string Data { get; set; }
+        public LocalData LData { get; set; }
 
         public InfoRecord()
         {
@@ -27,6 +28,13 @@ namespace BlockBase.Domain.Database.Info
             IV = (string)jObject[InfoTableConstants.IV];
             IsDataEncrypted = (bool?)jObject[InfoTableConstants.IS_DATA_ENCRYPTED];
             Data = (string)jObject[InfoTableConstants.DATA];
+        }
+
+        public class LocalData
+        {
+            public string EncryptedEqualityColumnName { get; set; }
+            public string EncryptedRangeColumnName { get; set; }
+            public string EncryptedIVColumnName { get; set; }
         }
     }
 }
