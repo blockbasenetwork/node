@@ -5,7 +5,6 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace BlockBase.DataProxy
@@ -14,7 +13,7 @@ namespace BlockBase.DataProxy
     {
         private Dictionary<estring, InfoRecord> _infoRecordsPerDatabase;
         private IConnector _connector;
-        private Encryptor _encryptor;
+        private readonly Encryptor _encryptor;
 
         public InfoTableCache(IConnector connector, Encryptor encryptor)
         {
@@ -34,7 +33,7 @@ namespace BlockBase.DataProxy
                 if (encryptedInfoRecords.Count != 0)
                 {
                     var infoRecord = DecryptInfoRecords(encryptedInfoRecords);
-                    var databaseName = new estring(infoRecord.Name, infoRecord.KeyRead != null);
+                    var databaseName = new estring(infoRecord.Name, infoRecord.KeyName != null);
                     _infoRecordsPerDatabase.Add(databaseName, infoRecord);
                 }
             }
@@ -50,17 +49,15 @@ namespace BlockBase.DataProxy
         private InfoRecord DecryptInfoRecord(InfoRecord infoRecord, byte[] parentIV = null, byte[] parentManageKey = null)
         {
             var decryptedInfoRecord = new InfoRecord();
-            var isNameEncrypted = infoRecord.KeyRead != null;
+            var isNameEncrypted = infoRecord.KeyName != null;
 
             //decryptedInfoRecord.KeyManage = decryptKeyManage(encryptedKey, parentManageKey, parentIV);
             //decryptedInfoRecord.KeyRead = decryptKeyManage(encryptedKey, decryptedInfoRecord.KeyManage, infoRecord.IV);
             //decryptedInfoRecord.Name = isNameEncrypted ? decryptName(encryptedName, readKey) : decryptedInfoRecord.Name;
 
-
             //decrypt keys
 
             return decryptedInfoRecord;
-
         }
     }
 }

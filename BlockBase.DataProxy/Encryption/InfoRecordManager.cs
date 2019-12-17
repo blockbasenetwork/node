@@ -14,17 +14,54 @@ namespace BlockBase.DataProxy.Encryption
 
         private const string ROOT_DUMMY_IV = "0";
 
-        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyRead, string recordIV, string parentIV)
+        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyName, string recordIV, string parentIV)
         {
             return new InfoRecord
             {
                 Name = recordName,
                 IV = recordIV,
                 KeyManage = encryptedKeyManage,
-                KeyRead = encryptedKeyRead,
+                KeyName = encryptedKeyName,
                 LocalNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(Encoding.Unicode.GetBytes(recordName))),
                 ParentIV = parentIV
             };
+        }
+
+        public List<InfoRecord> FindChildren(string iv, bool deepFind = false)
+        {
+            if (!_infoRecordsLookup.ContainsKey(iv))
+                return new List<InfoRecord>();
+
+            if (!deepFind)
+            {
+                return _infoRecordsLookup[iv];
+            }
+            else
+            {
+                var resultList = new List<InfoRecord>();
+                var queueToSearch = new Queue<InfoRecord>();
+
+                foreach (var record in _infoRecordsLookup[iv])
+                {
+                    resultList.Add(record);
+                    queueToSearch.Enqueue(record);
+                }
+
+                while (queueToSearch.Peek() != null)
+                {
+                    if (_infoRecordsLookup.ContainsKey(queueToSearch.Peek().IV))
+                    {
+                        foreach (var record in _infoRecordsLookup[queueToSearch.Peek().IV])
+                        {
+                            resultList.Add(record);
+                            queueToSearch.Enqueue(record);
+                        }
+                    }
+                    queueToSearch.Dequeue();
+                }
+
+                return resultList;
+            }
         }
 
         public InfoRecord FindInfoRecord(estring recordName, string parentIV)
