@@ -33,6 +33,11 @@ namespace BlockBase.DataProxy.Encryption
             return _infoRecordManager.FindInfoRecord(name, parentIV);
         }
 
+        public List<InfoRecord> FindChildren(string iv, bool deepFind = false)
+        {
+            return _infoRecordManager.FindChildren(iv, deepFind);
+        }
+
         public void AddInfoRecord(estring name, bool isDatabaseRecord, byte[] parentManageKey, byte[] parentIV)
         {
             var keyGenerator = new KeyAndIVGenerator_v2();

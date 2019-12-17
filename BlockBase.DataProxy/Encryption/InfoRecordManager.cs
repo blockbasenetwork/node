@@ -27,6 +27,43 @@ namespace BlockBase.DataProxy.Encryption
             };
         }
 
+        public List<InfoRecord> FindChildren(string iv, bool deepFind = false)
+        {
+            if (!_infoRecordsLookup.ContainsKey(iv))
+                return new List<InfoRecord>();
+
+            if (!deepFind)
+            {
+                return _infoRecordsLookup[iv];
+            }
+            else
+            {
+                var resultList = new List<InfoRecord>();
+                var queueToSearch = new Queue<InfoRecord>();
+
+                foreach (var record in _infoRecordsLookup[iv])
+                {
+                    resultList.Add(record);
+                    queueToSearch.Enqueue(record);
+                }
+
+                while (queueToSearch.Peek() != null)
+                {
+                    if (_infoRecordsLookup.ContainsKey(queueToSearch.Peek().IV))
+                    {
+                        foreach (var record in _infoRecordsLookup[queueToSearch.Peek().IV])
+                        {
+                            resultList.Add(record);
+                            queueToSearch.Enqueue(record);
+                        }
+                    }
+                    queueToSearch.Dequeue();
+                }
+
+                return resultList;
+            }
+        }
+
         public InfoRecord FindInfoRecord(estring recordName, string parentIV)
         {
             string pIV = parentIV != null ? parentIV : ROOT_DUMMY_IV;
