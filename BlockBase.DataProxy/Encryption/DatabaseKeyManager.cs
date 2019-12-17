@@ -2,19 +2,19 @@
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Utils.Crypto;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using Wiry.Base32;
 
 namespace BlockBase.DataProxy.Encryption
 {
     public class DatabaseKeyManager
     {
-        private readonly ISecretStore _keyStore;
+        private readonly IKeyStore _keyStore;
         private readonly InfoRecordManager _infoRecordManager;
         public string LiteralDatabaseName { get; private set; }
         private readonly KeyAndIVGenerator_v2 _keyAndIVGenerator;
 
-        public DatabaseKeyManager(string literalDatabaseName, ISecretStore keyStore)
+        public DatabaseKeyManager(string literalDatabaseName, IKeyStore keyStore)
         {
             LiteralDatabaseName = literalDatabaseName;
             _keyStore = keyStore;
@@ -28,27 +28,31 @@ namespace BlockBase.DataProxy.Encryption
             LoadInfoRecordsToRecordManager(infoRecords);
         }
 
-        public InfoRecord FindInfoRecord(string IV)
+        public InfoRecord FindInfoRecord(estring name, string parentIV)
         {
-            return _infoRecordManager.FindInfoRecord(IV);
+            return _infoRecordManager.FindInfoRecord(name, parentIV);
         }
 
-        //TODO change this
-        public InfoRecord FindInfoRecord(string name, string parentIV)
+        public void AddInfoRecord(estring name, bool isDatabaseRecord, byte[] parentManageKey, byte[] parentIV)
         {
-            return _infoRecordManager.FindInfoRecord(name);
-        }
-        public InfoRecord AddInfoRecord(estring name, string parentStringIV, byte[] parentManageKey, byte[] parentIV)
-        {
-            var parentInfoRecord = FindInfoRecord(parentStringIV);
-            var infoRecord = InfoRecordManager.CreateInfoRecord(name, parentManageKey, parentIV);
-            _infoRecordManager.AddInfoRecord(infoRecord, parentInfoRecord);
-            return infoRecord;
+            var keyGenerator = new KeyAndIVGenerator_v2();
+
+            var ivBytes = keyGenerator.CreateRandomIV();
+            var keyManageBytes = keyGenerator.CreateDerivateKey(parentManageKey, parentIV);
+            var keyReadBytes = keyGenerator.CreateDerivateKey(keyManageBytes, ivBytes);
+
+            string recordName = !name.ToEncrypt ? name.Value : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(name.Value), keyReadBytes, ivBytes));
+            var iv = Base32Encoding.ZBase32.GetString(ivBytes);
+            var keyManage = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyManageBytes, keyManageBytes, ivBytes));
+            var keyRead = !name.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyReadBytes, keyReadBytes, ivBytes));
+            string pIV = isDatabaseRecord ? null : Base32Encoding.ZBase32.GetString(parentIV);
+
+            _infoRecordManager.AddInfoRecord(InfoRecordManager.CreateInfoRecord(name.Value, keyManage, keyRead, iv, pIV));
         }
 
         public byte[] GetKeyManageFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
+            var key = _keyStore.GetKey(infoRecord.LocalNameHash);
             if (key == null) return null;
 
             var decryptedManageKeyData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyManage), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
@@ -60,7 +64,7 @@ namespace BlockBase.DataProxy.Encryption
 
         public byte[] GetKeyReadFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
+            var key = _keyStore.GetKey(infoRecord.LocalNameHash);
             if (key == null) return null;
 
             var decryptedReadKeyData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyRead), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
@@ -75,8 +79,7 @@ namespace BlockBase.DataProxy.Encryption
             foreach (var infoRecord in infoRecords)
             {
                 TryAddLocalHashToInfoRecord(infoRecord);
-                var parent = infoRecords.SingleOrDefault(r => r.IV == infoRecord.Parent);
-                _infoRecordManager.AddInfoRecord(infoRecord, parent);
+                _infoRecordManager.AddInfoRecord(infoRecord);
             }
         }
 
