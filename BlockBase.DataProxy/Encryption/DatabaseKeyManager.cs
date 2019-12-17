@@ -9,12 +9,12 @@ namespace BlockBase.DataProxy.Encryption
 {
     public class DatabaseKeyManager
     {
-        private readonly IKeyStore _keyStore;
+        private readonly ISecretStore _keyStore;
         private readonly InfoRecordManager _infoRecordManager;
         public string LiteralDatabaseName { get; private set; }
         private readonly KeyAndIVGenerator_v2 _keyAndIVGenerator;
 
-        public DatabaseKeyManager(string literalDatabaseName, IKeyStore keyStore)
+        public DatabaseKeyManager(string literalDatabaseName, ISecretStore keyStore)
         {
             LiteralDatabaseName = literalDatabaseName;
             _keyStore = keyStore;
@@ -44,20 +44,20 @@ namespace BlockBase.DataProxy.Encryption
 
             var ivBytes = keyGenerator.CreateRandomIV();
             var keyManageBytes = keyGenerator.CreateDerivateKey(parentManageKey, parentIV);
-            var keyReadBytes = keyGenerator.CreateDerivateKey(keyManageBytes, ivBytes);
+            var keyNameBytes = keyGenerator.CreateDerivateKey(keyManageBytes, ivBytes);
 
-            string recordName = !name.ToEncrypt ? name.Value : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(name.Value), keyReadBytes, ivBytes));
+            string recordName = !name.ToEncrypt ? name.Value : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(name.Value), keyNameBytes, ivBytes));
             var iv = Base32Encoding.ZBase32.GetString(ivBytes);
             var keyManage = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyManageBytes, keyManageBytes, ivBytes));
-            var keyRead = !name.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyReadBytes, keyReadBytes, ivBytes));
+            var keyName = !name.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyNameBytes, keyNameBytes, ivBytes));
             string pIV = isDatabaseRecord ? null : Base32Encoding.ZBase32.GetString(parentIV);
 
-            _infoRecordManager.AddInfoRecord(InfoRecordManager.CreateInfoRecord(name.Value, keyManage, keyRead, iv, pIV));
+            _infoRecordManager.AddInfoRecord(InfoRecordManager.CreateInfoRecord(name.Value, keyManage, keyName, iv, pIV));
         }
 
         public byte[] GetKeyManageFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetKey(infoRecord.LocalNameHash);
+            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
             if (key == null) return null;
 
             var decryptedManageKeyData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyManage), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
@@ -67,16 +67,16 @@ namespace BlockBase.DataProxy.Encryption
             return decryptedManageKeyData;
         }
 
-        public byte[] GetKeyReadFromInfoRecord(InfoRecord infoRecord)
+        public byte[] GetKeyNameFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetKey(infoRecord.LocalNameHash);
+            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
             if (key == null) return null;
 
-            var decryptedReadKeyData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyRead), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
+            var decryptedKeyNameData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyName), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
 
-            if (!Utils.Crypto.Utils.AreByteArraysEqual(key, decryptedReadKeyData)) return null;
+            if (!Utils.Crypto.Utils.AreByteArraysEqual(key, decryptedKeyNameData)) return null;
 
-            return decryptedReadKeyData;
+            return decryptedKeyNameData;
         }
 
         private void LoadInfoRecordsToRecordManager(List<InfoRecord> infoRecords)
@@ -90,7 +90,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private void TryAddLocalHashToInfoRecord(InfoRecord infoRecord)
         {
-            if (infoRecord.KeyRead == null)
+            if (infoRecord.KeyName == null)
             {
                 //the recordName isn't encrypted
                 return;
@@ -104,22 +104,22 @@ namespace BlockBase.DataProxy.Encryption
             if (decryptedManageKeyData != null)
             {
                 //user has the key manage
-                //derive key read from key manage
+                //derive key name from key manage
 
-                var keyRead = _keyAndIVGenerator.CreateDerivateKey(decryptedManageKeyData, iv);
-                var decryptedRecordNameInBytes = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.Name), keyRead, iv);
+                var keyName = _keyAndIVGenerator.CreateDerivateKey(decryptedManageKeyData, iv);
+                var decryptedRecordNameInBytes = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.Name), keyName, iv);
                 var localNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(decryptedRecordNameInBytes));
 
                 infoRecord.LocalNameHash = localNameHash;
                 return;
             }
 
-            var decryptedReadKeyData = GetKeyManageFromInfoRecord(infoRecord);
+            var decryptedKeyNameData = GetKeyNameFromInfoRecord(infoRecord);
 
-            if (decryptedReadKeyData != null)
+            if (decryptedKeyNameData != null)
             {
                 //user has the key read
-                var decryptedRecordNameInBytes = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.Name), decryptedReadKeyData, iv);
+                var decryptedRecordNameInBytes = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.Name), decryptedKeyNameData, iv);
                 var localNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(decryptedRecordNameInBytes));
 
                 infoRecord.LocalNameHash = localNameHash;

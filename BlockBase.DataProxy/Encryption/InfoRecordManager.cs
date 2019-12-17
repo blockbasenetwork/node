@@ -14,14 +14,14 @@ namespace BlockBase.DataProxy.Encryption
 
         private const string ROOT_DUMMY_IV = "0";
 
-        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyRead, string recordIV, string parentIV)
+        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyName, string recordIV, string parentIV)
         {
             return new InfoRecord
             {
                 Name = recordName,
                 IV = recordIV,
                 KeyManage = encryptedKeyManage,
-                KeyRead = encryptedKeyRead,
+                KeyName = encryptedKeyName,
                 LocalNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(Encoding.Unicode.GetBytes(recordName))),
                 ParentIV = parentIV
             };

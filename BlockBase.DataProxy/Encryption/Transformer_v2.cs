@@ -462,7 +462,7 @@ namespace BlockBase.DataProxy.Encryption
                     { NAME, new List<Value>() { new Value(infoRecord.Name, true) }  },
                     { IV, new List<Value>() { new Value(infoRecord.IV, true) }  },
                     { PARENT, infoRecord.ParentIV != null ? new List<Value>() { new Value(infoRecord.ParentIV, true) } : null },
-                    { KEY_READ, infoRecord.KeyRead != null ? new List<Value>() { new Value(infoRecord.KeyRead, true) } : null  },
+                    { KEY_READ, infoRecord.KeyName != null ? new List<Value>() { new Value(infoRecord.KeyName, true) } : null  },
                     { KEY_MANAGE, new List<Value>() { new Value(infoRecord.KeyManage, true) }  }
                 }
             };
