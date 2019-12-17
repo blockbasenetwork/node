@@ -71,15 +71,18 @@ namespace BlockBase.TestsConsole.Commands
             {
                 var builder = (Builder)_visitor.Visit(context);
                 var transformedBuilder = _transformer.GetTransformedBuilder(builder);
-                var sqlCommandsPerDatabase = transformedBuilder.BuildQueryStrings(new PSqlGenerator());
+                var sqlCommands = transformedBuilder.BuildSqlStatements(new PSqlGenerator());
 
-                foreach (var databaseSqlCommandsKeyPair in sqlCommandsPerDatabase)
+                var databaseName = "";
+                foreach (var sqlCommand in sqlCommands)
                 {
-                    foreach (var transformedSqlCommand in databaseSqlCommandsKeyPair.Value)
+                    if (sqlCommand.DatabaseName != null)
                     {
-                        Console.WriteLine(transformedSqlCommand.Value);
-                        _psqlConnector.ExecuteCommand(transformedSqlCommand.Value, transformedSqlCommand.IsDatabaseStatement ? null : databaseSqlCommandsKeyPair.Key);
+                        databaseName = sqlCommand.DatabaseName;
+                        continue;
                     }
+                       Console.WriteLine(sqlCommand.Value);
+                        _psqlConnector.ExecuteCommand(sqlCommand.Value, sqlCommand.IsDatabaseStatement ? null : databaseName);
                 }
             }
             catch (Exception e)

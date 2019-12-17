@@ -148,14 +148,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             }
         }
 
-        //TODO: Temporary, need to remove later
-        public Tuple<string, string> TransformQuery(SelectCoreStatement selectCoreStatement, estring databaseName)
-        {
-            var builder = new Builder();
-            builder.AddStatement(selectCoreStatement, databaseName);
-            return new Tuple<string, string>(builder.BuildQueryStrings(new PSqlGenerator()).SingleOrDefault().Key, builder.BuildQueryStrings(new PSqlGenerator()).SingleOrDefault().Value[0].Value);
-
-        }
 
 
         public IList<IList<string>> ExecuteQuery(string sqlQuery, string databaseName)

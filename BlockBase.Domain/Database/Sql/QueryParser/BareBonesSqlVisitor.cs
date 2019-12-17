@@ -18,8 +18,7 @@ namespace BlockBase.Domain.Database.QueryParser
 {
     public class BareBonesSqlVisitor : BareBonesSqlBaseVisitor<object>
     {
-        public estring DatabaseName { get; set; }
-
+        private estring DatabaseName { get; set; }
         public override object VisitSql_stmt_list([NotNull] Sql.QueryParser.BareBonesSqlParser.Sql_stmt_listContext context)
         {
             var builder = new Builder();
@@ -29,12 +28,7 @@ namespace BlockBase.Domain.Database.QueryParser
             foreach (var stm in stms)
             {
                 var sqlStatement = (ISqlStatement)Visit(stm);
-                //var psqlGenerator = new PSqlGenerator();
-                //Console.WriteLine(psqlGenerator.BuildString(sqlStatement));
-                if (sqlStatement is DropDatabaseStatement dropDatabaseStatement)
-                    builder.AddStatement(sqlStatement, dropDatabaseStatement.DatabaseName);
-                else
-                    builder.AddStatement(sqlStatement, DatabaseName);
+                builder.AddStatement(sqlStatement);
             }
 
             return builder;
@@ -67,15 +61,15 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitCreate_database_stmt([NotNull] Create_database_stmtContext context)
         {
             ThrowIfParserHasException(context);
-            DatabaseName = (estring)Visit(context.database_name().complex_name());
-            return new CreateDatabaseStatement() { DatabaseName = DatabaseName };
+            return new CreateDatabaseStatement() { DatabaseName = (estring)Visit(context.database_name().complex_name()) };
         }
 
         public override object VisitDrop_database_stmt([NotNull] Drop_database_stmtContext context)
         {
             ThrowIfParserHasException(context);
-            DatabaseName = null;
-            return new DropDatabaseStatement() { DatabaseName = (estring)Visit(context.database_name().complex_name()) };
+            var dropDatabaseName = (estring)Visit(context.database_name().complex_name());
+            if(dropDatabaseName == DatabaseName) DatabaseName = null;
+            return new DropDatabaseStatement() { DatabaseName = dropDatabaseName };
         }
 
         public override object VisitCreate_table_stmt(Create_table_stmtContext context)
