@@ -14,7 +14,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private const string ROOT_DUMMY_IV = "0";
 
-        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyName, string recordIV, string parentIV)
+        public static InfoRecord CreateInfoRecord(string recordName, string encryptedKeyManage, string encryptedKeyName, string recordIV, string parentIV, string data = null)
         {
             return new InfoRecord
             {

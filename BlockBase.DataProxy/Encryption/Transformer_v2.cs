@@ -31,7 +31,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private static readonly estring INFO_TABLE_NAME = new estring(InfoTableConstants.INFO_TABLE_NAME);
         private static readonly estring NAME = new estring(InfoTableConstants.NAME);
-        private static readonly estring DATA_ENCRYPTED = new estring(InfoTableConstants.DATA_ENCRYPTED);
+        private static readonly estring DATA_ENCRYPTED = new estring(InfoTableConstants.IS_DATA_ENCRYPTED);
         private static readonly estring KEY_READ = new estring(InfoTableConstants.KEY_READ);
         private static readonly estring KEY_MANAGE = new estring(InfoTableConstants.KEY_MANAGE);
         private static readonly estring PARENT = new estring(InfoTableConstants.PARENT);
