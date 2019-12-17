@@ -391,16 +391,16 @@ namespace BlockBase.DataProxy.Encryption
                         _encryptor.GetIVColumnName(transformedColumnDefinition.ColumnName.Value),
                         new DataType() { DataTypeName = DataTypeEnum.TEXT }
                     ));
-                    var createEqualityBktResult = CreateEqualityBucketColumnDefinition(columnDefinition, columnInfoRecord.Name);
-                    columnDefinitions.Add(createEqualityBktResult.ColumnDefinition);
-                    insertRecordStatements.Add(createEqualityBktResult.InsertRecordStatement);
+                    //var createEqualityBktResult = CreateEqualityBucketColumnDefinition(columnDefinition, columnInfoRecord.Name);
+                    //columnDefinitions.Add(createEqualityBktResult.ColumnDefinition);
+                    //insertRecordStatements.Add(createEqualityBktResult.InsertRecordStatement);
                 }
 
                 if (columnDefinition.DataType.BucketInfo?.RangeBucketSize != null)
                 {
-                    var createRangeBktResult = CreateRangeBucketColumnDefinition(columnDefinition, columnInfoRecord.Name);
-                    columnDefinitions.Add(createRangeBktResult.ColumnDefinition);
-                    insertRecordStatements.Add(createRangeBktResult.InsertRecordStatement);
+                    //var createRangeBktResult = CreateRangeBucketColumnDefinition(columnDefinition, columnInfoRecord.Name);
+                    //columnDefinitions.Add(createRangeBktResult.ColumnDefinition);
+                    //insertRecordStatements.Add(createRangeBktResult.InsertRecordStatement);
                 }
             }
 
@@ -411,38 +411,38 @@ namespace BlockBase.DataProxy.Encryption
             return new Tuple<IList<ColumnDefinition>, IList<InsertRecordStatement>>(columnDefinitions, insertRecordStatements);
         }
 
-        private CreateBktColumnResultPoco CreateEqualityBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
-        {
-            var equalityBktInfoRecord = _encryptor.CreateEqualityBktInfoRecord(columnName, columnDef.DataType.BucketInfo.EqualityBucketSize.Value);
+        //private CreateBktColumnResultPoco CreateEqualityBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
+        //{
+        //    var equalityBktInfoRecord = _encryptor.CreateEqualityBktInfoRecord(columnName, columnDef.DataType.BucketInfo.EqualityBucketSize.Value);
 
-            return new CreateBktColumnResultPoco()
-            {
-                ColumnDefinition = new ColumnDefinition()
-                {
-                    ColumnName = new estring(equalityBktInfoRecord.Name),
-                    DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
-                    ColumnConstraints = new List<ColumnConstraint>()
-                },
-                InsertRecordStatement = CreateInsertRecordStatementForInfoTable(equalityBktInfoRecord)
-            };
+        //    return new CreateBktColumnResultPoco()
+        //    {
+        //        ColumnDefinition = new ColumnDefinition()
+        //        {
+        //            ColumnName = new estring(equalityBktInfoRecord.Name),
+        //            DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
+        //            ColumnConstraints = new List<ColumnConstraint>()
+        //        },
+        //        InsertRecordStatement = CreateInsertRecordStatementForInfoTable(equalityBktInfoRecord)
+        //    };
 
-        }
-        private CreateBktColumnResultPoco CreateRangeBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
-        {
-            var rangeBktInfoRecord = _encryptor.CreateRangeBktInfoRecord(columnName, columnDef.DataType.BucketInfo.RangeBucketSize.Value,
-                 columnDef.DataType.BucketInfo.BucketMinRange.Value, columnDef.DataType.BucketInfo.BucketMaxRange.Value);
+        //}
+        //private CreateBktColumnResultPoco CreateRangeBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
+        //{
+        //    var rangeBktInfoRecord = _encryptor.CreateRangeBktInfoRecord(columnName, columnDef.DataType.BucketInfo.RangeBucketSize.Value,
+        //         columnDef.DataType.BucketInfo.BucketMinRange.Value, columnDef.DataType.BucketInfo.BucketMaxRange.Value);
 
-            return new CreateBktColumnResultPoco()
-            {
-                ColumnDefinition = new ColumnDefinition()
-                {
-                    ColumnName = new estring(rangeBktInfoRecord.Name),
-                    DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
-                    ColumnConstraints = new List<ColumnConstraint>()
-                },
-                InsertRecordStatement = CreateInsertRecordStatementForInfoTable(rangeBktInfoRecord)
-            };
-        }
+        //    return new CreateBktColumnResultPoco()
+        //    {
+        //        ColumnDefinition = new ColumnDefinition()
+        //        {
+        //            ColumnName = new estring(rangeBktInfoRecord.Name),
+        //            DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
+        //            ColumnConstraints = new List<ColumnConstraint>()
+        //        },
+        //        InsertRecordStatement = CreateInsertRecordStatementForInfoTable(rangeBktInfoRecord)
+        //    };
+        //}
 
         private ForeignKeyClause TransformForeignKeyClause(ForeignKeyClause foreignKeyClause, string databaseIV)
         {
