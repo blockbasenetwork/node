@@ -26,7 +26,7 @@ namespace BlockBase.DataProxy.Encryption
                 Name = !recordName.ToEncrypt ? recordName.Value : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(recordName.Value), keyRead, iv)),
                 IV = Base32Encoding.ZBase32.GetString(iv),
                 KeyManage = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyManage, keyManage, iv)),
-                KeyRead = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyRead, keyRead, iv)),
+                KeyRead = !recordName.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyRead, keyRead, iv)),
                 NameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(Utils.Crypto.Utils.ConcatenateByteArray(Encoding.Unicode.GetBytes(recordName.Value), iv))),
                 LocalNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(Encoding.Unicode.GetBytes(recordName.Value)))
             };
