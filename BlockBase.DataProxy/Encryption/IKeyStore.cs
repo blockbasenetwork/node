@@ -1,12 +1,12 @@
 ﻿namespace BlockBase.DataProxy.Encryption
 {
     //TODO - this interface should be implemented by a class that provides access to a secure system where the database keys are stored
-    public interface IKeyStore
+    public interface ISecretStore
     {
-        void SetKey(string keyId, byte[] key);
+        void SetSecret(string keyId, byte[] key);
 
-        void RemoveKey(string keyId);
+        void RemoveSecret(string keyId);
 
-        byte[] GetKey(string keyId);
+        byte[] GetSecret(string keyId);
     }
 }

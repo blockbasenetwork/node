@@ -9,25 +9,44 @@ namespace BlockBase.DataProxy.Encryption
 {
     public interface IEncryptor
     {
-        InfoRecord CreateInfoRecord(estring databaseName);
-        InfoRecord CreateInfoRecord(estring tableName, string databaseName);
-        InfoRecord CreateInfoRecord(estring columnName, string tableName, string databaseName, bool isDataEncrypted);
+        InfoRecord CreateInfoRecord(estring name, string parentIV);
+    
+        InfoRecord CreateEqualityBktColumnName(string columnName, int? size);
+        //{
+        //    var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size;
+        //    var encryptedSizeAndRange = _encryptor.GetEncryptedBucketColumn(bucketColumnNameString);
+        //    return new estring(_equalityBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange, false);
+        //}
+        InfoRecord CreateRangeBktColumnName(string columnName, int? size, int? min, int? max);
+        //{
+        //    var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size + _separatingChar + min + _separatingChar + max;
+        //    var encryptedSizeAndRange = _encryptor.GetEncryptedBucketColumn(bucketColumnNameString);
 
-        string RemoveInfoRecord(estring databaseName);
-        string RemoveInfoRecord(estring tableName, string databaseName);
-        IList<string> RemoveInfoRecord(estring columnName, string tableName, string databaseName);
+        //    return new estring(_rangeBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange, false);
+        //}
 
-        Tuple<string, string> ChangeInfoRecord(estring oldTableName, estring newTableName, string databaseName);
+        InfoRecord RemoveInfoRecord(estring name, string parentIV);
 
-        string GetEncryptedDatabaseName(estring databaseName);
-        string GetEncryptedTableName(estring tableName, string databaseName);
-        string GetEncryptedColumnName(estring columnName, string tableName, string databaseName);
-        Tuple<string, string> GetEncryptedBktColumnNames(estring columnName, string tableName, string databaseName);
+        Tuple<string, string> ChangeInfoRecord(estring oldName, estring newName, string parentIV);
 
-        string GetRangeBucket(string columnName, int upperBound);
+        InfoRecord FindInfoRecord(estring name, string parentIV);
+
+      
+        Tuple<string, string> GetEncryptedBktColumnNames(string columnIV);
+        estring GetIVColumnName(string columnName);
+        //{
+        //    return new estring(_ivPrefix + _separatingChar + columnName, false);
+        //}
 
         Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName);
 
-        string GetEncryptedBucketColumn(string bktValues);
+        
+        
+
+        string CreateRangeBktValue(string rangeColumnName, string valueToInsert, string columnName);
+        string CreateEqualityBktValue(string rangeColumnName, string valueToInsert, string columnName);
+
+        string EncryptNormalValue(string valueToInsert, string columnName, out string generatedIV);
+        string EncryptUniqueValue(string valueToInsert, string columnName);
     }
 }

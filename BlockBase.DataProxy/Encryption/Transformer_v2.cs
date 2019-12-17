@@ -11,6 +11,7 @@ using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.ColumnCo
 using BlockBase.Domain.Database.Info;
 using System.Linq;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
+using BlockBase.DataProxy.Encryption.Pocos;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -49,7 +50,7 @@ namespace BlockBase.DataProxy.Encryption
         public Builder GetTransformedBuilder(Builder builder)
         {
             var transformedBuilder = new Builder();
-            string currentDatabaseName = "";
+            InfoRecord databaseInfoRecord = null;
             foreach (var sqlStatement in builder.SqlStatements)
             {
                 switch (sqlStatement)
@@ -63,28 +64,34 @@ namespace BlockBase.DataProxy.Encryption
                         break;
 
                     case UseDatabaseStatement useDatabaseStatement:
-                        transformedBuilder.AddStatement(GetTransformedUseDatabaseStatement(useDatabaseStatement, out currentDatabaseName));
+                        transformedBuilder.AddStatement(GetTransformedUseDatabaseStatement(useDatabaseStatement, out databaseInfoRecord));
                         break;
 
                     case CreateTableStatement createTableStatement:
-                        transformedBuilder.AddStatements(GetTransformedCreateTableStatement(createTableStatement, currentDatabaseName));
+                        transformedBuilder.AddStatements(GetTransformedCreateTableStatement(createTableStatement, databaseInfoRecord.IV));
                         break;
 
                     case DropTableStatement dropTableStatement:
-                        transformedBuilder.AddStatements(GetTransformedDropTableStatement(dropTableStatement, currentDatabaseName));
+                        transformedBuilder.AddStatements(GetTransformedDropTableStatement(dropTableStatement, databaseInfoRecord.IV));
                         break;
 
                     case AbstractAlterTableStatement abstractAlterTableStatement:
-                        transformedBuilder.AddStatements(GetTransformedAlterTableStatement(abstractAlterTableStatement, currentDatabaseName));
+                        transformedBuilder.AddStatements(GetTransformedAlterTableStatement(abstractAlterTableStatement, databaseInfoRecord.IV));
                         break;
+
+                    case InsertRecordStatement insertRecordStatement:
+                        transformedBuilder.AddStatement(GetTransformedInsertRecordStatement(insertRecordStatement, databaseInfoRecord.IV));
+                        break;
+
+
                 }
             }
             return transformedBuilder;
         }
-
+        #region Transform SqlStatements
         private List<ISqlStatement> GetTransformedCreateDatabaseStatement(CreateDatabaseStatement createDatabaseStatement)
         {
-            var datatabaseInfoRecord = _encryptor.CreateInfoRecord(createDatabaseStatement.DatabaseName);
+            var datatabaseInfoRecord = _encryptor.CreateInfoRecord(createDatabaseStatement.DatabaseName, null);
 
             return new List<ISqlStatement>()
             {
@@ -95,22 +102,22 @@ namespace BlockBase.DataProxy.Encryption
         }
         private List<ISqlStatement> GetTransformedDropDatabaseStatement(DropDatabaseStatement dropDatabaseStatement)
         {
-            var databaseNameToRemove = _encryptor.RemoveInfoRecord(dropDatabaseStatement.DatabaseName);
+            var infoRecord = _encryptor.RemoveInfoRecord(dropDatabaseStatement.DatabaseName, null);
             return new List<ISqlStatement>()
             {
-                CreateDeleteRecordStatementForInfoTable(databaseNameToRemove),
-                new DropDatabaseStatement(new estring(databaseNameToRemove))
+                CreateDeleteRecordStatementForInfoTable(infoRecord.IV),
+                new DropDatabaseStatement(new estring(infoRecord.Name))
             };
         }
-        private UseDatabaseStatement GetTransformedUseDatabaseStatement(UseDatabaseStatement useDatabaseStatement, out string databaseName)
+        private UseDatabaseStatement GetTransformedUseDatabaseStatement(UseDatabaseStatement useDatabaseStatement, out InfoRecord databaseInfoRecord)
         {
-            databaseName = _encryptor.GetEncryptedDatabaseName(useDatabaseStatement.DatabaseName);
-            return new UseDatabaseStatement(new estring(databaseName));
+            databaseInfoRecord = _encryptor.FindInfoRecord(useDatabaseStatement.DatabaseName, null);
+            return new UseDatabaseStatement(new estring(databaseInfoRecord.Name));
         }
 
-        private IList<ISqlStatement> GetTransformedCreateTableStatement(CreateTableStatement createTableStatement, string databaseName)
+        private IList<ISqlStatement> GetTransformedCreateTableStatement(CreateTableStatement createTableStatement, string databaseIV)
         {
-            var tableInfoRecord = _encryptor.CreateInfoRecord(createTableStatement.TableName, databaseName);
+            var tableInfoRecord = _encryptor.CreateInfoRecord(createTableStatement.TableName, databaseIV);
             var transformedCreateTableStatement = new CreateTableStatement(new estring(tableInfoRecord.Name));
 
             var transformedStatements = new List<ISqlStatement>()
@@ -121,10 +128,10 @@ namespace BlockBase.DataProxy.Encryption
 
             foreach (var columnDef in createTableStatement.ColumnDefinitions)
             {
-                var additionalColAndInfoInserts = GetTransformedColumnDefinition(columnDef, tableInfoRecord.Name, databaseName);
+                var additionalColAndInfoInserts = GetTransformedColumnDefinition(columnDef, tableInfoRecord.IV, databaseIV);
 
                 ((List<ColumnDefinition>)createTableStatement.ColumnDefinitions).AddRange(additionalColAndInfoInserts.Item1);
-                transformedStatements.Add(additionalColAndInfoInserts.Item2);
+                transformedStatements.AddRange(additionalColAndInfoInserts.Item2);
             }
 
             return transformedStatements;
@@ -132,36 +139,37 @@ namespace BlockBase.DataProxy.Encryption
         private IList<ISqlStatement> GetTransformedDropTableStatement(DropTableStatement dropTableStatement, string databaseName)
         {
             var sqlStatements = new List<ISqlStatement>();
-            var tableToDelete = _encryptor.RemoveInfoRecord(dropTableStatement.TableName, databaseName);
-            sqlStatements.Add(new DropTableStatement(new estring(tableToDelete)));
-            sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(tableToDelete));
+            var tableInfoRecord = _encryptor.RemoveInfoRecord(dropTableStatement.TableName, databaseName);
+            sqlStatements.Add(new DropTableStatement(new estring(tableInfoRecord.Name)));
+            sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(tableInfoRecord.IV));
             return sqlStatements;
         }
 
-        private IList<ISqlStatement> GetTransformedAlterTableStatement(AbstractAlterTableStatement alterTableStatement, string databaseName)
+        private IList<ISqlStatement> GetTransformedAlterTableStatement(AbstractAlterTableStatement alterTableStatement, string databaseIV)
         {
             switch (alterTableStatement)
             {
                 case RenameTableStatement renameTableStatement:
-                    return new List<ISqlStatement>(GetTransformedRenameTableStatement(renameTableStatement, databaseName));
+                    return new List<ISqlStatement>(GetTransformedRenameTableStatement(renameTableStatement, databaseIV));
 
                 case RenameColumnStatement renameColumnStatement:
-                    return new List<ISqlStatement>(GetTransformedRenameColumnStatement(renameColumnStatement, databaseName));
+                    return new List<ISqlStatement>(GetTransformedRenameColumnStatement(renameColumnStatement, databaseIV));
 
                 case AddColumnStatement addColumnStatement:
-                    return new List<ISqlStatement>(GetTransformedAddColumnStatement(addColumnStatement, databaseName));
+                    return new List<ISqlStatement>(GetTransformedAddColumnStatement(addColumnStatement, databaseIV));
 
                 case DropColumnStatement dropColumnStatement:
-                    return new List<ISqlStatement>(GetTransformedDropColumnStatement(dropColumnStatement, databaseName));
+                    return new List<ISqlStatement>(GetTransformedDropColumnStatement(dropColumnStatement, databaseIV));
             }
 
             throw new FormatException("Alter table statement type not recognized.");
         }
-        private IList<ISqlStatement> GetTransformedRenameTableStatement(RenameTableStatement renameTableStatement, string databaseName)
+
+        private IList<ISqlStatement> GetTransformedRenameTableStatement(RenameTableStatement renameTableStatement, string databaseIV)
         {
             var sqlStatements = new List<ISqlStatement>();
 
-            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameTableStatement.TableName, renameTableStatement.NewTableName, databaseName);
+            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameTableStatement.TableName, renameTableStatement.NewTableName, databaseIV);
             var transformedOldTableName = changeInfoRecordResults.Item1;
             var transformedNewTableName = changeInfoRecordResults.Item2;
 
@@ -191,19 +199,20 @@ namespace BlockBase.DataProxy.Encryption
 
             return sqlStatements;
         }
-        private IList<ISqlStatement> GetTransformedRenameColumnStatement(RenameColumnStatement renameColumnStatement, string databaseName)
+        private IList<ISqlStatement> GetTransformedRenameColumnStatement(RenameColumnStatement renameColumnStatement, string databaseIV)
         {
             var sqlStatements = new List<ISqlStatement>();
 
-            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameColumnStatement.ColumnName, renameColumnStatement.NewColumnName, databaseName);
+            var tableInfoRecord = _encryptor.FindInfoRecord(renameColumnStatement.TableName, databaseIV);
+
+
+            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameColumnStatement.ColumnName, renameColumnStatement.NewColumnName, tableInfoRecord.IV);
             var transformedOldColumnName = changeInfoRecordResults.Item1;
             var transformedNewColumnName = changeInfoRecordResults.Item2;
 
-            var transformedTableName  = _encryptor.GetEncryptedTableName(renameColumnStatement.TableName, databaseName);
-
             sqlStatements.Add(
                 new RenameColumnStatement(
-                    new estring(transformedTableName),
+                    new estring(tableInfoRecord.Name),
                     new estring(transformedOldColumnName),
                     new estring(transformedNewColumnName)));
 
@@ -219,59 +228,69 @@ namespace BlockBase.DataProxy.Encryption
                    ));
             return sqlStatements;
         }
-        private IList<ISqlStatement> GetTransformedAddColumnStatement(AddColumnStatement addColumnStatement, string databaseName)
+        private IList<ISqlStatement> GetTransformedAddColumnStatement(AddColumnStatement addColumnStatement, string databaseIV)
         {
             var sqlStatements = new List<ISqlStatement>();
-            var transformedTableName = _encryptor.GetEncryptedTableName(addColumnStatement.TableName, databaseName);
-            var columnDefinitionsAndAdditionalInsert = GetTransformedColumnDefinition(addColumnStatement.ColumnDefinition, transformedTableName, databaseName);
+            var tableInfoRecord = _encryptor.FindInfoRecord(addColumnStatement.TableName, databaseIV);
+                
+            var columnDefinitionsAndAdditionalInsert = GetTransformedColumnDefinition(addColumnStatement.ColumnDefinition, tableInfoRecord.IV, databaseIV);
 
             foreach (var columnDef in columnDefinitionsAndAdditionalInsert.Item1)
             {
-                sqlStatements.Add(new AddColumnStatement(new estring(transformedTableName), columnDef));
+                sqlStatements.Add(new AddColumnStatement(new estring(tableInfoRecord.Name), columnDef));
             }
-            sqlStatements.Add(columnDefinitionsAndAdditionalInsert.Item2);
+            sqlStatements.AddRange(columnDefinitionsAndAdditionalInsert.Item2);
             return sqlStatements;
         }
-        private IList<ISqlStatement> GetTransformedDropColumnStatement(DropColumnStatement dropColumnStatement, string databaseName)
+        
+        //TODO: NEEDS TO DROP ALSO BKT COLUMNS
+        private IList<ISqlStatement> GetTransformedDropColumnStatement(DropColumnStatement dropColumnStatement, string databaseIV)
         {
             var sqlStatements = new List<ISqlStatement>();
-            var transformedTableName = _encryptor.GetEncryptedTableName(dropColumnStatement.TableName, databaseName);
-            var columnsToDelete = _encryptor.RemoveInfoRecord(dropColumnStatement.ColumnName, transformedTableName, databaseName);
-            foreach (var columnName in columnsToDelete)
-            {
-                sqlStatements.Add( new DropColumnStatement(new estring(transformedTableName), new estring(columnName)));
-                sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(columnName));
-            }
+            var tableInfoRecord = _encryptor.FindInfoRecord(dropColumnStatement.TableName, databaseIV);
+
+            var columnToDelete = _encryptor.RemoveInfoRecord(dropColumnStatement.ColumnName, tableInfoRecord.IV);
+
+            //foreach (var columnName in columnsToDelete)
+            //{
+            //    sqlStatements.Add( new DropColumnStatement(new estring(transformedTableName), new estring(columnName)));
+            //    sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(columnName));
+            //}
 
             return sqlStatements;
         }
-        private ISqlStatement GetTransformedInsertRecordStatement(InsertRecordStatement insertRecordStatement, string databaseName)
+
+        private ISqlStatement GetTransformedInsertRecordStatement(InsertRecordStatement insertRecordStatement, string databaseIV)
         {
-            var transformedTableName = _encryptor.GetEncryptedTableName(insertRecordStatement.TableName, databaseName);
-            var transformedInsertRecordStatement = new InsertRecordStatement(new estring(transformedTableName));
-            var columnDataTypes = _encryptor.GetColumnDatatypes(transformedTableName, databaseName);
+            var tableInfoRecord = _encryptor.FindInfoRecord(insertRecordStatement.TableName, databaseIV);
+
+
+            var transformedInsertRecordStatement = new InsertRecordStatement(new estring(tableInfoRecord.Name));
+            var columnDataTypes = _encryptor.GetColumnDatatypes(tableInfoRecord.Name, databaseIV);
 
             foreach (var valuesPerColumn in insertRecordStatement.ValuesPerColumn)
             {
-                transformedInsertRecordStatement.ValuesPerColumn.Concat(TransformColumnValues(valuesPerColumn, insertRecordStatement.TableName.Value, databaseName, columnDataTypes));
+                transformedInsertRecordStatement.ValuesPerColumn.Concat(TransformColumnValues(valuesPerColumn, insertRecordStatement.TableName.Value, columnDataTypes));
             }
 
             return transformedInsertRecordStatement;
         }
 
-        private IDictionary<estring, IList<Value>> TransformColumnValues(KeyValuePair<estring, IList<Value>> columnValues, string tableName, string databaseName, Dictionary<string, string> columnDataTypes)
+        #endregion
+
+        private IDictionary<estring, IList<Value>> TransformColumnValues(KeyValuePair<estring, IList<Value>> columnValues, string tableIV, Dictionary<string, string> columnDataTypes)
         {
             var columnName = columnValues.Key;
 
             var valuesPerColumn = new Dictionary<estring, IList<Value>>();
 
-            var transformedColumnName = _encryptor.GetEncryptedColumnName(columnName, tableName, databaseName);
+            var columnInfoRecord = _encryptor.FindInfoRecord(columnName, tableIV);
           
-            if (transformedColumnName == null) throw new FieldAccessException("No column with that name.");
+            if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
-            var bktColumnsNames = _encryptor.GetEncryptedBktColumnNames(columnName, tableName, databaseName);
+            var bktColumnsNames = _encryptor.GetEncryptedBktColumnNames(columnInfoRecord.IV);
 
-            string columnDataType = columnDataTypes[transformedColumnName];
+            string columnDataType = columnDataTypes[columnInfoRecord.Name];
 
             estring equalityBktColumnName = bktColumnsNames.Item1 != null ? new estring(bktColumnsNames.Item1) : null; 
             estring rangeBktColumnName = bktColumnsNames.Item2 != null ? new estring(bktColumnsNames.Item2) : null;
@@ -280,10 +299,10 @@ namespace BlockBase.DataProxy.Encryption
             bool isEncrypted = columnDataType == ENCRYPTED_KEY_WORD;
             bool isNotUnique = equalityBktColumnName != null;
 
-            if (equalityBktColumnName != null)
+            if (isNotUnique)
             {
                 valuesPerColumn[equalityBktColumnName] = new List<Value>();
-                ivColumnName = CreateIVColumnName(transformedColumnName);
+                ivColumnName = _encryptor.GetIVColumnName(columnInfoRecord.Name);
                 valuesPerColumn[ivColumnName] = new List<Value>();
             }
             if (rangeBktColumnName != null) valuesPerColumn[rangeBktColumnName] = new List<Value>();
@@ -297,38 +316,38 @@ namespace BlockBase.DataProxy.Encryption
                 {
                     if (rangeBktColumnName != null)
                     {
-            //            var newRangeColumnValue = new Value(CreateRangeBktValue(rangeBktColumnNameString, columnValues.Value[i].ValueToInsert, plainDatabaseName, plainTableName, columnName.Value), true);
-            //            additionalColumnsPerColumn[rangeBktColumnName].Add(newRangeColumnValue);
+                        var newRangeColumnValue = new Value(_encryptor.CreateRangeBktValue(rangeBktColumnName.Value, columnValues.Value[i].ValueToInsert, columnName.Value), true);
+                        valuesPerColumn[rangeBktColumnName].Add(newRangeColumnValue);
                     }
 
-            //        if (isNotUnique)
-            //        {
-            //            var equalityBktValue = new Value(CreateEqualityBktValue(equalityBktColumnNameString, columnValues.Value[i].ValueToInsert, plainDatabaseName, plainTableName, columnName.Value), true);
-            //            additionalColumnsPerColumn[equalityBktColumnName].Add(equalityBktValue);
+                    if (isNotUnique)
+                    {
+                          var equalityBktValue = new Value(_encryptor.CreateEqualityBktValue(equalityBktColumnName.Value, columnValues.Value[i].ValueToInsert, columnName.Value), true);
+                        valuesPerColumn[equalityBktColumnName].Add(equalityBktValue);
 
-            //            columnValues.Value[i] = TransformNormalValue(columnValues.Value[i].ValueToInsert, columnName.Value, plainTableName, out byte[] generatedIV);
-            //            additionalColumnsPerColumn[ivColumnName].Add(new Value(Base32Encoding.ZBase32.GetString(generatedIV), true));
-            //        }
-
-            //        else
-            //        {
-            //            columnValues.Value[i] = TransformUniqueValue(columnValues.Value[i].ValueToInsert, columnName.Value, plainTableName);
-            //        }
+                        columnValues.Value[i] = new Value(_encryptor.EncryptNormalValue(columnValues.Value[i].ValueToInsert, columnName.Value, out string generatedIV), true);
+                        valuesPerColumn[ivColumnName].Add(new Value(generatedIV, true));
+                    }
+                    else
+                    {
+                        columnValues.Value[i] = new Value(_encryptor.EncryptUniqueValue(columnValues.Value[i].ValueToInsert, columnName.Value), true);
+                    }
                 }
 
-            //    else
-            //    {
-            //        columnValues.Value[i] = new Value(columnValues.Value[i].ValueToInsert, columnDataType == TEXT_KEY_WORD);
-            //    }
+                else
+                {
+                    columnValues.Value[i] = new Value(columnValues.Value[i].ValueToInsert, columnDataType == TEXT_KEY_WORD);
+                }
             }
             return valuesPerColumn;
         }
 
-
-        private Tuple<IList<ColumnDefinition>, InsertRecordStatement> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableName, string databaseName)
+        private Tuple<IList<ColumnDefinition>, IList<InsertRecordStatement>> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableIV, string databaseIV)
         {
             var dataEncrypted = columnDefinition.DataType.DataTypeName == DataTypeEnum.ENCRYPTED;
-            var columnInfoRecord = _encryptor.CreateInfoRecord(columnDefinition.ColumnName, tableName, databaseName, dataEncrypted);
+            var columnInfoRecord = _encryptor.CreateInfoRecord(columnDefinition.ColumnName, tableIV); // data encrypted
+
+            var insertRecordStatements = new List<InsertRecordStatement>() { CreateInsertRecordStatementForInfoTable(columnInfoRecord) };
 
             var transformedColumnDefinition = new ColumnDefinition(
                 new estring(columnInfoRecord.Name),
@@ -349,100 +368,71 @@ namespace BlockBase.DataProxy.Encryption
                 if (!isUnique)
                 {
                     columnDefinitions.Add(new ColumnDefinition(
-                        CreateIVColumnName(transformedColumnDefinition.ColumnName.Value),
+                        _encryptor.GetIVColumnName(transformedColumnDefinition.ColumnName.Value),
                         new DataType() { DataTypeName = DataTypeEnum.TEXT }
                     ));
-
-                    columnDefinitions.Add(CreateEqualityBucketColumnDefinition(columnDefinition, columnInfoRecord.Name));
+                    var createEqualityBktResult = CreateEqualityBucketColumnDefinition(columnDefinition, columnInfoRecord.Name);
+                    columnDefinitions.Add(createEqualityBktResult.ColumnDefinition);
+                    insertRecordStatements.Add(createEqualityBktResult.InsertRecordStatement);
                 }
 
                 if (columnDefinition.DataType.BucketInfo?.RangeBucketSize != null)
-                    columnDefinitions.Add(CreateRangeBucketColumnDefinition(columnDefinition, columnInfoRecord.Name));
+                {
+                    var createRangeBktResult = CreateRangeBucketColumnDefinition(columnDefinition, columnInfoRecord.Name);
+                    columnDefinitions.Add(createRangeBktResult.ColumnDefinition);
+                    insertRecordStatements.Add(createRangeBktResult.InsertRecordStatement);
+                }
             }
 
             foreach (var foreignKeyClause in columnDefinition.ColumnConstraints.Select(c => c.ForeignKeyClause).Where(f => f != null))
             {
-                TransformForeignKeyClause(foreignKeyClause, databaseName);
+                TransformForeignKeyClause(foreignKeyClause, databaseIV);
             }
-            return new Tuple<IList<ColumnDefinition>, InsertRecordStatement>(columnDefinitions, CreateInsertRecordStatementForInfoTable(columnInfoRecord));
+            return new Tuple<IList<ColumnDefinition>, IList<InsertRecordStatement>>(columnDefinitions, insertRecordStatements);
         }
 
-        private estring CreateIVColumnName(string columnName)
+        private CreateBktColumnResultPoco CreateEqualityBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
         {
-            return new estring(_ivPrefix + _separatingChar + columnName, false);
-        }
-        private estring CreateEqualityBktColumnName(string columnName, int? size)
-        {
-            var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size;
-            var encryptedSizeAndRange = _encryptor.GetEncryptedBucketColumn(bucketColumnNameString);
-            return new estring(_equalityBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange, false);
-        }
-        private estring CreateRangeBktColumnName(string columnName, int? size, int? min, int? max)
-        {
-            var bucketColumnNameString = columnName.Substring(1, 4) + _separatingChar + size + _separatingChar + min + _separatingChar + max;
-            var encryptedSizeAndRange = _encryptor.GetEncryptedBucketColumn(bucketColumnNameString);
+            var equalityBktInfoRecord = _encryptor.CreateEqualityBktColumnName(columnName, columnDef.DataType.BucketInfo.EqualityBucketSize);
 
-            return new estring(_rangeBucketPrefix + _separatingChar + columnName + _separatingChar + encryptedSizeAndRange, false);
-        }
-
-        private ColumnDefinition CreateEqualityBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
-        {
-            var equalityBktColumnName = CreateEqualityBktColumnName(columnName, columnDef.DataType.BucketInfo.EqualityBucketSize);
-
-            return new ColumnDefinition()
+            return new CreateBktColumnResultPoco()
             {
-                ColumnName = equalityBktColumnName,
-                DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
-                ColumnConstraints = new List<ColumnConstraint>()
+                ColumnDefinition = new ColumnDefinition()
+                {
+                    ColumnName = new estring(equalityBktInfoRecord.Name),
+                    DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
+                    ColumnConstraints = new List<ColumnConstraint>()
+                },
+                InsertRecordStatement = CreateInsertRecordStatementForInfoTable(equalityBktInfoRecord)
             };
 
         }
-        private ColumnDefinition CreateRangeBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
+        private CreateBktColumnResultPoco CreateRangeBucketColumnDefinition(ColumnDefinition columnDef, string columnName)
         {
-            var rangeBktColumnName = CreateRangeBktColumnName(columnName, columnDef.DataType.BucketInfo.RangeBucketSize,
+            var rangeBktInfoRecord = _encryptor.CreateRangeBktColumnName(columnName, columnDef.DataType.BucketInfo.RangeBucketSize,
                  columnDef.DataType.BucketInfo.BucketMinRange, columnDef.DataType.BucketInfo.BucketMaxRange);
 
-            return new ColumnDefinition()
+            return new CreateBktColumnResultPoco()
             {
-                ColumnName = rangeBktColumnName,
-                DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
-                ColumnConstraints = new List<ColumnConstraint>()
+                ColumnDefinition = new ColumnDefinition()
+                {
+                    ColumnName = new estring(rangeBktInfoRecord.Name),
+                    DataType = new DataType() { DataTypeName = DataTypeEnum.TEXT },
+                    ColumnConstraints = new List<ColumnConstraint>()
+                },
+                InsertRecordStatement = CreateInsertRecordStatementForInfoTable(rangeBktInfoRecord)
             };
         }
 
-        private string CreateRangeBktValue(string bktColumnName, string value, string databaseName, string tableName, string plainColumnName)
+        private ForeignKeyClause TransformForeignKeyClause(ForeignKeyClause foreignKeyClause, string databaseIV)
         {
-            //var sizeAndRange = GetBktSizeAndRangeFromRangeBktColumnName(bktColumnName, databaseName, tableName);
-            //if (double.TryParse(value, out double valueResult))
-            //{
-            //    var upperBoundValue = CalculateUpperBound(sizeAndRange.Item1, sizeAndRange.Item2, sizeAndRange.Item3, valueResult);
-            //    return _separatingChar + _encryptor.GetRangeBucket(tableName, plainColumnName, upperBoundValue);
-            //}
-            //else throw new ArgumentException("Value was supposed to be a number.");
-            return null;
-        }
-
-        private int CalculateUpperBound(int N, int min, int max, double value)
-        {
-            if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
-
-            for (int i = min + N - 1; i <= max; i += N)
-            {
-                if (value <= i)
-                {
-                    return i;
-                }
-            }
-            throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
-        }
-
-        private ForeignKeyClause TransformForeignKeyClause(ForeignKeyClause foreignKeyClause, string databaseName)
-        {
-            var encryptedTableName = _encryptor.GetEncryptedTableName(foreignKeyClause.TableName, databaseName);
-            var transformedForeignKeyClause = new ForeignKeyClause(new estring(encryptedTableName));
+            var tableInfoRecord = _encryptor.FindInfoRecord(foreignKeyClause.TableName, databaseIV);
+            
+            var transformedForeignKeyClause = new ForeignKeyClause(new estring(tableInfoRecord.Name));
             foreach (var columnName in foreignKeyClause.ColumnNames)
             {
-                transformedForeignKeyClause.ColumnNames.Add(new estring(_encryptor.GetEncryptedColumnName(columnName, encryptedTableName, databaseName)));
+                var columnInfoRecord = _encryptor.FindInfoRecord(columnName, tableInfoRecord.IV);
+                transformedForeignKeyClause.ColumnNames.Add(new estring(columnInfoRecord.Name));
             }
             return transformedForeignKeyClause;
         }
@@ -477,12 +467,14 @@ namespace BlockBase.DataProxy.Encryption
                 }
             };
         }
-        private DeleteRecordStatement CreateDeleteRecordStatementForInfoTable(string name)
+
+        //adicionar netos
+        private DeleteRecordStatement CreateDeleteRecordStatementForInfoTable(string iv)
         {
             return new DeleteRecordStatement(INFO_TABLE_NAME,
                     new LogicalExpression(
-                        new ComparisonExpression(INFO_TABLE_NAME, NAME, new Value(name, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
-                        new ComparisonExpression(INFO_TABLE_NAME, PARENT, new Value(name, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
+                        new ComparisonExpression(INFO_TABLE_NAME, NAME, new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
+                        new ComparisonExpression(INFO_TABLE_NAME, PARENT, new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal),
                         LogicalExpression.LogicalOperatorEnum.OR
                         )
                     );
