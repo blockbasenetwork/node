@@ -9,12 +9,12 @@ namespace BlockBase.DataProxy.Encryption
 {
     public class DatabaseKeyManager
     {
-        private readonly IKeyStore _keyStore;
+        private readonly ISecretStore _keyStore;
         private readonly InfoRecordManager _infoRecordManager;
         public string LiteralDatabaseName { get; private set; }
         private readonly KeyAndIVGenerator_v2 _keyAndIVGenerator;
 
-        public DatabaseKeyManager(string literalDatabaseName, IKeyStore keyStore)
+        public DatabaseKeyManager(string literalDatabaseName, ISecretStore keyStore)
         {
             LiteralDatabaseName = literalDatabaseName;
             _keyStore = keyStore;
@@ -28,20 +28,27 @@ namespace BlockBase.DataProxy.Encryption
             LoadInfoRecordsToRecordManager(infoRecords);
         }
 
-        public InfoRecord FindInfoRecord(string name)
+        public InfoRecord FindInfoRecord(string IV)
+        {
+            return _infoRecordManager.FindInfoRecord(IV);
+        }
+
+        //TODO change this
+        public InfoRecord FindInfoRecord(string name, string parentIV)
         {
             return _infoRecordManager.FindInfoRecord(name);
         }
-
-        public void AddInfoRecord(estring name, estring parentName, byte[] parentManageKey, byte[] parentIV)
+        public InfoRecord AddInfoRecord(estring name, string parentStringIV, byte[] parentManageKey, byte[] parentIV)
         {
-            var parentInfoRecord = FindInfoRecord(parentName.Value);
-            _infoRecordManager.AddInfoRecord(InfoRecordManager.CreateInfoRecord(name, parentManageKey, parentIV), parentInfoRecord);
+            var parentInfoRecord = FindInfoRecord(parentStringIV);
+            var infoRecord = InfoRecordManager.CreateInfoRecord(name, parentManageKey, parentIV);
+            _infoRecordManager.AddInfoRecord(infoRecord, parentInfoRecord);
+            return infoRecord;
         }
 
         public byte[] GetKeyManageFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetKey(infoRecord.LocalNameHash);
+            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
             if (key == null) return null;
 
             var decryptedManageKeyData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyManage), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
@@ -53,7 +60,7 @@ namespace BlockBase.DataProxy.Encryption
 
         public byte[] GetKeyReadFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetKey(infoRecord.LocalNameHash);
+            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
             if (key == null) return null;
 
             var decryptedReadKeyData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyRead), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
