@@ -38,7 +38,7 @@ namespace BlockBase.DataProxy.Encryption
             return _infoRecordManager.FindChildren(iv, deepFind);
         }
 
-        public InfoRecord AddInfoRecord(estring name, bool isDatabaseRecord, byte[] parentManageKey, byte[] parentIV)
+        public InfoRecord AddInfoRecord(estring name, bool isDatabaseRecord, byte[] parentManageKey, byte[] parentIV, string data = null)
         {
             var keyGenerator = new KeyAndIVGenerator_v2();
 
@@ -51,6 +51,7 @@ namespace BlockBase.DataProxy.Encryption
             var keyManage = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyManageBytes, keyManageBytes, ivBytes));
             var keyName = !name.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyNameBytes, keyNameBytes, ivBytes));
             string pIV = isDatabaseRecord ? null : Base32Encoding.ZBase32.GetString(parentIV);
+            string encryptedData = data == null ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(data), keyManageBytes, ivBytes));
 
             var infoRecord = InfoRecordManager.CreateInfoRecord(name.Value, keyManage, keyName, iv, pIV);
             _infoRecordManager.AddInfoRecord(infoRecord);
