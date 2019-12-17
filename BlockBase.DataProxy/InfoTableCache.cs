@@ -42,7 +42,7 @@ namespace BlockBase.DataProxy
 
         private InfoRecord DecryptInfoRecords(IList<InfoRecord> encryptedInfoRecords)
         {
-            var databaseInfoRecord = encryptedInfoRecords.Where(ir => ir.Parent == null).SingleOrDefault();
+            var databaseInfoRecord = encryptedInfoRecords.Where(ir => ir.ParentIV == null).SingleOrDefault();
             if (databaseInfoRecord == null) throw new Exception("Database Info not inserted.");
             return DecryptInfoRecord(databaseInfoRecord);
         }
