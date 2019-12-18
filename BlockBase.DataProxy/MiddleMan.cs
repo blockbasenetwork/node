@@ -30,7 +30,7 @@ namespace BlockBase.DataProxy
             return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.ColumnRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV), JsonConvert.SerializeObject(data));
         }
 
-        public string CreateEqualityBktValue(string rangeColumnName, string valueToInsert, string columnName)
+        public string CreateEqualityBktValue(string valueToInsert, string columnIV)
         {
             throw new NotImplementedException();
         }
@@ -49,17 +49,17 @@ namespace BlockBase.DataProxy
             return null;
         }
 
-        public string CreateRangeBktValue(string rangeColumnName, string valueToInsert, string columnName)
+        public string CreateRangeBktValue(string valueToInsert, string columnIV)
         {
             throw new NotImplementedException();
         }
 
-        public string EncryptNormalValue(string valueToInsert, string columnName, out string generatedIV)
+        public string EncryptNormalValue(string valueToInsert, string columnIV, out string generatedIV)
         {
             throw new NotImplementedException();
         }
 
-        public string EncryptUniqueValue(string valueToInsert, string columnName)
+        public string EncryptUniqueValue(string valueToInsert, string columnIV)
         {
             throw new NotImplementedException();
         }
@@ -74,12 +74,7 @@ namespace BlockBase.DataProxy
             throw new NotImplementedException();
         }
 
-        public Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public estring GetIVColumnName(string columnName)
+        public DataType GetColumnDatatype(string columnIV)
         {
             throw new NotImplementedException();
         }

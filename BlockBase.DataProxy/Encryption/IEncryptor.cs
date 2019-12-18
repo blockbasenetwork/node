@@ -18,19 +18,15 @@ namespace BlockBase.DataProxy.Encryption
 
         InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data);
 
-        Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName);
-
+        DataType GetColumnDatatype(string columnIV);
 
         Tuple<string, string> ChangeInfoRecord(estring oldName, estring newName, string parentIV);
 
-        estring GetIVColumnName(string columnName);
 
-        
+        string CreateRangeBktValue(string valueToInsert, string columnIV);
+        string CreateEqualityBktValue(string valueToInsert, string columnIV);
 
-        string CreateRangeBktValue(string rangeColumnName, string valueToInsert, string columnName);
-        string CreateEqualityBktValue(string rangeColumnName, string valueToInsert, string columnName);
-
-        string EncryptNormalValue(string valueToInsert, string columnName, out string generatedIV);
-        string EncryptUniqueValue(string valueToInsert, string columnName);
+        string EncryptNormalValue(string valueToInsert, string columnIV, out string generatedIV);
+        string EncryptUniqueValue(string valueToInsert, string columnIV);
     }
 }

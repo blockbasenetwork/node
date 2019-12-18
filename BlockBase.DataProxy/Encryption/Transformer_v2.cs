@@ -137,7 +137,7 @@ namespace BlockBase.DataProxy.Encryption
                 var additionalColAndInfoInserts = GetTransformedColumnDefinition(columnDef, tableInfoRecord.IV, databaseIV);
 
                 ((List<ColumnDefinition>)createTableStatement.ColumnDefinitions).AddRange(additionalColAndInfoInserts.Item1);
-                transformedStatements.AddRange(additionalColAndInfoInserts.Item2);
+                transformedStatements.Add(additionalColAndInfoInserts.Item2);
             }
 
             return transformedStatements;
@@ -253,7 +253,7 @@ namespace BlockBase.DataProxy.Encryption
             {
                 sqlStatements.Add(new AddColumnStatement(new estring(tableInfoRecord.Name), columnDef));
             }
-            sqlStatements.AddRange(columnDefinitionsAndAdditionalInsert.Item2);
+            sqlStatements.Add(columnDefinitionsAndAdditionalInsert.Item2);
             return sqlStatements;
         }
         
@@ -284,11 +284,10 @@ namespace BlockBase.DataProxy.Encryption
 
 
             var transformedInsertRecordStatement = new InsertRecordStatement(new estring(tableInfoRecord.Name));
-            var columnDataTypes = _encryptor.GetColumnDatatypes(tableInfoRecord.Name, databaseIV);
 
             foreach (var valuesPerColumn in insertRecordStatement.ValuesPerColumn)
             {
-                transformedInsertRecordStatement.ValuesPerColumn.Concat(TransformColumnValues(valuesPerColumn, insertRecordStatement.TableName.Value, columnDataTypes));
+                transformedInsertRecordStatement.ValuesPerColumn.Concat(TransformColumnValues(valuesPerColumn, insertRecordStatement.TableName.Value));
             }
 
             return transformedInsertRecordStatement;
@@ -296,7 +295,7 @@ namespace BlockBase.DataProxy.Encryption
 
         #endregion
 
-        private IDictionary<estring, IList<Value>> TransformColumnValues(KeyValuePair<estring, IList<Value>> columnValues, string tableIV, Dictionary<string, string> columnDataTypes)
+        private IDictionary<estring, IList<Value>> TransformColumnValues(KeyValuePair<estring, IList<Value>> columnValues, string tableIV)
         {
             var columnName = columnValues.Key;
 
@@ -306,22 +305,18 @@ namespace BlockBase.DataProxy.Encryption
           
             if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
-            var bktColumnsInfoRecords = _encryptor.FindChildren(columnInfoRecord.IV);
+            var columnDataType = _encryptor.GetColumnDatatype(columnInfoRecord.IV);
 
-            string columnDataType = columnDataTypes[columnInfoRecord.Name];
+            estring equalityBktColumnName = columnInfoRecord.LData.EncryptedEqualityColumnName != null ? new estring(columnInfoRecord.LData.EncryptedEqualityColumnName) : null; 
+            estring rangeBktColumnName = columnInfoRecord.LData.EncryptedRangeColumnName != null ? new estring(columnInfoRecord.LData.EncryptedRangeColumnName) : null;
+            estring ivColumnName = columnInfoRecord.LData.EncryptedIVColumnName != null ? new estring(columnInfoRecord.LData.EncryptedIVColumnName) : null;
 
-            //TODO: change to use json info
-            estring equalityBktColumnName = bktColumnsInfoRecords[0] != null ? new estring(bktColumnsInfoRecords[0].Name) : null; 
-            estring rangeBktColumnName = bktColumnsInfoRecords[1] != null ? new estring(bktColumnsInfoRecords[1].Name) : null;
-            estring ivColumnName = null;
-                
-            bool isEncrypted = columnDataType == ENCRYPTED_KEY_WORD;
-            bool isNotUnique = equalityBktColumnName != null;
+            bool isEncrypted = columnDataType.DataTypeName.ToString() == ENCRYPTED_KEY_WORD;
+            bool isNotUnique = ivColumnName != null;
 
             if (isNotUnique)
             {
                 valuesPerColumn[equalityBktColumnName] = new List<Value>();
-                ivColumnName = _encryptor.GetIVColumnName(columnInfoRecord.Name);
                 valuesPerColumn[ivColumnName] = new List<Value>();
             }
             if (rangeBktColumnName != null) valuesPerColumn[rangeBktColumnName] = new List<Value>();
@@ -335,65 +330,72 @@ namespace BlockBase.DataProxy.Encryption
                 {
                     if (rangeBktColumnName != null)
                     {
-                        var newRangeColumnValue = new Value(_encryptor.CreateRangeBktValue(rangeBktColumnName.Value, columnValues.Value[i].ValueToInsert, columnName.Value), true);
+                        var newRangeColumnValue = new Value(_encryptor.CreateRangeBktValue(columnValues.Value[i].ValueToInsert, columnInfoRecord.IV), true);
                         valuesPerColumn[rangeBktColumnName].Add(newRangeColumnValue);
                     }
 
                     if (isNotUnique)
                     {
-                          var equalityBktValue = new Value(_encryptor.CreateEqualityBktValue(equalityBktColumnName.Value, columnValues.Value[i].ValueToInsert, columnName.Value), true);
+                        var equalityBktValue = new Value(_encryptor.CreateEqualityBktValue(columnValues.Value[i].ValueToInsert, columnInfoRecord.IV), true);
                         valuesPerColumn[equalityBktColumnName].Add(equalityBktValue);
 
-                        columnValues.Value[i] = new Value(_encryptor.EncryptNormalValue(columnValues.Value[i].ValueToInsert, columnName.Value, out string generatedIV), true);
+                        columnValues.Value[i] = new Value(_encryptor.EncryptNormalValue(columnValues.Value[i].ValueToInsert, columnInfoRecord.IV, out string generatedIV), true);
                         valuesPerColumn[ivColumnName].Add(new Value(generatedIV, true));
                     }
                     else
                     {
-                        columnValues.Value[i] = new Value(_encryptor.EncryptUniqueValue(columnValues.Value[i].ValueToInsert, columnName.Value), true);
+                        columnValues.Value[i] = new Value(_encryptor.EncryptUniqueValue(columnValues.Value[i].ValueToInsert, columnInfoRecord.IV), true);
                     }
                 }
-
                 else
                 {
-                    columnValues.Value[i] = new Value(columnValues.Value[i].ValueToInsert, columnDataType == TEXT_KEY_WORD);
+                    columnValues.Value[i] = new Value(columnValues.Value[i].ValueToInsert, columnDataType.ToString() == TEXT_KEY_WORD);
                 }
             }
             return valuesPerColumn;
         }
 
-        private Tuple<IList<ColumnDefinition>, IList<InsertRecordStatement>> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableIV, string databaseIV)
+        private Tuple<IList<ColumnDefinition>, InsertRecordStatement> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableIV, string databaseIV)
         {
             var dataEncrypted = columnDefinition.DataType.DataTypeName == DataTypeEnum.ENCRYPTED;
             var columnInfoRecord = _encryptor.CreateColumnInfoRecord(columnDefinition.ColumnName, tableIV, columnDefinition.DataType); 
 
-            var insertRecordStatements = new List<InsertRecordStatement>() { CreateInsertRecordStatementForInfoTable(columnInfoRecord) };
 
             var transformedColumnDefinition = new ColumnDefinition(
                 new estring(columnInfoRecord.Name),
                 columnDefinition.DataType,
-                columnDefinition.ColumnConstraints);
+                new List<ColumnConstraint>());
+
+
+            foreach (var columnConstraint in columnDefinition.ColumnConstraints)
+            {
+                transformedColumnDefinition.ColumnConstraints.Add(
+                    new ColumnConstraint()
+                    {
+                        //TODO: encrypt column constraint name
+                        Name = columnConstraint.Name,
+                        ColumnConstraintType = columnConstraint.ColumnConstraintType,
+                        ForeignKeyClause = columnConstraint.ForeignKeyClause != null ? 
+                        TransformForeignKeyClause(columnConstraint.ForeignKeyClause, databaseIV) : null
+                    })
+                    ;
+            }
 
             var columnDefinitions = new List<ColumnDefinition>()
             {
                 transformedColumnDefinition
             };
 
-            
-                    //columnDefinitions.Add(new ColumnDefinition(
-                    //    _encryptor.GetIVColumnName(columnInfoRecord.Name),
-                    //    new DataType() { DataTypeName = DataTypeEnum.TEXT }
-                    //));
+            if (columnInfoRecord.LData.EncryptedEqualityColumnName != null)
+                columnDefinitions.Add(new ColumnDefinition(new estring(columnInfoRecord.LData.EncryptedEqualityColumnName), new DataType(DataTypeEnum.TEXT)));
 
-                    //columnDefinitions.Add(createRangeBktResult.ColumnDefinition);
-    
-                
-            
+            if (columnInfoRecord.LData.EncryptedIVColumnName != null)
+                columnDefinitions.Add(new ColumnDefinition(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new DataType(DataTypeEnum.TEXT)));
 
-            foreach (var foreignKeyClause in columnDefinition.ColumnConstraints.Select(c => c.ForeignKeyClause).Where(f => f != null))
-            {
-                TransformForeignKeyClause(foreignKeyClause, databaseIV);
-            }
-            return new Tuple<IList<ColumnDefinition>, IList<InsertRecordStatement>>(columnDefinitions, insertRecordStatements);
+            if (columnInfoRecord.LData.EncryptedRangeColumnName != null)
+                columnDefinitions.Add(new ColumnDefinition(new estring(columnInfoRecord.LData.EncryptedRangeColumnName), new DataType(DataTypeEnum.TEXT)));
+
+            return new Tuple<IList<ColumnDefinition>, InsertRecordStatement>(columnDefinitions, CreateInsertRecordStatementForInfoTable(columnInfoRecord));
         }
         private ForeignKeyClause TransformForeignKeyClause(ForeignKeyClause foreignKeyClause, string databaseIV)
         {
