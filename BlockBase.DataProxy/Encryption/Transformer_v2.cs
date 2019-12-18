@@ -305,7 +305,7 @@ namespace BlockBase.DataProxy.Encryption
           
             if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
-            var columnDataType = _encryptor.GetColumnDatatype(columnInfoRecord.IV);
+            var columnDataType = _encryptor.GetColumnDatatype(columnInfoRecord);
 
             estring equalityBktColumnName = columnInfoRecord.LData.EncryptedEqualityColumnName != null ? new estring(columnInfoRecord.LData.EncryptedEqualityColumnName) : null; 
             estring rangeBktColumnName = columnInfoRecord.LData.EncryptedRangeColumnName != null ? new estring(columnInfoRecord.LData.EncryptedRangeColumnName) : null;
@@ -330,7 +330,9 @@ namespace BlockBase.DataProxy.Encryption
                 {
                     if (rangeBktColumnName != null)
                     {
-                        var newRangeColumnValue = new Value(_encryptor.CreateRangeBktValue(columnValues.Value[i].ValueToInsert, columnInfoRecord.IV), true);
+                        bool tryParse = double.TryParse(columnValues.Value[i].ValueToInsert, out double doubleValue);
+                        if (!tryParse) throw new FormatException("The value in a range column needs to be a number.");
+                        var newRangeColumnValue = new Value(_encryptor.CreateRangeBktValue(doubleValue, columnInfoRecord.IV), true);
                         valuesPerColumn[rangeBktColumnName].Add(newRangeColumnValue);
                     }
 

@@ -74,6 +74,11 @@ namespace BlockBase.DataProxy.Encryption
             return _infoRecordsLookup[pIV].SingleOrDefault(r => !recordName.ToEncrypt ? r.Name == recordName.Value : r.LocalNameHash == localNameHash);
         }
 
+        public InfoRecord FindInfoRecord(string recordIV)
+        {    
+            return _infoRecordsLookup.Values.SelectMany(r => r).SingleOrDefault(r => r.IV == recordIV);
+        }
+
         public IEnumerable<InfoRecord> GetAllInfoRecords()
         {
             throw new NotImplementedException();

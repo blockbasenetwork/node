@@ -2,6 +2,8 @@
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Utils.Crypto;
 using Newtonsoft.Json;
+using System.Numerics;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Wiry.Base32;
@@ -10,15 +12,15 @@ namespace BlockBase.DataProxy.Encryption
 {
     public class DatabaseKeyManager
     {
-        private readonly ISecretStore _keyStore;
+        private readonly ISecretStore _secretStore;
         private readonly InfoRecordManager _infoRecordManager;
         public string LiteralDatabaseName { get; private set; }
         private readonly KeyAndIVGenerator_v2 _keyAndIVGenerator;
 
-        public DatabaseKeyManager(string literalDatabaseName, ISecretStore keyStore)
+        public DatabaseKeyManager(string literalDatabaseName, ISecretStore secretStore)
         {
             LiteralDatabaseName = literalDatabaseName;
-            _keyStore = keyStore;
+            _secretStore = secretStore;
             _infoRecordManager = new InfoRecordManager();
             _keyAndIVGenerator = new KeyAndIVGenerator_v2();
         }
@@ -32,6 +34,11 @@ namespace BlockBase.DataProxy.Encryption
         public InfoRecord FindInfoRecord(estring name, string parentIV)
         {
             return _infoRecordManager.FindInfoRecord(name, parentIV);
+        }
+
+        public InfoRecord FindInfoRecord(string recordIV)
+        {
+            return _infoRecordManager.FindInfoRecord(recordIV);
         }
 
         public List<InfoRecord> FindChildren(string iv, bool deepFind = false)
@@ -78,7 +85,7 @@ namespace BlockBase.DataProxy.Encryption
 
         public byte[] GetKeyManageFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
+            var key = _secretStore.GetSecret(infoRecord.LocalNameHash);
             if (key == null) return null;
 
             var decryptedManageKeyData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyManage), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
@@ -90,7 +97,7 @@ namespace BlockBase.DataProxy.Encryption
 
         public byte[] GetKeyNameFromInfoRecord(InfoRecord infoRecord)
         {
-            var key = _keyStore.GetSecret(infoRecord.LocalNameHash);
+            var key = _secretStore.GetSecret(infoRecord.LocalNameHash);
             if (key == null) return null;
 
             var decryptedKeyNameData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyName), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
@@ -157,6 +164,52 @@ namespace BlockBase.DataProxy.Encryption
             return new List<InfoRecord>();
         }
 
+        public DataType GetColumnDatatype(InfoRecord infoRecord)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string CreateEqualityBktValue(string value, string columnIV)
+        {
+            var columnInfoRecord = FindInfoRecord(columnIV);
+            var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
+            var dataType = GetColumnDatatype(columnInfoRecord);
+
+            var valueBytes = Encoding.ASCII.GetBytes(value);
+            var bucket = new BigInteger(Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(valueBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)))) % dataType.BucketInfo.EqualityBucketSize.Value;
+
+            return Base32Encoding.ZBase32.GetString(bucket.ToByteArray());
+        }
+        public string CreateRangeBktValue(double value, string columnIV)
+        {
+            var columnInfoRecord = FindInfoRecord(columnIV);
+            var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
+            var dataType = GetColumnDatatype(columnInfoRecord);
+
+            var upperBound = CalculateUpperBound(dataType.BucketInfo.RangeBucketSize.Value,
+                                                 dataType.BucketInfo.BucketMinRange.Value,
+                                                 dataType.BucketInfo.BucketMaxRange.Value,
+                                                 value);
+
+            var upperBoundBytes = BitConverter.GetBytes(upperBound);
+            var bucket = Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(upperBoundBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)));
+            return Base32Encoding.ZBase32.GetString(bucket);
+        }
+
+        private int CalculateUpperBound(int N, int min, int max, double value)
+        {
+            if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+
+            for (int i = min + N - 1; i <= max; i += N)
+            {
+                if (value <= i)
+                {
+                    return i;
+                }
+            }
+            throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+        }
+
         public enum InfoRecordTypeEnum
         {
             DatabaseRecord,
@@ -164,5 +217,7 @@ namespace BlockBase.DataProxy.Encryption
             ColumnRecord,
             Unknown
         }
+
+        
     }
 }
