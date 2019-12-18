@@ -169,6 +169,11 @@ namespace BlockBase.DataProxy.Encryption
             throw new NotImplementedException();
         }
 
+        //TODO: ricardo - check if this code is right
+        public void RemoveInfoRecord(InfoRecord infoRecord)
+        {
+            _infoRecordManager.RemoveInfoRecord(infoRecord);
+        }
         public string CreateEqualityBktValue(string value, string columnIV)
         {
             var columnInfoRecord = FindInfoRecord(columnIV);
@@ -195,7 +200,6 @@ namespace BlockBase.DataProxy.Encryption
             var bucket = Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(upperBoundBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)));
             return Base32Encoding.ZBase32.GetString(bucket);
         }
-
         private int CalculateUpperBound(int N, int min, int max, double value)
         {
             if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
@@ -208,6 +212,26 @@ namespace BlockBase.DataProxy.Encryption
                 }
             }
             throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+        }
+
+        public string EncryptNormalValue(string valueToInsert, string columnIV, out string generatedIV)
+        {
+            var columnInfoRecord = FindInfoRecord(columnIV);
+            var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
+
+            var randomIV = _keyAndIVGenerator.CreateRandomIV();
+            generatedIV = Base32Encoding.ZBase32.GetString(randomIV);
+
+            var valueInBytes = Encoding.ASCII.GetBytes(valueToInsert);
+            return Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(valueInBytes, columnManageKey, randomIV));
+        }
+        public string EncryptUniqueValue(string valueToInsert, string columnIV)
+        {
+            var columnInfoRecord = FindInfoRecord(columnIV);
+            var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
+
+            var valueInBytes = Encoding.ASCII.GetBytes(valueToInsert);
+            return Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(valueInBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)));
         }
 
         public enum InfoRecordTypeEnum

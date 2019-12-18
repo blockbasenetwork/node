@@ -57,9 +57,9 @@ namespace BlockBase.DataProxy
         {
             throw new NotImplementedException();
         }
-        public void RemoveInfoRecord(string iv)
+        public void RemoveInfoRecord(InfoRecord infoRecord)
         {
-            throw new NotImplementedException();
+            _databaseKeyManager.RemoveInfoRecord(infoRecord);
         }
         
         public string CreateEqualityBktValue(string valueToInsert, string columnIV)
@@ -73,17 +73,11 @@ namespace BlockBase.DataProxy
 
         public string EncryptNormalValue(string valueToInsert, string columnIV, out string generatedIV)
         {
-            throw new NotImplementedException();
+            return _databaseKeyManager.EncryptNormalValue(valueToInsert, columnIV, out generatedIV);
         }
         public string EncryptUniqueValue(string valueToInsert, string columnIV)
         {
-            throw new NotImplementedException();
+            return _databaseKeyManager.EncryptUniqueValue(valueToInsert, columnIV);
         }
-
-        
-
-       
-
-        
     }
 }

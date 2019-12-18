@@ -109,7 +109,7 @@ namespace BlockBase.DataProxy.Encryption
             };
 
             var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
-            _encryptor.RemoveInfoRecord(infoRecord.IV);
+            _encryptor.RemoveInfoRecord(infoRecord);
 
             foreach (var child in childrenInfoRecords) sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(child.IV));
 
@@ -152,7 +152,7 @@ namespace BlockBase.DataProxy.Encryption
             };
 
             var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
-            _encryptor.RemoveInfoRecord(infoRecord.IV);
+            _encryptor.RemoveInfoRecord(infoRecord);
 
             foreach (var child in childrenInfoRecords) sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(child.IV));
             
@@ -271,7 +271,7 @@ namespace BlockBase.DataProxy.Encryption
 
             var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
             sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(infoRecord.IV));
-            _encryptor.RemoveInfoRecord(infoRecord.IV);
+            _encryptor.RemoveInfoRecord(infoRecord);
 
             foreach (var child in childrenInfoRecords) sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(child.IV));
 

@@ -94,6 +94,18 @@ namespace BlockBase.DataProxy.Encryption
             _infoRecordsLookup[parentIV].Add(infoRecord);
         }
 
+        //TODO: check this
+        public void RemoveInfoRecord(InfoRecord infoRecord)
+        {
+            if (_infoRecordsLookup.ContainsKey(infoRecord.IV)) {
+                foreach (var childInfoRecord in _infoRecordsLookup[infoRecord.IV])
+                {
+                    RemoveInfoRecord(childInfoRecord);
+                }
+            }
+            _infoRecordsLookup[infoRecord.ParentIV].Remove(infoRecord);
+        }
+
         public void ClearRecords()
         {
             _infoRecordsLookup = new Dictionary<string, List<InfoRecord>>();

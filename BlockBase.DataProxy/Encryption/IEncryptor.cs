@@ -14,7 +14,7 @@ namespace BlockBase.DataProxy.Encryption
         InfoRecord FindInfoRecord(estring name, string parentIV);
         List<InfoRecord> FindChildren(string parentIV, bool deepFind = false);
 
-        void RemoveInfoRecord(string iv);
+        void RemoveInfoRecord(InfoRecord infoRecord);
 
         InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data);
 
