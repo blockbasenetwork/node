@@ -206,7 +206,15 @@ namespace BlockBase.Runtime.Sidechain
                 if (proposal == null) await Task.Delay(50);
             }
             
-            await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
+            try 
+            {
+                await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
+            }
+            catch(ApiErrorException apiException)
+            {
+                _logger.LogCritical($"Unable to approve transaction with error: {apiException?.error?.name}");
+            }
+            
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
 
             await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName, proposal);
