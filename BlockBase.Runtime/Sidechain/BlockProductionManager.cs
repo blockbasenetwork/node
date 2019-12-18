@@ -227,6 +227,8 @@ namespace BlockBase.Runtime.Sidechain
                     }
                     await Task.Delay(100);
                 }
+                _logger.LogInformation("Canceling proposal...");
+                await _mainchainService.CancelTransaction(proposer, proposal.ProposalName);
             }
             catch(ApiErrorException)
             {
