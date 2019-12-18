@@ -183,9 +183,11 @@ namespace BlockBase.DataProxy.Encryption
         {
             var sqlStatements = new List<ISqlStatement>();
 
-            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameTableStatement.TableName, renameTableStatement.NewTableName, databaseIV);
-            var transformedOldTableName = changeInfoRecordResults.Item1;
-            var transformedNewTableName = changeInfoRecordResults.Item2;
+            var tableInfoRecord = _encryptor.FindInfoRecord(renameTableStatement.TableName, databaseIV);
+            var transformedOldTableName = tableInfoRecord.Name;
+
+            tableInfoRecord = _encryptor.ChangeInfoRecordName(tableInfoRecord, renameTableStatement.NewTableName);
+            var transformedNewTableName = tableInfoRecord.Name;
 
             sqlStatements.Add(new RenameTableStatement( new estring(transformedOldTableName), new estring(transformedNewTableName)));
 
@@ -195,19 +197,8 @@ namespace BlockBase.DataProxy.Encryption
                     new Dictionary<estring, Value>() { { NAME, new Value(transformedNewTableName, true) } },
                     new ComparisonExpression(
                         INFO_TABLE_NAME,
-                        NAME,
-                        new Value(transformedOldTableName, true),
-                        ComparisonExpression.ComparisonOperatorEnum.Equal)
-                    ));
-
-            sqlStatements.Add(
-                new UpdateRecordStatement(
-                    INFO_TABLE_NAME,
-                    new Dictionary<estring, Value>() { { PARENT, new Value(transformedNewTableName, true) } },
-                    new ComparisonExpression(
-                        INFO_TABLE_NAME, 
-                        PARENT, 
-                        new Value(transformedOldTableName, true), 
+                        IV,
+                        new Value(tableInfoRecord.IV, true),
                         ComparisonExpression.ComparisonOperatorEnum.Equal)
                     ));
 
@@ -219,10 +210,11 @@ namespace BlockBase.DataProxy.Encryption
 
             var tableInfoRecord = _encryptor.FindInfoRecord(renameColumnStatement.TableName, databaseIV);
 
+            var columnInfoRecord = _encryptor.FindInfoRecord(renameColumnStatement.ColumnName, tableInfoRecord.IV);
+            var transformedOldColumnName = columnInfoRecord.Name;
 
-            var changeInfoRecordResults = _encryptor.ChangeInfoRecord(renameColumnStatement.ColumnName, renameColumnStatement.NewColumnName, tableInfoRecord.IV);
-            var transformedOldColumnName = changeInfoRecordResults.Item1;
-            var transformedNewColumnName = changeInfoRecordResults.Item2;
+            columnInfoRecord = _encryptor.ChangeInfoRecordName(columnInfoRecord, renameColumnStatement.NewColumnName);
+            var transformedNewColumnName = columnInfoRecord.Name;
 
             sqlStatements.Add(
                 new RenameColumnStatement(
@@ -236,8 +228,8 @@ namespace BlockBase.DataProxy.Encryption
                    new Dictionary<estring, Value>() { { NAME, new Value(transformedNewColumnName, true) } },
                    new ComparisonExpression(
                        INFO_TABLE_NAME,
-                       NAME,
-                       new Value(transformedOldColumnName, true),
+                       IV,
+                       new Value(columnInfoRecord.IV, true),
                        ComparisonExpression.ComparisonOperatorEnum.Equal)
                    ));
             return sqlStatements;
@@ -305,7 +297,7 @@ namespace BlockBase.DataProxy.Encryption
           
             if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
-            var columnDataType = _encryptor.GetColumnDatatype(columnInfoRecord);
+            var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
 
             estring equalityBktColumnName = columnInfoRecord.LData.EncryptedEqualityColumnName != null ? new estring(columnInfoRecord.LData.EncryptedEqualityColumnName) : null; 
             estring rangeBktColumnName = columnInfoRecord.LData.EncryptedRangeColumnName != null ? new estring(columnInfoRecord.LData.EncryptedRangeColumnName) : null;
@@ -324,7 +316,6 @@ namespace BlockBase.DataProxy.Encryption
 
             for (int i = 0; i < columnValues.Value.Count; i++)
             {
-                columnValues.Value[i].ValueToInsert.Trim('\'', '"');
 
                 if (isEncrypted)
                 {

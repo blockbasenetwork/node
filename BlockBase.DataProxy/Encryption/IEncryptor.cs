@@ -18,9 +18,9 @@ namespace BlockBase.DataProxy.Encryption
 
         InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data);
 
-        DataType GetColumnDatatype(InfoRecord columnInfoRecord);
+        DataType GetColumnDataType(InfoRecord columnInfoRecord);
 
-        Tuple<string, string> ChangeInfoRecord(estring oldName, estring newName, string parentIV);
+        InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName);
 
 
         string CreateRangeBktValue(double valueToInsert, string columnIV);

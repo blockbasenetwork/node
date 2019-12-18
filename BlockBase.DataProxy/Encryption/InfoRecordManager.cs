@@ -94,7 +94,7 @@ namespace BlockBase.DataProxy.Encryption
             _infoRecordsLookup[parentIV].Add(infoRecord);
         }
 
-        //TODO: check this
+      
         public void RemoveInfoRecord(InfoRecord infoRecord)
         {
             if (_infoRecordsLookup.ContainsKey(infoRecord.IV)) {
@@ -103,7 +103,7 @@ namespace BlockBase.DataProxy.Encryption
                     RemoveInfoRecord(childInfoRecord);
                 }
             }
-            _infoRecordsLookup[infoRecord.ParentIV].Remove(infoRecord);
+            _infoRecordsLookup[infoRecord.ParentIV ?? ROOT_DUMMY_IV].Remove(infoRecord);
         }
 
         public void ClearRecords()

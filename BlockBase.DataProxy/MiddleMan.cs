@@ -48,14 +48,14 @@ namespace BlockBase.DataProxy
         {
             return _databaseKeyManager.FindChildren(iv, deepFind);
         }
-        public DataType GetColumnDatatype(InfoRecord columnInfoRecord)
+        public DataType GetColumnDataType(InfoRecord columnInfoRecord)
         {
-            throw new NotImplementedException();
+            return _databaseKeyManager.GetColumnDataType(columnInfoRecord);
         }
 
-        public Tuple<string, string> ChangeInfoRecord(estring oldName, estring newName, string parentIV)
+        public InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName)
         {
-            throw new NotImplementedException();
+            return _databaseKeyManager.ChangeInfoRecordName(infoRecord, newName);
         }
         public void RemoveInfoRecord(InfoRecord infoRecord)
         {

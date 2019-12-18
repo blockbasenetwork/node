@@ -164,21 +164,37 @@ namespace BlockBase.DataProxy.Encryption
             return new List<InfoRecord>();
         }
 
-        public DataType GetColumnDatatype(InfoRecord infoRecord)
+        //TODO: check if this is ok
+        public DataType GetColumnDataType(InfoRecord columnInfoRecord)
         {
-            throw new NotImplementedException();
+            if (columnInfoRecord.Data == null) throw new FormatException("Column Data is empty!");
+
+            var keyManageBytes = GetKeyManageFromInfoRecord(columnInfoRecord);
+            var ivBytes = Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV);
+
+            var decryptedData = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(columnInfoRecord.Data), keyManageBytes, ivBytes));
+
+            return JsonConvert.DeserializeObject<DataType>(decryptedData);
+        }
+        public InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName)
+        {
+            var keyNameBytes = GetKeyNameFromInfoRecord(infoRecord);
+            var ivBytes = Base32Encoding.ZBase32.ToBytes(infoRecord.IV);
+            string newRecordName = !newName.ToEncrypt ? newName.Value : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(newName.Value), keyNameBytes, ivBytes));
+            infoRecord.Name = newRecordName;
+            return infoRecord;
         }
 
-        //TODO: ricardo - check if this code is right
         public void RemoveInfoRecord(InfoRecord infoRecord)
         {
             _infoRecordManager.RemoveInfoRecord(infoRecord);
         }
+
         public string CreateEqualityBktValue(string value, string columnIV)
         {
             var columnInfoRecord = FindInfoRecord(columnIV);
             var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
-            var dataType = GetColumnDatatype(columnInfoRecord);
+            var dataType = GetColumnDataType(columnInfoRecord);
 
             var valueBytes = Encoding.ASCII.GetBytes(value);
             var bucket = new BigInteger(Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(valueBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)))) % dataType.BucketInfo.EqualityBucketSize.Value;
@@ -189,7 +205,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             var columnInfoRecord = FindInfoRecord(columnIV);
             var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
-            var dataType = GetColumnDatatype(columnInfoRecord);
+            var dataType = GetColumnDataType(columnInfoRecord);
 
             var upperBound = CalculateUpperBound(dataType.BucketInfo.RangeBucketSize.Value,
                                                  dataType.BucketInfo.BucketMinRange.Value,
