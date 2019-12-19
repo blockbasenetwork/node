@@ -14,6 +14,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
         public ForeignKeyClause(estring tableName)
         {
             TableName = tableName;
+            ColumnNames = new List<estring>();
         }
 
         public ForeignKeyClause Clone()

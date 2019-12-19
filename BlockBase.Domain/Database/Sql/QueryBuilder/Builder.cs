@@ -79,6 +79,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
 
                     case CreateDatabaseStatement createDatabaseStatement:
                         sqlString = generator.BuildString(createDatabaseStatement);
+                        databaseName = createDatabaseStatement.DatabaseName.Value;
                         isDatabaseStatement = true;
                         break;
 
@@ -88,7 +89,6 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                         break;
 
                     case UseDatabaseStatement useDatabaseStatement:
-                        isDatabaseStatement = true;
                         databaseName = useDatabaseStatement.DatabaseName.Value;
                         sqlString = generator.BuildString(useDatabaseStatement);
                         break;
