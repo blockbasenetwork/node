@@ -7,10 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="1.50.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.1.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\eos-sharp\EosSharp\EosSharp\EosSharp.csproj" />
-    <ProjectReference Include="..\eos-sharp\EosSharp\EosSharp.Core\EosSharp.Core.csproj" />
+    <PackageReference Include="eos-sharp" Version="2.1.2"/>
   </ItemGroup>
 
 </Project>
