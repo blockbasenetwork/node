@@ -9,25 +9,24 @@ namespace BlockBase.DataProxy.Encryption
 {
     public interface IEncryptor
     {
-        InfoRecord CreateInfoRecord(estring databaseName);
-        InfoRecord CreateInfoRecord(estring tableName, string databaseName);
-        InfoRecord CreateInfoRecord(estring columnName, string tableName, string databaseName, bool isDataEncrypted);
+        InfoRecord CreateInfoRecord(estring name, string parentIV);
 
-        string RemoveInfoRecord(estring databaseName);
-        string RemoveInfoRecord(estring tableName, string databaseName);
-        IList<string> RemoveInfoRecord(estring columnName, string tableName, string databaseName);
+        InfoRecord FindInfoRecord(estring name, string parentIV);
+        List<InfoRecord> FindChildren(string parentIV, bool deepFind = false);
 
-        Tuple<string, string> ChangeInfoRecord(estring oldTableName, estring newTableName, string databaseName);
+        void RemoveInfoRecord(InfoRecord infoRecord);
 
-        string GetEncryptedDatabaseName(estring databaseName);
-        string GetEncryptedTableName(estring tableName, string databaseName);
-        string GetEncryptedColumnName(estring columnName, string tableName, string databaseName);
-        Tuple<string, string> GetEncryptedBktColumnNames(estring columnName, string tableName, string databaseName);
+        InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data);
 
-        string GetRangeBucket(string columnName, int upperBound);
+        DataType GetColumnDataType(InfoRecord columnInfoRecord);
 
-        Dictionary<string, string> GetColumnDatatypes(string tableName, string databaseName);
+        InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName);
 
-        string GetEncryptedBucketColumn(string bktValues);
+
+        string CreateRangeBktValue(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDatatype);
+        string CreateEqualityBktValue(string valueToInsert, InfoRecord columnInfoRecord, DataType columnDatatype);
+
+        string EncryptNormalValue(string valueToInsert, InfoRecord columnInfoRecord, out string generatedIV);
+        string EncryptUniqueValue(string valueToInsert, InfoRecord columnInfoRecord);
     }
 }

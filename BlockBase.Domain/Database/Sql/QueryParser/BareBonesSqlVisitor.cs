@@ -18,7 +18,7 @@ namespace BlockBase.Domain.Database.QueryParser
 {
     public class BareBonesSqlVisitor : BareBonesSqlBaseVisitor<object>
     {
-        private estring DatabaseName { get; set; }
+        private estring _databaseName { get; set; }
         public override object VisitSql_stmt_list([NotNull] Sql.QueryParser.BareBonesSqlParser.Sql_stmt_listContext context)
         {
             var builder = new Builder();
@@ -39,8 +39,8 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitUse_database_stmt(Use_database_stmtContext context)
         {
             ThrowIfParserHasException(context);
-            DatabaseName = (estring)Visit(context.database_name().complex_name());
-            return new UseDatabaseStatement() { DatabaseName = DatabaseName };
+            _databaseName = (estring)Visit(context.database_name().complex_name());
+            return new UseDatabaseStatement() { DatabaseName = _databaseName };
         }
 
         public override object VisitCurrent_database_stmt(Current_database_stmtContext context)
@@ -61,14 +61,15 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitCreate_database_stmt([NotNull] Create_database_stmtContext context)
         {
             ThrowIfParserHasException(context);
-            return new CreateDatabaseStatement() { DatabaseName = (estring)Visit(context.database_name().complex_name()) };
+            _databaseName = (estring)Visit(context.database_name().complex_name());
+            return new CreateDatabaseStatement() { DatabaseName = _databaseName };
         }
 
         public override object VisitDrop_database_stmt([NotNull] Drop_database_stmtContext context)
         {
             ThrowIfParserHasException(context);
             var dropDatabaseName = (estring)Visit(context.database_name().complex_name());
-            if(dropDatabaseName == DatabaseName) DatabaseName = null;
+            if(dropDatabaseName == _databaseName) _databaseName = null;
             return new DropDatabaseStatement() { DatabaseName = dropDatabaseName };
         }
 
@@ -323,7 +324,7 @@ namespace BlockBase.Domain.Database.QueryParser
             if (dataTypeContext.K_TEXT() != null) return new DataType() { DataTypeName = DataTypeEnum.TEXT };
             if (dataTypeContext.K_ENCRYPTED() != null)
             {
-                var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED, BucketInfo = new BucketInfo() };
+                var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED};
                 if (dataTypeContext.bucket_size() != null)
                 {
                     dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_size().NUMERIC_LITERAL().GetText());
@@ -505,7 +506,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         private void ThrowIfDatabaseNameIsNull()
         {
-            if (DatabaseName == null) throw new FormatException("Please use or create a database first.");
+            if (_databaseName == null) throw new FormatException("Please use or create a database first.");
         }
 
         private void ThrowIfParserHasException(ParserRuleContext context)
