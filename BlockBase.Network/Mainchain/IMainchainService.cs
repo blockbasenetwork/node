@@ -25,7 +25,6 @@ namespace BlockBase.Network.Mainchain
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string permission = "active", string accountPermission = "active");
         Task<string> LinkAuthorization(string actionName ,string accountname, string permission = "active");
 
-        Task<GetTransactionResponse> RetrieveTransaction(string transactionId, string blockNumberHint = null);
         Task<ClientTable> RetrieveClientTable(string chain);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);
         Task<List<CurrentProducerTable>> RetrieveCurrentProducer(string chain);
