@@ -8,30 +8,26 @@ using Wiry.Base32;
 
 namespace BlockBase.DataProxy
 {
-    internal class MiddleMan : IEncryptor
+    public class MiddleMan : IEncryptor
     {
         private DatabaseKeyManager _databaseKeyManager;
-        private SecretStore _keyStore;
+        private SecretStore _secretStore;
 
-        public MiddleMan(DatabaseKeyManager databaseKeyManager, SecretStore keyStore)
+        public MiddleMan(DatabaseKeyManager databaseKeyManager, SecretStore secretStore)
         {
             _databaseKeyManager = databaseKeyManager;
-            _keyStore = keyStore;
+            _secretStore = secretStore;
         }
 
         public InfoRecord CreateInfoRecord(estring name, string parentIV)
         {
-            if (_databaseKeyManager.FindInfoRecord(name, parentIV) == null)
+            if (parentIV != null)
             {
-                if (parentIV != null)
-                {
-                    var parentInfoRecord = _databaseKeyManager.FindInfoRecord(parentIV);
-                    var parentManageKey = _databaseKeyManager.GetKeyManageFromInfoRecord(parentInfoRecord);
-                    return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.TableRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV));
-                }
-                return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, _keyStore.GetSecret("master_key"), _keyStore.GetSecret("master_iv"));
+                var parentInfoRecord = _databaseKeyManager.FindInfoRecord(parentIV);
+                var parentManageKey = _databaseKeyManager.GetKeyManageFromInfoRecord(parentInfoRecord);
+                return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.TableRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV));
             }
-            return null;
+            return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, _secretStore.GetSecret("master_key"), _secretStore.GetSecret("master_iv"));
         }
         public InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data)
         {
@@ -39,7 +35,7 @@ namespace BlockBase.DataProxy
             var parentManageKey = _databaseKeyManager.GetKeyManageFromInfoRecord(parentInfoRecord);
             return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.ColumnRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV), JsonConvert.SerializeObject(data));
         }
-       
+
         public InfoRecord FindInfoRecord(estring name, string parentIV)
         {
             return _databaseKeyManager.FindInfoRecord(name, parentIV);
@@ -61,23 +57,23 @@ namespace BlockBase.DataProxy
         {
             _databaseKeyManager.RemoveInfoRecord(infoRecord);
         }
-        
-        public string CreateEqualityBktValue(string valueToInsert, string columnIV)
+
+        public string CreateEqualityBktValue(string valueToInsert, InfoRecord columnInfoRecord, DataType columnDataType)
         {
-            return _databaseKeyManager.CreateEqualityBktValue(valueToInsert, columnIV);
+            return _databaseKeyManager.CreateEqualityBktValue(valueToInsert, columnInfoRecord, columnDataType);
         }
-        public string CreateRangeBktValue(double valueToInsert, string columnIV)
+        public string CreateRangeBktValue(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDataType)
         {
-            return _databaseKeyManager.CreateRangeBktValue(valueToInsert, columnIV);
+            return _databaseKeyManager.CreateRangeBktValue(valueToInsert, columnInfoRecord, columnDataType);
         }
 
-        public string EncryptNormalValue(string valueToInsert, string columnIV, out string generatedIV)
+        public string EncryptNormalValue(string valueToInsert, InfoRecord columnInfoRecord, out string generatedIV)
         {
-            return _databaseKeyManager.EncryptNormalValue(valueToInsert, columnIV, out generatedIV);
+            return _databaseKeyManager.EncryptNormalValue(valueToInsert, columnInfoRecord, out generatedIV);
         }
-        public string EncryptUniqueValue(string valueToInsert, string columnIV)
+        public string EncryptUniqueValue(string valueToInsert, InfoRecord columnInfoRecord)
         {
-            return _databaseKeyManager.EncryptUniqueValue(valueToInsert, columnIV);
+            return _databaseKeyManager.EncryptUniqueValue(valueToInsert, columnInfoRecord);
         }
     }
 }

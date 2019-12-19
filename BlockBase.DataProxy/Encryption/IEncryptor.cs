@@ -23,10 +23,10 @@ namespace BlockBase.DataProxy.Encryption
         InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName);
 
 
-        string CreateRangeBktValue(double valueToInsert, string columnIV);
-        string CreateEqualityBktValue(string valueToInsert, string columnIV);
+        string CreateRangeBktValue(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDatatype);
+        string CreateEqualityBktValue(string valueToInsert, InfoRecord columnInfoRecord, DataType columnDatatype);
 
-        string EncryptNormalValue(string valueToInsert, string columnIV, out string generatedIV);
-        string EncryptUniqueValue(string valueToInsert, string columnIV);
+        string EncryptNormalValue(string valueToInsert, InfoRecord columnInfoRecord, out string generatedIV);
+        string EncryptUniqueValue(string valueToInsert, InfoRecord columnInfoRecord);
     }
 }
