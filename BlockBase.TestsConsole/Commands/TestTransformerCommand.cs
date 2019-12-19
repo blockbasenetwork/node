@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime;
 using BlockBase.DataPersistence.Sidechain.Connectors;
+using BlockBase.DataProxy;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Database.QueryParser;
 using BlockBase.Domain.Database.Sql.Generators;
@@ -18,22 +19,30 @@ namespace BlockBase.TestsConsole.Commands
         private BareBonesSqlBaseVisitor<object> _visitor;
         private PSqlConnector _psqlConnector;
         private readonly ILogger _logger;
+        private string _databaseName = "";
 
         public TestTransformerCommand(ILogger logger)
         {
             _logger = logger;
             _psqlConnector = new PSqlConnector("localhost", "postgres", 5432, "qwerty123", _logger);
-            _transformer = new Transformer_v2(_psqlConnector);
+            var secretStore = new SecretStore();
+            secretStore.SetSecret("master_key", KeyAndIVGenerator_v2.CreateRandomKey());
+            secretStore.SetSecret("master_iv", KeyAndIVGenerator_v2.CreateMasterIV("qwerty123"));
+            var databaseKeyManager = new DatabaseKeyManager(secretStore);
+            var middleMan = new MiddleMan(databaseKeyManager, secretStore);
+            _transformer = new Transformer_v2(_psqlConnector, middleMan);
             _visitor = new BareBonesSqlVisitor();
         }
 
         public async Task ExecuteAsync()
         {
             RunSqlCommand("CREATE DATABASE database1;");
+            RunSqlCommand("USE database1;");
 
             RunSqlCommand("CREATE TABLE table1 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 30 NOT NULL);");
             RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
             RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
+            //RunSqlCommand("CREATE TABLE accounts ( id ENCRYPTED PRIMARY KEY, name ENCRYPTED 30, amount ENCRYPTED 80 RANGE (100, 1, 5000));");
             RunSqlCommand("DROP TABLE table2;");
 
             RunSqlCommand("ALTER TABLE table1 RENAME TO newtable11");
@@ -50,7 +59,7 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 5, 'marcia', 26 )");
             RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 6, 'marcia', 290)");
 
-            RunSqlCommand("UPDATE newtable1 SET !column3 = 20 where newtable1.column2 == 'bulha' ");
+            //RunSqlCommand("UPDATE newtable1 SET !column3 = 20 where newtable1.column2 == 'bulha' ");
 
             //RunSqlCommand("SELECT newtable1.column1 FROM newtable1 WHERE newtable1.column2 == 'bulha';");
 
@@ -73,16 +82,16 @@ namespace BlockBase.TestsConsole.Commands
                 var transformedBuilder = _transformer.GetTransformedBuilder(builder);
                 var sqlCommands = transformedBuilder.BuildSqlStatements(new PSqlGenerator());
 
-                var databaseName = "";
+                
                 foreach (var sqlCommand in sqlCommands)
                 {
                     if (sqlCommand.DatabaseName != null)
                     {
-                        databaseName = sqlCommand.DatabaseName;
-                        continue;
+                        _databaseName = sqlCommand.DatabaseName;
+                        if(!sqlCommand.IsDatabaseStatement)continue;
                     }
-                       Console.WriteLine(sqlCommand.Value);
-                        _psqlConnector.ExecuteCommand(sqlCommand.Value, sqlCommand.IsDatabaseStatement ? null : databaseName);
+                    Console.WriteLine(sqlCommand.Value);
+                    _psqlConnector.ExecuteCommand(sqlCommand.Value, sqlCommand.IsDatabaseStatement ? null : _databaseName);
                 }
             }
             catch (Exception e)
