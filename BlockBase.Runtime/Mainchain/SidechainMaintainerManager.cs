@@ -36,7 +36,7 @@ namespace BlockBase.Runtime.Mainchain
         {
             _sidechain = sidechain;
             _mainchainService = mainchainService;
-            _roundsUntilSettlement = (int)sidechain.BlocksBetweenSettlement;
+            _roundsUntilSettlement = 0;
             _logger = logger;
             _latestTrxTimes = new List<int>();
         }
@@ -48,6 +48,7 @@ namespace BlockBase.Runtime.Mainchain
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.SidechainName);
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
+                _roundsUntilSettlement = (int)contractInfo.BlocksBetweenSettlement;
 
                 while (true)
                 {
@@ -116,6 +117,7 @@ namespace BlockBase.Runtime.Mainchain
             {
                 latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SidechainName);
                 _roundsUntilSettlement--;
+                _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
                 if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
             }
 
@@ -183,8 +185,16 @@ namespace BlockBase.Runtime.Mainchain
 
         private async Task ExecuteSettlementActions()
         {
+            _logger.LogDebug("Settlement starting...");
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
-            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.BLACKLIST_PRODUCERS, _sidechain.SidechainName);
+
+            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
+
+            foreach(var producer in producers)
+            {
+                if (producer.Warning == 2) await _mainchainService.BlacklistProducer(_sidechain.SidechainName, producer.Key);
+            }
+
             await _mainchainService.PunishProd(_sidechain.SidechainName);
         }
 
