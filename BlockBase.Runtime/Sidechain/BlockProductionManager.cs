@@ -235,12 +235,20 @@ namespace BlockBase.Runtime.Sidechain
                     }
                     await Task.Delay(100);
                 }
+            }
+            catch(ApiErrorException)
+            {
+                _logger.LogInformation("Unable to execute, proposed transaction might have already been executed");
+            }
+
+            try
+            {
                 _logger.LogInformation("Canceling proposal...");
                 await _mainchainService.CancelTransaction(proposer, proposal.ProposalName);
             }
             catch(ApiErrorException)
             {
-                _logger.LogInformation("Unable to execute, proposed transaction might have already been executed");
+                _logger.LogCritical("Failed to cancel proposal after failed execution");
             }
         }
 
