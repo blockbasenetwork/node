@@ -12,6 +12,11 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public int? Limit { get; set; }
         public int? Offset { get; set; }
 
+        public SimpleSelectStatement()
+        {
+            OrderingTerms = new List<OrderingTerm>();
+        }
+
         public ISqlStatement Clone()
         {
             return new SimpleSelectStatement()

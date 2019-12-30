@@ -4,6 +4,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.SqlCommand;
 using System.Collections.Generic;
 
 namespace BlockBase.Domain.Database.Sql.QueryBuilder
@@ -33,74 +34,58 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
             return this;
         }
 
-        public IList<SqlCommand> BuildSqlStatements(IGenerator generator)
+        public IList<ISqlCommand> BuildSqlStatements(IGenerator generator)
         {
-            var sqlCommands = new List<SqlCommand>();
+            var sqlCommands = new List<ISqlCommand>();
 
             foreach (var sqlStatement in SqlStatements)
             {
-                var sqlString = "";
-                var isDatabaseStatement = false;
-                string databaseName = null;
+                ISqlCommand command = null;
+
 
                 switch (sqlStatement)
                 {
                     case CreateTableStatement createTableStatement:
-                        sqlString = generator.BuildString(createTableStatement);
+                        command = new GenericSqlCommand(generator.BuildString(createTableStatement));
                         break;
 
                     case AbstractAlterTableStatement abstractAlterTableStatement:
-                        sqlString = generator.BuildString(abstractAlterTableStatement);
+                        command = new GenericSqlCommand(generator.BuildString(abstractAlterTableStatement));
                         break;
 
                     case DropTableStatement dropTableStatement:
-                        sqlString = generator.BuildString(dropTableStatement);
+                        command = new GenericSqlCommand(generator.BuildString(dropTableStatement));
                         break;
 
                     case InsertRecordStatement insertRecordStatement:
-                        sqlString = generator.BuildString(insertRecordStatement);
+                        command = new GenericSqlCommand(generator.BuildString(insertRecordStatement));
                         break;
 
                     case UpdateRecordStatement updateRecordStatement:
-                        sqlString = generator.BuildString(updateRecordStatement);
+                        command = new GenericSqlCommand(generator.BuildString(updateRecordStatement));
                         break;
 
                     case DeleteRecordStatement deleteRecordStatement:
-                        sqlString = generator.BuildString(deleteRecordStatement);
+                        command = new GenericSqlCommand(generator.BuildString(deleteRecordStatement));
                         break;
 
                     case SimpleSelectStatement simpleSelectStatement:
-                        sqlString = generator.BuildString(simpleSelectStatement);
-                        break;
-
-                    case SelectCoreStatement selectCoreStatement:
-                        sqlString = generator.BuildString(selectCoreStatement);
+                        command = new ReadQuerySqlCommand(generator.BuildString(simpleSelectStatement));
                         break;
 
                     case CreateDatabaseStatement createDatabaseStatement:
-                        sqlString = generator.BuildString(createDatabaseStatement);
-                        databaseName = createDatabaseStatement.DatabaseName.Value;
-                        isDatabaseStatement = true;
+                        command = new DatabaseSqlCommand(generator.BuildString(createDatabaseStatement), createDatabaseStatement.DatabaseName.Value);
                         break;
 
                     case DropDatabaseStatement dropDatabaseStatement:
-                        sqlString = generator.BuildString(dropDatabaseStatement);
-                        isDatabaseStatement = true;
+                        command = new DatabaseSqlCommand(generator.BuildString(dropDatabaseStatement));
                         break;
 
                     case UseDatabaseStatement useDatabaseStatement:
-                        databaseName = useDatabaseStatement.DatabaseName.Value;
-                        sqlString = generator.BuildString(useDatabaseStatement);
+                        command = new DatabaseSqlCommand(generator.BuildString(useDatabaseStatement), useDatabaseStatement.DatabaseName.Value);
                         break;
                 }
-                sqlCommands.Add(
-                    new SqlCommand()
-                    {
-                        Value = sqlString + ";",
-                        IsDatabaseStatement = isDatabaseStatement,
-                        DatabaseName = databaseName
-
-                    });
+                sqlCommands.Add(command);
             }
             return sqlCommands;
         }
