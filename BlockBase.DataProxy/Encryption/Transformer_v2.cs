@@ -11,6 +11,8 @@ using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.ColumnCo
 using BlockBase.Domain.Database.Info;
 using System.Linq;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
+using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.ComparisonExpression;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -83,7 +85,9 @@ namespace BlockBase.DataProxy.Encryption
                         transformedBuilder.AddStatement(GetTransformedInsertRecordStatement(insertRecordStatement, _databaseInfoRecord.IV));
                         break;
 
-
+                    case SimpleSelectStatement simpleSelectStatement:
+                        transformedBuilder.AddStatement(GetTransformedSimpleSelectStatement(simpleSelectStatement, _databaseInfoRecord.IV));
+                        break;
                 }
             }
             return transformedBuilder;
@@ -143,9 +147,9 @@ namespace BlockBase.DataProxy.Encryption
 
             return transformedStatements;
         }
-        private IList<ISqlStatement> GetTransformedDropTableStatement(DropTableStatement dropTableStatement, string databaseName)
+        private IList<ISqlStatement> GetTransformedDropTableStatement(DropTableStatement dropTableStatement, string databaseIV)
         {
-            var infoRecord = _encryptor.FindInfoRecord(dropTableStatement.TableName, databaseName);
+            var infoRecord = _encryptor.FindInfoRecord(dropTableStatement.TableName, databaseIV);
 
             var sqlStatements = new List<ISqlStatement>()
             {
@@ -259,7 +263,6 @@ namespace BlockBase.DataProxy.Encryption
             return sqlStatements;
         }
 
-
         private IList<ISqlStatement> GetTransformedDropColumnStatement(DropColumnStatement dropColumnStatement, string databaseIV)
         {
             var tableInfoRecord = _encryptor.FindInfoRecord(dropColumnStatement.TableName, databaseIV);
@@ -303,6 +306,127 @@ namespace BlockBase.DataProxy.Encryption
 
             return transformedInsertRecordStatement;
         }
+
+        private ISqlStatement GetTransformedSimpleSelectStatement(SimpleSelectStatement simpleSelectStatement, string databaseIV)
+        {
+            var transformedSimpleSelectStatement = new SimpleSelectStatement();
+            transformedSimpleSelectStatement.SelectCoreStatement = (SelectCoreStatement) GetTransformedSelectCoreStatement(simpleSelectStatement.SelectCoreStatement, databaseIV);
+            return transformedSimpleSelectStatement;
+        }
+
+        private ISqlStatement GetTransformedSelectCoreStatement(SelectCoreStatement selectCoreStatement, string databaseIV)
+        {
+            var transformedSelectStatement = new SelectCoreStatement();
+
+            foreach (var resultColumn in selectCoreStatement.ResultColumns)
+            {
+                var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseIV);
+                var columnInfoRecord = !resultColumn.AllColumnsfFlag ? _encryptor.FindInfoRecord(resultColumn.ColumnName, tableInfoRecord.IV) : null;
+
+                transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                {
+                    TableName = new estring(tableInfoRecord.Name),
+                    ColumnName = !resultColumn.AllColumnsfFlag ? new estring(columnInfoRecord.Name) : null,
+                    AllColumnsfFlag = resultColumn.AllColumnsfFlag
+                });
+
+                if (columnInfoRecord != null && columnInfoRecord.LData.EncryptedIVColumnName != null)
+                {
+
+                    transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                    {
+                        TableName = new estring(tableInfoRecord.Name),
+                        ColumnName = new estring(columnInfoRecord.LData.EncryptedIVColumnName),
+                        AllColumnsfFlag = resultColumn.AllColumnsfFlag
+                    });
+                }
+            }
+
+            transformedSelectStatement.TablesOrSubqueries = GetTransformedTablesOrSubqueries(selectCoreStatement.TablesOrSubqueries, databaseIV);
+
+            transformedSelectStatement.WhereExpression = GetTransformedExpression(selectCoreStatement.WhereExpression, databaseIV, transformedSelectStatement);
+
+            return transformedSelectStatement;
+        }
+
+        //TODO: finish this method
+        private IList<TableOrSubquery> GetTransformedTablesOrSubqueries(IList<TableOrSubquery> tablesOrSubqueries, string databaseIV)
+        {
+            var transformedTableOrSubqueries = new List<TableOrSubquery>();
+
+            foreach (var tableOrSubquery in tablesOrSubqueries)
+            {
+                if (tableOrSubquery.TableName != null)
+                {
+                    transformedTableOrSubqueries.Add(new TableOrSubquery()
+                    {
+                        TableName = new estring(_encryptor.FindInfoRecord(tableOrSubquery.TableName, databaseIV).Name)
+                    });
+                }
+            }
+
+            return transformedTableOrSubqueries;
+
+        }
+
+        private AbstractExpression GetTransformedExpression(AbstractExpression expression, string databaseIV, SelectCoreStatement transformedSelectCoreStatement)
+        {
+            switch (expression)
+            {
+                case ComparisonExpression comparisonExpression:
+                    return GetTransformedComparisonExpression(comparisonExpression, databaseIV, transformedSelectCoreStatement);
+
+                case LogicalExpression logicalExpression:
+                    var newLogicalExpression = (LogicalExpression)logicalExpression.Clone();
+                    newLogicalExpression.LeftExpression = GetTransformedExpression(logicalExpression.LeftExpression, databaseIV, transformedSelectCoreStatement);
+                    newLogicalExpression.RightExpression = GetTransformedExpression(logicalExpression.RightExpression, databaseIV, transformedSelectCoreStatement);
+                    return newLogicalExpression;
+
+            }
+            throw new FormatException("Expression not recognized.");
+        }
+
+        private AbstractExpression GetTransformedComparisonExpression(ComparisonExpression comparisonExpression, string databaseIV, SelectCoreStatement transformedSelectCoreStatement)
+        {
+            var tableInfoRecord = _encryptor.FindInfoRecord(comparisonExpression.TableName, databaseIV);
+
+            var columnInfoRecord = _encryptor.FindInfoRecord(comparisonExpression.ColumnName, tableInfoRecord.IV);
+            var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
+
+            var transformedComparisonExpression = new ComparisonExpression(
+                new estring(tableInfoRecord.Name),
+                new estring(columnInfoRecord.Name),
+                comparisonExpression.Value,
+                comparisonExpression.ComparisonOperator);
+
+
+            if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+            {
+                var isColumnUnique = columnInfoRecord.LData.EncryptedIVColumnName == null;
+                if (!isColumnUnique)
+                {
+                    transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
+                    transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+
+                    if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Equal || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Different)
+                    {
+                        transformedComparisonExpression.ColumnName = new estring(columnInfoRecord.LData.EncryptedEqualityColumnName);
+                        transformedComparisonExpression.Value = new Value(_encryptor.CreateEqualityBktValue(comparisonExpression.Value.ValueToInsert, columnInfoRecord, columnDataType), true);
+                    }
+                }
+                else
+                {
+                    transformedComparisonExpression.ColumnName = new estring(columnInfoRecord.LData.EncryptedRangeColumnName);
+                    if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))
+                        transformedComparisonExpression.Value = new Value(_encryptor.CreateRangeBktValue(valueDoubleToInsert, columnInfoRecord, columnDataType), true);
+                    else
+                        throw new Exception("Tried to compare variable that is not a number.");
+                }
+            }
+
+            return transformedComparisonExpression;
+        }
+
 
         #endregion
 
