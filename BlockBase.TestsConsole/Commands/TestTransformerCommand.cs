@@ -10,6 +10,7 @@ using BlockBase.TestsConsole.Commands.Interfaces;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using BlockBase.Domain.Database.Sql.SqlCommand;
 
 namespace BlockBase.TestsConsole.Commands
 {
@@ -39,29 +40,30 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("CREATE DATABASE database1;");
             RunSqlCommand("USE database1;");
 
-            RunSqlCommand("CREATE TABLE table1 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 30 NOT NULL);");
-            RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
-            RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( column1 ), column2 ENCRYPTED 40 );");
+            RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 30 NOT NULL);");
+            RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
+            RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
             //RunSqlCommand("CREATE TABLE accounts ( id ENCRYPTED PRIMARY KEY, name ENCRYPTED 30, amount ENCRYPTED 80 RANGE (100, 1, 5000));");
             RunSqlCommand("DROP TABLE table2;");
 
             RunSqlCommand("ALTER TABLE table1 RENAME TO newtable11");
-            RunSqlCommand("ALTER TABLE newtable11 RENAME TO newtable1");
-            RunSqlCommand("ALTER TABLE newtable1 RENAME !column2 TO column2");
-            RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN !column3 int");
-            RunSqlCommand("ALTER TABLE newtable1 ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
-            RunSqlCommand("ALTER TABLE newtable1 DROP COLUMN column4");
+            RunSqlCommand("ALTER TABLE newtable11 RENAME TO bestplayers");
+            RunSqlCommand("ALTER TABLE bestplayers RENAME !column2 TO name");
+            RunSqlCommand("ALTER TABLE bestplayers ADD COLUMN !number int");
+            RunSqlCommand("ALTER TABLE bestplayers ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
+            RunSqlCommand("ALTER TABLE bestplayers DROP COLUMN column4");
 
-            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 1, 'bulha', 7 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 2, 'bulha', 25 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 3, 'pires', 10 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 4, 'fernando', 25 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 5, 'marcia', 26 )");
-            RunSqlCommand("INSERT INTO newtable1 (column1, column2, !column3) VALUES ( 6, 'marcia', 290)");
+            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 1, 'Cristiano Ronaldo', 7 )");
+            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 2, 'bulha', 7 )");
+            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 3, 'bulha', 25 )");
+            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 4, 'pires', 10 )");
+            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 5, 'fernando', 25 )");
+            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 6, 'marcia', 26 )");
+            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 7, 'marcia', 290)");
 
             //RunSqlCommand("UPDATE newtable1 SET !column3 = 20 where newtable1.column2 == 'bulha' ");
 
-            //RunSqlCommand("SELECT newtable1.column1 FROM newtable1 WHERE newtable1.column2 == 'bulha';");
+            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.!number == 25;");
 
             //RunSqlCommand("DROP DATABASE database1;");
         }
@@ -82,16 +84,31 @@ namespace BlockBase.TestsConsole.Commands
                 var transformedBuilder = _transformer.GetTransformedBuilder(builder);
                 var sqlCommands = transformedBuilder.BuildSqlStatements(new PSqlGenerator());
 
-                
+
                 foreach (var sqlCommand in sqlCommands)
                 {
-                    if (sqlCommand.DatabaseName != null)
+                    Console.WriteLine(sqlCommand.EncryptedValue);
+                    switch (sqlCommand)
                     {
-                        _databaseName = sqlCommand.DatabaseName;
-                        if(!sqlCommand.IsDatabaseStatement)continue;
+                        case DatabaseSqlCommand databaseSqlCommand:
+                            if(databaseSqlCommand.DatabaseName != null)
+                                _databaseName = databaseSqlCommand.DatabaseName;
+                            _psqlConnector.ExecuteCommand(sqlCommand.EncryptedValue, null);
+                            break;
+
+                        case ReadQuerySqlCommand readQuerySqlCommand:
+                            var resultList = _psqlConnector.ExecuteQuery(sqlCommand.EncryptedValue, _databaseName);
+                            foreach (var row in resultList)
+                            {
+                                Console.WriteLine();
+                                foreach (var value in row) Console.Write(value);
+                            }
+                            break;
+
+                        case GenericSqlCommand genericSqlCommand:
+                            _psqlConnector.ExecuteCommand(sqlCommand.EncryptedValue, _databaseName);
+                            break;
                     }
-                    Console.WriteLine(sqlCommand.Value);
-                    _psqlConnector.ExecuteCommand(sqlCommand.Value, sqlCommand.IsDatabaseStatement ? null : _databaseName);
                 }
             }
             catch (Exception e)
