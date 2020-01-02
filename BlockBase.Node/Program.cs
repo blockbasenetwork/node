@@ -17,7 +17,7 @@ namespace BlockBase.Node
             var networkService = webHost.Services.Get<INetworkService>();
             var sidechainProducerService = webHost.Services.Get<ISidechainProducerService>();
 
-            var noRecover = args.FirstOrDefault() == "--no-recover";
+            var noRecover = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
 
             networkService.Run();
             sidechainProducerService.Run(!noRecover);
