@@ -1,0 +1,20 @@
+version: '3.1'
+services:
+  mongo:
+      image: mongo
+      restart: always
+      environment:
+        MONGO_INITDB_ROOT_USERNAME: root
+        MONGO_INITDB_ROOT_PASSWORD: example
+      ports:
+        - 27017:27017
+  blockbase:
+      build: .
+      restart: always
+      ports:
+        - '80:5001'
+        - '4444:4444'
+      environment:
+        MongoDB__Host: mongo
+      depends_on:
+        - mongo
