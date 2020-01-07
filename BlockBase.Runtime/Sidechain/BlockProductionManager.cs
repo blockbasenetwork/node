@@ -227,7 +227,7 @@ namespace BlockBase.Runtime.Sidechain
                 while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
-                    if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count)
+                    if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
                     {
                         await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
                         _logger.LogInformation("Executed block verification");
