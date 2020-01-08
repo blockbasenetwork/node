@@ -20,6 +20,7 @@ namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
+    [ApiExplorerSettings(GroupName = "providerApi")]
     public class ProducerController : ControllerBase
     {
         private NodeConfigurations NodeConfigurations;
@@ -27,7 +28,7 @@ namespace BlockBase.Node.Controllers
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
-
+        
         public ProducerController(ILogger<ChainController> logger, IOptions<NodeConfigurations> nodeConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             NodeConfigurations = nodeConfigurations?.Value;
@@ -40,7 +41,7 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Sends candidature to a specific sidechain.
+        /// Sends a transaction to blockbase operation contract to submit a candidature for a target sidechain.
         /// </summary>
         /// <param name="chainName">Account name of the Sidechain</param>
         /// <param name="workTime">Producer working time in the Sidechain in seconds</param>
@@ -51,8 +52,8 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error sending candidature</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a producer candidature to a sidechain",
-            Description = "Requires login to access",
+            Summary = "Sends a transaction to blockbase operation contract to submit a candidature for a target sidechain.",
+            Description = "Description here",
             OperationId = "SendCandidatureToSidechain"
         )]
         public async Task<ObjectResult> SendCandidatureToChain(string chainName, int workTime, bool forceDelete = false)
@@ -88,7 +89,20 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the sidechain contract information of a specific account that is started and configured.
+        /// </summary>
+        /// <param name="chainName">Account name of the sidechain</param>
+        /// <returns>The success of the task</returns>
+        /// <response code="200">Contract information obtained with success.</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error getting the contract information</response>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the sidechain contract information of a specific account that is started and configured.",
+            Description = "Description here",
+            OperationId = "GetContractInfo"
+        )]
         public async Task<ObjectResult> GetContractInfo(string chainName)
         {
             try
@@ -104,7 +118,22 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the confirmation if the user account has a candidateure in specific sidechain.
+        /// </summary>
+        /// <param name="chainName">Account name of the Sidechain</param>
+        /// <param name="forceDelete">Producer can choose to delete the database with the same account name</param>
+        /// <returns> A boolean if the account is candidate in the sidechain</returns>
+        /// <response code="200">Information obtained with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error getting the information</response>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the confirmation if the user account has a candidateure in specific sidechain.",
+            Description = "Description here",
+            OperationId = "GetProducerCandidature"
+        )]
+        //TODO Change name to something more intuitive.
         public async Task<ObjectResult> GetProducerCandidature(string chainName, bool forceDelete = false)
         {
             try
@@ -121,7 +150,20 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the current state of a specific sidechain.
+        /// </summary>
+        /// <param name="chainName">Account name of the Sidechain</param>
+        /// <returns>The current state of the contract</returns>
+        /// <response code="200">Contract state obtained with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error getting contract state</response>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the current state of a specific sidechain.",
+            Description = "Description here",
+            OperationId = "GetChainState"
+        )]
         public async Task<ObjectResult> GetChainState(string chainName)
         {
             try
@@ -135,7 +177,20 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the total producers needed for a specific sidechain.
+        /// </summary>
+        /// <param name="chainName">Account name of the Sidechain</param>
+        /// <returns>The number of producers needed for a sidechain.</returns>
+        /// <response code="200">Producers needed obtained with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error getting the producers needed</response>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the total producers needed for a specific sidechain.",
+            Description = "Description here",
+            OperationId = "GetTotalProducersNeeded"
+        )]
         public async Task<ObjectResult> GetTotalProducersNeeded(string chainName)
         {
             try
@@ -149,7 +204,21 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the total payment to the producers until the request moment of a specific sidechain.
+        /// </summary>
+        /// <param name="chainName">Account name of the Sidechain</param>
+        /// <returns>The total payment of the producers per settlement.</returns>
+        /// <response code="200">Chain payment obtained with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error getting the payments information</response>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the total payment to the producers until the request moment of a specific sidechain.",
+            Description = "Description here",
+            OperationId = "GetTotalProducerPayment"
+        )]
+        //TODO Change name to something more intuitive.
         public async Task<ObjectResult> GetTotalProducerPayment(string chainName)
         {
             try
@@ -164,7 +233,20 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the total number of candidates of a specific sidechain.
+        /// </summary>
+        /// <param name="chainName">Account name of the sidechain</param>
+        /// <returns>The number of candidates in the sidechain.</returns>
+        /// <response code="200">Total producers obtained with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error getting total candidates information.</response>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the total number of candidates of a specific sidechain.",
+            Description = "Description here",
+            OperationId = "GetTotalCandidatesInChain"
+        )]
         public async Task<ObjectResult> GetTotalCandidatesInChain(string chainName)
         {
             try
@@ -179,7 +261,21 @@ namespace BlockBase.Node.Controllers
 
         }
 
+        /// <summary>
+        /// Gets the payment per block of a specific sidechain.
+        /// </summary>
+        /// <param name="chainName">Account name of the Sidechain</param>
+        /// <returns>The total payment for the producers.</returns>
+        /// <response code="200">Chain payment obtained with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error getting the payment information.</response>
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "Get the payment per block of a specific sidechain.",
+            Description = "Description here",
+            OperationId = "GetChainPayment"
+        )]
+        //TODO Change name to something more intuitive.
         public async Task<ObjectResult> GetChainPayment(string chainName)
         {
             try
