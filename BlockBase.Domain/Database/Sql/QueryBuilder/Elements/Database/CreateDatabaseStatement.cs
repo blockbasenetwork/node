@@ -5,7 +5,7 @@ using System.Text;
 
 namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database
 {
-    public class CreateDatabaseStatement : ISqlStatement
+    public class CreateDatabaseStatement : ISqlDatabaseStatement
     {
         public estring DatabaseName { get; set; }
 
