@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using BlockBase.Domain.Database.Sql.SqlCommand;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 
 namespace BlockBase.TestsConsole.Commands
 {
@@ -81,33 +83,41 @@ namespace BlockBase.TestsConsole.Commands
             try
             {
                 var builder = (Builder)_visitor.Visit(context);
-                var transformedBuilder = _transformer.GetTransformedBuilder(builder);
-                var sqlCommands = transformedBuilder.BuildSqlStatements(new PSqlGenerator());
+                _transformer.TransformBuilder(builder);
+                builder.BuildSqlStatements(new PSqlGenerator());
 
 
-                foreach (var sqlCommand in sqlCommands)
+                foreach (var sqlCommand in builder.SqlCommands)
                 {
-                    Console.WriteLine(sqlCommand.EncryptedValue);
-                    switch (sqlCommand)
+                    Console.WriteLine("");
+                    if(sqlCommand is DatabaseSqlCommand)
+                        _databaseName = ((DatabaseSqlCommand) sqlCommand).DatabaseName;
+
+                    for (int i = 0; i < sqlCommand.TransformedSqlStatement.Count; i++)
                     {
-                        case DatabaseSqlCommand databaseSqlCommand:
-                            if(databaseSqlCommand.DatabaseName != null)
-                                _databaseName = databaseSqlCommand.DatabaseName;
-                            _psqlConnector.ExecuteCommand(sqlCommand.EncryptedValue, null);
-                            break;
+                        var sqlTextToExecute = sqlCommand.TransformedSqlStatementText[i];
+                        var sqlStatement = sqlCommand.TransformedSqlStatement[i];
+                        Console.WriteLine(sqlTextToExecute);
 
-                        case ReadQuerySqlCommand readQuerySqlCommand:
-                            var resultList = _psqlConnector.ExecuteQuery(sqlCommand.EncryptedValue, _databaseName);
-                            foreach (var row in resultList)
-                            {
-                                Console.WriteLine();
-                                foreach (var value in row) Console.Write(value);
-                            }
-                            break;
+                        switch (sqlStatement)
+                        {
+                            case ISqlDatabaseStatement databaseStatement:
+                                _psqlConnector.ExecuteCommand(sqlTextToExecute, null);
+                                break;
 
-                        case GenericSqlCommand genericSqlCommand:
-                            _psqlConnector.ExecuteCommand(sqlCommand.EncryptedValue, _databaseName);
-                            break;
+                            case SimpleSelectStatement simpleSelectStatement:
+                                var resultList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                                foreach (var row in resultList)
+                                {
+                                    Console.WriteLine();
+                                    foreach (var value in row) Console.Write(value);
+                                }
+                                break;
+
+                            default:
+                                _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
+                                break;
+                        }
                     }
                 }
             }
