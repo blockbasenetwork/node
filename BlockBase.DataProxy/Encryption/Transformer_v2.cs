@@ -13,6 +13,7 @@ using System.Linq;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.ComparisonExpression;
+using BlockBase.Domain.Database.Sql.SqlCommand;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -49,48 +50,50 @@ namespace BlockBase.DataProxy.Encryption
             _encryptor = middleMan;
         }
 
-        public Builder GetTransformedBuilder(Builder builder)
+        public void TransformBuilder(Builder builder)
         {
-            var transformedBuilder = new Builder();
-
-            foreach (var sqlStatement in builder.SqlStatements)
+            foreach (var command in builder.SqlCommands)
             {
-                switch (sqlStatement)
+                var statement = command.OriginalSqlStatement;
+                switch (statement)
                 {
                     case CreateDatabaseStatement createDatabaseStatement:
-                        transformedBuilder.AddStatements(GetTransformedCreateDatabaseStatement(createDatabaseStatement, out _databaseInfoRecord));
+                        command.TransformedSqlStatement = GetTransformedCreateDatabaseStatement(createDatabaseStatement, out _databaseInfoRecord);
+                        var createDatabaseCommand = (DatabaseSqlCommand)command;
+                        createDatabaseCommand.DatabaseName = ((CreateDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
                         break;
 
                     case DropDatabaseStatement dropDatabaseStatement:
-                        transformedBuilder.AddStatements(GetTransformedDropDatabaseStatement(dropDatabaseStatement));
+                        command.TransformedSqlStatement = GetTransformedDropDatabaseStatement(dropDatabaseStatement);
                         break;
 
                     case UseDatabaseStatement useDatabaseStatement:
-                        transformedBuilder.AddStatement(GetTransformedUseDatabaseStatement(useDatabaseStatement, out _databaseInfoRecord));
+                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedUseDatabaseStatement(useDatabaseStatement, out _databaseInfoRecord) };
+                        var useDatabaseCommand = (DatabaseSqlCommand) command;
+                        useDatabaseCommand.DatabaseName = ((CreateDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
                         break;
 
                     case CreateTableStatement createTableStatement:
-                        transformedBuilder.AddStatements(GetTransformedCreateTableStatement(createTableStatement, _databaseInfoRecord.IV));
+                        command.TransformedSqlStatement = GetTransformedCreateTableStatement(createTableStatement, _databaseInfoRecord.IV);
                         break;
 
                     case DropTableStatement dropTableStatement:
-                        transformedBuilder.AddStatements(GetTransformedDropTableStatement(dropTableStatement, _databaseInfoRecord.IV));
+                        command.TransformedSqlStatement = GetTransformedDropTableStatement(dropTableStatement, _databaseInfoRecord.IV);
                         break;
 
                     case AbstractAlterTableStatement abstractAlterTableStatement:
-                        transformedBuilder.AddStatements(GetTransformedAlterTableStatement(abstractAlterTableStatement, _databaseInfoRecord.IV));
+                        command.TransformedSqlStatement = GetTransformedAlterTableStatement(abstractAlterTableStatement, _databaseInfoRecord.IV);
                         break;
 
                     case InsertRecordStatement insertRecordStatement:
-                        transformedBuilder.AddStatement(GetTransformedInsertRecordStatement(insertRecordStatement, _databaseInfoRecord.IV));
+                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedInsertRecordStatement(insertRecordStatement, _databaseInfoRecord.IV) };
                         break;
 
                     case SimpleSelectStatement simpleSelectStatement:
-                        transformedBuilder.AddStatement(GetTransformedSimpleSelectStatement(simpleSelectStatement, _databaseInfoRecord.IV));
+                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedSimpleSelectStatement(simpleSelectStatement, _databaseInfoRecord.IV) };
                         break;
                 }
             }
-            return transformedBuilder;
         }
         #region Transform SqlStatements
         private List<ISqlStatement> GetTransformedCreateDatabaseStatement(CreateDatabaseStatement createDatabaseStatement, out InfoRecord databaseInfoRecord)

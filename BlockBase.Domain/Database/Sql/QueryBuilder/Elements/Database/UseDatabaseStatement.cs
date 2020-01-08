@@ -2,7 +2,7 @@
 
 namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database
 {
-    public class UseDatabaseStatement : ISqlStatement
+    public class UseDatabaseStatement : ISqlDatabaseStatement
     {
         public estring DatabaseName { get; set; }
 
