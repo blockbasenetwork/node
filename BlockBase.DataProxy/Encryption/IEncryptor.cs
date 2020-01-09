@@ -17,6 +17,7 @@ namespace BlockBase.DataProxy.Encryption
         void RemoveInfoRecord(InfoRecord infoRecord);
 
         InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data);
+        string DecryptName(InfoRecord infoRecord);
 
         DataType GetColumnDataType(InfoRecord columnInfoRecord);
 
@@ -28,5 +29,8 @@ namespace BlockBase.DataProxy.Encryption
 
         string EncryptNormalValue(string valueToInsert, InfoRecord columnInfoRecord, out string generatedIV);
         string EncryptUniqueValue(string valueToInsert, InfoRecord columnInfoRecord);
+
+        string DecryptNormalValue(string encryptedValue, InfoRecord columnInfoRecord, string generatedIV);
+        string DecryptUniqueValue(string encryptedValue, InfoRecord columnInfoRecord);
     }
 }
