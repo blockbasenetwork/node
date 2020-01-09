@@ -90,9 +90,9 @@ namespace BlockBase.Runtime.Sidechain
                             {
                                 await CheckContractAndUpdateStates();
                                 await CheckContractAndUpdateWaitTimes();
+                                await CheckContractEndState();
                                 if (Sidechain.ProducingBlocks)
                                 {
-                                    await CheckContractEndState();
                                     await CheckContractAndUpdatePool();
                                 };
                             }
