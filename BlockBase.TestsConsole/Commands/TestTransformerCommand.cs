@@ -67,7 +67,7 @@ namespace BlockBase.TestsConsole.Commands
 
             //RunSqlCommand("UPDATE newtable1 SET !column3 = 20 where newtable1.column2 == 'bulha' ");
 
-            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.!number == 25;");
+            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.!number == 25 and bestplayers.position == 3;");
 
             //RunSqlCommand("DROP DATABASE database1;");
         }
