@@ -21,6 +21,7 @@ namespace BlockBase.TestsConsole.Commands
         private Transformer_v2 _transformer;
         private BareBonesSqlBaseVisitor<object> _visitor;
         private PSqlConnector _psqlConnector;
+        private InfoPostProcessing _infoPostProcessing;
         private readonly ILogger _logger;
         private string _databaseName = "";
 
@@ -35,6 +36,7 @@ namespace BlockBase.TestsConsole.Commands
             var middleMan = new MiddleMan(databaseKeyManager, secretStore);
             _transformer = new Transformer_v2(_psqlConnector, middleMan);
             _visitor = new BareBonesSqlVisitor();
+            _infoPostProcessing = new InfoPostProcessing(middleMan);
         }
 
         public async Task ExecuteAsync()
@@ -107,10 +109,11 @@ namespace BlockBase.TestsConsole.Commands
 
                             case SimpleSelectStatement simpleSelectStatement:
                                 var resultList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                foreach (var row in resultList)
+                                var unencryptedResultList = _infoPostProcessing.DecryptRows(simpleSelectStatement, resultList, _databaseName);
+                                foreach (var row in unencryptedResultList)
                                 {
                                     Console.WriteLine();
-                                    foreach (var value in row) Console.Write(value);
+                                    foreach (var value in row) Console.Write(value + " ");
                                 }
                                 break;
 
