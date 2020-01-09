@@ -60,9 +60,9 @@ namespace BlockBase.Runtime.SidechainProducer
             try
             {
                 var sidechainManager = new SidechainManager(sidechain, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _endpoint, _logger, _networkService, _mongoDbProducerService, _blockSender, _mainchainService);
+                var task = sidechainManager.Start();
+                sidechain.ManagerTask = task;
                 var sidechainAdded = _sidechainKeeper.TryAddSidechain(sidechain);
-
-                sidechainManager.Start();
                 
                 return sidechainAdded;
             }
@@ -77,7 +77,10 @@ namespace BlockBase.Runtime.SidechainProducer
         {
             try
             {
-                return _sidechainKeeper.TryRemoveSidechain(sidechain);
+                if (sidechain.ManagerTask.Task.Status != TaskStatus.Running) 
+                    return _sidechainKeeper.TryRemoveSidechain(sidechain);
+                else 
+                    return false;
             }
             catch (Exception ex)
             {

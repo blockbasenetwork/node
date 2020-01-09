@@ -65,7 +65,10 @@ namespace BlockBase.Node.Controllers
             {
                 var sidechainExists = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
                 var poolOfSidechains = _sidechainProducerService.GetSidechains();
-                if (poolOfSidechains.ContainsKey(chainName)) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
+                var chainExists = poolOfSidechains.TryGetValue(chainName, out var existingChain);
+                
+                if (chainExists && !forceDelete) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
+                if (chainExists && forceDelete) _sidechainProducerService.RemoveSidechainFromProducer(existingChain);
                 if (sidechainExists && !forceDelete) return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new ApplicationException(), "Sidechain not being produced but added in local database, please force delete in order to remove it."));
                 if (sidechainExists && forceDelete) await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
 
