@@ -45,7 +45,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
 
         public bool TryAddResultColumn(TableAndColumnName tableAndColumnName)
         {
-            if (ResultColumns.Count(c => c.TableName.Value == tableAndColumnName.TableName.Value && c.ColumnName.Value == tableAndColumnName.ToString()) == 0)
+            if (ResultColumns.Count(c => c.TableName.Value == tableAndColumnName.TableName.Value && c.ColumnName.Value == tableAndColumnName.ColumnName.Value) == 0)
             {
                 ResultColumns.Add(new ResultColumn(tableAndColumnName.TableName, tableAndColumnName.ColumnName));
                 return true;

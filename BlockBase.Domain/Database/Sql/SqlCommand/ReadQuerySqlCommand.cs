@@ -9,6 +9,7 @@ namespace BlockBase.Domain.Database.Sql.SqlCommand
 {
     public class ReadQuerySqlCommand : ISqlCommand
     {
+        //TODO: is this class really needed?
         public IList<string> TransformedSqlStatementText { get; set; }
 
         public ISqlStatement OriginalSqlStatement { get; set; }

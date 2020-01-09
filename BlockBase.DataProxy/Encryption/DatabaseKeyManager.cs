@@ -262,6 +262,22 @@ namespace BlockBase.DataProxy.Encryption
             return Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(valueInBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)));
         }
 
+        public string DecryptValue(string encryptedValue, InfoRecord columnInfoRecord, string generatedIV = null)
+        {
+            var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
+            var encryptedValueInBytes = Base32Encoding.ZBase32.ToBytes(encryptedValue);
+
+            var iv = generatedIV != null ? generatedIV : columnInfoRecord.IV;
+
+            return Encoding.ASCII.GetString(AES256.DecryptWithCBC(encryptedValueInBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(iv)));
+        }
+        public string DecryptName(InfoRecord infoRecord)
+        {
+            var keyName = GetKeyNameFromInfoRecord(infoRecord);
+            string recordName = infoRecord.Name.Substring(1);
+            return Encoding.Unicode.GetString(AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(recordName), keyName, Base32Encoding.ZBase32.ToBytes(infoRecord.IV)));
+        }
+
         public enum InfoRecordTypeEnum
         {
             DatabaseRecord,

@@ -75,5 +75,19 @@ namespace BlockBase.DataProxy
         {
             return _databaseKeyManager.EncryptUniqueValue(valueToInsert, columnInfoRecord);
         }
+
+        public string DecryptNormalValue(string encryptedValue, InfoRecord columnInfoRecord, string generatedIV)
+        {
+            return _databaseKeyManager.DecryptValue(encryptedValue, columnInfoRecord, generatedIV);
+        }
+        public string DecryptUniqueValue(string encryptedValue, InfoRecord columnInfoRecord)
+        {
+            return _databaseKeyManager.DecryptValue(encryptedValue, columnInfoRecord);
+        }
+
+        public string DecryptName(InfoRecord infoRecord)
+        {
+            return _databaseKeyManager.DecryptName(infoRecord);
+        }
     }
 }

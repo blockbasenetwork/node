@@ -69,7 +69,7 @@ namespace BlockBase.DataProxy.Encryption
 
                     case UseDatabaseStatement useDatabaseStatement:
                         command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedUseDatabaseStatement(useDatabaseStatement, out _databaseInfoRecord) };
-                        var useDatabaseCommand = (DatabaseSqlCommand) command;
+                        var useDatabaseCommand = (DatabaseSqlCommand)command;
                         useDatabaseCommand.DatabaseName = ((CreateDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
                         break;
 
@@ -313,7 +313,7 @@ namespace BlockBase.DataProxy.Encryption
         private ISqlStatement GetTransformedSimpleSelectStatement(SimpleSelectStatement simpleSelectStatement, string databaseIV)
         {
             var transformedSimpleSelectStatement = new SimpleSelectStatement();
-            transformedSimpleSelectStatement.SelectCoreStatement = (SelectCoreStatement) GetTransformedSelectCoreStatement(simpleSelectStatement.SelectCoreStatement, databaseIV);
+            transformedSimpleSelectStatement.SelectCoreStatement = (SelectCoreStatement)GetTransformedSelectCoreStatement(simpleSelectStatement.SelectCoreStatement, databaseIV);
             return transformedSimpleSelectStatement;
         }
 
@@ -333,7 +333,7 @@ namespace BlockBase.DataProxy.Encryption
                     AllColumnsfFlag = resultColumn.AllColumnsfFlag
                 });
 
-                if (columnInfoRecord != null && columnInfoRecord.LData.EncryptedIVColumnName != null)
+                if (columnInfoRecord.LData.EncryptedIVColumnName != null)
                 {
 
                     transformedSelectStatement.ResultColumns.Add(new ResultColumn()
@@ -380,9 +380,13 @@ namespace BlockBase.DataProxy.Encryption
                     return GetTransformedComparisonExpression(comparisonExpression, databaseIV, transformedSelectCoreStatement);
 
                 case LogicalExpression logicalExpression:
-                    var newLogicalExpression = (LogicalExpression)logicalExpression.Clone();
-                    newLogicalExpression.LeftExpression = GetTransformedExpression(logicalExpression.LeftExpression, databaseIV, transformedSelectCoreStatement);
-                    newLogicalExpression.RightExpression = GetTransformedExpression(logicalExpression.RightExpression, databaseIV, transformedSelectCoreStatement);
+                    var newLogicalExpression = new LogicalExpression
+                    {
+                        LeftExpression = GetTransformedExpression(logicalExpression.LeftExpression, databaseIV, transformedSelectCoreStatement),
+                        RightExpression = GetTransformedExpression(logicalExpression.RightExpression, databaseIV, transformedSelectCoreStatement),
+                        LogicalOperator = logicalExpression.LogicalOperator,
+                        HasParenthesis = logicalExpression.HasParenthesis
+                    };
                     return newLogicalExpression;
 
             }
@@ -402,20 +406,21 @@ namespace BlockBase.DataProxy.Encryption
                 comparisonExpression.Value,
                 comparisonExpression.ComparisonOperator);
 
+            transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
 
             if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
             {
                 var isColumnUnique = columnInfoRecord.LData.EncryptedIVColumnName == null;
-                if (!isColumnUnique)
-                {
-                    transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
-                    transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+                if (!isColumnUnique)  transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
 
-                    if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Equal || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Different)
+                if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Equal || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Different)
+                {
+                    if (!isColumnUnique)
                     {
                         transformedComparisonExpression.ColumnName = new estring(columnInfoRecord.LData.EncryptedEqualityColumnName);
                         transformedComparisonExpression.Value = new Value(_encryptor.CreateEqualityBktValue(comparisonExpression.Value.ValueToInsert, columnInfoRecord, columnDataType), true);
                     }
+                    else transformedComparisonExpression.Value = new Value(_encryptor.EncryptUniqueValue(comparisonExpression.Value.ValueToInsert, columnInfoRecord), true);
                 }
                 else
                 {
@@ -426,7 +431,6 @@ namespace BlockBase.DataProxy.Encryption
                         throw new Exception("Tried to compare variable that is not a number.");
                 }
             }
-
             return transformedComparisonExpression;
         }
 
