@@ -136,56 +136,71 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task<Block> ProduceBlock()
         {
-            var lastBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.SidechainName);
-            uint currentSequenceNumber;
-            byte[] previousBlockhash;
-
-            if (lastBlock != null)
+            var i = 0;
+            while (i < 3)
             {
-                previousBlockhash = HashHelper.FormattedHexaStringToByteArray(lastBlock.BlockHash);
-                currentSequenceNumber = lastBlock.SequenceNumber + 1;
+                try
+                {
+                    var lastBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.SidechainName);
+                    uint currentSequenceNumber;
+                    byte[] previousBlockhash;
+
+                    if (lastBlock != null)
+                    {
+                        previousBlockhash = HashHelper.FormattedHexaStringToByteArray(lastBlock.BlockHash);
+                        currentSequenceNumber = lastBlock.SequenceNumber + 1;
+                    }
+                    else
+                    {
+                        currentSequenceNumber = 1;
+                        previousBlockhash = new byte[32];
+                    }
+
+                    var databaseName = _sidechainPool.SidechainName;
+                    var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(databaseName);
+                    ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(databaseName))?.SequenceNumber ?? 0;
+                    var transactions = new List<Transaction>();
+
+                    foreach (var looseTransaction in allLooseTransactions)
+                    {
+                        if (looseTransaction.SequenceNumber != lastSequenceNumber + 1) break;
+                        lastSequenceNumber = looseTransaction.SequenceNumber;
+                        transactions.Add(looseTransaction);
+                        _logger.LogDebug($"Including transaction {lastSequenceNumber}");
+                    }
+
+                    var blockHeader = new BlockHeader()
+                    {
+                        Producer = _nodeConfigurations.AccountName,
+                        BlockHash = new byte[0],
+                        PreviousBlockHash = previousBlockhash,
+                        SequenceNumber = currentSequenceNumber,
+                        Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
+                        TransactionCount = (uint)transactions.Count(),
+                        ProducerSignature = "",
+                        MerkleRoot = MerkleTreeHelper.CalculateMerkleRootHash(transactions.Select(t => t.TransactionHash).ToList())
+                    };
+
+                    var block = new Block(blockHeader, transactions);
+                    var serializedBlockHeader = JsonConvert.SerializeObject(block.BlockHeader);
+                    var blockHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedBlockHeader));
+
+                    block.BlockHeader.BlockHash = blockHash;
+                    block.BlockHeader.ProducerSignature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, blockHash);
+
+                    _logger.LogInformation($"Produced Block -> sequence number: {currentSequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(blockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(previousBlockhash)}");
+
+                    return block;
+                }
+                catch (Exception e)
+                {
+                    i++;
+                    _logger.LogCritical($"Failed try #{i} to produce block");
+                    _logger.LogDebug(e.ToString());
+                    throw e;
+                }
             }
-            else
-            {
-                currentSequenceNumber = 1;
-                previousBlockhash = new byte[32];
-            }
-
-            var databaseName = _sidechainPool.SidechainName;
-            var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(databaseName);
-            ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(databaseName))?.SequenceNumber ?? 0;
-            var transactions = new List<Transaction>();
-
-            foreach (var looseTransaction in allLooseTransactions)
-            {
-                if (looseTransaction.SequenceNumber != lastSequenceNumber + 1) break;
-                lastSequenceNumber = looseTransaction.SequenceNumber;
-                transactions.Add(looseTransaction);
-                _logger.LogDebug($"Including transaction {lastSequenceNumber}");
-            }
-
-            var blockHeader = new BlockHeader()
-            {
-                Producer = _nodeConfigurations.AccountName,
-                BlockHash = new byte[0],
-                PreviousBlockHash = previousBlockhash,
-                SequenceNumber = currentSequenceNumber,
-                Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
-                TransactionCount = (uint)transactions.Count(),
-                ProducerSignature = "",
-                MerkleRoot = MerkleTreeHelper.CalculateMerkleRootHash(transactions.Select(t => t.TransactionHash).ToList())
-            };
-
-            var block = new Block(blockHeader, transactions);
-            var serializedBlockHeader = JsonConvert.SerializeObject(block.BlockHeader);
-            var blockHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedBlockHeader));
-
-            block.BlockHeader.BlockHash = blockHash;
-            block.BlockHeader.ProducerSignature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, blockHash);
-
-            _logger.LogInformation($"Produced Block -> sequence number: {currentSequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(blockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(previousBlockhash)}");
-
-            return block;
+            throw new OperationCanceledException("Failed to produce block");
         }
 
         private async Task ProposeBlock(Block block)
@@ -205,16 +220,16 @@ namespace BlockBase.Runtime.Sidechain
                 proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
                 if (proposal == null) await Task.Delay(50);
             }
-            
-            try 
+
+            try
             {
                 await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
             }
-            catch(ApiErrorException apiException)
+            catch (ApiErrorException apiException)
             {
                 _logger.LogCritical($"Unable to approve transaction with error: {apiException?.error?.name}");
             }
-            
+
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
 
             await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName, proposal);
@@ -236,7 +251,7 @@ namespace BlockBase.Runtime.Sidechain
                     await Task.Delay(100);
                 }
             }
-            catch(ApiErrorException)
+            catch (ApiErrorException)
             {
                 _logger.LogInformation("Unable to execute, proposed transaction might have already been executed");
             }
@@ -246,7 +261,7 @@ namespace BlockBase.Runtime.Sidechain
                 _logger.LogInformation("Canceling proposal...");
                 await _mainchainService.CancelTransaction(proposer, proposal.ProposalName);
             }
-            catch(ApiErrorException)
+            catch (ApiErrorException)
             {
                 _logger.LogCritical("Failed to cancel proposal after failed execution");
             }
