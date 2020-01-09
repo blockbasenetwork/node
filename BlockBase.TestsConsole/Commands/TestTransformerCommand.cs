@@ -44,7 +44,7 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("CREATE DATABASE database1;");
             RunSqlCommand("USE database1;");
 
-            RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 30 NOT NULL);");
+            RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 4 NOT NULL);");
             RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
             RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
             //RunSqlCommand("CREATE TABLE accounts ( id ENCRYPTED PRIMARY KEY, name ENCRYPTED 30, amount ENCRYPTED 80 RANGE (100, 1, 5000));");
@@ -67,7 +67,9 @@ namespace BlockBase.TestsConsole.Commands
 
             //RunSqlCommand("UPDATE newtable1 SET !column3 = 20 where newtable1.column2 == 'bulha' ");
 
-            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.!number == 25 and bestplayers.position == 3;");
+            //RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.!number == 25 and bestplayers.name == 'bulha';");
+
+            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name == 'bulha' OR bestplayers.!number > 25;");
 
             //RunSqlCommand("DROP DATABASE database1;");
         }
@@ -109,7 +111,7 @@ namespace BlockBase.TestsConsole.Commands
 
                             case SimpleSelectStatement simpleSelectStatement:
                                 var resultList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                var unencryptedResultList = _infoPostProcessing.DecryptRows(simpleSelectStatement, resultList, _databaseName);
+                                var unencryptedResultList = _infoPostProcessing.TranslateSelectResults((ReadQuerySqlCommand) sqlCommand, resultList, _databaseName);
                                 foreach (var row in unencryptedResultList)
                                 {
                                     Console.WriteLine();
