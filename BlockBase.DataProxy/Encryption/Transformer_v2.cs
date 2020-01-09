@@ -380,9 +380,13 @@ namespace BlockBase.DataProxy.Encryption
                     return GetTransformedComparisonExpression(comparisonExpression, databaseIV, transformedSelectCoreStatement);
 
                 case LogicalExpression logicalExpression:
-                    var newLogicalExpression = (LogicalExpression)logicalExpression.Clone();
-                    newLogicalExpression.LeftExpression = GetTransformedExpression(logicalExpression.LeftExpression, databaseIV, transformedSelectCoreStatement);
-                    newLogicalExpression.RightExpression = GetTransformedExpression(logicalExpression.RightExpression, databaseIV, transformedSelectCoreStatement);
+                    var newLogicalExpression = new LogicalExpression
+                    {
+                        LeftExpression = GetTransformedExpression(logicalExpression.LeftExpression, databaseIV, transformedSelectCoreStatement),
+                        RightExpression = GetTransformedExpression(logicalExpression.RightExpression, databaseIV, transformedSelectCoreStatement),
+                        LogicalOperator = logicalExpression.LogicalOperator,
+                        HasParenthesis = logicalExpression.HasParenthesis
+                    };
                     return newLogicalExpression;
 
             }
@@ -416,6 +420,7 @@ namespace BlockBase.DataProxy.Encryption
                         transformedComparisonExpression.ColumnName = new estring(columnInfoRecord.LData.EncryptedEqualityColumnName);
                         transformedComparisonExpression.Value = new Value(_encryptor.CreateEqualityBktValue(comparisonExpression.Value.ValueToInsert, columnInfoRecord, columnDataType), true);
                     }
+                    else transformedComparisonExpression.Value = new Value(_encryptor.EncryptUniqueValue(comparisonExpression.Value.ValueToInsert, columnInfoRecord), true);
                 }
                 else
                 {

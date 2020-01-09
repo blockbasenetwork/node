@@ -62,7 +62,7 @@ namespace BlockBase.DataProxy.Encryption
                             var columnIVIndex = selectCoreStatement.ResultColumns.IndexOf(ivColumn);
                             decryptedValue = _encryptor.DecryptNormalValue(row[i], columnInfoRecord, row[columnIVIndex]);
                         }
-                        else _encryptor.DecryptUniqueValue(row[i], columnInfoRecord);
+                        else decryptedValue = _encryptor.DecryptUniqueValue(row[i], columnInfoRecord);
                         decryptedResults[j+1].Add(decryptedValue);
                     }
 
