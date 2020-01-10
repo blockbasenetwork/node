@@ -92,6 +92,11 @@ namespace BlockBase.DataProxy.Encryption
                     case SimpleSelectStatement simpleSelectStatement:
                         command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedSimpleSelectStatement(simpleSelectStatement, _databaseInfoRecord.IV) };
                         break;
+
+                    case UpdateRecordStatement updateRecordStatement:
+                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedUpdateRecordStatement(updateRecordStatement, _databaseInfoRecord.IV) };
+                        break;
+
                 }
             }
         }
@@ -316,7 +321,6 @@ namespace BlockBase.DataProxy.Encryption
             transformedSimpleSelectStatement.SelectCoreStatement = (SelectCoreStatement)GetTransformedSelectCoreStatement(simpleSelectStatement.SelectCoreStatement, databaseIV);
             return transformedSimpleSelectStatement;
         }
-
         private ISqlStatement GetTransformedSelectCoreStatement(SelectCoreStatement selectCoreStatement, string databaseIV)
         {
             var transformedSelectStatement = new SelectCoreStatement();
@@ -324,25 +328,45 @@ namespace BlockBase.DataProxy.Encryption
             foreach (var resultColumn in selectCoreStatement.ResultColumns)
             {
                 var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseIV);
-                var columnInfoRecord = !resultColumn.AllColumnsfFlag ? _encryptor.FindInfoRecord(resultColumn.ColumnName, tableInfoRecord.IV) : null;
 
-                transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                if (!resultColumn.AllColumnsfFlag)
                 {
-                    TableName = new estring(tableInfoRecord.Name),
-                    ColumnName = !resultColumn.AllColumnsfFlag ? new estring(columnInfoRecord.Name) : null,
-                    AllColumnsfFlag = resultColumn.AllColumnsfFlag
-                });
-
-                if (columnInfoRecord.LData.EncryptedIVColumnName != null)
-                {
+                    var columnInfoRecord = !resultColumn.AllColumnsfFlag ? _encryptor.FindInfoRecord(resultColumn.ColumnName, tableInfoRecord.IV) : null;
 
                     transformedSelectStatement.ResultColumns.Add(new ResultColumn()
                     {
                         TableName = new estring(tableInfoRecord.Name),
-                        ColumnName = new estring(columnInfoRecord.LData.EncryptedIVColumnName),
-                        AllColumnsfFlag = resultColumn.AllColumnsfFlag
+                        ColumnName = new estring(columnInfoRecord.Name),
+                        AllColumnsfFlag = false
                     });
+
+                    if (columnInfoRecord.LData.EncryptedIVColumnName != null)
+                    {
+
+                        transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                        {
+                            TableName = new estring(tableInfoRecord.Name),
+                            ColumnName = new estring(columnInfoRecord.LData.EncryptedIVColumnName),
+                            AllColumnsfFlag = false
+                        });
+                    }
                 }
+
+                else
+                {
+                    var columnInfoRecords =  _encryptor.FindChildren(tableInfoRecord.IV) ;
+
+                    foreach (var columnInfoRecord in columnInfoRecords)
+                    {
+                        transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                        {
+                            TableName = new estring(tableInfoRecord.Name),
+                            ColumnName = new estring(columnInfoRecord.Name),
+                            AllColumnsfFlag = false
+                        });
+                    }
+                }
+
             }
 
             transformedSelectStatement.TablesOrSubqueries = GetTransformedTablesOrSubqueries(selectCoreStatement.TablesOrSubqueries, databaseIV);
@@ -351,6 +375,23 @@ namespace BlockBase.DataProxy.Encryption
 
             return transformedSelectStatement;
         }
+
+        private ISqlStatement GetTransformedUpdateRecordStatement(UpdateRecordStatement updateRecordStatement, string databaseIV)
+        {
+            var tableInfoRecord = _encryptor.FindInfoRecord(updateRecordStatement.TableName, databaseIV);
+
+            var selectStatement = new SimpleSelectStatement();
+            
+            selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
+
+            selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery()
+            {
+                TableName = new estring(tableInfoRecord.Name)
+            });
+
+            return selectStatement;
+        }
+
 
         //TODO: finish this method
         private IList<TableOrSubquery> GetTransformedTablesOrSubqueries(IList<TableOrSubquery> tablesOrSubqueries, string databaseIV)
