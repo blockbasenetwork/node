@@ -18,13 +18,16 @@ namespace BlockBase.DataProxy.Encryption
             _encryptor = middleMan;
         }
 
+
         public IList<IList<string>> TranslateSelectResults(ReadQuerySqlCommand readQuerySqlCommand, IList<IList<string>> allResults, string databaseName)
         {
-            IList<string> columnNames;
+            var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out IList<string> columnNames);
 
-            var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out columnNames);
+            var filteredResults = FilterExpression(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
 
-            return RemoveDecoyRows((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement, decryptedResults, columnNames);
+            var removedExtraColumns = FilterSelectColumns(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName);
+
+            return removedExtraColumns;
         }
 
         private IList<IList<string>> DecryptRows(SimpleSelectStatement simpleSelectStatement, IList<IList<string>> allResults, string databaseName, out IList<string> columnNames)
@@ -37,17 +40,21 @@ namespace BlockBase.DataProxy.Encryption
             foreach (var row in allResults) decryptedResults.Add(new List<string>());
 
             columnNames = new List<string>();
-            
+
             for (int i = 0; i < selectCoreStatement.ResultColumns.Count; i++)
             {
                 var resultColumn = selectCoreStatement.ResultColumns[i];
                 var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseInfoRecord.IV);
+
+                var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+
                 var columnInfoRecord = _encryptor.FindInfoRecord(resultColumn.ColumnName, tableInfoRecord.IV);
 
                 if (columnInfoRecord == null) continue;
 
-                if (columnInfoRecord.KeyName != null) columnNames.Add(_encryptor.DecryptName(columnInfoRecord));
-                else columnNames.Add(columnInfoRecord.Name);
+                var decryptedColumnName = columnInfoRecord.KeyName != null ? _encryptor.DecryptName(columnInfoRecord) : columnInfoRecord.Name;
+
+                columnNames.Add(decryptedTableName + "." + decryptedColumnName);
 
                 for (int j = 0; j < allResults.Count; j++)
                 {
@@ -74,15 +81,9 @@ namespace BlockBase.DataProxy.Encryption
             return decryptedResults;
         }
 
-        private IList<IList<string>> RemoveDecoyRows(SimpleSelectStatement simpleSelectStatement, IList<IList<string>> decryptedResults, IList<string> columnNames)
-        {
-            var filteredResults = FilterExpression(simpleSelectStatement.SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
-
-            return FilterSelectColumns(simpleSelectStatement.SelectCoreStatement.ResultColumns, filteredResults, columnNames);
-        }
 
         private IList<IList<string>> FilterExpression(AbstractExpression expression, IList<IList<string>> decryptedResults, IList<string> columnNames)
-        { 
+        {
             switch (expression)
             {
                 case ComparisonExpression comparisonExpression:
@@ -107,9 +108,28 @@ namespace BlockBase.DataProxy.Encryption
             throw new FormatException("Expression not recognized.");
 
         }
-        private IList<IList<string>> FilterSelectColumns(IList<ResultColumn> resultColumns, IList<IList<string>> decryptedResults, IList<string> columnNames)
+        private IList<IList<string>> FilterSelectColumns(IList<ResultColumn> resultColumns, IList<IList<string>> decryptedResults, IList<string> columnNames, string databaseName)
         {
-            var columnsToRemove = columnNames.Except(resultColumns.Select(r => r.ColumnName.Value).ToList());
+            var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
+
+            var columnsToMantain = new List<string>();
+
+            foreach (var resultColumn in resultColumns)
+            {
+                if (!resultColumn.AllColumnsfFlag) columnsToMantain.Add(resultColumn.TableName.Value + "." + resultColumn.ColumnName.Value);
+                else
+                {
+                    var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseInfoRecord.IV);
+
+                    foreach (var columnInfoRecord in _encryptor.FindChildren(tableInfoRecord.IV))
+                    {
+                        var decryptedColumnName = columnInfoRecord.KeyName != null ? _encryptor.DecryptName(columnInfoRecord) : columnInfoRecord.Name;
+                        columnsToMantain.Add(resultColumn.TableName.Value + "." + decryptedColumnName);
+                    }
+                }
+            }
+
+            var columnsToRemove = columnNames.Except(columnsToMantain);
             var indexesOfColumnsToRemove = columnsToRemove.Select(c => columnNames.IndexOf(c));
             foreach (var row in decryptedResults)
             {
@@ -122,7 +142,7 @@ namespace BlockBase.DataProxy.Encryption
         }
         private IList<IList<string>> FilterComparisonExpression(ComparisonExpression expression, IList<IList<string>> decryptedResults, IList<string> columnNames)
         {
-            var columnIndex = columnNames.IndexOf(expression.ColumnName.Value);
+            var columnIndex = columnNames.IndexOf(expression.TableName.Value + "." + expression.ColumnName.Value);
 
             switch (expression.ComparisonOperator)
             {
@@ -131,7 +151,7 @@ namespace BlockBase.DataProxy.Encryption
 
                 case ComparisonExpression.ComparisonOperatorEnum.BiggerThan:
                     return decryptedResults.Where(r => double.Parse(r[columnIndex]) > double.Parse(expression.Value.ValueToInsert)).ToList();
-                
+
                 case ComparisonExpression.ComparisonOperatorEnum.Different:
                     return decryptedResults.Where(r => r[columnIndex] != expression.Value.ValueToInsert).ToList();
 

@@ -14,6 +14,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
 
         public SimpleSelectStatement()
         {
+            SelectCoreStatement = new SelectCoreStatement();
             OrderingTerms = new List<OrderingTerm>();
         }
 

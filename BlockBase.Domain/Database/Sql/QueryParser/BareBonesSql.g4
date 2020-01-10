@@ -79,7 +79,7 @@ select_core:
 
 ordering_term: expr ( K_ASC | K_DESC)?;
 
-result_column: '*' | table_column_name;
+result_column: table_name '.*' | table_column_name;
 
 table_or_subquery:
 	table_name

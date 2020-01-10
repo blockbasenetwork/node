@@ -418,11 +418,11 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitResult_column(Result_columnContext resultColumnContext)
         {
             ThrowIfParserHasException(resultColumnContext);
-            var allColumns = resultColumnContext.table_column_name().column_name() == null;
+            var allColumns = resultColumnContext.table_column_name() == null;
             return new ResultColumn()
             {
                 ColumnName = !allColumns ? (estring)Visit(resultColumnContext.table_column_name().column_name().complex_name()) : null,
-                TableName = !allColumns ? (estring)Visit(resultColumnContext.table_column_name().table_name().complex_name()) : null,
+                TableName = !allColumns ? (estring)Visit(resultColumnContext.table_column_name().table_name().complex_name()) : (estring)Visit(resultColumnContext.table_name().complex_name()),
                 AllColumnsfFlag = allColumns
             };
         }
