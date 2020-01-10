@@ -65,11 +65,15 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 6, 'marcia', 26 )");
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 7, 'marcia', 290)");
 
-            //RunSqlCommand("UPDATE newtable1 SET !column3 = 20 where newtable1.column2 == 'bulha' ");
-
             //RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.!number == 25 and bestplayers.name == 'bulha';");
 
-            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name == 'bulha' OR bestplayers.!number > 25;");
+            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name == 'bulha';");
+
+            RunSqlCommand("SELECT bestplayers.* FROM bestplayers WHERE bestplayers.name == 'bulha' OR ( bestplayers.!number > 10 AND bestplayers.!number <= 26 );");
+
+            
+
+            //RunSqlCommand("UPDATE bestplayers SET bestplayers.name = 'ricardo' where bestplayers.name == 'marcia'");
 
             //RunSqlCommand("DROP DATABASE database1;");
         }
@@ -97,32 +101,40 @@ namespace BlockBase.TestsConsole.Commands
                     if(sqlCommand is DatabaseSqlCommand)
                         _databaseName = ((DatabaseSqlCommand) sqlCommand).DatabaseName;
 
-                    for (int i = 0; i < sqlCommand.TransformedSqlStatement.Count; i++)
+                    switch (sqlCommand)
                     {
-                        var sqlTextToExecute = sqlCommand.TransformedSqlStatementText[i];
-                        var sqlStatement = sqlCommand.TransformedSqlStatement[i];
-                        Console.WriteLine(sqlTextToExecute);
+                        case ReadQuerySqlCommand readQuerySql:
+                            var resultList = _psqlConnector.ExecuteQuery(readQuerySql.TransformedSqlStatementText[0], _databaseName);
+                            var unencryptedResultList = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultList, _databaseName);
+                            foreach (var row in unencryptedResultList)
+                            {
+                                Console.WriteLine();
+                                foreach (var value in row) Console.Write(value + " ");
+                            }
+                            break;
 
-                        switch (sqlStatement)
-                        {
-                            case ISqlDatabaseStatement databaseStatement:
-                                _psqlConnector.ExecuteCommand(sqlTextToExecute, null);
-                                break;
+                        case UpdateSqlCommand updateSqlCommand:
+                            //TODO: continue
+                            break;
 
-                            case SimpleSelectStatement simpleSelectStatement:
-                                var resultList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                var unencryptedResultList = _infoPostProcessing.TranslateSelectResults((ReadQuerySqlCommand) sqlCommand, resultList, _databaseName);
-                                foreach (var row in unencryptedResultList)
-                                {
-                                    Console.WriteLine();
-                                    foreach (var value in row) Console.Write(value + " ");
-                                }
-                                break;
 
-                            default:
+                        case GenericSqlCommand genericSqlCommand:
+                            for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
+                            {
+                                var sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
+                                Console.WriteLine(sqlTextToExecute);
                                 _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                break;
-                        }
+                            }
+                            break;
+
+                        case DatabaseSqlCommand databaseSqlCommand:
+                            for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
+                            {
+                                var sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
+                                Console.WriteLine(sqlTextToExecute);
+                                _psqlConnector.ExecuteCommand(sqlTextToExecute, null);
+                            }
+                            break;
                     }
                 }
             }
