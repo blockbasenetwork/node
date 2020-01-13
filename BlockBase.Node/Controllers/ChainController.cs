@@ -96,7 +96,7 @@ namespace BlockBase.Node.Controllers
         }
 
         [HttpPost]
-        public async Task<ObjectResult> StartChainMaintainance()
+        public async Task<ObjectResult> StartChainMaintenance()
         {
             try
             {
@@ -109,7 +109,7 @@ namespace BlockBase.Node.Controllers
                 
                 sidechainMaintainer.Start();
 
-                return Ok(new OperationResponse<bool>(true, $"Chain maintainance started and start candidature sent: Tx: {tx}"));
+                return Ok(new OperationResponse<bool>(true, $"Chain maintenance started and start candidature sent: Tx: {tx}"));
             }
             catch(Exception e)
             {
@@ -118,7 +118,7 @@ namespace BlockBase.Node.Controllers
         }
 
         [HttpPost]
-        public async Task<ObjectResult> EndChainMaintainance()
+        public async Task<ObjectResult> EndChainMaintenance()
         {
             return NotFound(new NotImplementedException());
         }

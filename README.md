@@ -72,7 +72,7 @@ With the following body:
 
 Finally, a request is needed to the following action in order to get the chain running:
 
-`https://`_`apiendpoint`_`/api/Chain/StartChainMaintainance`
+`https://`_`apiendpoint`_`/api/Chain/StartChainMaintenance`
 
 ## Sending a candidature for a sidechain
 if you intent on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
