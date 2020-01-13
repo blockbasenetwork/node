@@ -12,7 +12,7 @@ The node software currently has working consensus tested on private and public t
 ## Configuring the Node
 Inside BlockBase.Node/appsettings.json you'll find all the settings you need to configure in order to run the BlockBase node.
 
-```json
+```js
 {
   "NodeConfigurations": {
     "AccountName": "blockbase", // The node's EOS account name
@@ -50,7 +50,7 @@ To configure the chain, a POST request is needed to the following action:
 
 With the following body:
 
-```json
+```js
 {
 	"key": "blockbasedb1", // The name of the chain
 	"paymentperblock": 400, // The payment for each block, in the lowest decimal value of BBT (ie: 400 means that each block will cost 0.0400 BBT)
