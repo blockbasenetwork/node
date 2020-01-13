@@ -40,6 +40,7 @@ Run the following command to get the node up and running:
 `dotnet run --project `_`BlockBase.Node_Folder`_` --urls=`_`Api_Endpoint`_
 
 **Note: If you wish to run the node as a sidechain requester and sidechain provider, you will need two different instances and two different EOS accounts.**
+
 **Note 2: You will need to have staked BBT on the sidechains in order get the services running, more details below**
 
 
