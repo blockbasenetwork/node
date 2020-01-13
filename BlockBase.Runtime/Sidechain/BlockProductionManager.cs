@@ -221,15 +221,6 @@ namespace BlockBase.Runtime.Sidechain
                 if (proposal == null) await Task.Delay(50);
             }
 
-            try
-            {
-                await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
-            }
-            catch (ApiErrorException apiException)
-            {
-                _logger.LogCritical($"Unable to approve transaction with error: {apiException?.error?.name}");
-            }
-
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
 
             await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName, proposal);
@@ -242,18 +233,24 @@ namespace BlockBase.Runtime.Sidechain
                 while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
-                    if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
+
+                    if (approvals?.ProvidedApprovals?.Where(a => a.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
+                    {
+                        await TryApproveTransaction(proposal);
+                    }
+                    else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
                     {
                         await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
                         _logger.LogInformation("Executed block verification");
                         return;
                     }
+
                     await Task.Delay(100);
                 }
             }
             catch (ApiErrorException)
             {
-                _logger.LogInformation("Unable to execute, proposed transaction might have already been executed");
+                _logger.LogInformation("Unable to execute proposed transaction, number of required approvals might not have been reached");
             }
 
             try
@@ -264,6 +261,18 @@ namespace BlockBase.Runtime.Sidechain
             catch (ApiErrorException)
             {
                 _logger.LogCritical("Failed to cancel proposal after failed execution");
+            }
+        }
+
+        private async Task TryApproveTransaction(TransactionProposal proposal)
+        {
+            try
+            {
+                await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
+            }
+            catch (ApiErrorException apiException)
+            {
+                _logger.LogCritical($"Unable to approve transaction with error: {apiException?.error?.name}");
             }
         }
 
