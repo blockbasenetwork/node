@@ -42,7 +42,7 @@ Run the following command to get the node up and running:
 **Note: If you wish to run the node as a sidechain requester and sidechain provider, you will need two different instances and two different EOS accounts.**
 
 ## Running as a service requester
-# Creating a new sidechain
+### Creating a new sidechain
 In case you want to run the node as a service requester, make a request to the following action in order to start a new sidechain:
 
 `https://`_`apiendpoint`_`/api/Chain/StartChain`
@@ -78,7 +78,7 @@ Finally, a request is needed to the following action in order to get the chain r
 `https://`_`apiendpoint`_`/api/Chain/StartChainMaintenance`
 
 ## Running as a service provider
-# Sending a candidature for a sidechain
+### Sending a candidature for a sidechain
 if you intent on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
 
 `https://`_`apiendpoint`_`/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_
