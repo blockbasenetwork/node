@@ -50,7 +50,8 @@ namespace BlockBase.TestsConsole.Commands
             //RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
             RunSqlCommand("CREATE TABLE !table4 ( !column1 int PRIMARY KEY);");
             RunSqlCommand("CREATE TABLE !table5 ( !column1 int PRIMARY KEY REFERENCES !table4 ( !column1 ), column2 ENCRYPTED 40 );");
-            //RunSqlCommand("CREATE TABLE accounts ( id ENCRYPTED PRIMARY KEY, name ENCRYPTED 30, amount ENCRYPTED 80 RANGE (100, 1, 5000));");
+            RunSqlCommand("CREATE TABLE !table6 ( !column1 int PRIMARY KEY REFERENCES !table4 ( !column1 ), column2 ENCRYPTED 40 );");
+
             RunSqlCommand("DROP TABLE table2;");
 
             RunSqlCommand("ALTER TABLE table1 RENAME TO newtable11");
@@ -63,9 +64,14 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 1 )");
             RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 2 )");
             RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 3 )");
+
             RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 1, 'primeiro' )");
             RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 2, 'segundo' )");
             RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 3, 'terceiro' )");
+
+            RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 1, 'first' )");
+            RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 2, 'second' )");
+            RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 3, 'third' )");
 
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 1, 'Cristiano Ronaldo', 7 )");
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 2, 'bulha', 7 )");
@@ -78,10 +84,20 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name == 'bulha';");
 
             RunSqlCommand("SELECT bestplayers.* FROM bestplayers WHERE bestplayers.name == 'bulha' OR ( bestplayers.!number > 10 AND bestplayers.!number <= 26 );");
+
             RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
 
             RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1;");
 
+            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1 AND !table4.!column1 == 2 ;");
+
+            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1 WHERE !table4.!column1 == 2;");
+
+            RunSqlCommand("SELECT !table4.*, !table5.column2, !table6.column2  FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1 JOIN !table6 ON !table4.!column1 == !table6.!column1 WHERE !table4.!column1 == 2;");
+
+            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5 JOIN !table6 ON !table5.column2 == !table6.column2;");
+
+            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5, !table6 WHERE !table5.!column1 == !table6.!column1;");
 
             //RunSqlCommand("UPDATE bestplayers SET name = 'ricardo' where bestplayers.name == 'marcia'");
 
