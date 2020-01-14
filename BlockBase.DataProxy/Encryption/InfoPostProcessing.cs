@@ -131,6 +131,7 @@ namespace BlockBase.DataProxy.Encryption
             switch (expression)
             {
                 case ComparisonExpression comparisonExpression:
+                    if (comparisonExpression.Value == null) return decryptedResults;
                     return FilterComparisonExpression(comparisonExpression, decryptedResults, columnNames);
 
                 case LogicalExpression logicalExpression:
