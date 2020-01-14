@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using System.Collections.Generic;
 
 namespace BlockBase.TestsConsole.Commands
 {
@@ -46,7 +47,9 @@ namespace BlockBase.TestsConsole.Commands
 
             RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 4 NOT NULL);");
             RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
-            RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
+            //RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
+            RunSqlCommand("CREATE TABLE !table4 ( !column1 int PRIMARY KEY);");
+            RunSqlCommand("CREATE TABLE !table5 ( !column1 int PRIMARY KEY REFERENCES !table4 ( !column1 ), column2 ENCRYPTED 40 );");
             //RunSqlCommand("CREATE TABLE accounts ( id ENCRYPTED PRIMARY KEY, name ENCRYPTED 30, amount ENCRYPTED 80 RANGE (100, 1, 5000));");
             RunSqlCommand("DROP TABLE table2;");
 
@@ -57,6 +60,13 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("ALTER TABLE bestplayers ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
             RunSqlCommand("ALTER TABLE bestplayers DROP COLUMN column4");
 
+            RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 1 )");
+            RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 2 )");
+            RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 3 )");
+            RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 1, 'primeiro' )");
+            RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 2, 'segundo' )");
+            RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 3, 'terceiro' )");
+
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 1, 'Cristiano Ronaldo', 7 )");
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 2, 'bulha', 7 )");
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 3, 'bulha', 25 )");
@@ -65,15 +75,15 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 6, 'marcia', 26 )");
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 7, 'marcia', 290)");
 
-            //RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.!number == 25 and bestplayers.name == 'bulha';");
-
             RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name == 'bulha';");
 
             RunSqlCommand("SELECT bestplayers.* FROM bestplayers WHERE bestplayers.name == 'bulha' OR ( bestplayers.!number > 10 AND bestplayers.!number <= 26 );");
+            RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
 
-            
+            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1;");
 
-            //RunSqlCommand("UPDATE bestplayers SET bestplayers.name = 'ricardo' where bestplayers.name == 'marcia'");
+
+            //RunSqlCommand("UPDATE bestplayers SET name = 'ricardo' where bestplayers.name == 'marcia'");
 
             //RunSqlCommand("DROP DATABASE database1;");
         }
@@ -98,15 +108,18 @@ namespace BlockBase.TestsConsole.Commands
                 foreach (var sqlCommand in builder.SqlCommands)
                 {
                     Console.WriteLine("");
-                    if(sqlCommand is DatabaseSqlCommand)
-                        _databaseName = ((DatabaseSqlCommand) sqlCommand).DatabaseName;
-
+                    string sqlTextToExecute = "";
+                    if (sqlCommand is DatabaseSqlCommand)              
+                        _databaseName =( (DatabaseSqlCommand)sqlCommand).DatabaseName;
+                        
                     switch (sqlCommand)
                     {
                         case ReadQuerySqlCommand readQuerySql:
-                            var resultList = _psqlConnector.ExecuteQuery(readQuerySql.TransformedSqlStatementText[0], _databaseName);
-                            var unencryptedResultList = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultList, _databaseName);
-                            foreach (var row in unencryptedResultList)
+                            sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
+                            Console.WriteLine(sqlTextToExecute);
+                            var resultList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                            var filteredResults = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultList, _databaseName);
+                            foreach (var row in filteredResults)
                             {
                                 Console.WriteLine();
                                 foreach (var value in row) Console.Write(value + " ");
@@ -114,25 +127,38 @@ namespace BlockBase.TestsConsole.Commands
                             break;
 
                         case UpdateSqlCommand updateSqlCommand:
-                            //TODO: continue
+                            sqlTextToExecute = updateSqlCommand.TransformedSqlStatementText[0];
+                            Console.WriteLine(sqlTextToExecute);
+                            var resultsList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                            var descryptedResults = _infoPostProcessing.DecryptRows((SimpleSelectStatement)updateSqlCommand.TransformedSqlStatement[0], resultsList, _databaseName, out IList<string> columnNames);
+                            foreach (var columnName in columnNames) Console.WriteLine(columnName + " ");
+                            foreach (var row in descryptedResults)
+                            {
+                                Console.WriteLine();
+                                foreach (var value in row) Console.Write(value + " ");
+                            }
                             break;
 
 
                         case GenericSqlCommand genericSqlCommand:
                             for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
                             {
-                                var sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
+                                sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
                                 Console.WriteLine(sqlTextToExecute);
                                 _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
                             }
                             break;
 
                         case DatabaseSqlCommand databaseSqlCommand:
+                            if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement) continue;
                             for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
                             {
-                                var sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
+                                sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
                                 Console.WriteLine(sqlTextToExecute);
-                                _psqlConnector.ExecuteCommand(sqlTextToExecute, null);
+                                if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
+                                    _psqlConnector.ExecuteCommand(sqlTextToExecute, null);
+                                 else
+                                    _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
                             }
                             break;
                     }
