@@ -28,7 +28,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         //TODO: REFACTOR PROBABLY EQUAL TO EVERY LANGUAGE
         string BuildString(ComparisonExpression.ComparisonOperatorEnum comparisonOperator);
-        string BuildString(JoinClause.JoinConstraint joinConstraint);
+        string BuildString(JoinOperationField.JoinConstraint joinConstraint);
         string BuildString(ResultColumn resultColumn);
         string BuildString(TableOrSubquery tableOrSubquery);
         string BuildString(OrderingTerm orderingTerm);

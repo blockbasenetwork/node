@@ -4,11 +4,13 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions
 {
     public class ComparisonExpression : AbstractExpression
     {
-        public estring TableName { get; set; }
+        public TableAndColumnName LeftTableNameAndColumnName { get; set; }
+
+        public TableAndColumnName RightTableNameAndColumnName { get; set; }
 
         public bool HasParenthesis { get; set; }
 
-        public estring ColumnName { get; set; }
+        
 
         public Value Value { get; set; }
 
@@ -16,18 +18,28 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions
 
         public ComparisonExpression() { }
 
-        public ComparisonExpression(estring tableName, estring columnName, Value value, ComparisonOperatorEnum comparisonOperator)
+        public ComparisonExpression(ComparisonOperatorEnum comparisonOperator, bool hasParenthesis)
         {
-            TableName = tableName;
-            ColumnName = columnName;
-            Value = value;
             ComparisonOperator = comparisonOperator;
-            HasParenthesis = false;
+            HasParenthesis = hasParenthesis;
+
+        }
+
+        public ComparisonExpression(TableAndColumnName tableAndColumnName, Value value, ComparisonOperatorEnum comparisonOperator, bool hasParenthesis = false) : this(comparisonOperator, hasParenthesis)
+        {
+            LeftTableNameAndColumnName = tableAndColumnName;
+            Value = value;
+        }
+
+        public ComparisonExpression(TableAndColumnName leftTableAndColumnName, TableAndColumnName rightTableAndColumnName, ComparisonOperatorEnum comparisonOperator, bool hasParenthesis = false) : this(comparisonOperator, hasParenthesis)
+        {
+            LeftTableNameAndColumnName = leftTableAndColumnName;
+            RightTableNameAndColumnName = rightTableAndColumnName;
         }
 
         public AbstractExpression Clone()
         {
-            return new ComparisonExpression() { TableName = TableName.Clone(), ColumnName = ColumnName.Clone(), Value = Value, ComparisonOperator = ComparisonOperator, HasParenthesis = HasParenthesis };
+            return new ComparisonExpression() { LeftTableNameAndColumnName = LeftTableNameAndColumnName.Clone(), RightTableNameAndColumnName = RightTableNameAndColumnName.Clone(), Value = Value, ComparisonOperator = ComparisonOperator, HasParenthesis = HasParenthesis };
         }
 
         public enum ComparisonOperatorEnum

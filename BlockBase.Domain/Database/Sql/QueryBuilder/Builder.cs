@@ -62,49 +62,52 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
 
                 foreach (var statement in statements)
                 {
+                    var statementText = "";
                     switch (statement)
                     {
                         case CreateTableStatement createTableStatement:
-                            transformedStatementsText.Add(generator.BuildString(createTableStatement));
+                            statementText = generator.BuildString(createTableStatement);
                             break;
 
                         case AbstractAlterTableStatement abstractAlterTableStatement:
-                            transformedStatementsText.Add(generator.BuildString(abstractAlterTableStatement));
+                            statementText = generator.BuildString(abstractAlterTableStatement);
                             break;
 
                         case DropTableStatement dropTableStatement:
-                            transformedStatementsText.Add(generator.BuildString(dropTableStatement));
+                            statementText = generator.BuildString(dropTableStatement);
                             break;
 
                         case InsertRecordStatement insertRecordStatement:
-                            transformedStatementsText.Add(generator.BuildString(insertRecordStatement));
+                            statementText = generator.BuildString(insertRecordStatement);
                             break;
 
                         case UpdateRecordStatement updateRecordStatement:
-                            transformedStatementsText.Add(generator.BuildString(updateRecordStatement));
+                            statementText = generator.BuildString(updateRecordStatement);
                             break;
 
                         case DeleteRecordStatement deleteRecordStatement:
-                            transformedStatementsText.Add(generator.BuildString(deleteRecordStatement));
+                            statementText = generator.BuildString(deleteRecordStatement);
                             break;
 
                         case SimpleSelectStatement simpleSelectStatement:
-                            transformedStatementsText.Add(generator.BuildString(simpleSelectStatement));
+                            statementText = generator.BuildString(simpleSelectStatement);
                             break;
 
                         case CreateDatabaseStatement createDatabaseStatement:
-                            transformedStatementsText.Add(generator.BuildString(createDatabaseStatement));
+                            statementText = generator.BuildString(createDatabaseStatement);
                             break;
 
                         case DropDatabaseStatement dropDatabaseStatement:
-                            transformedStatementsText.Add(generator.BuildString(dropDatabaseStatement));
+                            statementText = generator.BuildString(dropDatabaseStatement);
                             break;
 
                         case UseDatabaseStatement useDatabaseStatement:
-                            transformedStatementsText.Add(generator.BuildString(useDatabaseStatement));
+                            statementText = generator.BuildString(useDatabaseStatement);
                             break;
                     }
-                    
+                    transformedStatementsText.Add(statementText + ";");
+
+
                 }
                 command.TransformedSqlStatementText = transformedStatementsText;
             }

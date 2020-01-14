@@ -57,7 +57,6 @@ namespace BlockBase.Domain.Database.Sql.Generators
             return "DROP TABLE " + dropTableStatement.TableName.Value;
         }
         
-        //TODO: need to know the type of column to know if I add " or not
         public string BuildString(InsertRecordStatement insertRecordStatement)
         {
             var psqlString = "INSERT INTO " + insertRecordStatement.TableName.Value + " ( ";
@@ -179,12 +178,11 @@ namespace BlockBase.Domain.Database.Sql.Generators
             var psqlString = BuildString(joinClause.TableOrSubquery);
             for (int i = 0; i < joinClause.JoinOperationFields.Count; i++)
             {
-                if (i == 0) psqlString += " ";
-                else psqlString += ", ";
+                psqlString += " ";
 
-                var joinOperators = joinClause.JoinOperationFields[i].Item1;
-                var tableOrSubquery = joinClause.JoinOperationFields[i].Item2;
-                var joinConstraint = joinClause.JoinOperationFields[i].Item3;
+                var joinOperators = joinClause.JoinOperationFields[i].JoinOperators;
+                var tableOrSubquery = joinClause.JoinOperationFields[i].RightTableOrSubquery;
+                var joinConstraint = joinClause.JoinOperationFields[i].JoinClauseConstraint;
 
                 foreach (var joinOperator in joinOperators)
                     psqlString += joinOperator + " ";
@@ -193,17 +191,17 @@ namespace BlockBase.Domain.Database.Sql.Generators
             }
             return psqlString;
         }
-        public string BuildString(JoinClause.JoinConstraint joinConstraint)
+        public string BuildString(JoinOperationField.JoinConstraint joinConstraint)
         {
-            if (joinConstraint.Expression != null)
-                return "ON " + BuildString(joinConstraint.Expression);
-            var psqlString = "USING ";
-            for (int i = 0; i < joinConstraint.ColumnNames.Count; i++)
-            {
-                if (i != 0) psqlString += ", ";
-                psqlString += joinConstraint.ColumnNames[i].Value;
-            }
-            return psqlString;
+            //if (joinConstraint.Expression != null)
+            return "ON " + BuildString(joinConstraint.Expression);
+            //var psqlString = "USING ";
+            //for (int i = 0; i < joinConstraint.ColumnNames.Count; i++)
+            //{
+            //    if (i != 0) psqlString += ", ";
+            //    psqlString += joinConstraint.ColumnNames[i].Value;
+            //}
+
         }
         public string BuildString(ResultColumn resultColumn)
         {
@@ -241,9 +239,14 @@ namespace BlockBase.Domain.Database.Sql.Generators
         {
             string exprString = "";
             if (expression is ComparisonExpression comparisonExpression)
-                exprString = comparisonExpression.TableName.Value+ "." + comparisonExpression.ColumnName.Value + " "
+            {
+                var finalPart = comparisonExpression.Value != null ?
+                    BuildString(comparisonExpression.Value) :
+                    comparisonExpression.RightTableNameAndColumnName.TableName.Value + "." + comparisonExpression.RightTableNameAndColumnName.ColumnName.Value;
+                exprString = comparisonExpression.LeftTableNameAndColumnName.TableName.Value + "." + comparisonExpression.LeftTableNameAndColumnName.ColumnName.Value + " "
                     + BuildString(comparisonExpression.ComparisonOperator) + " "
-                    + BuildString(comparisonExpression.Value);
+                    + finalPart;
+            }
 
             else if (expression is LogicalExpression logicalExpression)
                 exprString = BuildString(logicalExpression.LeftExpression) + " "
