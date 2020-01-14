@@ -69,7 +69,7 @@ namespace BlockBase.Domain.Database.QueryParser
         {
             ThrowIfParserHasException(context);
             var dropDatabaseName = (estring)Visit(context.database_name().complex_name());
-            if(dropDatabaseName == _databaseName) _databaseName = null;
+            if (dropDatabaseName == _databaseName) _databaseName = null;
             return new DropDatabaseStatement() { DatabaseName = dropDatabaseName };
         }
 
@@ -324,7 +324,7 @@ namespace BlockBase.Domain.Database.QueryParser
             if (dataTypeContext.K_TEXT() != null) return new DataType() { DataTypeName = DataTypeEnum.TEXT };
             if (dataTypeContext.K_ENCRYPTED() != null)
             {
-                var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED};
+                var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED };
                 if (dataTypeContext.bucket_size() != null)
                 {
                     dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_size().NUMERIC_LITERAL().GetText());
@@ -385,15 +385,35 @@ namespace BlockBase.Domain.Database.QueryParser
                 && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
                 || exprString.Contains(">=") || exprString.Contains("==") || exprString.Contains("!=")))
             {
-                var comparisonExpression = new ComparisonExpression()
-                {
-                    TableName = (estring)Visit(expr.table_name().complex_name()),
-                    ColumnName = (estring)Visit(expr.column_name().complex_name()),
-                    Value = new Value(expr.literal_value().GetText()),
-                    ComparisonOperator = GetLogicalOperatorFromString(exprString)
-                };
+                var comparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(
+                        (estring)Visit(expr.table_name().complex_name()),
+                        (estring)Visit(expr.column_name().complex_name())),
+                    new Value(expr.literal_value().GetText()),
+                    GetLogicalOperatorFromString(exprString));
+                ;
+                return comparisonExpression;
+
+
+            }
+
+            if (expr.table_column_name() != null && expr.table_column_name().Count() == 2
+               && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
+               || exprString.Contains(">=") || exprString.Contains("==") || exprString.Contains("!=")))
+            {
+
+                var comparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(
+                        (estring)Visit(expr.table_column_name()[0].table_name().complex_name()),
+                        (estring)Visit(expr.table_column_name()[0].column_name().complex_name())),
+                    new TableAndColumnName(
+                        (estring)Visit(expr.table_column_name()[1].table_name().complex_name()),
+                        (estring)Visit(expr.table_column_name()[1].column_name().complex_name())),
+                    GetLogicalOperatorFromString(exprString));
+                
                 return comparisonExpression;
             }
+
 
             if (exprString.Contains("(") && exprString.Contains(")"))
             {
@@ -402,7 +422,7 @@ namespace BlockBase.Domain.Database.QueryParser
                 return exprWithParenthesis;
             }
 
-            throw new FormatException("Expression not recognized.");
+            return null;
         }
 
         public override object VisitOrdering_term(Ordering_termContext orderingTermContext)
@@ -445,16 +465,16 @@ namespace BlockBase.Domain.Database.QueryParser
             var joinClause = new JoinClause()
             {
                 TableOrSubquery = (TableOrSubquery)Visit(joinClauseContext.table_or_subquery()[0]),
-                JoinOperationFields = new List<Tuple<IList<JoinClause.JoinOperatorEnum>, TableOrSubquery, JoinClause.JoinConstraint>>()
+                JoinOperationFields = new List<JoinOperationField>()
             };
 
             for (int i = 0; i < joinClauseContext.join_operator().Length; i++)
             {
-                var joinOperationField = new Tuple<IList<JoinClause.JoinOperatorEnum>, TableOrSubquery, JoinClause.JoinConstraint>
+                var joinOperationField = new JoinOperationField
                 (
-                    (List<JoinClause.JoinOperatorEnum>)Visit(joinClauseContext.join_operator()[i]),
+                    (List<JoinOperationField.JoinOperatorEnum>)Visit(joinClauseContext.join_operator()[i]),
                     (TableOrSubquery)Visit(joinClauseContext.table_or_subquery()[i + 1]),
-                    (JoinClause.JoinConstraint)Visit(joinClauseContext.join_constraint()[i])
+                    (JoinOperationField.JoinConstraint)Visit(joinClauseContext.join_constraint()[i])
                 );
                 joinClause.JoinOperationFields.Add(joinOperationField);
             }
@@ -464,21 +484,21 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitJoin_operator(Join_operatorContext joinOperatorContext)
         {
             ThrowIfParserHasException(joinOperatorContext);
-            var joinOperatorEnumList = new List<JoinClause.JoinOperatorEnum>();
-            if (joinOperatorContext.K_NATURAL() != null) joinOperatorEnumList.Add(JoinClause.JoinOperatorEnum.NATURAL);
-            if (joinOperatorContext.K_LEFT() != null) joinOperatorEnumList.Add(JoinClause.JoinOperatorEnum.LEFT);
-            if (joinOperatorContext.K_OUTER() != null) joinOperatorEnumList.Add(JoinClause.JoinOperatorEnum.OUTER);
-            if (joinOperatorContext.K_CROSS() != null) joinOperatorEnumList.Add(JoinClause.JoinOperatorEnum.CROSS);
+            var joinOperatorEnumList = new List<JoinOperationField.JoinOperatorEnum>();
+            if (joinOperatorContext.K_NATURAL() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.NATURAL);
+            if (joinOperatorContext.K_LEFT() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.LEFT);
+            if (joinOperatorContext.K_OUTER() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.OUTER);
+            if (joinOperatorContext.K_CROSS() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.CROSS);
             return joinOperatorEnumList;
         }
 
         public override object VisitJoin_constraint(Join_constraintContext joinConstraintContext)
         {
             ThrowIfParserHasException(joinConstraintContext);
-            return new JoinClause.JoinConstraint()
+            return new JoinOperationField.JoinConstraint()
             {
-                Expression = (AbstractExpression)Visit(joinConstraintContext.expr()),
-                ColumnNames = joinConstraintContext.column_name().Select(c => (estring)Visit(c.complex_name())).ToList()
+                Expression = (AbstractExpression)Visit(joinConstraintContext.expr())
+                //ColumnNames = joinConstraintContext.column_name().Select(c => (estring)Visit(c.complex_name())).ToList()
             };
         }
 

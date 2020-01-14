@@ -11,9 +11,12 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public JoinClause JoinClause { get; set; }
         public SimpleSelectStatement SimpleSelectStatement { get; set; }
 
-        public TableOrSubquery() { }
+        public TableOrSubquery()
+        {
+            TablesOrSubqueries = new List<TableOrSubquery>();
+        }
 
-        public TableOrSubquery(estring tableName)
+        public TableOrSubquery(estring tableName) : this()
         {
             TableName = tableName;
         }

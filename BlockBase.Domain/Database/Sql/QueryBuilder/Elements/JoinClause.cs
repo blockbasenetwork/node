@@ -11,37 +11,25 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements
     {
 
         public TableOrSubquery TableOrSubquery { get; set; }
-        public IList<Tuple<IList<JoinOperatorEnum>, TableOrSubquery, JoinConstraint>> JoinOperationFields { get; set; }
+        public IList<JoinOperationField>  JoinOperationFields { get; set; }
 
-        public enum JoinOperatorEnum
+        public JoinClause() { }
+
+        public JoinClause(TableOrSubquery tableOrSubquery, IList<JoinOperationField> joinOperationFields)
         {
-            NATURAL,
-            LEFT,
-            OUTER,
-            INNER,
-            CROSS
-        }
-
-        public class JoinConstraint
-        {
-            public AbstractExpression Expression { get; set; }
-            public IList<estring> ColumnNames { get; set; }
-
-            public JoinConstraint Clone()
-            {
-                return new JoinConstraint() { Expression = Expression.Clone(), ColumnNames = ColumnNames.Select(c => c.Clone()).ToList() };
-            }
+            TableOrSubquery = tableOrSubquery;
+            JoinOperationFields = joinOperationFields;
         }
 
         public JoinClause Clone()
         {
-            var joinClauseClone = new JoinClause() { TableOrSubquery = TableOrSubquery?.Clone(), JoinOperationFields = new List<Tuple<IList<JoinOperatorEnum>, TableOrSubquery, JoinConstraint>>() };
-            foreach (var entry in JoinOperationFields)
+            var joinClauseClone = new JoinClause() { TableOrSubquery = TableOrSubquery?.Clone(), JoinOperationFields = new List<JoinOperationField>() };
+            foreach (var joinOperationField in JoinOperationFields)
             {
-                joinClauseClone.JoinOperationFields.Add(new Tuple<IList<JoinOperatorEnum>, TableOrSubquery, JoinConstraint>(
-                        new List<JoinOperatorEnum>(entry.Item1),
-                        entry.Item2.Clone(),
-                        entry.Item3.Clone()
+                joinClauseClone.JoinOperationFields.Add( new JoinOperationField(
+                        new List<JoinOperationField.JoinOperatorEnum> (joinOperationField.JoinOperators),
+                        joinOperationField.RightTableOrSubquery.Clone(),
+                        joinOperationField.JoinClauseConstraint.Clone()
                         )
                     );
             }

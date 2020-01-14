@@ -21,7 +21,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         private static readonly string INFO_TABLE_NAME = "info";
         private static readonly string COLUMN_INFO_TABLE_NAME = "column_info";
         private static readonly string COLUMN_INFO_COLUMN_NAME = "column_name";
-        private static readonly string COLUMN_INFO_NAME_ENCRYPTED = "name_encrypted";
 
         private static readonly List<string> DEFAULT_DBS  = new List<string>() { "template0", "template1" };
 

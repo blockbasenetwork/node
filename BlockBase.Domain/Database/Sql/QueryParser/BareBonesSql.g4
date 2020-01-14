@@ -100,7 +100,7 @@ join_operator:
 
 join_constraint: (
 		K_ON expr
-		| K_USING '(' column_name ( ',' column_name)* ')'
+//		| K_USING '(' column_name ( ',' column_name)* ')'
 	)?;
 
 column_def: column_name data_type column_constraint*;
@@ -132,7 +132,7 @@ column_constraint: (K_CONSTRAINT name)? (
 
 expr:  
 	table_name '.' column_name ( '<' | '<=' | '>' | '>=' | '==' | '!=' ) literal_value
-	//| table_name '.' column_name ( '<' | '<=' | '>' | '>=' | '==' | '!=' ) table_name '.' column_name
+	| table_column_name ( '<' | '<=' | '>' | '>=' | '==' | '!=' ) table_column_name
 	| expr (K_AND | K_OR) expr
 	| '(' expr ')';
 

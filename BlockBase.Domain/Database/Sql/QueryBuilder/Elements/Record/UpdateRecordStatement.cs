@@ -12,7 +12,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
 
         public AbstractExpression WhereExpression { get; set; }
 
-        public UpdateRecordStatement() { }
+        public UpdateRecordStatement()
+        {
+            ColumnNamesAndUpdateValues = new Dictionary<estring, Value>();
+        }
 
         public UpdateRecordStatement(estring tableName, Dictionary<estring, Value> columnNamesAndUpdateValues, AbstractExpression whereClause)
         {
