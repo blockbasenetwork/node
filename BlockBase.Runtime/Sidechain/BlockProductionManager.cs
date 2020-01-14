@@ -141,7 +141,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 try
                 {
-                    var lastBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.SidechainName);
+                    var lastBlock = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.SidechainName);
                     uint currentSequenceNumber;
                     byte[] previousBlockhash;
 
