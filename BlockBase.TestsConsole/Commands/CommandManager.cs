@@ -75,8 +75,7 @@ namespace BlockBase.TestsConsole.Commands
         {
             var commands = new List<ICommand>
             {
-                new TestTransformerCommand(_logger),
-                new TestInfoTableCache(_logger)
+                new TestTransformerCommand(_logger)
             };
             return commands;
         }
