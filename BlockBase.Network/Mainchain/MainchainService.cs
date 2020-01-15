@@ -183,12 +183,22 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
+        public async Task<string> BlacklistProducer(string owner, string producerToBlacklist, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.BLACKLIST_PRODUCERS,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForBlackListProd(owner, producerToBlacklist),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
         public async Task<string> PunishProd(string owner, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.PUNISH_PRODUCERS,
                 NetworkConfigurations.BlockBaseTokenContract,
                 owner,
-                CreateDataForDeferredTransaction(owner),
+                CreateDataForProdPunish(owner),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -474,6 +484,24 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.CLAIMER, claimer },
                 { EosParameterNames.CONTRACT, NetworkConfigurations.BlockBaseOperationsContract}
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForBlackListProd(string owner, string producer)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.PRODUCER, producer }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForProdPunish(string owner)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.CONTRACT, NetworkConfigurations.BlockBaseOperationsContract }
             };
         }
 

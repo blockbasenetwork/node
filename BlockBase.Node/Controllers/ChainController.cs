@@ -138,12 +138,7 @@ namespace BlockBase.Node.Controllers
         /// <response code="200">Chain maintaince started with success</response>
         /// <response code="500">Error starting maintaince of the chain</response>
         [HttpPost]
-        [SwaggerOperation(
-            Summary = "Sends the request to start sidechain maintainance.",
-            Description = "Description here",
-            OperationId = "StartChainMaintainance"
-        )]
-        public async Task<ObjectResult> StartChainMaintainance()
+        public async Task<ObjectResult> StartChainMaintenance()
         {
             try
             {
@@ -156,7 +151,7 @@ namespace BlockBase.Node.Controllers
                 
                 sidechainMaintainer.Start();
 
-                return Ok(new OperationResponse<bool>(true, $"Chain maintainance started and start candidature sent: Tx: {tx}"));
+                return Ok(new OperationResponse<bool>(true, $"Chain maintenance started and start candidature sent: Tx: {tx}"));
             }
             catch(Exception e)
             {
@@ -170,12 +165,7 @@ namespace BlockBase.Node.Controllers
         /// <response code="200">Chain maintainance ended with success</response>
         /// <response code="500">Error ending the chain maintainance</response>
         [HttpPost]
-        [SwaggerOperation(
-            Summary = "Sends the request to end the sidechain maintainance.",
-            Description = "Description here",
-            OperationId = "EndChainMaintainance"
-        )]
-        public async Task<ObjectResult> EndChainMaintainance()
+        public async Task<ObjectResult> EndChainMaintenance()
         {
             return NotFound(new NotImplementedException());
         }

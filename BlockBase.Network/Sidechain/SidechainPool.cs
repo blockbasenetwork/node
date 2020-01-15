@@ -18,6 +18,8 @@ namespace BlockBase.Network.Sidechain
         public uint BlocksBetweenSettlement { get; set; }
         public uint BlockTimeDuration { get; set; }
         public DateTime NextTimeToCheckSmartContract { get; set; }
+
+        public TaskContainer ManagerTask { get; set; }
  
         public SidechainPool()
         {

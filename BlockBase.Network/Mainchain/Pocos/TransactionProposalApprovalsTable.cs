@@ -12,9 +12,18 @@ namespace BlockBase.Network.Mainchain.Pocos
         public string ProposalName { get; set; }
 
         [JsonProperty("requested_approvals")]
-        public List<PermissionLevel> RequestedApprovals { get; set; }
+        public List<Approval> RequestedApprovals { get; set; }
 
         [JsonProperty("provided_approvals")]
-        public List<PermissionLevel> ProvidedApprovals { get; set; }
+        public List<Approval> ProvidedApprovals { get; set; }
+    }
+
+    public class Approval
+    {
+        [JsonProperty("level")]
+        public PermissionLevel PermissionLevel { get; set; }
+
+        [JsonProperty("time")]
+        public DateTime Time { get; set; }
     }
 }

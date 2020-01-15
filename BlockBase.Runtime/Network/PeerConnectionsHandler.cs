@@ -9,6 +9,7 @@ using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
 using BlockBase.Utils.Operation;
+using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Open.P2P;
@@ -29,8 +30,8 @@ namespace BlockBase.Runtime.Network
         //TODO: marciak - UpdatePeerConnectionRating, should they win back reputation with time?
         private readonly SidechainKeeper _sidechainKeeper;
         private readonly INetworkService _networkService;
-        private List<PeerConnection> _currentPeerConnections;
-        private List<Peer> _waitingForApprovalPeers;
+        private ThreadSafeList<PeerConnection> _currentPeerConnections;
+        private ThreadSafeList<Peer> _waitingForApprovalPeers;
         private NodeConfigurations _nodeConfigurations;
         private SystemConfig _systemConfig;
         private ILogger _logger;
@@ -53,8 +54,8 @@ namespace BlockBase.Runtime.Network
             _networkConfigurations = networkConfigurations?.Value;
 
             _nodeConfigurations = nodeConfigurations?.Value;
-            _currentPeerConnections = new List<PeerConnection>();
-            _waitingForApprovalPeers = new List<Peer>();
+            _currentPeerConnections = new ThreadSafeList<PeerConnection>();
+            _waitingForApprovalPeers = new ThreadSafeList<Peer>();
 
             _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
             _networkService.SubscribePeerDisconnectedEvent(TcpConnector_PeerDisconnected);
@@ -106,7 +107,7 @@ namespace BlockBase.Runtime.Network
             if (producer.ProducerInfo.IPEndPoint != null)
             { 
                 producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo);
-                var peerConnected = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
+                var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
                 if (peerConnected == null)
                 {
@@ -136,27 +137,25 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        //marciak - async void because event handler needs void, is this ok?
         private async void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
         {
-            var peerConnection = _currentPeerConnections.Where(p => p.IPEndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
+            var peerConnection = _currentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
             if (peerConnection != null)
             {
                 peerConnection.ConnectionState = ConnectionStateEnum.Disconnected;
                 await UpdatePeerConnectionRating(peerConnection, RATING_LOST_FOR_DISCONECT);
                 _logger.LogDebug("Peer Connections handler :: Removing peer connection.");
                 _currentPeerConnections.Remove(peerConnection);
-                //TODO: marciak - try to connect to another one?
             }
 
-            var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
-            if (peerConnection != null) _waitingForApprovalPeers.Remove(peer);
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
+            if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
-            var peerConnection = _currentPeerConnections.Where(p => p.IPEndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
-            var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
+            var peerConnection = _currentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
 
             if (peerConnection != null)
             {
@@ -182,7 +181,7 @@ namespace BlockBase.Runtime.Network
         {
             var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount && m.ProducerInfo.PublicKey == args.PublicKey)).FirstOrDefault();
 
-            var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.SenderIPEndPoint)).SingleOrDefault();
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.SenderIPEndPoint)).SingleOrDefault();
             if (peer == null) {
                 _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
                 return;
@@ -257,7 +256,7 @@ namespace BlockBase.Runtime.Network
 
             if (producerInfo.IPEndPoint != null)
             {
-                producerPeerConnection = _currentPeerConnections.SingleOrDefault(p => p.IPEndPoint.Equals(producerInfo.IPEndPoint));
+                producerPeerConnection = _currentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint.Equals(producerInfo.IPEndPoint));
                 if (producerPeerConnection == null)
                 {
                     producerPeerConnection = new PeerConnection
