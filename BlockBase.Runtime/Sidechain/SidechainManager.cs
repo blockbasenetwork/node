@@ -529,7 +529,6 @@ namespace BlockBase.Runtime.Sidechain
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SidechainName);
             if (producersInTable == null || !producersInTable.Any() || !IsProducerInTable(producersInTable)) return;
 
-            _logger.LogInformation("Checking if pool changed...");
             bool poolChanged = UpdateAndCheckIfProducersInSidechainChanged(producersInTable);
             await _peerConnectionsHandler.TryReconnectWithDisconnectedAccounts(Sidechain);
             if (poolChanged)

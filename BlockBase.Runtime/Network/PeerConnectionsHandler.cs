@@ -142,17 +142,6 @@ namespace BlockBase.Runtime.Network
             var peerConnection = _currentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
             if (peerConnection != null)
             {
-                var i = 0;
-                while (i < _networkConfigurations.MaxNumberOfConnectionRetries)
-                {
-                    i++;
-                    var peerConnectionRetry = await ConnectAsync(args.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
-
-                    if (peerConnectionRetry == null) 
-                        continue;
-                    else 
-                        return;
-                }
                 peerConnection.ConnectionState = ConnectionStateEnum.Disconnected;
                 await UpdatePeerConnectionRating(peerConnection, RATING_LOST_FOR_DISCONECT);
                 _logger.LogDebug("Peer Connections handler :: Removing peer connection.");
