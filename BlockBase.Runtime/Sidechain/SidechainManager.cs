@@ -90,9 +90,9 @@ namespace BlockBase.Runtime.Sidechain
                             {
                                 await CheckContractAndUpdateStates();
                                 await CheckContractAndUpdateWaitTimes();
+                                await CheckContractEndState();
                                 if (Sidechain.ProducingBlocks)
                                 {
-                                    await CheckContractEndState();
                                     await CheckContractAndUpdatePool();
                                 };
                             }
@@ -390,7 +390,7 @@ namespace BlockBase.Runtime.Sidechain
 
             Sidechain.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.NewlyJoined = false);
             if (!(Sidechain.ProducersInPool.GetEnumerable().Count() == 1 ||
-               (Sidechain.ProducersInPool.GetEnumerable().Count() == 2 && Sidechain.ProducersInPool.GetEnumerable().First().ProducerInfo.PublicKey == _nodeConfigurations.ActivePublicKey)))
+               (Sidechain.ProducersInPool.GetEnumerable().Count() == 2 && Sidechain.ProducersInPool.GetEnumerable().First().ProducerInfo.AccountName == _nodeConfigurations.AccountName)))
             {
                 await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
             }
@@ -500,11 +500,11 @@ namespace BlockBase.Runtime.Sidechain
 
             if (!Sidechain.ProducingBlocks) return;
 
-            var nextSettlementTime = lastBlockFromSettlement != null ?
-                lastBlockFromSettlement.Timestamp + (Sidechain.BlockTimeDuration * (Sidechain.BlocksBetweenSettlement + 1)) :
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (Sidechain.BlockTimeDuration * (Sidechain.BlocksBetweenSettlement + 1));
-            if (nextSettlementTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
-                Sidechain.NextStateWaitEndTime = nextSettlementTime;
+            var nextBlockTime = lastBlockFromSettlement != null ?
+                lastBlockFromSettlement.Timestamp + Sidechain.BlockTimeDuration :
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
+            if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
+                Sidechain.NextStateWaitEndTime = nextBlockTime;
         }
 
         private async Task CheckContractEndState()
@@ -529,7 +529,6 @@ namespace BlockBase.Runtime.Sidechain
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SidechainName);
             if (producersInTable == null || !producersInTable.Any() || !IsProducerInTable(producersInTable)) return;
 
-            _logger.LogInformation("Checking if pool changed...");
             bool poolChanged = UpdateAndCheckIfProducersInSidechainChanged(producersInTable);
             await _peerConnectionsHandler.TryReconnectWithDisconnectedAccounts(Sidechain);
             if (poolChanged)

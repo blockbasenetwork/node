@@ -69,18 +69,12 @@ namespace BlockBase.Runtime.Sidechain
             await sidechainSemaphore.WaitAsync();
             try
             {
-                //_logger.LogDebug("HandleReceivedBlock.");
                 var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
 
                 var blockHashString = HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash);
 
                 if (await AlreadyProcessedThisBlock(databaseName, blockHashString)) return;
-
-                if (!await IsTimeForThisProducerToProduce(sidechainPool, blockReceived.BlockHeader.Producer))
-                {
-                    //_logger.LogDebug("Not this producer time to mine.");
-                    return;
-                }
+                if (!await IsTimeForThisProducerToProduce(sidechainPool, blockReceived.BlockHeader.Producer)) return;
 
                 BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.SidechainName)).ConvertToBlockHeader();
 
