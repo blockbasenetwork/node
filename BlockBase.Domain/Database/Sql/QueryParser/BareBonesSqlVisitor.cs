@@ -383,7 +383,7 @@ namespace BlockBase.Domain.Database.QueryParser
             var exprString = expr.GetText();
             if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null
                 && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
-                || exprString.Contains(">=") || exprString.Contains("==") || exprString.Contains("!=")))
+                || exprString.Contains(">=") || exprString.Contains("=") || exprString.Contains("!=")))
             {
                 var comparisonExpression = new ComparisonExpression(
                     new TableAndColumnName(
@@ -399,7 +399,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
             if (expr.table_column_name() != null && expr.table_column_name().Count() == 2
                && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
-               || exprString.Contains(">=") || exprString.Contains("==") || exprString.Contains("!=")))
+               || exprString.Contains(">=") || exprString.Contains("=") || exprString.Contains("!=")))
             {
 
                 var comparisonExpression = new ComparisonExpression(
@@ -516,7 +516,7 @@ namespace BlockBase.Domain.Database.QueryParser
                 return ComparisonExpression.ComparisonOperatorEnum.SmallerThan;
             if (exprString.Contains(">"))
                 return ComparisonExpression.ComparisonOperatorEnum.BiggerThan;
-            if (exprString.Contains("=="))
+            if (exprString.Contains("="))
                 return ComparisonExpression.ComparisonOperatorEnum.Equal;
             if (exprString.Contains("!="))
                 return ComparisonExpression.ComparisonOperatorEnum.Different;

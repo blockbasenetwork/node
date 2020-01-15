@@ -131,8 +131,8 @@ column_constraint: (K_CONSTRAINT name)? (
 	);
 
 expr:  
-	table_name '.' column_name ( '<' | '<=' | '>' | '>=' | '==' | '!=' ) literal_value
-	| table_column_name ( '<' | '<=' | '>' | '>=' | '==' | '!=' ) table_column_name
+	table_name '.' column_name ( '<' | '<=' | '>' | '>=' | '=' | '!=' ) literal_value
+	| table_column_name ( '<' | '<=' | '>' | '>=' | '=' | '!=' ) table_column_name
 	| expr (K_AND | K_OR) expr
 	| '(' expr ')';
 
