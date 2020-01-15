@@ -234,7 +234,7 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
 
-                    if (approvals?.ProvidedApprovals?.Where(a => a.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
+                    if (approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
                     {
                         await TryApproveTransaction(proposal);
                     }
