@@ -137,21 +137,30 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        //marciak - async void because event handler needs void, is this ok?
         private async void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
         {
             var peerConnection = _currentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
             if (peerConnection != null)
             {
+                var i = 0;
+                while (i < _networkConfigurations.MaxNumberOfConnectionRetries)
+                {
+                    i++;
+                    var peerConnectionRetry = await ConnectAsync(args.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
+
+                    if (peerConnectionRetry == null) 
+                        continue;
+                    else 
+                        return;
+                }
                 peerConnection.ConnectionState = ConnectionStateEnum.Disconnected;
                 await UpdatePeerConnectionRating(peerConnection, RATING_LOST_FOR_DISCONECT);
                 _logger.LogDebug("Peer Connections handler :: Removing peer connection.");
                 _currentPeerConnections.Remove(peerConnection);
-                //TODO: marciak - try to connect to another one?
             }
 
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
-            if (peerConnection != null) _waitingForApprovalPeers.Remove(peer);
+            if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
