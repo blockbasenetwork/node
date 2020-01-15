@@ -14,6 +14,8 @@ using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using System.Collections.Generic;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
+using System.Linq;
 
 namespace BlockBase.TestsConsole.Commands
 {
@@ -24,6 +26,7 @@ namespace BlockBase.TestsConsole.Commands
         private PSqlConnector _psqlConnector;
         private InfoPostProcessing _infoPostProcessing;
         private readonly ILogger _logger;
+        private IGenerator _generator;
         private string _databaseName = "";
 
         public TestTransformerCommand(ILogger logger)
@@ -38,6 +41,7 @@ namespace BlockBase.TestsConsole.Commands
             _transformer = new Transformer_v2(_psqlConnector, middleMan);
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
+            _generator = new PSqlGenerator();
         }
 
         public async Task ExecuteAsync()
@@ -45,7 +49,7 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("CREATE DATABASE database1;");
             RunSqlCommand("USE database1;");
 
-            RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 4 NOT NULL);");
+            RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 2 NOT NULL);");
             RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
             //RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
             RunSqlCommand("CREATE TABLE !table4 ( !column1 int PRIMARY KEY);");
@@ -81,25 +85,30 @@ namespace BlockBase.TestsConsole.Commands
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 6, 'marcia', 26 )");
             RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 7, 'marcia', 290)");
 
-            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name == 'bulha';");
+            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name = 'bulha';");
 
-            RunSqlCommand("SELECT bestplayers.* FROM bestplayers WHERE bestplayers.name == 'bulha' OR ( bestplayers.!number > 10 AND bestplayers.!number <= 26 );");
+            RunSqlCommand("SELECT bestplayers.* FROM bestplayers WHERE bestplayers.name = 'bulha' OR ( bestplayers.!number > 10 AND bestplayers.!number <= 26 );");
 
             RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
 
-            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1;");
+            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1;");
 
-            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1 AND !table4.!column1 == 2 ;");
+            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 AND !table4.!column1 = 2 ;");
 
-            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1 WHERE !table4.!column1 == 2;");
+            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 WHERE !table4.!column1 = 2;");
 
-            RunSqlCommand("SELECT !table4.*, !table5.column2, !table6.column2  FROM !table4 JOIN !table5 ON !table4.!column1 == !table5.!column1 JOIN !table6 ON !table4.!column1 == !table6.!column1 WHERE !table4.!column1 == 2;");
+            RunSqlCommand("SELECT !table4.*, !table5.column2, !table6.column2  FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 JOIN !table6 ON !table4.!column1 = !table6.!column1 WHERE !table4.!column1 = 2;");
 
-            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5 JOIN !table6 ON !table5.column2 == !table6.column2;");
+            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5 JOIN !table6 ON !table5.column2 = !table6.column2;");
 
-            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5, !table6 WHERE !table5.!column1 == !table6.!column1;");
+            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5, !table6 WHERE !table5.!column1 = !table6.!column1;");
 
-            //RunSqlCommand("UPDATE bestplayers SET name = 'ricardo' where bestplayers.name == 'marcia'");
+            RunSqlCommand("UPDATE bestplayers SET name = 'ricardo', number = 1000 where bestplayers.name = 'marcia'");
+            RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
+
+
+            RunSqlCommand("UPDATE bestplayers SET name = 'ricardo' where bestplayers.number = 25");
+            RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
 
             //RunSqlCommand("DROP DATABASE database1;");
         }
@@ -118,16 +127,16 @@ namespace BlockBase.TestsConsole.Commands
             {
                 var builder = (Builder)_visitor.Visit(context);
                 _transformer.TransformBuilder(builder);
-                builder.BuildSqlStatements(new PSqlGenerator());
+                builder.BuildSqlStatements(_generator);
 
 
                 foreach (var sqlCommand in builder.SqlCommands)
                 {
                     Console.WriteLine("");
                     string sqlTextToExecute = "";
-                    if (sqlCommand is DatabaseSqlCommand)              
-                        _databaseName =( (DatabaseSqlCommand)sqlCommand).DatabaseName;
-                        
+                    if (sqlCommand is DatabaseSqlCommand)
+                        _databaseName = ((DatabaseSqlCommand)sqlCommand).DatabaseName;
+
                     switch (sqlCommand)
                     {
                         case ReadQuerySqlCommand readQuerySql:
@@ -145,14 +154,17 @@ namespace BlockBase.TestsConsole.Commands
                         case UpdateSqlCommand updateSqlCommand:
                             sqlTextToExecute = updateSqlCommand.TransformedSqlStatementText[0];
                             Console.WriteLine(sqlTextToExecute);
+
                             var resultsList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                            var descryptedResults = _infoPostProcessing.DecryptRows((SimpleSelectStatement)updateSqlCommand.TransformedSqlStatement[0], resultsList, _databaseName, out IList<string> columnNames);
-                            foreach (var columnName in columnNames) Console.WriteLine(columnName + " ");
-                            foreach (var row in descryptedResults)
+                            var finalListOfUpdates = _infoPostProcessing.UpdateUpdateRecordStatement(updateSqlCommand, resultsList, _databaseName);
+
+                            var updatesToExecute = finalListOfUpdates.Select(u => _generator.BuildString(u)).ToList();
+                            foreach (var updateToExecute in updatesToExecute)
                             {
-                                Console.WriteLine();
-                                foreach (var value in row) Console.Write(value + " ");
+                                Console.WriteLine(updateToExecute);
+                                _psqlConnector.ExecuteCommand(updateToExecute, _databaseName);
                             }
+
                             break;
 
 
@@ -173,7 +185,7 @@ namespace BlockBase.TestsConsole.Commands
                                 Console.WriteLine(sqlTextToExecute);
                                 if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
                                     _psqlConnector.ExecuteCommand(sqlTextToExecute, null);
-                                 else
+                                else
                                     _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
                             }
                             break;
