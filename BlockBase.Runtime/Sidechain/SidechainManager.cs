@@ -500,11 +500,11 @@ namespace BlockBase.Runtime.Sidechain
 
             if (!Sidechain.ProducingBlocks) return;
 
-            var nextSettlementTime = lastBlockFromSettlement != null ?
-                lastBlockFromSettlement.Timestamp + (Sidechain.BlockTimeDuration * (Sidechain.BlocksBetweenSettlement + 1)) :
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (Sidechain.BlockTimeDuration * (Sidechain.BlocksBetweenSettlement + 1));
-            if (nextSettlementTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
-                Sidechain.NextStateWaitEndTime = nextSettlementTime;
+            var nextBlockTime = lastBlockFromSettlement != null ?
+                lastBlockFromSettlement.Timestamp + Sidechain.BlockTimeDuration :
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
+            if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
+                Sidechain.NextStateWaitEndTime = nextBlockTime;
         }
 
         private async Task CheckContractEndState()
