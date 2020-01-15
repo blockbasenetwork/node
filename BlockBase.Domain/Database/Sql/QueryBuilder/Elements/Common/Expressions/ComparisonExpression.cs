@@ -39,7 +39,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions
 
         public AbstractExpression Clone()
         {
-            return new ComparisonExpression() { LeftTableNameAndColumnName = LeftTableNameAndColumnName.Clone(), RightTableNameAndColumnName = RightTableNameAndColumnName.Clone(), Value = Value, ComparisonOperator = ComparisonOperator, HasParenthesis = HasParenthesis };
+            return new ComparisonExpression() { LeftTableNameAndColumnName = LeftTableNameAndColumnName.Clone(), RightTableNameAndColumnName = RightTableNameAndColumnName != null ? RightTableNameAndColumnName.Clone() : null, Value = Value != null ? Value.Clone() : null, ComparisonOperator = ComparisonOperator, HasParenthesis = HasParenthesis };
         }
 
         public enum ComparisonOperatorEnum

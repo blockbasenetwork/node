@@ -94,7 +94,7 @@ namespace BlockBase.DataProxy.Encryption
                         break;
 
                     case UpdateRecordStatement updateRecordStatement:
-                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedUpdateRecordStatement(updateRecordStatement, _databaseInfoRecord.IV) };
+                        command.TransformedSqlStatement = GetTransformedUpdateRecordStatement(updateRecordStatement, _databaseInfoRecord.IV);
                         break;
 
                 }
@@ -385,21 +385,57 @@ namespace BlockBase.DataProxy.Encryption
             return transformedSelectStatement;
         }
 
-        private ISqlStatement GetTransformedUpdateRecordStatement(UpdateRecordStatement updateRecordStatement, string databaseIV)
+        private IList<ISqlStatement> GetTransformedUpdateRecordStatement(UpdateRecordStatement updateRecordStatement, string databaseIV)
         {
+            var sqlStatements = new List<ISqlStatement>();
+
             var selectStatement = new SimpleSelectStatement();
 
+            var transformedUpdateRecordStatement = new UpdateRecordStatement();
+
             var tableInfoRecord = _encryptor.FindInfoRecord(updateRecordStatement.TableName, databaseIV);
+
+            transformedUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
             foreach (var columnValue in updateRecordStatement.ColumnNamesAndUpdateValues)
             {
                 var columnInfoRecord = _encryptor.FindInfoRecord(columnValue.Key, tableInfoRecord.IV);
-                if (columnInfoRecord.LData.EncryptedIVColumnName != null) selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+
+                var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
+
+                if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                {
+                    if (columnInfoRecord.LData.EncryptedIVColumnName == null)
+                        transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                           new estring(columnInfoRecord.Name),
+                           new Value(_encryptor.EncryptUniqueValue(columnValue.Value.ValueToInsert, columnInfoRecord), true)
+                           );
+
+                    else
+                    {
+                        selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
+                        selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+                        selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
+                    }
+                }
+
+                else
+                    transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                           new estring(columnInfoRecord.Name),
+                           columnValue.Value
+                           );
             }
 
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
+            sqlStatements.Add(selectStatement);
 
-            return selectStatement;
+            if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
+            {
+                transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+                sqlStatements.Add(transformedUpdateRecordStatement);
+            }
+
+            return sqlStatements;
         }
 
         private JoinClause GetTransformedJoinClause(JoinClause joinClause, string databaseIV)

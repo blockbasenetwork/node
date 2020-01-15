@@ -1,4 +1,5 @@
-﻿using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
+﻿using BlockBase.Domain.Database.Info;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
@@ -22,59 +23,105 @@ namespace BlockBase.DataProxy.Encryption
 
         public IList<IList<string>> TranslateSelectResults(ReadQuerySqlCommand readQuerySqlCommand, IList<IList<string>> allResults, string databaseName)
         {
-            var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out IList<string> columnNames);
-
+            var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out IList<TableAndColumnName> columnNames);
             var filteredResults = FilterExpression(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
-
             var removedExtraColumns = FilterSelectColumns(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName);
 
             return removedExtraColumns;
         }
 
-        public IList<UpdateRecordStatement> CreateUpdateRecordStatement(UpdateSqlCommand updateSqlCommand, IList<IList<string>> allResults, string databaseName)
+        public IList<UpdateRecordStatement> UpdateUpdateRecordStatement(UpdateSqlCommand updateSqlCommand, IList<IList<string>> allResults, string databaseName)
         {
-            var transformedUpdateRecordStatements = new List<UpdateRecordStatement>();
-
             var originalUpdateRecordStatement = (UpdateRecordStatement)updateSqlCommand.OriginalSqlStatement;
+            var transformedSimpleSelectStatement = (SimpleSelectStatement)updateSqlCommand.TransformedSqlStatement[0];
+
+            var updateRecordStatements = new List<UpdateRecordStatement>();
+
+            var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
+            var filteredResults = FilterExpression(originalUpdateRecordStatement.WhereExpression, decryptedResults, columnNames);
 
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
-
             var tableInfoRecord = _encryptor.FindInfoRecord(originalUpdateRecordStatement.TableName, databaseInfoRecord.IV);
 
-            var transformedUpdateRecordStatement = new UpdateRecordStatement();
+            var additionalUpdateRecordStatements = GetAdditionalUpdateRecordStatements(originalUpdateRecordStatement, columnNames, tableInfoRecord, filteredResults);
+            updateRecordStatements.AddRange(additionalUpdateRecordStatements);
 
-            transformedUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
+            var wrongResults = decryptedResults.Except(filteredResults).ToList(); //these are needed to remove extra results on the first
 
-            foreach (var columnValues in originalUpdateRecordStatement.ColumnNamesAndUpdateValues)
+            if (updateSqlCommand.TransformedSqlStatement.Count == 2)
             {
-                var columnInfoRecord = _encryptor.FindInfoRecord(columnValues.Key, tableInfoRecord.IV);
-
-                var dataType = _encryptor.GetColumnDataType(columnInfoRecord);
-
-                if (dataType.DataTypeName != DataTypeEnum.ENCRYPTED)
-                    transformedUpdateRecordStatement.ColumnNamesAndUpdateValues[new estring(columnInfoRecord.Name)] = columnValues.Value;
-                else
+                var transformedUpdateRecordStatement = (UpdateRecordStatement)updateSqlCommand.TransformedSqlStatement[1];
+                updateRecordStatements.Add(transformedUpdateRecordStatement);
+                if (wrongResults.Count() != 0)
                 {
-                    if (columnInfoRecord.LData.EncryptedIVColumnName == null)
-                        transformedUpdateRecordStatement.ColumnNamesAndUpdateValues[new estring(columnInfoRecord.Name)] = new Value(_encryptor.EncryptUniqueValue(columnValues.Value.ValueToInsert, columnInfoRecord), true);
+                    foreach (var tableColumn in columnNames)
+                    {
+                        var columnInfoRecord = _encryptor.FindInfoRecord(tableColumn.ColumnName, tableInfoRecord.IV);
+                        if (columnInfoRecord != null && columnInfoRecord.LData.EncryptedIVColumnName != null)
+                        {
+                            foreach (var row in wrongResults)
+                            {
+                                var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                                var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName + "." + columnInfoRecord.LData.EncryptedIVColumnName);
 
-                    //else
-                    //{
-                    //    transformedUpdateRecordStatement.ColumnNamesAndUpdateValues[new estring(columnInfoRecord.Name)] = new Value(_encryptor.EncryptUniqueValue(columnValues.Value.ValueToInsert, columnInfoRecord), true);
-
-                    //    transformedUpdateRecordStatements.Add(
-                    //        new UpdateRecordStatement(
-                    //            new estring(tableInfoRecord.Name), 
-                    //            new Dictionary<estring, Value>() { { new estring(columnInfoRecord.LData.EncryptedIVColumnName), generatedIV } }, 
-                    //            new ComparisonExpression(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName), );
-                    //    transformedUpdateRecordStatement.ColumnNamesAndUpdateValues[new estring(columnInfoRecord.Name)] = new Value(_encryptor.EncryptUniqueValue(columnValues.Value.ValueToInsert, columnInfoRecord), true);
-                    //}
+                                if (transformedUpdateRecordStatement.WhereExpression != null)
+                                {
+                                    transformedUpdateRecordStatement.WhereExpression.HasParenthesis = true;
+                                    transformedUpdateRecordStatement.WhereExpression = new LogicalExpression(
+                                        transformedUpdateRecordStatement.WhereExpression,
+                                        new ComparisonExpression(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)),
+                                        new Value(row[ivIndexColumn], true),
+                                        ComparisonExpression.ComparisonOperatorEnum.Different),
+                                        LogicalExpression.LogicalOperatorEnum.AND);
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
             }
-            return transformedUpdateRecordStatements;
+
+            return updateRecordStatements;
+
+
         }
 
-        public IList<IList<string>> DecryptRows(SimpleSelectStatement simpleSelectStatement, IList<IList<string>> allResults, string databaseName, out IList<string> columnNames)
+        private IList<UpdateRecordStatement> GetAdditionalUpdateRecordStatements(UpdateRecordStatement originalUpdateRecordStatement, IList<TableAndColumnName> columnNames, InfoRecord tableInfoRecord, IList<IList<string>> filteredResults)
+        {
+            var updateRecordStatements = new List<UpdateRecordStatement>();
+
+            foreach (var columnValue in originalUpdateRecordStatement.ColumnNamesAndUpdateValues)
+            {
+                var columnInfoRecord = _encryptor.FindInfoRecord(columnValue.Key, tableInfoRecord.IV);
+                if (columnInfoRecord.LData.EncryptedIVColumnName == null) continue;
+
+                var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName  + "." + columnInfoRecord.LData.EncryptedIVColumnName);
+
+                foreach (var row in filteredResults)
+                {
+                    var additionalUpdateRecordStatement = new UpdateRecordStatement();
+                    additionalUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
+
+                    var encryptedValue = new Value(_encryptor.EncryptNormalValue(columnValue.Value.ValueToInsert, columnInfoRecord, out string generatedIV), true);
+                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), encryptedValue);
+                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new Value(generatedIV, true));
+
+                    var oldIV = row[ivIndexColumn];
+                    additionalUpdateRecordStatement.WhereExpression = new ComparisonExpression(
+                        new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)),
+                        new Value(oldIV, true),
+                        ComparisonExpression.ComparisonOperatorEnum.Equal);
+
+                    updateRecordStatements.Add(additionalUpdateRecordStatement);
+                }
+            }
+
+            return updateRecordStatements;
+
+        }
+
+        public IList<IList<string>> DecryptRows(SimpleSelectStatement simpleSelectStatement, IList<IList<string>> allResults, string databaseName, out IList<TableAndColumnName> columnNames)
         {
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
 
@@ -83,42 +130,49 @@ namespace BlockBase.DataProxy.Encryption
             var decryptedResults = new List<IList<string>>();
             foreach (var row in allResults) decryptedResults.Add(new List<string>());
 
-            columnNames = new List<string>();
+            columnNames = new List<TableAndColumnName>();
 
             for (int i = 0; i < selectCoreStatement.ResultColumns.Count; i++)
             {
                 var resultColumn = selectCoreStatement.ResultColumns[i];
                 var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseInfoRecord.IV);
 
-                var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                var decryptedTableName = tableInfoRecord.KeyName != null ? new estring(_encryptor.DecryptName(tableInfoRecord), true) : new estring(tableInfoRecord.Name, false);
 
                 var columnInfoRecord = _encryptor.FindInfoRecord(resultColumn.ColumnName, tableInfoRecord.IV);
 
-                if (columnInfoRecord == null) continue;
+                if (columnInfoRecord != null)
+                {
+                    var decryptedColumnName = columnInfoRecord.KeyName != null ? _encryptor.DecryptName(columnInfoRecord) : columnInfoRecord.Name;
 
-                var decryptedColumnName = columnInfoRecord.KeyName != null ? _encryptor.DecryptName(columnInfoRecord) : columnInfoRecord.Name;
+                    columnNames.Add(new TableAndColumnName(decryptedTableName, new estring(decryptedColumnName, true)));
+                }
 
-                columnNames.Add(decryptedTableName + "." + decryptedColumnName);
+                else columnNames.Add(new TableAndColumnName(decryptedTableName, resultColumn.ColumnName));
 
                 for (int j = 0; j < allResults.Count; j++)
                 {
                     var row = allResults[j];
-                    var dataType = _encryptor.GetColumnDataType(columnInfoRecord);
 
-                    if (dataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                    if (columnInfoRecord != null)
                     {
-                        var decryptedValue = "";
-                        if (columnInfoRecord.LData.EncryptedIVColumnName != null)
-                        {
-                            var ivColumn = selectCoreStatement.ResultColumns.Where(r => r.ColumnName.Value == columnInfoRecord.LData.EncryptedIVColumnName).SingleOrDefault();
-                            var columnIVIndex = selectCoreStatement.ResultColumns.IndexOf(ivColumn);
-                            decryptedValue = _encryptor.DecryptNormalValue(row[i], columnInfoRecord, row[columnIVIndex]);
-                        }
-                        else decryptedValue = _encryptor.DecryptUniqueValue(row[i], columnInfoRecord);
-                        decryptedResults[j].Add(decryptedValue);
-                    }
+                        var dataType = _encryptor.GetColumnDataType(columnInfoRecord);
 
-                    else decryptedResults[j].Add(row[i]);
+                        if (dataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                        {
+                            var decryptedValue = "";
+                            if (columnInfoRecord.LData.EncryptedIVColumnName != null)
+                            {
+                                var ivColumn = selectCoreStatement.ResultColumns.Where(r => r.ColumnName.Value == columnInfoRecord.LData.EncryptedIVColumnName).SingleOrDefault();
+                                var columnIVIndex = selectCoreStatement.ResultColumns.IndexOf(ivColumn);
+                                decryptedValue = _encryptor.DecryptNormalValue(row[i], columnInfoRecord, row[columnIVIndex]);
+                            }
+                            else decryptedValue = _encryptor.DecryptUniqueValue(row[i], columnInfoRecord);
+                            decryptedResults[j].Add(decryptedValue);
+                            continue;
+                        }
+                    }
+                    decryptedResults[j].Add(row[i]);
                 }
             }
 
@@ -126,7 +180,7 @@ namespace BlockBase.DataProxy.Encryption
         }
 
 
-        private IList<IList<string>> FilterExpression(AbstractExpression expression, IList<IList<string>> decryptedResults, IList<string> columnNames)
+        private IList<IList<string>> FilterExpression(AbstractExpression expression, IList<IList<string>> decryptedResults, IList<TableAndColumnName> columnNames)
         {
             switch (expression)
             {
@@ -153,7 +207,7 @@ namespace BlockBase.DataProxy.Encryption
             return decryptedResults;
 
         }
-        private IList<IList<string>> FilterSelectColumns(IList<ResultColumn> resultColumns, IList<IList<string>> decryptedResults, IList<string> columnNames, string databaseName)
+        private IList<IList<string>> FilterSelectColumns(IList<ResultColumn> resultColumns, IList<IList<string>> decryptedResults, IList<TableAndColumnName> columnNames, string databaseName)
         {
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
 
@@ -174,20 +228,19 @@ namespace BlockBase.DataProxy.Encryption
                 }
             }
 
-            var columnsToRemove = columnNames.Except(columnsToMantain);
-            var indexesOfColumnsToRemove = columnsToRemove.Select(c => columnNames.IndexOf(c));
+            var columnsToRemove = columnNames.Select(s => s.ToString()).Except(columnsToMantain).ToList();
+            var indexesOfColumnsToRemove = columnsToRemove.Select(c => columnNames.Select(s => s.ToString()).ToList().IndexOf(c)).OrderByDescending(x => x).ToList();
+
             foreach (var row in decryptedResults)
-            {
                 foreach (var index in indexesOfColumnsToRemove)
-                {
-                    row.Remove(row[index]);
-                }
-            }
+                    row.RemoveAt(index);
+
+
             return decryptedResults;
         }
-        private IList<IList<string>> FilterComparisonExpression(ComparisonExpression expression, IList<IList<string>> decryptedResults, IList<string> columnNames)
+        private IList<IList<string>> FilterComparisonExpression(ComparisonExpression expression, IList<IList<string>> decryptedResults, IList<TableAndColumnName> columnNames)
         {
-            var columnIndex = columnNames.IndexOf(expression.LeftTableNameAndColumnName.TableName.Value + "." + expression.LeftTableNameAndColumnName.ColumnName.Value);
+            var columnIndex = columnNames.Select(s => s.ToString()).ToList().IndexOf(expression.LeftTableNameAndColumnName.TableName.Value + "." + expression.LeftTableNameAndColumnName.ColumnName.Value);
 
             switch (expression.ComparisonOperator)
             {
