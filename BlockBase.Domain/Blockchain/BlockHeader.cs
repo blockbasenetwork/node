@@ -42,16 +42,16 @@ namespace BlockBase.Domain.Blockchain
         {
             return new Dictionary<string, object>()
             {
-                { EosParameterNames.PRODUCER, Producer },
-                { EosParameterNames.BLOCK_HASH, HashHelper.ByteArrayToFormattedHexaString(BlockHash) },
-                { EosParameterNames.PREVIOUS_BLOCK_HASH, HashHelper.ByteArrayToFormattedHexaString(PreviousBlockHash) },
-                { EosParameterNames.SEQUENCE_NUMBER, SequenceNumber},
-                { EosParameterNames.TIMESTAMP, Timestamp },
-                { EosParameterNames.NUMBER_OF_TRANSACTIONS, TransactionCount},
-                { EosParameterNames.PRODUCER_SIGNATURE, ProducerSignature},
-                { EosParameterNames.MERKLE_TREE_ROOT_HASH, HashHelper.ByteArrayToFormattedHexaString(MerkleRoot) },
-                { EosParameterNames.IS_VERIFIED, false },
-                { EosParameterNames.IS_LAST_BLOCK, false }
+                { EosAtributeNames.PRODUCER, Producer },
+                { EosAtributeNames.BLOCK_HASH, HashHelper.ByteArrayToFormattedHexaString(BlockHash) },
+                { EosAtributeNames.PREVIOUS_BLOCK_HASH, HashHelper.ByteArrayToFormattedHexaString(PreviousBlockHash) },
+                { EosAtributeNames.SEQUENCE_NUMBER, SequenceNumber},
+                { EosAtributeNames.TIMESTAMP, Timestamp },
+                { EosAtributeNames.TRANSACTIONS_COUNT, TransactionCount},
+                { EosAtributeNames.PRODUCER_SIGNATURE, ProducerSignature},
+                { EosAtributeNames.MERKLETREE_ROOT_HASH, HashHelper.ByteArrayToFormattedHexaString(MerkleRoot) },
+                { EosAtributeNames.IS_VERIFIED, false },
+                { EosAtributeNames.IS_LATEST_BLOCK, false }
             };
         }
 
@@ -74,14 +74,14 @@ namespace BlockBase.Domain.Blockchain
 
         public BlockHeader SetValuesFromDictionary(Dictionary<string, object> dic)
         {
-            BlockHash = HashHelper.FormattedHexaStringToByteArray((string) dic[EosParameterNames.BLOCK_HASH]);
-            Producer = (string) dic[EosParameterNames.PRODUCER];
-            PreviousBlockHash = HashHelper.FormattedHexaStringToByteArray((string)dic[EosParameterNames.PREVIOUS_BLOCK_HASH]);
-            SequenceNumber = (ulong) dic[EosParameterNames.SEQUENCE_NUMBER];
-            Timestamp = (ulong) dic[EosParameterNames.TIMESTAMP];
-            TransactionCount = (uint) dic[EosParameterNames.NUMBER_OF_TRANSACTIONS];
-            ProducerSignature = (string) dic[EosParameterNames.PRODUCER_SIGNATURE];
-            MerkleRoot = HashHelper.FormattedHexaStringToByteArray((string) dic[EosParameterNames.MERKLE_TREE_ROOT_HASH]);
+            BlockHash = HashHelper.FormattedHexaStringToByteArray((string) dic[EosAtributeNames.BLOCK_HASH]);
+            Producer = (string) dic[EosAtributeNames.PRODUCER];
+            PreviousBlockHash = HashHelper.FormattedHexaStringToByteArray((string)dic[EosAtributeNames.PREVIOUS_BLOCK_HASH]);
+            SequenceNumber = (ulong) dic[EosAtributeNames.SEQUENCE_NUMBER];
+            Timestamp = (ulong) dic[EosAtributeNames.TIMESTAMP];
+            TransactionCount = (uint) dic[EosAtributeNames.TRANSACTIONS_COUNT];
+            ProducerSignature = (string) dic[EosAtributeNames.PRODUCER_SIGNATURE];
+            MerkleRoot = HashHelper.FormattedHexaStringToByteArray((string) dic[EosAtributeNames.MERKLETREE_ROOT_HASH]);
 
             return this;
         }

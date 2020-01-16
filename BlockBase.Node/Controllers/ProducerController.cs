@@ -41,20 +41,20 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Sends a transaction to blockbase operation contract to submit a candidature for a target sidechain.
+        /// Sends a transaction to BlockBase Operations Contract that contains the producer application information for producing the sidechain
         /// </summary>
-        /// <param name="chainName">Account name of the Sidechain</param>
-        /// <param name="workTime">Producer working time in the Sidechain in seconds</param>
-        /// <param name="forceDelete">Producer can choose to delete the database with the same account name</param>
+        /// <param name="chainName">Account name of the sidechain</param>
+        /// <param name="workTime">How much time in seconds the producer will produce the sidechain</param>
+        /// <param name="forceDelete">This parameter is here only to simplify testing purposes. It makes it more easy to restart the whole system and delete previous existing databases</param>
         /// <returns>The success of the task</returns>
         /// <response code="200">Candidature sent with success</response>
         /// <response code="400">Invalid parameters</response>
         /// <response code="500">Error sending candidature</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a transaction to blockbase operation contract to submit a candidature for a target sidechain.",
-            Description = "Description here",
-            OperationId = "SendCandidatureToSidechain"
+            Summary = "Sends a transaction to BlockBase Operations Contract that contains the producer application information for producing the sidechain",
+            Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
+            OperationId = "SendCandidatureToChain"
         )]
         public async Task<ObjectResult> SendCandidatureToChain(string chainName, int workTime, bool forceDelete = false)
         {
@@ -93,17 +93,17 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the sidechain contract information of a specific account that is started and configured.
+        /// Gets the contract information of a sidechain that is started and configured
         /// </summary>
-        /// <param name="chainName">Account name of the sidechain</param>
+        /// <param name="chainName">Name of the sidechain</param>
         /// <returns>The success of the task</returns>
-        /// <response code="200">Contract information obtained with success.</response>
+        /// <response code="200">Contract information retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error getting the contract information</response>
+        /// <response code="500">Error retrieving the contract information</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the sidechain contract information of a specific account that is started and configured.",
-            Description = "Description here",
+            Summary = "Gets the contract information of a sidechain that is started and configured",
+            Description = "Retrieves relevant information about a sidechain, e.g. payment per block, mininum producer stake to participate, required number of producers, max block size in bytes, etc",
             OperationId = "GetContractInfo"
         )]
         public async Task<ObjectResult> GetContractInfo(string chainName)
@@ -122,18 +122,18 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the confirmation if the user account has a candidateure in specific sidechain.
+        /// Gets information about the participation state of the producer on a sidechain
         /// </summary>
-        /// <param name="chainName">Account name of the Sidechain</param>
-        /// <param name="forceDelete">Producer can choose to delete the database with the same account name</param>
+        /// <param name="chainName">Name of the sidechain</param>
+        /// <param name="forceDelete">This parameter is here only to simplify testing purposes. It makes it more easy to restart the whole system and delete previous existing databases</param>
         /// <returns> A boolean if the account is candidate in the sidechain</returns>
-        /// <response code="200">Information obtained with success</response>
+        /// <response code="200">Information retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error getting the information</response>
+        /// <response code="500">Error retrieving the information</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the confirmation if the user account has a candidateure in specific sidechain.",
-            Description = "Description here",
+            Summary = "Gets information about the participation state of the producer on a sidechain",
+            Description = "Confirms if the producer has applied successfully to produce a given sidechain",
             OperationId = "GetProducerCandidature"
         )]
         //TODO Change name to something more intuitive.
@@ -154,17 +154,17 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the current state of a specific sidechain.
+        /// Gets the current state of a given sidechain
         /// </summary>
-        /// <param name="chainName">Account name of the Sidechain</param>
+        /// <param name="chainName">Name of the sidechain</param>
         /// <returns>The current state of the contract</returns>
-        /// <response code="200">Contract state obtained with success</response>
+        /// <response code="200">Contract state retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error getting contract state</response>
+        /// <response code="500">Error retrieving contract state</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the current state of a specific sidechain.",
-            Description = "Description here",
+            Summary = "Gets the current state of a given sidechain",
+            Description = "Gets the current state of a given sidechain e.g. has chain started, is in configuration phase, is in candidature phase, is secret sharing phase, etc",
             OperationId = "GetChainState"
         )]
         public async Task<ObjectResult> GetChainState(string chainName)
@@ -181,17 +181,17 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the total producers needed for a specific sidechain.
+        /// Gets the total producers requested for a given sidechain
         /// </summary>
-        /// <param name="chainName">Account name of the Sidechain</param>
-        /// <returns>The number of producers needed for a sidechain.</returns>
-        /// <response code="200">Producers needed obtained with success</response>
+        /// <param name="chainName">Name of the sidechain</param>
+        /// <returns>The number of producers needed for a sidechain</returns>
+        /// <response code="200">Producers needed retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error getting the producers needed</response>
+        /// <response code="500">Error retrieving the number of producers requested</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the total producers needed for a specific sidechain.",
-            Description = "Description here",
+            Summary = "Gets the total producers requested for a given sidechain",
+            Description = "Gets the number of sidechain producers requested for a given sidechain",
             OperationId = "GetTotalProducersNeeded"
         )]
         public async Task<ObjectResult> GetTotalProducersNeeded(string chainName)
@@ -208,17 +208,17 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the total payment to the producers until the request moment of a specific sidechain.
+        /// Gets the total amount of BBT that needs to be paid to the producers at a given moment since the last settlement
         /// </summary>
-        /// <param name="chainName">Account name of the Sidechain</param>
-        /// <returns>The total payment of the producers per settlement.</returns>
-        /// <response code="200">Chain payment obtained with success</response>
+        /// <param name="chainName">Name of the sidechain</param>
+        /// <returns>The current total amount of BBT in debt to the producers since the last settlement</returns>
+        /// <response code="200">Chain payment retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error getting the payments information</response>
+        /// <response code="500">Error retrieving the payments information</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the total payment to the producers until the request moment of a specific sidechain.",
-            Description = "Description here",
+            Summary = "Gets the total amount of BBT that needs to be paid to the producers at a given moment since the last settlement",
+            Description = "The producer ",
             OperationId = "GetTotalProducerPayment"
         )]
         //TODO Change name to something more intuitive.
@@ -237,17 +237,17 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the total number of candidates of a specific sidechain.
+        /// Gets the total number of current candidates for a given sidechain
         /// </summary>
-        /// <param name="chainName">Account name of the sidechain</param>
-        /// <returns>The number of candidates in the sidechain.</returns>
-        /// <response code="200">Total producers obtained with success</response>
+        /// <param name="chainName">Name of the sidechain</param>
+        /// <returns>The number of candidates in the sidechain</returns>
+        /// <response code="200">Total producers retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error getting total candidates information.</response>
+        /// <response code="500">Error retrieving total candidates information.</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the total number of candidates of a specific sidechain.",
-            Description = "Description here",
+            Summary = "Gets the current number of candidates for a given sidechain",
+            Description = "Gets the current number of candidates that have applied to produce a given sidechain",
             OperationId = "GetTotalCandidatesInChain"
         )]
         public async Task<ObjectResult> GetTotalCandidatesInChain(string chainName)
@@ -265,17 +265,17 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the payment per block of a specific sidechain.
+        /// Gets the payment in BBT per block of a given sidechain
         /// </summary>
-        /// <param name="chainName">Account name of the Sidechain</param>
-        /// <returns>The total payment for the producers.</returns>
-        /// <response code="200">Chain payment obtained with success</response>
+        /// <param name="chainName">Name of the Sidechain</param>
+        /// <returns>The payment in BBT for one block</returns>
+        /// <response code="200">Chain payment retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error getting the payment information.</response>
+        /// <response code="500">Error retrieving the payment information</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Get the payment per block of a specific sidechain.",
-            Description = "Description here",
+            Summary = "Gets the payment in BBT per block of a given sidechain",
+            Description = "Gets the payment in BBT that a producer will receive when he produces one block of a given sidechain",
             OperationId = "GetChainPayment"
         )]
         //TODO Change name to something more intuitive.

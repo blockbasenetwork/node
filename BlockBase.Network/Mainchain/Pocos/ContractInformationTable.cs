@@ -1,55 +1,53 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class ContractInformationTable
     {
-        [JsonProperty("key")]
+        [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
 
-        [JsonProperty("paymentperblock")]
+        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK)]
         public uint Payment { get; set; }
 
-        [JsonProperty("minimumcandidatestake")]
+        [JsonProperty(EosAtributeNames.MIN_CANDIDATURE_STAKE)]
         public uint Stake { get; set; }
 
-        [JsonProperty("requirednumberofproducers")]
+        [JsonProperty(EosAtributeNames.NUMBER_OF_PRODUCERS_REQUIRED)]
         public uint ProducersNumber { get; set; }
 
-        [JsonProperty("candidatureenddate")]
+        [JsonProperty(EosAtributeNames.CANDIDATURE_PHASE_END_DATE_IN_SECONDS)]
         public long CandidatureEndDate { get; set; }
 
-        [JsonProperty("secretenddate")]
+        [JsonProperty(EosAtributeNames.SECRET_SENDING_PHASE_END_DATE_IN_SECONDS)]
         public long SecretEndDate { get; set; }
 
-        [JsonProperty("ipsendenddate")]
+        [JsonProperty(EosAtributeNames.IP_SENDING_PHASE_END_DATE_IN_SECONDS)]
         public long SendEndDate { get; set; }
 
-        [JsonProperty("ipreceiveenddate")]
+        [JsonProperty(EosAtributeNames.IP_RETRIEVAL_PHASE_END_DATE_IN_SECONDS)]
         public long ReceiveEndDate { get; set; }
 
-        [JsonProperty("candidaturetime")]
+        [JsonProperty(EosAtributeNames.CANDIDATURE_PHASE_DURATION_IN_SECONDS)]
         public uint CandidatureTime { get; set; }
 
-        [JsonProperty("ipsendtime")]
+        [JsonProperty(EosAtributeNames.IP_SENDING_PHASE_DURATION_IN_SECONDS)]
         public uint SendTime { get; set; }
 
-        [JsonProperty("ipreceivetime")]
+        [JsonProperty(EosAtributeNames.IP_RETRIEVAL_PHASE_DURATION_IN_SECONDS)]
         public uint ReceiveTime { get; set; }
 
-        [JsonProperty("sendsecrettime")]
+        [JsonProperty(EosAtributeNames.SECRET_SENDING_PHASE_DURATION_IN_SECONDS)]
         public uint SendSecretTime { get; set; }
 
-        [JsonProperty("blocktimeduration")]
+        [JsonProperty(EosAtributeNames.BLOCK_TIME_IN_SECONDS)]
         public uint BlockTimeDuration { get; set; }
 
-        [JsonProperty("blocksbetweensettlement")]
+        [JsonProperty(EosAtributeNames.NUM_BLOCKS_BETWEEN_SETTLEMENTS)]
         public uint BlocksBetweenSettlement { get; set; }
 
-        [JsonProperty("sizeofblockinbytes")]
+        [JsonProperty(EosAtributeNames.BLOCK_SIZE_IN_BYTES)]
         public uint SizeOfBlockInBytes { get; set; }
 
     }

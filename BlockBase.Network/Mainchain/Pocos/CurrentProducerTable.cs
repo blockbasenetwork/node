@@ -1,16 +1,14 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class CurrentProducerTable
     {
-        [JsonProperty("producer")]
+        [JsonProperty(EosAtributeNames.PRODUCER)]
         public string Producer { get; set; }
 
-        [JsonProperty("startproductiontime")]
+        [JsonProperty(EosAtributeNames.PRODUCTION_START_DATE_IN_SECONDS)]
         public long StartProductionTime { get; set; }
     }
 }

@@ -1,29 +1,29 @@
 using EosSharp.Core.Api.v1;
 using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
+using System;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class TransactionProposalApprovalsTable
     {
-        [JsonProperty("proposal_name")]
+        [JsonProperty(EosAtributeNames.PROPOSAL_NAME)]
         public string ProposalName { get; set; }
 
-        [JsonProperty("requested_approvals")]
+        [JsonProperty(EosAtributeNames.REQUESTED_APPROVALS)]
         public List<Approval> RequestedApprovals { get; set; }
 
-        [JsonProperty("provided_approvals")]
+        [JsonProperty(EosAtributeNames.PROVIDED_APPROVALS)]
         public List<Approval> ProvidedApprovals { get; set; }
     }
 
     public class Approval
     {
-        [JsonProperty("level")]
+        [JsonProperty(EosAtributeNames.LEVEL)]
         public PermissionLevel PermissionLevel { get; set; }
 
-        [JsonProperty("time")]
+        [JsonProperty(EosAtributeNames.TIME)]
         public DateTime Time { get; set; }
     }
 }

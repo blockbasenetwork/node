@@ -1,42 +1,40 @@
 ﻿using BlockBase.Domain.Blockchain;
 using BlockBase.Utils.Crypto;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class BlockheaderTable
     {
-        [JsonProperty("blockhash")]
+        [JsonProperty(EosAtributeNames.BLOCK_HASH)]
         public string BlockHash { get; set; }
 
-        [JsonProperty("previousblockhash")]
+        [JsonProperty(EosAtributeNames.PREVIOUS_BLOCK_HASH)]
         public string PreviousBlockHash { get; set; }
 
-        [JsonProperty("sequencenumber")]
+        [JsonProperty(EosAtributeNames.SEQUENCE_NUMBER)]
         public uint SequenceNumber { get; set; }
 
-        [JsonProperty("timestamp")]
+        [JsonProperty(EosAtributeNames.TIMESTAMP)]
         public uint Timestamp { get; set; }
 
-        [JsonProperty("transactionnumber")]
+        [JsonProperty(EosAtributeNames.TRANSACTIONS_COUNT)]
         public uint TransactionCount { get; set; }
 
-        [JsonProperty("producer")]
+        [JsonProperty(EosAtributeNames.PRODUCER)]
         public string Producer { get; set; }
 
-        [JsonProperty("producersignature")]
+        [JsonProperty(EosAtributeNames.PRODUCER_SIGNATURE)]
         public string ProducerSignature { get; set; }
 
-        [JsonProperty("merkletreeroothash")]
+        [JsonProperty(EosAtributeNames.MERKLETREE_ROOT_HASH)]
         public string MerkleTreeRootHash { get; set; }
 
-        [JsonProperty("isverified")]
+        [JsonProperty(EosAtributeNames.IS_VERIFIED)]
         public bool IsVerified { get; set; }
         
-        [JsonProperty("islasblock")]
+        [JsonProperty(EosAtributeNames.IS_LATEST_BLOCK)]
         public bool IsLastBlock { get; set; }
 
 

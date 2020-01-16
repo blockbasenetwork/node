@@ -1,16 +1,14 @@
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class PendingRewardTable
     {
-        [JsonProperty("key")]
+        [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
 
-        [JsonProperty("reward")]
+        [JsonProperty(EosAtributeNames.REWARD)]
         public uint Reward { get; set; }
     }
 }
