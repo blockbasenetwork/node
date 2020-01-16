@@ -94,3 +94,7 @@ if you intent on running the node as a service provider, you can use the followi
 In order to stake BBT as a service requester, run the 'addstake' action in the blockbase token contract with both 'owner' and 'sidechain' with your sidechain account name.
 
 In case you want to stake as a service provider, run the 'addstake' action with 'owner' as your producer accout name and 'sidechain' as the sidechain you want to candidate as a producer.
+
+## Smart Contracts running on Jungle
+**blockbaseopr** - Operations Contract
+**blockbasetkn** - Token Contract
