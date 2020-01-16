@@ -189,6 +189,7 @@ namespace BlockBase.Runtime.Mainchain
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
+            if (!producers.Where(p => p.Warning == 2).Any()) return;
 
             foreach(var producer in producers)
             {
@@ -196,6 +197,7 @@ namespace BlockBase.Runtime.Mainchain
             }
 
             await _mainchainService.PunishProd(_sidechain.SidechainName);
+            await UpdateAuthorization(_sidechain.SidechainName);
         }
 
         #endregion Auxiliar Methods
