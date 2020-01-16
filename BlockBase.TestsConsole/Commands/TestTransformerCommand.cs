@@ -46,74 +46,78 @@ namespace BlockBase.TestsConsole.Commands
 
         public async Task ExecuteAsync()
         {
-            RunSqlCommand("CREATE DATABASE database1;");
-            RunSqlCommand("USE database1;");
+            await RunSqlCommand("CREATE DATABASE database2;");
+            await RunSqlCommand("CREATE DATABASE database1;");
+            await RunSqlCommand("USE database1;");
 
-            RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 2 NOT NULL);");
-            RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
+            await RunSqlCommand("CREATE TABLE table1 ( position ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY, !column2 ENCRYPTED 2 NOT NULL);");
+            await RunSqlCommand("CREATE TABLE table2 ( column1 ENCRYPTED RANGE (2, 1, 10) PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
             //RunSqlCommand("CREATE TABLE table3 ( column1 ENCRYPTED 5 PRIMARY KEY REFERENCES table1 ( position ), column2 ENCRYPTED 40 );");
-            RunSqlCommand("CREATE TABLE !table4 ( !column1 int PRIMARY KEY);");
-            RunSqlCommand("CREATE TABLE !table5 ( !column1 int PRIMARY KEY REFERENCES !table4 ( !column1 ), column2 ENCRYPTED 40 );");
-            RunSqlCommand("CREATE TABLE !table6 ( !column1 int PRIMARY KEY REFERENCES !table4 ( !column1 ), column2 ENCRYPTED 40 );");
+            await RunSqlCommand("CREATE TABLE !table4 ( !column1 int PRIMARY KEY);");
+            await RunSqlCommand("CREATE TABLE !table5 ( !column1 int PRIMARY KEY REFERENCES !table4 ( !column1 ), column2 ENCRYPTED 40 );");
+            await RunSqlCommand("CREATE TABLE !table6 ( !column1 int PRIMARY KEY REFERENCES !table4 ( !column1 ), column2 ENCRYPTED 40 );");
 
-            RunSqlCommand("DROP TABLE table2;");
+            await RunSqlCommand("DROP TABLE table2;");
 
-            RunSqlCommand("ALTER TABLE table1 RENAME TO newtable11");
-            RunSqlCommand("ALTER TABLE newtable11 RENAME TO bestplayers");
-            RunSqlCommand("ALTER TABLE bestplayers RENAME !column2 TO name");
-            RunSqlCommand("ALTER TABLE bestplayers ADD COLUMN !number int");
-            RunSqlCommand("ALTER TABLE bestplayers ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
-            RunSqlCommand("ALTER TABLE bestplayers DROP COLUMN column4");
+            await RunSqlCommand("ALTER TABLE table1 RENAME TO newtable11");
+            await RunSqlCommand("ALTER TABLE newtable11 RENAME TO bestplayers");
+            await RunSqlCommand("ALTER TABLE bestplayers RENAME !column2 TO name");
+            await RunSqlCommand("ALTER TABLE bestplayers ADD COLUMN !number int");
+            await RunSqlCommand("ALTER TABLE bestplayers ADD COLUMN column4 ENCRYPTED 30 NOT NULL");
+            await RunSqlCommand("ALTER TABLE bestplayers DROP COLUMN column4");
 
-            RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 1 )");
-            RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 2 )");
-            RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 3 )");
+            await RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 1 )");
+            await RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 2 )");
+            await RunSqlCommand("INSERT INTO !table4 (!column1) VALUES ( 3 )");
 
-            RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 1, 'primeiro' )");
-            RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 2, 'segundo' )");
-            RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 3, 'terceiro' )");
+            await RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 1, 'primeiro' )");
+            await RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 2, 'segundo' )");
+            await RunSqlCommand("INSERT INTO !table5 (!column1, column2) VALUES ( 3, 'terceiro' )");
 
-            RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 1, 'first' )");
-            RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 2, 'second' )");
-            RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 3, 'third' )");
+            await RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 1, 'first' )");
+            await RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 2, 'second' )");
+            await RunSqlCommand("INSERT INTO !table6 (!column1, column2) VALUES ( 3, 'third' )");
 
-            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 1, 'Cristiano Ronaldo', 7 )");
-            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 2, 'bulha', 7 )");
-            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 3, 'bulha', 25 )");
-            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 4, 'pires', 10 )");
-            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 5, 'fernando', 25 )");
-            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 6, 'marcia', 26 )");
-            RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 7, 'marcia', 290)");
+            await RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 1, 'Cristiano Ronaldo', 7 )");
+            await RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 2, 'bulha', 7 )");
+            await RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 3, 'bulha', 25 )");
+            await RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 4, 'pires', 10 )");
+            await RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 5, 'fernando', 25 )");
+            await RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 6, 'marcia', 26 )");
+            await RunSqlCommand("INSERT INTO bestplayers (position, name, !number) VALUES ( 7, 'marcia', 290)");
 
-            RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name = 'bulha';");
+            await RunSqlCommand("SELECT bestplayers.name FROM bestplayers WHERE bestplayers.name = 'bulha';");
 
-            RunSqlCommand("SELECT bestplayers.* FROM bestplayers WHERE bestplayers.name = 'bulha' OR ( bestplayers.!number > 10 AND bestplayers.!number <= 26 );");
+            await RunSqlCommand("SELECT bestplayers.* FROM bestplayers WHERE bestplayers.name = 'bulha' OR ( bestplayers.!number > 10 AND bestplayers.!number <= 26 );");
 
-            RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
+            await RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
 
-            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1;");
+            await RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1;");
 
-            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 AND !table4.!column1 = 2 ;");
+            await RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 AND !table4.!column1 = 2 ;");
 
-            RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 WHERE !table4.!column1 = 2;");
+            await RunSqlCommand("SELECT !table4.*, !table5.* FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 WHERE !table4.!column1 = 2;");
 
-            RunSqlCommand("SELECT !table4.*, !table5.column2, !table6.column2  FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 JOIN !table6 ON !table4.!column1 = !table6.!column1 WHERE !table4.!column1 = 2;");
+            await RunSqlCommand("SELECT !table4.*, !table5.column2, !table6.column2  FROM !table4 JOIN !table5 ON !table4.!column1 = !table5.!column1 JOIN !table6 ON !table4.!column1 = !table6.!column1 WHERE !table4.!column1 = 2;");
 
-            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5 JOIN !table6 ON !table5.column2 = !table6.column2;");
+            await RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5 JOIN !table6 ON !table5.column2 = !table6.column2;");
 
-            RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5, !table6 WHERE !table5.!column1 = !table6.!column1;");
+            await RunSqlCommand("SELECT !table5.column2, !table6.column2  FROM !table5, !table6 WHERE !table5.!column1 = !table6.!column1;");
 
-            RunSqlCommand("UPDATE bestplayers SET name = 'ricardo', number = 1000 where bestplayers.name = 'marcia'");
-            RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
+            await RunSqlCommand("UPDATE bestplayers SET name = 'ricardo', number = 1000 where bestplayers.name = 'marcia'");
+            await RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
 
 
-            RunSqlCommand("UPDATE bestplayers SET name = 'ricardo' where bestplayers.number = 25");
-            RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
+            await RunSqlCommand("UPDATE bestplayers SET name = 'ricardo' where bestplayers.number = 25");
+            await RunSqlCommand("SELECT bestplayers.* FROM bestplayers");
+
+            await RunSqlCommand("LIST");
+            await RunSqlCommand("CURRENT_DATABASE");
 
             //RunSqlCommand("DROP DATABASE database1;");
         }
 
-        private void RunSqlCommand(string plainSqlCommand)
+        private async Task RunSqlCommand(string plainSqlCommand)
         {
             Console.WriteLine("");
             Console.WriteLine(plainSqlCommand);
@@ -188,6 +192,16 @@ namespace BlockBase.TestsConsole.Commands
                                 else
                                     _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
                             }
+                            break;
+                        case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
+                            if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
+                            {
+                                var databasesList = await _psqlConnector.GetDatabasesList();
+                                Console.WriteLine("Databases:");
+                                foreach(var database in databasesList) Console.WriteLine(_infoPostProcessing.DecryptDatabaseName(database));
+                            }
+
+                            else Console.WriteLine("Current Database: " + _infoPostProcessing.DecryptDatabaseName(_databaseName) ?? "none");
                             break;
                     }
                 }

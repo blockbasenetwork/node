@@ -45,12 +45,12 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitCurrent_database_stmt(Current_database_stmtContext context)
         {
-            throw new NotImplementedException();
+            return new CurrentDatabaseStatement();
         }
 
         public override object VisitList_databases_stmt(List_databases_stmtContext context)
         {
-            throw new NotImplementedException();
+            return new ListDatabasesStatement();
         }
 
         public override object VisitGet_structure_stmt(Get_structure_stmtContext context)

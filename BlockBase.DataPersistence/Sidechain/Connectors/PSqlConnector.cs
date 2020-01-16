@@ -22,7 +22,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         private static readonly string COLUMN_INFO_TABLE_NAME = "column_info";
         private static readonly string COLUMN_INFO_COLUMN_NAME = "column_name";
 
-        private static readonly List<string> DEFAULT_DBS  = new List<string>() { "template0", "template1" };
+        private static readonly List<string> DEFAULT_DBS  = new List<string>() { "template0", "template1", "postgres" };
 
 
         public PSqlConnector(string serverName, string user, int port, string password, ILogger logger)

@@ -179,6 +179,11 @@ namespace BlockBase.DataProxy.Encryption
             return decryptedResults;
         }
 
+        public string DecryptDatabaseName(string encryptedDatabaseName)
+        {
+            var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(encryptedDatabaseName), null);
+            return databaseInfoRecord.KeyName != null ? _encryptor.DecryptName(databaseInfoRecord) : databaseInfoRecord.Name;
+        }
 
         private IList<IList<string>> FilterExpression(AbstractExpression expression, IList<IList<string>> decryptedResults, IList<TableAndColumnName> columnNames)
         {

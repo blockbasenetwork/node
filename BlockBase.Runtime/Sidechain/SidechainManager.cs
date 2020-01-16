@@ -24,7 +24,6 @@ namespace BlockBase.Runtime.Sidechain
 {
     public class SidechainManager : IThreadableComponent
     {
-        //TODO: marciak - build chain method.
         //encrypt and decrypt IPs methods
 
         //rpinto - this isn't thread safe. Anything that may be accessed from a different running thread must be thread safe.  -> done - marciak

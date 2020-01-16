@@ -169,7 +169,6 @@ namespace BlockBase.DataProxy.Encryption
             return new List<InfoRecord>();
         }
 
-        //TODO: check if this is ok
         public DataType GetColumnDataType(InfoRecord columnInfoRecord)
         {
             if (columnInfoRecord.Data == null) throw new FormatException("Column Data is empty!");
