@@ -40,13 +40,13 @@ namespace BlockBase.DataProxy.Encryption
         private static readonly estring IV = new estring(InfoTableConstants.IV);
         private InfoRecord _databaseInfoRecord = null;
 
-        private PSqlConnector _psqlConnector;
+        private IConnector _connector;
         private IEncryptor _encryptor;
 
         //TODO: this will not have a psql conector, instead it will have a classe that will communicate with the producer
-        public Transformer_v2(PSqlConnector psqlConnector, MiddleMan middleMan)
+        public Transformer_v2(IConnector connector, MiddleMan middleMan)
         {
-            _psqlConnector = psqlConnector;
+            _connector = connector;
             _encryptor = middleMan;
         }
 
@@ -124,7 +124,7 @@ namespace BlockBase.DataProxy.Encryption
             var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
             _encryptor.RemoveInfoRecord(infoRecord);
 
-            foreach (var child in childrenInfoRecords) sqlStatements.Add(CreateDeleteRecordStatementForInfoTable(child.IV));
+            foreach (var child in childrenInfoRecords) _encryptor.RemoveInfoRecord(child);
 
             return sqlStatements;
         }

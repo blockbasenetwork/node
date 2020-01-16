@@ -2,46 +2,25 @@
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
 using BlockBase.DataProxy.Encryption;
-using BlockBase.Domain.Database.QueryParser;
-using BlockBase.Domain.Database.Sql.Generators;
-using BlockBase.Domain.Database.Sql.QueryBuilder;
-using BlockBase.Domain.Database.Sql.QueryParser;
 using BlockBase.TestsConsole.Commands.Interfaces;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Threading.Tasks;
-using BlockBase.Domain.Database.Sql.SqlCommand;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
-using System.Collections.Generic;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
-using System.Linq;
+using BlockBase.DataPersistence.Sidechain.Connectors;
+
 
 namespace BlockBase.TestsConsole.Commands
 {
     internal class TestTransformerCommand : IHelperCommand
     {
-        private Transformer_v2 _transformer;
-        private BareBonesSqlBaseVisitor<object> _visitor;
-        private PSqlConnector _psqlConnector;
-        private InfoPostProcessing _infoPostProcessing;
-        private readonly ILogger _logger;
-        private IGenerator _generator;
-        private string _databaseName = "";
-
+        private ExecuteSqlCommand _executer;
         public TestTransformerCommand(ILogger logger)
         {
-            _logger = logger;
-            _psqlConnector = new PSqlConnector("localhost", "postgres", 5432, "qwerty123", _logger);
             var secretStore = new SecretStore();
             secretStore.SetSecret("master_key", KeyAndIVGenerator_v2.CreateRandomKey());
             secretStore.SetSecret("master_iv", KeyAndIVGenerator_v2.CreateMasterIV("qwerty123"));
             var databaseKeyManager = new DatabaseKeyManager(secretStore);
             var middleMan = new MiddleMan(databaseKeyManager, secretStore);
-            _transformer = new Transformer_v2(_psqlConnector, middleMan);
-            _visitor = new BareBonesSqlVisitor();
-            _infoPostProcessing = new InfoPostProcessing(middleMan);
-            _generator = new PSqlGenerator();
+            _executer = new ExecuteSqlCommand(middleMan, logger, new PSqlConnector("localhost", "postgres", 5432, "qwerty123", logger));
         }
 
         public async Task ExecuteAsync()
@@ -114,102 +93,13 @@ namespace BlockBase.TestsConsole.Commands
             await RunSqlCommand("LIST");
             await RunSqlCommand("CURRENT_DATABASE");
 
-            //RunSqlCommand("DROP DATABASE database1;");
+            await RunSqlCommand("DROP DATABASE database1;");
+            await RunSqlCommand("DROP DATABASE database2;");
         }
 
         private async Task RunSqlCommand(string plainSqlCommand)
         {
-            Console.WriteLine("");
-            Console.WriteLine(plainSqlCommand);
-            AntlrInputStream inputStream = new AntlrInputStream(plainSqlCommand);
-            BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
-            CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
-            BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
-
-            var context = parser.sql_stmt_list();
-            try
-            {
-                var builder = (Builder)_visitor.Visit(context);
-                _transformer.TransformBuilder(builder);
-                builder.BuildSqlStatements(_generator);
-
-
-                foreach (var sqlCommand in builder.SqlCommands)
-                {
-                    Console.WriteLine("");
-                    string sqlTextToExecute = "";
-                    if (sqlCommand is DatabaseSqlCommand)
-                        _databaseName = ((DatabaseSqlCommand)sqlCommand).DatabaseName;
-
-                    switch (sqlCommand)
-                    {
-                        case ReadQuerySqlCommand readQuerySql:
-                            sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
-                            Console.WriteLine(sqlTextToExecute);
-                            var resultList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                            var filteredResults = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultList, _databaseName);
-                            foreach (var row in filteredResults)
-                            {
-                                Console.WriteLine();
-                                foreach (var value in row) Console.Write(value + " ");
-                            }
-                            break;
-
-                        case UpdateSqlCommand updateSqlCommand:
-                            sqlTextToExecute = updateSqlCommand.TransformedSqlStatementText[0];
-                            Console.WriteLine(sqlTextToExecute);
-
-                            var resultsList = _psqlConnector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                            var finalListOfUpdates = _infoPostProcessing.UpdateUpdateRecordStatement(updateSqlCommand, resultsList, _databaseName);
-
-                            var updatesToExecute = finalListOfUpdates.Select(u => _generator.BuildString(u)).ToList();
-                            foreach (var updateToExecute in updatesToExecute)
-                            {
-                                Console.WriteLine(updateToExecute);
-                                _psqlConnector.ExecuteCommand(updateToExecute, _databaseName);
-                            }
-
-                            break;
-
-
-                        case GenericSqlCommand genericSqlCommand:
-                            for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
-                            {
-                                sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
-                                Console.WriteLine(sqlTextToExecute);
-                                _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                            }
-                            break;
-
-                        case DatabaseSqlCommand databaseSqlCommand:
-                            if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement) continue;
-                            for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
-                            {
-                                sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
-                                Console.WriteLine(sqlTextToExecute);
-                                if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
-                                    _psqlConnector.ExecuteCommand(sqlTextToExecute, null);
-                                else
-                                    _psqlConnector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                            }
-                            break;
-                        case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
-                            if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
-                            {
-                                var databasesList = await _psqlConnector.GetDatabasesList();
-                                Console.WriteLine("Databases:");
-                                foreach(var database in databasesList) Console.WriteLine(_infoPostProcessing.DecryptDatabaseName(database));
-                            }
-
-                            else Console.WriteLine("Current Database: " + _infoPostProcessing.DecryptDatabaseName(_databaseName) ?? "none");
-                            break;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
+            await _executer.Execute(plainSqlCommand);
         }
 
         public string GetCommandHelp()
