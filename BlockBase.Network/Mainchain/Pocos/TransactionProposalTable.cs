@@ -1,18 +1,15 @@
-using EosSharp;
-using EosSharp.Core.Api.v1;
+using BlockBase.Domain.Eos;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class TransactionProposalTable
     {
-        [JsonProperty("proposal_name")]
+        [JsonProperty(EosAtributeNames.PROPOSAL_NAME)]
         public string ProposalName { get; set; }
 
-        [JsonProperty("packed_transaction")]
+        [JsonProperty(EosAtributeNames.PACKED_TRANSACTION)]
         public string PackedTransaction { get; set; }
     }
 }

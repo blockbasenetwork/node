@@ -51,16 +51,16 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Sends a transaction to blockbase operation contract to request the sidechain and enable further configuration.
+        /// Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration
         /// </summary>
         /// <returns>The success of the transaction</returns>
         /// <response code="200">Chain started with success</response>
         /// <response code="500">Error starting chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a transaction to blockbase operation contract to request a sidechain and enable further configuration.",
-            Description = "Description here",
-            OperationId = "Startchain"
+            Summary = "Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration",
+            Description = "The requester uses this service to request a new sidechain for storing his databases",
+            OperationId = "StartChain"
         )]
         public async Task<ObjectResult> StartChain()
         {
@@ -77,18 +77,18 @@ namespace BlockBase.Node.Controllers
         }
         
         /// <summary>
-        /// Sends a transaction to blockbase operation contract to configure the requested sidechain.
+        /// Sends a transaction to Blockbase Operations Contract with the configuration requested for the sidechain
         /// </summary>
-        /// <param name="configuration">Configurations of the requested sidechain</param>
+        /// <param name="configuration">The sidechain configuration</param>
         /// <returns>The success of the configuration</returns>
-        /// <response code="200">Chain configured with success.</response>
-        /// <response code="400">Configuration parameters invalid.</response>
+        /// <response code="200">Chain configured with success</response>
+        /// <response code="400">Configuration parameters invalid</response>
         /// <response code="500">Error configurating the chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a transaction to blockbase operation contract to configure the requested sidechain.",
-            Description = "Description here",
-            OperationId = "Configurechain"
+            Summary = "Sends a transaction to BlockBase Operations Contract with the configuration requested for the sidechain",
+            Description = "The requester uses this service to configure the requirements for the sidechain and for producers participation",
+            OperationId = "ConfigureChain"
         )]
         public async Task<ObjectResult> ConfigureChain([FromBody]ContractInformationTable configuration)
         {
@@ -106,16 +106,16 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Sends a transaction to the blockbase operation contract to end the requested sidechain.
+        /// Sends a transaction to the BlockBase Operations Contract to terminate the sidechain
         /// </summary>
         /// <returns>The success of the transaction</returns>
-        /// <response code="200">Chain ended with success</response>
-        /// <response code="500">Error ending the chain</response>
+        /// <response code="200">Chain terminated with success</response>
+        /// <response code="500">Error terminating the chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a transaction to the blockbase operation contract to end the requested sidechain.",
-            Description = "Description here",
-            OperationId = "Endchain"
+            Summary = "Sends a transaction to the BlockBase Operations Contract to terminate the sidechain",
+            Description = "The requester uses this service to terminate a given sidechain",
+            OperationId = "EndChain"
         )]
         public async Task<ObjectResult> EndChain()
         {
@@ -128,16 +128,21 @@ namespace BlockBase.Node.Controllers
             catch(Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            }   
         }
 
         /// <summary>
-        /// Sends the request to start sidechain maintainance.
+        /// Starts the maintenance of the sidechain
         /// </summary>
-        /// <returns>The success of the task</returns>
-        /// <response code="200">Chain maintaince started with success</response>
-        /// <response code="500">Error starting maintaince of the chain</response>
+        /// <returns>The success of starting the sidechain maintenance</returns>
+        /// <response code="200">Chain maintenance started with success</response>
+        /// <response code="500">Error starting the maintenance of the chain</response>
         [HttpPost]
+        [SwaggerOperation(
+            Summary = "Starts the maintenance of the sidechain",
+            Description = "The requester uses this service to start the maintenance of the sidechain",
+            OperationId = "StartChainMaintenance"
+        )]
         public async Task<ObjectResult> StartChainMaintenance()
         {
             try
@@ -159,12 +164,17 @@ namespace BlockBase.Node.Controllers
             }
         }
         /// <summary>
-        /// Sends the request to end the sidechain maintainance.
+        /// Terminates the sidechain maintenance
         /// </summary>
-        /// <returns>The success in ending chain maintainance</returns>
-        /// <response code="200">Chain maintainance ended with success</response>
-        /// <response code="500">Error ending the chain maintainance</response>
+        /// <returns>The success of terminating the sidechain maintenance</returns>
+        /// <response code="200">Chain maintenance terminated with success</response>
+        /// <response code="500">Error terminating the chain maintenance</response>
         [HttpPost]
+        [SwaggerOperation(
+            Summary = "Terminates the sidechain maintenance",
+            Description = "The requester uses this service to end the maintenance of the sidechain",
+            OperationId = "EndChainMaintenance"
+        )]
         public async Task<ObjectResult> EndChainMaintenance()
         {
             return NotFound(new NotImplementedException());

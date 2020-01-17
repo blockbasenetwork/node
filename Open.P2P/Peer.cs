@@ -79,6 +79,7 @@ namespace Open.P2P
         internal void Disconnect()
         {
             Stream.Close();
+            Connection.Close();
         }
     }
 }

@@ -1,31 +1,26 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class ProducerInTable
     {
-        [JsonProperty("key")]
+        [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
 
-        [JsonProperty("publickey")]
+        [JsonProperty(EosAtributeNames.PUBLIC_KEY)]
         public string PublicKey { get; set; }
 
-        [JsonProperty("producerstake")]
+        [JsonProperty(EosAtributeNames.PRODUCER_STAKE)]
         public uint ProducerStake { get; set; }
 
-        [JsonProperty("miningposition")]
-        public uint MiningPosition { get; set; }
-
-        [JsonProperty("warning")]
+        [JsonProperty(EosAtributeNames.WARNING_TYPE)]
         public uint Warning { get; set; }
 
-        [JsonProperty("worktimeinseconds")]
+        [JsonProperty(EosAtributeNames.WORK_DURATION_IN_SECONDS)]
         public uint WorkTimeInSeconds { get; set; }
 
-        [JsonProperty("startinsidechaindate")]
+        [JsonProperty(EosAtributeNames.SIDECHAIN_START_DATE_IN_SECONDS)]
         public uint StartInSidechainDate { get; set; }
 
     }

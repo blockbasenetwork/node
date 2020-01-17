@@ -1,0 +1,35 @@
+trigger:
+  - master
+pool:
+  vmImage: 'ubuntu-16.04'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'restore'
+    restoreSolution: '**/*.sln'
+    feedsToUse: 'select'
+    noCache: true
+
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '2.2.x'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'build'
+    workingDirectory: '$(Build.SourcesDirectory)/BlockBase.Node/'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'publish'
+    arguments: '--configuration release --output $(build.artifactstagingdirectory)'
+    workingDirectory: '$(Build.SourcesDirectory)/BlockBase.Node/'

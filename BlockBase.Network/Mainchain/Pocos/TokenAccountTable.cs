@@ -1,13 +1,11 @@
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class TokenAccountTable
     {
-        [JsonProperty("balance")]
+        [JsonProperty(EosAtributeNames.BALANCE)]
         public string Balance { get; set; }
     }
 }
