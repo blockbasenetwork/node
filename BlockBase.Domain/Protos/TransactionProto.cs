@@ -25,15 +25,15 @@ namespace BlockBase.Domain.Protos {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChZUcmFuc2FjdGlvblByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWluLlBy",
-            "b3RvcyK5AQoQVHJhbnNhY3Rpb25Qcm90bxIXCg9UcmFuc2FjdGlvbkhhc2gY",
-            "ASABKAwSEQoJU2lnbmF0dXJlGAIgASgJEhcKD1RyYW5zYWN0aW9uVHlwZRgD",
-            "IAEoCRIRCglUaW1lc3RhbXAYBSABKAQSFgoOU2VxdWVuY2VOdW1iZXIYBiAB",
-            "KAQSDAoESnNvbhgHIAEoCRIRCglCbG9ja0hhc2gYCCABKAwSFAoMRGF0YWJh",
-            "c2VOYW1lGAkgASgJYgZwcm90bzM="));
+            "b3RvcyK1AQoQVHJhbnNhY3Rpb25Qcm90bxIXCg9UcmFuc2FjdGlvbkhhc2gY",
+            "ASABKAwSEQoJU2lnbmF0dXJlGAIgASgJEhMKC0lzUmVhZFF1ZXJ5GAMgASgI",
+            "EhEKCVRpbWVzdGFtcBgFIAEoBBIWCg5TZXF1ZW5jZU51bWJlchgGIAEoBBIM",
+            "CgRKc29uGAcgASgJEhEKCUJsb2NrSGFzaBgIIAEoDBIUCgxEYXRhYmFzZU5h",
+            "bWUYCSABKAliBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.TransactionProto), global::BlockBase.Domain.Protos.TransactionProto.Parser, new[]{ "TransactionHash", "Signature", "TransactionType", "Timestamp", "SequenceNumber", "Json", "BlockHash", "DatabaseName" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.TransactionProto), global::BlockBase.Domain.Protos.TransactionProto.Parser, new[]{ "TransactionHash", "Signature", "IsReadQuery", "Timestamp", "SequenceNumber", "Json", "BlockHash", "DatabaseName" }, null, null, null)
           }));
     }
     #endregion
@@ -67,7 +67,7 @@ namespace BlockBase.Domain.Protos {
     public TransactionProto(TransactionProto other) : this() {
       transactionHash_ = other.transactionHash_;
       signature_ = other.signature_;
-      transactionType_ = other.transactionType_;
+      isReadQuery_ = other.isReadQuery_;
       timestamp_ = other.timestamp_;
       sequenceNumber_ = other.sequenceNumber_;
       json_ = other.json_;
@@ -103,14 +103,14 @@ namespace BlockBase.Domain.Protos {
       }
     }
 
-    /// <summary>Field number for the "TransactionType" field.</summary>
-    public const int TransactionTypeFieldNumber = 3;
-    private string transactionType_ = "";
+    /// <summary>Field number for the "IsReadQuery" field.</summary>
+    public const int IsReadQueryFieldNumber = 3;
+    private bool isReadQuery_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string TransactionType {
-      get { return transactionType_; }
+    public bool IsReadQuery {
+      get { return isReadQuery_; }
       set {
-        transactionType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+        isReadQuery_ = value;
       }
     }
 
@@ -184,7 +184,7 @@ namespace BlockBase.Domain.Protos {
       }
       if (TransactionHash != other.TransactionHash) return false;
       if (Signature != other.Signature) return false;
-      if (TransactionType != other.TransactionType) return false;
+      if (IsReadQuery != other.IsReadQuery) return false;
       if (Timestamp != other.Timestamp) return false;
       if (SequenceNumber != other.SequenceNumber) return false;
       if (Json != other.Json) return false;
@@ -198,7 +198,7 @@ namespace BlockBase.Domain.Protos {
       int hash = 1;
       if (TransactionHash.Length != 0) hash ^= TransactionHash.GetHashCode();
       if (Signature.Length != 0) hash ^= Signature.GetHashCode();
-      if (TransactionType.Length != 0) hash ^= TransactionType.GetHashCode();
+      if (IsReadQuery != false) hash ^= IsReadQuery.GetHashCode();
       if (Timestamp != 0UL) hash ^= Timestamp.GetHashCode();
       if (SequenceNumber != 0UL) hash ^= SequenceNumber.GetHashCode();
       if (Json.Length != 0) hash ^= Json.GetHashCode();
@@ -225,9 +225,9 @@ namespace BlockBase.Domain.Protos {
         output.WriteRawTag(18);
         output.WriteString(Signature);
       }
-      if (TransactionType.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteString(TransactionType);
+      if (IsReadQuery != false) {
+        output.WriteRawTag(24);
+        output.WriteBool(IsReadQuery);
       }
       if (Timestamp != 0UL) {
         output.WriteRawTag(40);
@@ -263,8 +263,8 @@ namespace BlockBase.Domain.Protos {
       if (Signature.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Signature);
       }
-      if (TransactionType.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(TransactionType);
+      if (IsReadQuery != false) {
+        size += 1 + 1;
       }
       if (Timestamp != 0UL) {
         size += 1 + pb::CodedOutputStream.ComputeUInt64Size(Timestamp);
@@ -298,8 +298,8 @@ namespace BlockBase.Domain.Protos {
       if (other.Signature.Length != 0) {
         Signature = other.Signature;
       }
-      if (other.TransactionType.Length != 0) {
-        TransactionType = other.TransactionType;
+      if (other.IsReadQuery != false) {
+        IsReadQuery = other.IsReadQuery;
       }
       if (other.Timestamp != 0UL) {
         Timestamp = other.Timestamp;
@@ -335,8 +335,8 @@ namespace BlockBase.Domain.Protos {
             Signature = input.ReadString();
             break;
           }
-          case 26: {
-            TransactionType = input.ReadString();
+          case 24: {
+            IsReadQuery = input.ReadBool();
             break;
           }
           case 40: {

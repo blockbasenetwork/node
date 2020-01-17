@@ -136,7 +136,7 @@ expr:
 	| expr (K_AND | K_OR) expr
 	| '(' expr ')';
 
-	//TODO: This can be simplified
+
 foreign_key_clause:
 	K_REFERENCES foreign_table (
 		'(' column_name ( ',' column_name)* ')'

@@ -20,8 +20,9 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
 
         public ISqlStatement Clone()
         {
-            //TODO: clone dictionary elements
-            return new InsertRecordStatement() { TableName = TableName.Clone(), ValuesPerColumn = new Dictionary<estring, IList<Value>>(ValuesPerColumn) };
+            var valuesPerColumnClone = new Dictionary<estring, IList<Value>>();
+            foreach (var keyPair in ValuesPerColumn) valuesPerColumnClone.Add(keyPair.Key, keyPair.Value.Select(v => v.Clone()).ToList());
+            return new InsertRecordStatement() { TableName = TableName.Clone(), ValuesPerColumn = valuesPerColumnClone };
         }
     }
 }

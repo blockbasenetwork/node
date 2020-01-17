@@ -13,31 +13,26 @@ namespace BlockBase.Domain.Blockchain
         public byte[] TransactionHash { get; set; }
         public ulong SequenceNumber { get; set; }
         public string Signature { get; set; }
-        // public OperationType OperationType { get; set; }
-        // public ISqlOperation Operation { get; set; }
-        public string TransactionType { get; set; }
         public ulong Timestamp { get; set; }
         public string Json { get; set; }
         public string DatabaseName { get; set; }
+        public bool IsReadQuery { get; set; }
         public byte[] BlockHash { get; set; }
 
         public Transaction() { }
 
-        public Transaction(byte[] transactionHash, ulong sequenceNumber, string signature, string transactionType, byte[] blockHash, string json, string databaseName, ulong? timestamp = null)
+        public Transaction(byte[] transactionHash, ulong sequenceNumber, string signature, bool isReadQuery, byte[] blockHash, string json, string databaseName, ulong? timestamp = null)
         {
+            IsReadQuery = isReadQuery;
             TransactionHash = transactionHash;
             SequenceNumber = sequenceNumber;
             Signature = signature;
-            // OperationType = operationType;
-            // Operation = operation;
-            TransactionType = transactionType;
             Timestamp = timestamp ?? (ulong) ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds();
             Json = json;
             BlockHash = blockHash;
             DatabaseName = databaseName;
         }
 
-        //TODO: ADD OPERATION TYPE
         public TransactionProto ConvertToProto()
         {
             var transactionProto = new TransactionProto()
@@ -49,7 +44,7 @@ namespace BlockBase.Domain.Blockchain
                 Json = Json,
                 BlockHash = ByteString.CopyFrom(BlockHash),
                 DatabaseName = DatabaseName,
-                TransactionType = TransactionType
+                IsReadQuery = IsReadQuery
             };
 
             return transactionProto;
@@ -64,14 +59,14 @@ namespace BlockBase.Domain.Blockchain
             Json = transactionProto.Json;
             BlockHash = transactionProto.BlockHash.ToByteArray();
             DatabaseName = transactionProto.DatabaseName;
-            TransactionType = transactionProto.TransactionType;
+            IsReadQuery = transactionProto.IsReadQuery;
 
             return this;
         }
 
         public object Clone()
         {
-            return new Transaction(TransactionHash, SequenceNumber, Signature, TransactionType, BlockHash, Json, DatabaseName, Timestamp);
+            return new Transaction(TransactionHash, SequenceNumber, Signature, IsReadQuery, BlockHash, Json, DatabaseName, Timestamp);
         }
     }
 }

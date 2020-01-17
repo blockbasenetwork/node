@@ -39,10 +39,15 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                 case CreateDatabaseStatement createDatabaseStatement:
                     sqlCommand = new DatabaseSqlCommand(createDatabaseStatement);
                     break;
+                case ListDatabasesStatement listDatabasesStatement:
+                    sqlCommand = new ListOrDiscoverCurrentDatabaseCommand(listDatabasesStatement);
+                    break;
+                case CurrentDatabaseStatement currentDatabaseStatement:
+                    sqlCommand = new ListOrDiscoverCurrentDatabaseCommand(currentDatabaseStatement);
+                    break;
                 default:
                     sqlCommand = new GenericSqlCommand(statement);
                     break;
-
             }
             SqlCommands.Add(sqlCommand);
         }

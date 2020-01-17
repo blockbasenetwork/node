@@ -25,8 +25,6 @@ namespace BlockBase.Domain.Database.Sql.Generators
         string BuildString(ColumnDefinition columnDefinition);
         string BuildString(SimpleSelectStatement simpleSelectStatement);
         string BuildString(SelectCoreStatement selectCoreStatement);
-
-        //TODO: REFACTOR PROBABLY EQUAL TO EVERY LANGUAGE
         string BuildString(ComparisonExpression.ComparisonOperatorEnum comparisonOperator);
         string BuildString(JoinOperationField.JoinConstraint joinConstraint);
         string BuildString(ResultColumn resultColumn);
