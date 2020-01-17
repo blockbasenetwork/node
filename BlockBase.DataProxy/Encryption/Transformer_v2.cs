@@ -19,18 +19,6 @@ namespace BlockBase.DataProxy.Encryption
 {
     public class Transformer_v2
     {
-        //TODO: refactor this to go to configs
-        private static string _separatingChar = "_";
-        private static string _ivPrefix = "iv";
-        private static string _bucketPrefix = "bkt";
-        private static string _equalityBucketPrefix = _bucketPrefix + "e";
-        private static string _rangeBucketPrefix = _bucketPrefix + "r";
-
-        private static readonly string ENCRYPTED_KEY_WORD = "encrypted";
-        private static readonly string TEXT_KEY_WORD = "text";
-        private static readonly string TRUE_KEY_WORD = "TRUE";
-        private static readonly string FALSE_KEY_WORD = "FALSE";
-
         private static readonly estring INFO_TABLE_NAME = new estring(InfoTableConstants.INFO_TABLE_NAME);
         private static readonly estring NAME = new estring(InfoTableConstants.NAME);
         private static readonly estring DATA = new estring(InfoTableConstants.DATA);
@@ -40,13 +28,10 @@ namespace BlockBase.DataProxy.Encryption
         private static readonly estring IV = new estring(InfoTableConstants.IV);
         private InfoRecord _databaseInfoRecord = null;
 
-        private IConnector _connector;
         private IEncryptor _encryptor;
 
-        //TODO: this will not have a psql conector, instead it will have a classe that will communicate with the producer
-        public Transformer_v2(IConnector connector, MiddleMan middleMan)
+        public Transformer_v2(MiddleMan middleMan)
         {
-            _connector = connector;
             _encryptor = middleMan;
         }
 
@@ -632,7 +617,7 @@ namespace BlockBase.DataProxy.Encryption
                 }
                 else
                 {
-                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnDataType.ToString() == TEXT_KEY_WORD));
+                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnDataType.DataTypeName == DataTypeEnum.TEXT));
                 }
             }
             return valuesPerColumn;

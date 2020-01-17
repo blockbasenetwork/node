@@ -26,9 +26,9 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         [BsonElement("Blockhash")]
         public string BlockHash { get; set; }
 
-        [BsonElement("TransactionType")]
+        [BsonElement("IsReadQuery")]
         [BsonRequired()]
-        public string TransactionType { get; set; }
+        public bool IsReadQuery { get; set; }
 
         [BsonElement("Timestamp")]
         [BsonRequired()]
@@ -38,8 +38,6 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         [BsonRequired()]
         public string DatabaseName { get; set; }
 
-
-        //TODO: ADD operation type
         public Transaction TransactionFromTransactionDB()
         {
             var transaction = new Transaction();
@@ -50,7 +48,7 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             transaction.BlockHash = HashHelper.FormattedHexaStringToByteArray(BlockHash);
             transaction.Json = TransactionJson;
             transaction.DatabaseName = DatabaseName;
-            transaction.TransactionType = TransactionType;
+            transaction.IsReadQuery = IsReadQuery;
             return transaction;
         }
 
@@ -63,7 +61,7 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             Timestamp = transaction.Timestamp;
             SequenceNumber = transaction.SequenceNumber;
             DatabaseName = transaction.DatabaseName;
-            TransactionType = transaction.TransactionType;
+            IsReadQuery = transaction.IsReadQuery;
             return this;
         }
     }

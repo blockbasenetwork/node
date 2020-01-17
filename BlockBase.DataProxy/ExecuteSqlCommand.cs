@@ -36,7 +36,7 @@ namespace BlockBase.DataProxy
             _generator = new PSqlGenerator();
             _logger = logger;
             _connector = connector;
-            _transformer = new Transformer_v2(_connector, middleMan);
+            _transformer = new Transformer_v2(middleMan);
 
         }
 
