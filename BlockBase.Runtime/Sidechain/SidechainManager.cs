@@ -501,8 +501,8 @@ namespace BlockBase.Runtime.Sidechain
             if (!Sidechain.ProducingBlocks) return;
 
             var nextBlockTime = lastBlockFromSettlement != null ?
-                lastBlockFromSettlement.Timestamp + Sidechain.BlockTimeDuration :
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
+                lastBlockFromSettlement.Timestamp + (Sidechain.BlockTimeDuration / 2) :
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (Sidechain.BlockTimeDuration / 2);
             if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
                 Sidechain.NextStateWaitEndTime = nextBlockTime;
         }
