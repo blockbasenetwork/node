@@ -43,12 +43,12 @@ namespace BlockBase.Runtime.Sidechain
         private async void MessageForwarder_BlockRequest(BlocksRequestReceivedEventArgs args)
         {
             _logger.LogDebug("Block request received.");
-            var blocksToSend = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.SidechainName, args.BeginBlockSequenceNumber, args.EndBlockSequenceNumber);
+            var blocksToSend = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, args.BeginBlockSequenceNumber, args.EndBlockSequenceNumber);
             if(blocksToSend.Count() == 0) _logger.LogDebug("No blocks to send after " + args.BeginBlockSequenceNumber + " and before or equal to " + args.EndBlockSequenceNumber);
             foreach(Block block in blocksToSend)
             {
                 _logger.LogDebug("Going to send block: " + block.BlockHeader.SequenceNumber);
-                var data = BlockProtoToMessageData(block.ConvertToProto(), args.SidechainName);
+                var data = BlockProtoToMessageData(block.ConvertToProto(), args.ClientAccountName);
                 var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, args.Sender);
                 await _networkService.SendMessageAsync(message);
             }
@@ -57,7 +57,7 @@ namespace BlockBase.Runtime.Sidechain
         internal async Task SendBlockToSidechainMembers(SidechainPool sidechainPool, BlockProto blockProto, string endPoint)
         {
             
-            var data = BlockProtoToMessageData(blockProto, sidechainPool.SmartContractAccount);
+            var data = BlockProtoToMessageData(blockProto, sidechainPool.ClientAccountName);
             var connectedProducersInSidechain = sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection != null && m.PeerConnection.ConnectionState == ConnectionStateEnum.Connected);
             foreach(ProducerInPool producerConnected in connectedProducersInSidechain)
             {

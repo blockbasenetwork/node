@@ -66,7 +66,7 @@ namespace BlockBase.Runtime.Network
         #region Enter Points
         public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
         {
-            _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.SmartContractAccount);
+            _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.PublicKey == _nodeConfigurations.ActivePublicKey));
 
@@ -75,7 +75,7 @@ namespace BlockBase.Runtime.Network
             var producersWhoIAmSupposedToBeConnected = orderedProducersInPool.Where(m => IsPeerConnectionValid(m)).Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState != ConnectionStateEnum.Connected).ToList();
 
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
-            {
+            { 
                 await ConnectToProducer(sidechain, producer);
             }
         }
@@ -84,17 +84,17 @@ namespace BlockBase.Runtime.Network
         {
             foreach (ProducerInPool producerInPool in sidechain.ProducersInPool)
             {
-                RemoveProducerConnectionIfPossible(producerInPool);
+                RemoveProducerConnectionIfPossible(producerInPool.PeerConnection);
             }
         }
 
-        public void RemoveProducerConnectionIfPossible(ProducerInPool producerInPool)
+        public void RemoveProducerConnectionIfPossible(PeerConnection peerConnection)
         {
-            if (producerInPool.PeerConnection != null && producerInPool.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
+            if (peerConnection != null && peerConnection.ConnectionState == ConnectionStateEnum.Connected)
             {
-                if (CanDeleteConnection(producerInPool.PeerConnection))
+                if (CanDeleteConnection(peerConnection))
                 {
-                    Disconnect(producerInPool.PeerConnection.Peer);
+                    Disconnect(peerConnection.Peer);
                 }
             }
         }
@@ -105,7 +105,7 @@ namespace BlockBase.Runtime.Network
 
             if (producer.ProducerInfo.IPEndPoint != null)
             { 
-                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo);
+                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.PublicKey);
                 var peerConnected = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
                 if (peerConnected == null)
@@ -180,9 +180,15 @@ namespace BlockBase.Runtime.Network
 
         private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
         {
+            if(_sidechainKeeper.Sidechains.Values.Where(s => s.ClientPublicKey == args.PublicKey).SingleOrDefault() != null)
+            {
+                
+
+            }
             var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.PublicKey == args.PublicKey)).FirstOrDefault();
 
             var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.SenderIPEndPoint)).SingleOrDefault();
+
             if (peer == null) {
                 _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
                 return;
@@ -248,28 +254,27 @@ namespace BlockBase.Runtime.Network
             await _networkService.SendMessageAsync(message);
         }
 
-        //rpinto - consider not using this method at all -> marciak - method removed
-        //private PeerConnection ChangeConnectionState(PeerConnection connection, ConnectionStateEnum connectionState, Peer peer)
-
-        private PeerConnection AddIfNotExistsPeerConnection(ProducerInfo producerInfo)
+        private PeerConnection AddIfNotExistsPeerConnection(IPEndPoint ipEndPoint, string publicKey)
         {
-            PeerConnection producerPeerConnection = null;
+            PeerConnection peerConnection = null;
 
-            if (producerInfo.IPEndPoint != null)
+            if (ipEndPoint != null)
             {
-                producerPeerConnection = _currentPeerConnections.SingleOrDefault(p => p.IPEndPoint.Equals(producerInfo.IPEndPoint));
-                if (producerPeerConnection == null)
+                peerConnection = _currentPeerConnections.SingleOrDefault(p => p.IPEndPoint.Equals(ipEndPoint) || p.PublicKey == publicKey);
+                if (peerConnection == null)
                 {
-                    producerPeerConnection = new PeerConnection
+                    peerConnection = new PeerConnection
                     {
                         ConnectionState = ConnectionStateEnum.Disconnected,
                         Rating = STARTING_RATING,
-                        IPEndPoint = producerInfo.IPEndPoint
+                        IPEndPoint = ipEndPoint,
+                        PublicKey = publicKey
+                        
                     };
-                    _currentPeerConnections.Add(producerPeerConnection);
+                    _currentPeerConnections.Add(peerConnection);
                 }
             }
-            return producerPeerConnection;
+            return peerConnection;
         }
 
         private IPEndPoint TryParseIpEndPoint(string ipAddressStr, string portStr)

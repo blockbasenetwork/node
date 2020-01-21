@@ -147,15 +147,16 @@ namespace BlockBase.Runtime.Sidechain
         private async Task RecoverInfo()
         {
             Sidechain.State = SidechainPoolStateEnum.WaitForNextState;
+            Sidechain.ClientPublicKey = (await _mainchainService.RetrieveClientTable(Sidechain.ClientAccountName)).PublicKey;
 
             _logger.LogDebug("Recover Info");
 
-            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.SmartContractAccount);
+            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
 
             Sidechain.BlockTimeDuration = contractInformation.BlockTimeDuration;
             Sidechain.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;
 
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SmartContractAccount);
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
 
             if (IsProducerInTable(producersInTable))
             {
@@ -184,7 +185,7 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby) return;
 
             _logger.LogInformation("Init candidature.");
-            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.SmartContractAccount);
+            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
             if (contractInformation == null) _logger.LogCritical("contract info null");
             if (Sidechain == null) _logger.LogCritical("contract info null");
             Sidechain.BlockTimeDuration = contractInformation.BlockTimeDuration;
@@ -199,8 +200,8 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby) return;
 
             _logger.LogInformation("Sending Secret...");
-            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.SmartContractAccount);
-            var contractState = await _mainchainService.RetrieveContractState(Sidechain.SmartContractAccount);
+            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
+            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
 
             var secretPass = _nodeConfigurations.SecretPassword;
             _logger.LogDebug("Secret sent: " + _nodeConfigurations.SecretPassword);
@@ -210,7 +211,7 @@ namespace BlockBase.Runtime.Sidechain
 
             try
             {
-                await _mainchainService.AddSecret(Sidechain.SmartContractAccount, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
+                await _mainchainService.AddSecret(Sidechain.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
             }
             catch (ApiErrorException e)
             {
@@ -224,7 +225,7 @@ namespace BlockBase.Runtime.Sidechain
 
             _logger.LogInformation("End Candidature.");
 
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SmartContractAccount);
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
 
             if (IsProducerInTable(producersInTable))
             {
@@ -262,9 +263,8 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.CandidatureOnStandby) return;
 
             _logger.LogInformation("Init producer send IP.");
-            var producersPublicKeys = Sidechain.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.PublicKey).ToList();
-            var clientPublicKey = (await _mainchainService.RetrieveClientTable(Sidechain.SmartContractAccount)).PublicKey;
-            await EncryptAndSendIPToSmartContract(producersPublicKeys, clientPublicKey, Sidechain.SmartContractAccount);
+            var producersPublicKeys = Sidechain.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.PublicKey).ToList();           
+            await EncryptAndSendIPToSmartContract(producersPublicKeys, Sidechain.ClientPublicKey, Sidechain.ClientAccountName);
         }
 
         private async Task InitProducerReceiveIPs()
@@ -307,7 +307,7 @@ namespace BlockBase.Runtime.Sidechain
 
             try
             {
-                await _mainchainService.NotifyReady(Sidechain.SmartContractAccount, _nodeConfigurations.AccountName);
+                await _mainchainService.NotifyReady(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
             }
             catch (ApiErrorException e)
             {
@@ -383,7 +383,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task ExtractAndUpdateIPs()
         {
-            var ipAddresses = await _mainchainService.RetrieveIPAddresses(Sidechain.SmartContractAccount);
+            var ipAddresses = await _mainchainService.RetrieveIPAddresses(Sidechain.ClientAccountName);
 
             UpdateIPsInSidechain(ipAddresses);
 
@@ -472,7 +472,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task CheckContractAndUpdateStates()
         {
-            var contractState = await _mainchainService.RetrieveContractState(Sidechain.SmartContractAccount);
+            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
             if (contractState.ConfigTime) Sidechain.State = SidechainPoolStateEnum.ConfigTime;
             if (contractState.CandidatureTime) Sidechain.State = SidechainPoolStateEnum.CandidatureTime;
             if (contractState.SecretTime) Sidechain.State = SidechainPoolStateEnum.SecretTime;
@@ -489,8 +489,8 @@ namespace BlockBase.Runtime.Sidechain
         private async Task CheckContractAndUpdateWaitTimes()
         {
             _previousWaitTime = Sidechain.NextStateWaitEndTime;
-            var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.SmartContractAccount);
-            var lastBlockFromSettlement = await _mainchainService.RetrieveLastBlockFromLastSettlement(Sidechain.SmartContractAccount);
+            var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
+            var lastBlockFromSettlement = await _mainchainService.RetrieveLastBlockFromLastSettlement(Sidechain.ClientAccountName);
             if (Sidechain.State == SidechainPoolStateEnum.ConfigTime) Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (contractInfo.CandidatureTime / 2);
             if (Sidechain.State == SidechainPoolStateEnum.CandidatureTime && contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
             if (Sidechain.State == SidechainPoolStateEnum.SecretTime && contractInfo.SecretEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SecretEndDate;
@@ -508,8 +508,8 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task CheckContractEndState()
         {
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SmartContractAccount);
-            var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.SmartContractAccount);
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
+            var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
 
             if (Sidechain.State == SidechainPoolStateEnum.ConfigTime || (!IsProducerInTable(producersInTable) && !candidatesInTable.Select(m => m.Key).Contains(_nodeConfigurations.AccountName)))
             {
@@ -525,7 +525,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task CheckContractAndUpdatePool()
         {
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.SmartContractAccount);
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
             if (producersInTable == null || !producersInTable.Any() || !IsProducerInTable(producersInTable)) return;
 
             _logger.LogInformation("Checking if pool changed...");

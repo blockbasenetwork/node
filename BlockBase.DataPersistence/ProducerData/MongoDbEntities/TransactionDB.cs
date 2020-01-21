@@ -2,6 +2,7 @@
 using BlockBase.Utils.Crypto;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using static BlockBase.Domain.Protos.TransactionProto.Types;
 
 namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
 {
@@ -26,9 +27,9 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         [BsonElement("Blockhash")]
         public string BlockHash { get; set; }
 
-        [BsonElement("IsReadQuery")]
+        [BsonElement("SqlCommandType")]
         [BsonRequired()]
-        public bool IsReadQuery { get; set; }
+        public SqlCommandType SqlCommandType { get; set; }
 
         [BsonElement("Timestamp")]
         [BsonRequired()]
@@ -48,7 +49,7 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             transaction.BlockHash = HashHelper.FormattedHexaStringToByteArray(BlockHash);
             transaction.Json = TransactionJson;
             transaction.DatabaseName = DatabaseName;
-            transaction.IsReadQuery = IsReadQuery;
+            transaction.SqlCommandType = SqlCommandType;
             return transaction;
         }
 
@@ -61,7 +62,7 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             Timestamp = transaction.Timestamp;
             SequenceNumber = transaction.SequenceNumber;
             DatabaseName = transaction.DatabaseName;
-            IsReadQuery = transaction.IsReadQuery;
+            SqlCommandType = transaction.SqlCommandType;
             return this;
         }
     }

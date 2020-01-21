@@ -5,14 +5,14 @@ using BlockBase.DataProxy.Encryption;
 using BlockBase.TestsConsole.Commands.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.Sidechain.Connectors;
+using BlockBase.Runtime;
 
 
 namespace BlockBase.TestsConsole.Commands
 {
     internal class TestTransformerCommand : IHelperCommand
     {
-        private ExecuteSqlCommand _executer;
+        private SqlCommandManager _executer;
         public TestTransformerCommand(ILogger logger)
         {
             var secretStore = new SecretStore();
@@ -20,7 +20,7 @@ namespace BlockBase.TestsConsole.Commands
             secretStore.SetSecret("master_iv", KeyAndIVGenerator_v2.CreateMasterIV("qwerty123"));
             var databaseKeyManager = new DatabaseKeyManager(secretStore);
             var middleMan = new MiddleMan(databaseKeyManager, secretStore);
-            _executer = new ExecuteSqlCommand(middleMan, logger, new PSqlConnector("localhost", "postgres", 5432, "qwerty123", logger));
+            _executer = new SqlCommandManager(middleMan, logger, new PSqlConnector("localhost", "postgres", 5432, "qwerty123", logger));
         }
 
         public async Task ExecuteAsync()

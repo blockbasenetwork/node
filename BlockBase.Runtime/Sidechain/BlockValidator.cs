@@ -62,9 +62,9 @@ namespace BlockBase.Runtime.Sidechain
         public async Task HandleReceivedBlock(SidechainPool sidechainPool, BlockProto blockProtoReceived)
         {
             // var sidechainName = sidechainPool.SmartContractAccount;
-            var databaseName = sidechainPool.SmartContractAccount;
+            var databaseName = sidechainPool.ClientAccountName;
 
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.SmartContractAccount);
+            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.ClientAccountName);
 
             await sidechainSemaphore.WaitAsync();
             try
@@ -82,9 +82,9 @@ namespace BlockBase.Runtime.Sidechain
                     return;
                 }
 
-                BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.SmartContractAccount)).ConvertToBlockHeader();
+                BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName)).ConvertToBlockHeader();
 
-                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool.SmartContractAccount))
+                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool))
                 {
                     //_logger.LogDebug("Block valid saving, sending and approving.");
                     
@@ -124,7 +124,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task<bool> IsTimeForThisProducerToProduce(SidechainPool sidechainPool, string blockProducer)
         {
-            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(sidechainPool.SmartContractAccount)).SingleOrDefault();
+            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(sidechainPool.ClientAccountName)).SingleOrDefault();
             if (currentProducerTable.Producer == blockProducer) return true;
             return false;
         }
@@ -134,16 +134,16 @@ namespace BlockBase.Runtime.Sidechain
             var blockProto = SerializationHelper.DeserializeBlock(args.BlockBytes, _logger);
             if (blockProto == null) return;
 
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.SingleOrDefault(s => s.Key == args.SidechainName);
+            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.SingleOrDefault(s => s.Key == args.ClientAccountName);
 
             var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
             if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
             {
-                _logger.LogDebug($"Block received but sidechain {args.SidechainName} is unknown.");
+                _logger.LogDebug($"Block received but sidechain {args.ClientAccountName} is unknown.");
                 return;
             }
 
-            var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPoolValuePair.Value.SmartContractAccount)).ProductionTime;
+            var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPoolValuePair.Value.ClientAccountName)).ProductionTime;
 
             if (!isProductionTime)
             {
@@ -151,11 +151,11 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
-            var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.SmartContractAccount)).SingleOrDefault().StartProductionTime;
+            var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.ClientAccountName)).SingleOrDefault().StartProductionTime;
 
-            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.SmartContractAccount, startProductionTime);
+            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.ClientAccountName, startProductionTime);
 
-            if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.SmartContractAccount, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
+            if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.ClientAccountName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
             {
                 _logger.LogDebug($"Mined block received but producer is not up to date.");
                 return;
@@ -192,15 +192,14 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private async Task<bool> ValidateBlockTransactions(Block block, string sidechainName)
+        private async Task<bool> ValidateBlockTransactions(Block block, SidechainPool sidechain)
         {
-            ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(sidechainName))?.SequenceNumber ?? 0;
+            ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(sidechain.ClientAccountName))?.SequenceNumber ?? 0;
             foreach(var transaction in block.Transactions)
             {
                 if(transaction.SequenceNumber != ++lastSequenceNumber) return false;
                 if(!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash)) return false;
-                var clientPublicKey = (await _mainchainService.RetrieveClientTable(sidechainName)).PublicKey;
-                if(!SignatureHelper.VerifySignature(clientPublicKey, transaction.Signature, transactionHash)) return false;
+                if(!SignatureHelper.VerifySignature(sidechain.ClientPublicKey, transaction.Signature, transactionHash)) return false;
             }
             return true;
         }

@@ -5,12 +5,10 @@ using BlockBase.Utils.Crypto;
 using BlockBase.Utils.Operation;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
-using Open.P2P;
 using System;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using System.Transactions;
 using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 
 namespace BlockBase.Network.Rounting
@@ -108,8 +106,22 @@ namespace BlockBase.Network.Rounting
 
         private BlockReceivedEventArgs ParseMinedBlockMessage(byte[] payload)
         {
-            // _logger.LogDebug($"Payload: {HashHelper.ByteArrayToFormattedHexaString(payload)}");
+            var clientAccountNameAndBlockBytes = ParseClienAccounttName(payload);
+            
+            
+            return new BlockReceivedEventArgs { ClientAccountName = clientAccountNameAndBlockBytes.Item1, BlockBytes = clientAccountNameAndBlockBytes.Item2 };
 
+        }
+
+         private TransactionReceivedEventArgs ParseTransactionMessage(byte[] payload)
+        {
+            var clientAccountNameAndTransactionBytes = ParseClienAccounttName(payload);
+            
+            return new TransactionReceivedEventArgs { ClientAccountName = clientAccountNameAndTransactionBytes.Item1, TransactionBytes = clientAccountNameAndTransactionBytes.Item2 };
+        }
+
+        private Tuple<string, byte[]> ParseClienAccounttName(byte[] payload)
+        {
             //int16 is transformed to an array of 2 bytes
             //max size of sidechain name is 12 chars/24 bytes
             //which can be reprensented in a short
@@ -117,37 +129,18 @@ namespace BlockBase.Network.Rounting
             // _logger.LogDebug($"Lenght Bytes: {HashHelper.ByteArrayToFormattedHexaString(lengthBytes)}");
 
             var length = BitConverter.ToInt16(lengthBytes);
-            // _logger.LogDebug($"Lenght: {length}");
+             // _logger.LogDebug($"Lenght: {length}");
 
             byte[] stringBytes = new byte[length];
             Array.Copy(payload, lengthBytes.Length, stringBytes, 0, length);
             // _logger.LogDebug($"Sidechain Name Bytes: {HashHelper.ByteArrayToFormattedHexaString(stringBytes)}");
 
             var numberBlockBytes = payload.Length - length - lengthBytes.Length;
-            byte[] blockBytes = new byte[numberBlockBytes];
-            Array.Copy(payload, lengthBytes.Length + length, blockBytes, 0, numberBlockBytes);
-            // _logger.LogDebug($"Block Bytes: {HashHelper.ByteArrayToFormattedHexaString(blockBytes)}");
-            
-            return new BlockReceivedEventArgs { SidechainName = Encoding.UTF8.GetString(stringBytes), BlockBytes = blockBytes };
-
-        }
-
-        //TODO: REFACTOR THIS
-         private TransactionReceivedEventArgs ParseTransactionMessage(byte[] payload)
-        {
-            var lengthBytes = new byte[] { payload[0], payload[1] };
-
-            var length = BitConverter.ToInt16(lengthBytes);
-
-            byte[] stringBytes = new byte[length];
-            Array.Copy(payload, lengthBytes.Length, stringBytes, 0, length);
-
-            var numberBlockBytes = payload.Length - length - lengthBytes.Length;
             byte[] transactionBytes = new byte[numberBlockBytes];
             Array.Copy(payload, lengthBytes.Length + length, transactionBytes, 0, numberBlockBytes);
-            
-            return new TransactionReceivedEventArgs { SidechainName = Encoding.UTF8.GetString(stringBytes), TransactionBytes = transactionBytes };
+            // _logger.LogDebug($"Block Bytes: {HashHelper.ByteArrayToFormattedHexaString(blockBytes)}");
 
+            return new Tuple<string, byte[]> (Encoding.UTF8.GetString(stringBytes), transactionBytes);
         }
 
 
@@ -158,7 +151,6 @@ namespace BlockBase.Network.Rounting
             var endBlockSequenceNumberBytes = new byte[8];
             Array.Copy(payload, 8, endBlockSequenceNumberBytes, 0, 8);
 
-            //  {payload[0], payload[1], payload[2], payload[3], payload[4], payload[5], payload[6], payload[7]}; 
             var beginBlockSequenceNumber = BitConverter.ToUInt64(beginBlockSequenceNumberBytes);
             var endBlockSequenceNumber = BitConverter.ToUInt64(endBlockSequenceNumberBytes);
 
@@ -166,7 +158,7 @@ namespace BlockBase.Network.Rounting
             byte[] stringBytes = new byte[sidechainBytesLength];
             Array.Copy(payload, 16, stringBytes, 0, sidechainBytesLength);
 
-            return new BlocksRequestReceivedEventArgs{ SidechainName = Encoding.UTF8.GetString(stringBytes), BeginBlockSequenceNumber = beginBlockSequenceNumber, EndBlockSequenceNumber = endBlockSequenceNumber, Sender = sender};
+            return new BlocksRequestReceivedEventArgs{ ClientAccountName = Encoding.UTF8.GetString(stringBytes), BeginBlockSequenceNumber = beginBlockSequenceNumber, EndBlockSequenceNumber = endBlockSequenceNumber, Sender = sender};
         }
 
         public event RecoverBlockReceivedEventHandler RecoverBlockReceived;
@@ -177,7 +169,7 @@ namespace BlockBase.Network.Rounting
 
         public class BlockReceivedEventArgs
         {
-            public string SidechainName { get; set; }
+            public string ClientAccountName { get; set; }
             public byte[] BlockBytes { get; set; }
         }
 
@@ -186,7 +178,7 @@ namespace BlockBase.Network.Rounting
 
         public class BlocksRequestReceivedEventArgs
         {
-            public string SidechainName { get; set; }
+            public string ClientAccountName { get; set; }
             public ulong BeginBlockSequenceNumber { get; set; }
             public ulong EndBlockSequenceNumber { get; set; }
             public IPEndPoint Sender { get; set; }
@@ -206,7 +198,7 @@ namespace BlockBase.Network.Rounting
         public class TransactionReceivedEventArgs
         {
             public byte[] TransactionBytes { get; set; }
-            public string SidechainName { get; set; }
+            public string ClientAccountName { get; set; }
         }
     }
 

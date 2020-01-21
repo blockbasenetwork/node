@@ -68,7 +68,7 @@ namespace BlockBase.Runtime.Sidechain
         public async Task Execute()
         {
             // var sidechainName = sidechainPool.SmartContractAccount;
-            var databaseName = _sidechainPool.SmartContractAccount;
+            var databaseName = _sidechainPool.ClientAccountName;
             try
             {
                 while (true)
@@ -80,7 +80,7 @@ namespace BlockBase.Runtime.Sidechain
                         if (_nextTimeToCheckSmartContract.CompareTo(_previousTimeToCheck) == 0) await Task.Delay(50);
                         try
                         {
-                            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.SmartContractAccount)).SingleOrDefault();
+                            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName)).SingleOrDefault();
 
                             if (currentProducerTable != null)
                             {
@@ -94,7 +94,7 @@ namespace BlockBase.Runtime.Sidechain
                                 //_logger.LogDebug($"Next Producer to produce: {currentProducerTable.Producer}");
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
-                                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.SmartContractAccount, currentProducerTable.StartProductionTime);
+                                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.ClientAccountName, currentProducerTable.StartProductionTime);
                                 if (lastValidBlockheaderSmartContractFromLastProduction != null)
                                 {
                                     if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash, currentProducerTable.StartProductionTime))
@@ -139,7 +139,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task<Block> ProduceBlock()
         {
-            var lastBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.SmartContractAccount);
+            var lastBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName);
             uint currentSequenceNumber;
             byte[] previousBlockhash;
 
@@ -157,7 +157,7 @@ namespace BlockBase.Runtime.Sidechain
                 previousBlockhash = HashHelper.Sha256Data(new byte[4]);
             }
 
-            var databaseName = _sidechainPool.SmartContractAccount;
+            var databaseName = _sidechainPool.ClientAccountName;
             var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(databaseName);
             ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(databaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
@@ -199,13 +199,13 @@ namespace BlockBase.Runtime.Sidechain
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
 
-            var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName, blockheaderEOS);
+            var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
             //_logger.LogDebug($"Block Producer: Add Block Transaction {addBlockTransaction}");
                                     
             var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
             if(proposal != null) await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName,  EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
                                     
-            var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
+            var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             //_logger.LogDebug($"Block Producer: Proposed Verify Block Transaction {proposedTransaction}");
 
             //_logger.LogDebug("Block Producer: Approving and Executing transaction");
@@ -225,7 +225,7 @@ namespace BlockBase.Runtime.Sidechain
 
             try
             {
-                await _mainchainService.NotifyReady(_sidechainPool.SmartContractAccount, _nodeConfigurations.AccountName);
+                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             }
             catch (ApiErrorException)
             {

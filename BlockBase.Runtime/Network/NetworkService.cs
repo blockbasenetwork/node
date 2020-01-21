@@ -113,6 +113,7 @@ namespace BlockBase.Runtime.Network
 
         public void Dispose()
         {
+            throw new NotImplementedException();
         }
     }
 }

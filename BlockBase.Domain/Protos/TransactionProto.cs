@@ -25,15 +25,17 @@ namespace BlockBase.Domain.Protos {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChZUcmFuc2FjdGlvblByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWluLlBy",
-            "b3RvcyK1AQoQVHJhbnNhY3Rpb25Qcm90bxIXCg9UcmFuc2FjdGlvbkhhc2gY",
-            "ASABKAwSEQoJU2lnbmF0dXJlGAIgASgJEhMKC0lzUmVhZFF1ZXJ5GAMgASgI",
-            "EhEKCVRpbWVzdGFtcBgFIAEoBBIWCg5TZXF1ZW5jZU51bWJlchgGIAEoBBIM",
-            "CgRKc29uGAcgASgJEhEKCUJsb2NrSGFzaBgIIAEoDBIUCgxEYXRhYmFzZU5h",
-            "bWUYCSABKAliBnByb3RvMw=="));
+            "b3RvcyKcAgoQVHJhbnNhY3Rpb25Qcm90bxIXCg9UcmFuc2FjdGlvbkhhc2gY",
+            "ASABKAwSEQoJU2lnbmF0dXJlGAIgASgJEhEKCVRpbWVzdGFtcBgDIAEoBBIW",
+            "Cg5TZXF1ZW5jZU51bWJlchgEIAEoBBIMCgRKc29uGAUgASgJEhEKCUJsb2Nr",
+            "SGFzaBgGIAEoDBIUCgxEYXRhYmFzZU5hbWUYByABKAkSTQoLQ29tbWFuZFR5",
+            "cGUYCCABKA4yOC5CbG9ja0Jhc2UuRG9tYWluLlByb3Rvcy5UcmFuc2FjdGlv",
+            "blByb3RvLlNxbENvbW1hbmRUeXBlIisKDlNxbENvbW1hbmRUeXBlEgsKB0dl",
+            "bmVyaWMQABIMCghEYXRhYmFzZRABYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.TransactionProto), global::BlockBase.Domain.Protos.TransactionProto.Parser, new[]{ "TransactionHash", "Signature", "IsReadQuery", "Timestamp", "SequenceNumber", "Json", "BlockHash", "DatabaseName" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.TransactionProto), global::BlockBase.Domain.Protos.TransactionProto.Parser, new[]{ "TransactionHash", "Signature", "Timestamp", "SequenceNumber", "Json", "BlockHash", "DatabaseName", "CommandType" }, null, new[]{ typeof(global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType) }, null)
           }));
     }
     #endregion
@@ -67,12 +69,12 @@ namespace BlockBase.Domain.Protos {
     public TransactionProto(TransactionProto other) : this() {
       transactionHash_ = other.transactionHash_;
       signature_ = other.signature_;
-      isReadQuery_ = other.isReadQuery_;
       timestamp_ = other.timestamp_;
       sequenceNumber_ = other.sequenceNumber_;
       json_ = other.json_;
       blockHash_ = other.blockHash_;
       databaseName_ = other.databaseName_;
+      commandType_ = other.commandType_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -103,19 +105,8 @@ namespace BlockBase.Domain.Protos {
       }
     }
 
-    /// <summary>Field number for the "IsReadQuery" field.</summary>
-    public const int IsReadQueryFieldNumber = 3;
-    private bool isReadQuery_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool IsReadQuery {
-      get { return isReadQuery_; }
-      set {
-        isReadQuery_ = value;
-      }
-    }
-
     /// <summary>Field number for the "Timestamp" field.</summary>
-    public const int TimestampFieldNumber = 5;
+    public const int TimestampFieldNumber = 3;
     private ulong timestamp_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public ulong Timestamp {
@@ -126,7 +117,7 @@ namespace BlockBase.Domain.Protos {
     }
 
     /// <summary>Field number for the "SequenceNumber" field.</summary>
-    public const int SequenceNumberFieldNumber = 6;
+    public const int SequenceNumberFieldNumber = 4;
     private ulong sequenceNumber_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public ulong SequenceNumber {
@@ -137,7 +128,7 @@ namespace BlockBase.Domain.Protos {
     }
 
     /// <summary>Field number for the "Json" field.</summary>
-    public const int JsonFieldNumber = 7;
+    public const int JsonFieldNumber = 5;
     private string json_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Json {
@@ -148,7 +139,7 @@ namespace BlockBase.Domain.Protos {
     }
 
     /// <summary>Field number for the "BlockHash" field.</summary>
-    public const int BlockHashFieldNumber = 8;
+    public const int BlockHashFieldNumber = 6;
     private pb::ByteString blockHash_ = pb::ByteString.Empty;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pb::ByteString BlockHash {
@@ -159,13 +150,24 @@ namespace BlockBase.Domain.Protos {
     }
 
     /// <summary>Field number for the "DatabaseName" field.</summary>
-    public const int DatabaseNameFieldNumber = 9;
+    public const int DatabaseNameFieldNumber = 7;
     private string databaseName_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string DatabaseName {
       get { return databaseName_; }
       set {
         databaseName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "CommandType" field.</summary>
+    public const int CommandTypeFieldNumber = 8;
+    private global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType commandType_ = 0;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType CommandType {
+      get { return commandType_; }
+      set {
+        commandType_ = value;
       }
     }
 
@@ -184,12 +186,12 @@ namespace BlockBase.Domain.Protos {
       }
       if (TransactionHash != other.TransactionHash) return false;
       if (Signature != other.Signature) return false;
-      if (IsReadQuery != other.IsReadQuery) return false;
       if (Timestamp != other.Timestamp) return false;
       if (SequenceNumber != other.SequenceNumber) return false;
       if (Json != other.Json) return false;
       if (BlockHash != other.BlockHash) return false;
       if (DatabaseName != other.DatabaseName) return false;
+      if (CommandType != other.CommandType) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -198,12 +200,12 @@ namespace BlockBase.Domain.Protos {
       int hash = 1;
       if (TransactionHash.Length != 0) hash ^= TransactionHash.GetHashCode();
       if (Signature.Length != 0) hash ^= Signature.GetHashCode();
-      if (IsReadQuery != false) hash ^= IsReadQuery.GetHashCode();
       if (Timestamp != 0UL) hash ^= Timestamp.GetHashCode();
       if (SequenceNumber != 0UL) hash ^= SequenceNumber.GetHashCode();
       if (Json.Length != 0) hash ^= Json.GetHashCode();
       if (BlockHash.Length != 0) hash ^= BlockHash.GetHashCode();
       if (DatabaseName.Length != 0) hash ^= DatabaseName.GetHashCode();
+      if (CommandType != 0) hash ^= CommandType.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -225,29 +227,29 @@ namespace BlockBase.Domain.Protos {
         output.WriteRawTag(18);
         output.WriteString(Signature);
       }
-      if (IsReadQuery != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(IsReadQuery);
-      }
       if (Timestamp != 0UL) {
-        output.WriteRawTag(40);
+        output.WriteRawTag(24);
         output.WriteUInt64(Timestamp);
       }
       if (SequenceNumber != 0UL) {
-        output.WriteRawTag(48);
+        output.WriteRawTag(32);
         output.WriteUInt64(SequenceNumber);
       }
       if (Json.Length != 0) {
-        output.WriteRawTag(58);
+        output.WriteRawTag(42);
         output.WriteString(Json);
       }
       if (BlockHash.Length != 0) {
-        output.WriteRawTag(66);
+        output.WriteRawTag(50);
         output.WriteBytes(BlockHash);
       }
       if (DatabaseName.Length != 0) {
-        output.WriteRawTag(74);
+        output.WriteRawTag(58);
         output.WriteString(DatabaseName);
+      }
+      if (CommandType != 0) {
+        output.WriteRawTag(64);
+        output.WriteEnum((int) CommandType);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -263,9 +265,6 @@ namespace BlockBase.Domain.Protos {
       if (Signature.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Signature);
       }
-      if (IsReadQuery != false) {
-        size += 1 + 1;
-      }
       if (Timestamp != 0UL) {
         size += 1 + pb::CodedOutputStream.ComputeUInt64Size(Timestamp);
       }
@@ -280,6 +279,9 @@ namespace BlockBase.Domain.Protos {
       }
       if (DatabaseName.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(DatabaseName);
+      }
+      if (CommandType != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) CommandType);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -298,9 +300,6 @@ namespace BlockBase.Domain.Protos {
       if (other.Signature.Length != 0) {
         Signature = other.Signature;
       }
-      if (other.IsReadQuery != false) {
-        IsReadQuery = other.IsReadQuery;
-      }
       if (other.Timestamp != 0UL) {
         Timestamp = other.Timestamp;
       }
@@ -315,6 +314,9 @@ namespace BlockBase.Domain.Protos {
       }
       if (other.DatabaseName.Length != 0) {
         DatabaseName = other.DatabaseName;
+      }
+      if (other.CommandType != 0) {
+        CommandType = other.CommandType;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -336,32 +338,44 @@ namespace BlockBase.Domain.Protos {
             break;
           }
           case 24: {
-            IsReadQuery = input.ReadBool();
-            break;
-          }
-          case 40: {
             Timestamp = input.ReadUInt64();
             break;
           }
-          case 48: {
+          case 32: {
             SequenceNumber = input.ReadUInt64();
             break;
           }
-          case 58: {
+          case 42: {
             Json = input.ReadString();
             break;
           }
-          case 66: {
+          case 50: {
             BlockHash = input.ReadBytes();
             break;
           }
-          case 74: {
+          case 58: {
             DatabaseName = input.ReadString();
+            break;
+          }
+          case 64: {
+            commandType_ = (global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType) input.ReadEnum();
             break;
           }
         }
       }
     }
+
+    #region Nested types
+    /// <summary>Container for nested types declared in the TransactionProto message type.</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static partial class Types {
+      public enum SqlCommandType {
+        [pbr::OriginalName("Generic")] Generic = 0,
+        [pbr::OriginalName("Database")] Database = 1,
+      }
+
+    }
+    #endregion
 
   }
 

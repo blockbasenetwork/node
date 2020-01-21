@@ -14,12 +14,12 @@ namespace BlockBase.Runtime.SidechainProducer
 
         public bool TryAddSidechain(SidechainPool sidechain)
         {
-            return Sidechains.TryAdd(sidechain.SmartContractAccount, sidechain);
+            return Sidechains.TryAdd(sidechain.ClientAccountName, sidechain);
         }
 
         public bool TryRemoveSidechain(SidechainPool sidechain)
         {
-            return Sidechains.TryRemove(sidechain.SmartContractAccount, out sidechain);
+            return Sidechains.TryRemove(sidechain.ClientAccountName, out sidechain);
         }
     }
 }

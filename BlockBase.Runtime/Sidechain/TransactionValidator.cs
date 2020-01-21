@@ -54,19 +54,19 @@ namespace BlockBase.Runtime.Sidechain
 
             var transaction = new Transaction().SetValuesFromProto(transactionProto);
 
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == args.SidechainName);
+            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == args.ClientAccountName);
 
             var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
             
             if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
             {
-                _logger.LogDebug($"Transaction received but sidechain {args.SidechainName} is unknown.");
+                _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
                 return;
             }
 
             var sidechainPool = sidechainPoolValuePair.Value;
 
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.SmartContractAccount);
+            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.ClientAccountName);
 
             await sidechainSemaphore.WaitAsync();
 
@@ -77,14 +77,14 @@ namespace BlockBase.Runtime.Sidechain
                     _logger.LogDebug($"Transaction hash not valid.");
                     return;
                 }
-                var databaseName = args.SidechainName;
+                var databaseName = args.ClientAccountName;
                 if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
                 {
                     _logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
                     return;
                 }
-                var clientPublicKey = (await _mainChainService.RetrieveClientTable(args.SidechainName)).PublicKey;
-                if (!SignatureHelper.VerifySignature(clientPublicKey, transaction.Signature, transactionHash))
+               
+                if (!SignatureHelper.VerifySignature(sidechainPool.ClientPublicKey, transaction.Signature, transactionHash))
                 {
                     _logger.LogDebug($"Transaction signature not valid.");
                     return;

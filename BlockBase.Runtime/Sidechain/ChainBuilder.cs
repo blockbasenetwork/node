@@ -78,11 +78,11 @@ namespace BlockBase.Runtime.Sidechain
             _completed = false;
             _receiving = true;
 
-            var databaseName = _sidechainPool.SmartContractAccount;
+            var databaseName = _sidechainPool.ClientAccountName;
             _validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).Except(_badBehaviourList);
             await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
             _lastValidSavedBlock = await _mongoDbProducerService.GetLastValidSidechainBlockAsync(databaseName);
-            _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.SmartContractAccount);
+            _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
 
             _currentSendingProducer = _validConnectedProducers.FirstOrDefault();
             var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
@@ -94,7 +94,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 //TODO: ask another if the first fails
                 _logger.LogDebug("Sending Block Request.");
-                var message = BuildRequestBlocksNetworkMessage(_validConnectedProducers.FirstOrDefault(), beginSequenceNumber, _lastSidechainBlockheader.SequenceNumber, _sidechainPool.SmartContractAccount);
+                var message = BuildRequestBlocksNetworkMessage(_validConnectedProducers.FirstOrDefault(), beginSequenceNumber, _lastSidechainBlockheader.SequenceNumber, _sidechainPool.ClientAccountName);
                 await _networkService.SendMessageAsync(message);
             }
 
@@ -136,8 +136,8 @@ namespace BlockBase.Runtime.Sidechain
 
             _lastReceivedDate = DateTime.UtcNow;
 
-            _logger.LogDebug("Block from sidechain: " + args.SidechainName);
-            if (args.SidechainName != _sidechainPool.SmartContractAccount) return;
+            _logger.LogDebug("Block from sidechain: " + args.ClientAccountName);
+            if (args.ClientAccountName != _sidechainPool.ClientAccountName) return;
 
             var blockProto = SerializationHelper.DeserializeBlock(args.BlockBytes, _logger);
             _logger.LogDebug($"Received block {blockProto.BlockHeader.SequenceNumber}.");
@@ -198,12 +198,12 @@ namespace BlockBase.Runtime.Sidechain
         {
             _logger.LogDebug("Adding blocks to database.");
             var orderedBlocks = _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber);
-             var databaseName = _sidechainPool.SmartContractAccount;
+             var databaseName = _sidechainPool.ClientAccountName;
 
             foreach (Block block in orderedBlocks)
             {
                 await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
-                var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.SmartContractAccount, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
+                var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
                 //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
                 await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             }
