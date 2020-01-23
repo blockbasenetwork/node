@@ -44,7 +44,7 @@ namespace BlockBase.Domain.Eos
         public const string START_RECEIVE_TIME = "startrectime";
         public const string START_SECRET_TIME = "secrettime";
         public const string CHANGE_CURRENT_PRODUCER = "changecprod";
-        public const string PRODUTION_TIME = "startprodtime";
+        public const string PRODUCTION_TIME = "startprodtime";
         public const string ADD_CANDIDATE = "addcandidate";
         public const string ADD_SECRET = "addsecret";
         public const string ADD_ENCRYPTED_IP = "addencryptip";
