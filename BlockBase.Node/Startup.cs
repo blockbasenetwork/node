@@ -45,7 +45,8 @@ namespace BlockBase.Node
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Producer API V1");
+                c.SwaggerEndpoint("/swagger/providerApi/swagger.json", "Service Provider API V0.1");
+                c.SwaggerEndpoint("/swagger/requesterApi/swagger.json", "Service Requester API V0.1");
                 c.RoutePrefix = string.Empty;
             });
             app.UseMvc();

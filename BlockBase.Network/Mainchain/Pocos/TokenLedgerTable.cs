@@ -1,17 +1,15 @@
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class TokenLedgerTable
     {
-        [JsonProperty("sidechain")]
+        [JsonProperty(EosAtributeNames.SIDECHAIN)]
         public string Sidechain { get; set; }
-        [JsonProperty("owner")]
+        [JsonProperty(EosAtributeNames.OWNER)]
         public string Owner { get; set; }
-        [JsonProperty("stake")]
+        [JsonProperty(EosAtributeNames.STAKE)]
         public string Stake { get; set; }
     }
 }

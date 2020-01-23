@@ -26,6 +26,8 @@ namespace BlockBase.Network.IO
 
         public string PublicKey { get; set; }
 
+        public string EosAccount { get; set; }
+
         public IPEndPoint Destination { get; set; }
 
         //2 Bytes
@@ -46,12 +48,13 @@ namespace BlockBase.Network.IO
             TransportType = TransportTypeEnum.Tcp;
         }
 
-        public NetworkMessage(NetworkMessageTypeEnum networkMessageType, byte[] payload, TransportTypeEnum? transportType, string privateKey, string publicKey, string senderEndPoint, IPEndPoint destination = null)
+        public NetworkMessage(NetworkMessageTypeEnum networkMessageType, byte[] payload, TransportTypeEnum? transportType, string privateKey, string publicKey, string senderEndPoint, string eosAccount, IPEndPoint destination = null)
         {
             NetworkMessageType = networkMessageType;
             Payload = payload;
             TransportType = transportType != null ? transportType.Value : TransportTypeEnum.Tcp;
             Destination = destination;
+            EosAccount = eosAccount;
             PublicKey = publicKey;
             MessageHash = new byte[0];
             Signature = "";
@@ -78,6 +81,7 @@ namespace BlockBase.Network.IO
                 Version = Version,
                 Signature = Signature,
                 PublicKey = PublicKey,
+                EosAccount = EosAccount,
                 Destination = Destination.ToString(),
                 MessageHash =  Google.Protobuf.ByteString.CopyFrom(MessageHash)
             };
@@ -93,6 +97,7 @@ namespace BlockBase.Network.IO
                 {"MessageHash", MessageHash },
                 {"Signature", Signature},
                 {"PublicKey", PublicKey},
+                {"EosAccount", EosAccount},
                 {"Destination", Destination.ToString()},
                 {"Payload", Payload},
                 {"Sender", Sender.ToString()},
@@ -109,6 +114,7 @@ namespace BlockBase.Network.IO
             networkMessage.Payload = networkMessageProto.Payload.ToByteArray();
             networkMessage.MessageHash = networkMessageProto.MessageHash.ToByteArray();
             networkMessage.PublicKey = networkMessageProto.PublicKey;
+            networkMessage.EosAccount = networkMessageProto.EosAccount;
             networkMessage.Signature = networkMessageProto.Signature;
             networkMessage.Version = networkMessageProto.Version;
             var ipAddressAndPort = networkMessageProto.Destination.Split(":");

@@ -127,7 +127,7 @@ namespace Open.P2P.IO
                 }
             }
 
-            //marciak- edited this
+            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             await _socket.ConnectAsync(awaitable);
 
             SocketAwaitablePool.Add(awaitable);

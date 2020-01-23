@@ -28,7 +28,7 @@ namespace BlockBase.Network.Mainchain
             NodeConfigurations = nodeConfigurations.Value;
             NetworkConfigurations = networkConfigurations.Value;
             MongoDBConfigurations = mongoDBConfigurations.Value;
-            
+
             _logger = logger;
             EosStub = new EosStub(NetworkConfigurations.ConnectionExpirationTimeInSeconds, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
         }
@@ -153,6 +153,16 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
+        public async Task<string> EndChain(string owner, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.END_CHAIN,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForDeferredTransaction(owner),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
         public async Task<string> StartCandidatureTime(string owner, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.START_CANDIDATURE_TIME,
@@ -169,6 +179,26 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
                 CreateDataForExitRequest(owner),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
+        public async Task<string> BlacklistProducer(string owner, string producerToBlacklist, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.BLACKLIST_PRODUCERS,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForBlackListProd(owner, producerToBlacklist),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
+        public async Task<string> PunishProd(string owner, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.PUNISH_PRODUCERS,
+                NetworkConfigurations.BlockBaseTokenContract,
+                owner,
+                CreateDataForProdPunish(owner),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -198,8 +228,7 @@ namespace BlockBase.Network.Mainchain
             foreach (var producer in producersNames)
             {
                 AuthorityAccount authAcc = new AuthorityAccount();
-                authAcc.account = producer.Key;
-                //authAcc.permission = new PermissionLevel() { permission = accountPermission, actor = producer.Key };
+                authAcc.permission = new PermissionLevel() { permission = accountPermission, actor = producer.Key };
                 authAcc.weight = 1;
                 accList.Add(authAcc);
             }
@@ -208,7 +237,7 @@ namespace BlockBase.Network.Mainchain
             newAutorization.keys = new List<AuthorityKey>();
             newAutorization.waits = new List<AuthorityWait>();
             newAutorization.accounts = accList;
-            newAutorization.threshold = 3;
+            newAutorization.threshold = (uint)(producersNames.Count() / 2) + 1;
 
             return await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.UPDATEAUTH,
@@ -313,7 +342,7 @@ namespace BlockBase.Network.Mainchain
             var blocks = await RetrieveBlockCount(chain);
             return blocks;
         }
-        
+
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)
         {
             var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, proposerName), MAX_NUMBER_OF_TRIES);
@@ -336,7 +365,7 @@ namespace BlockBase.Network.Mainchain
         public async Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string chain)
         {
             var listLedger = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
-            TokenLedgerTable tokenTable = listLedger.Where(b => b.Owner == chain).SingleOrDefault();
+            TokenLedgerTable tokenTable = listLedger.Where(b => b.Sidechain == chain).SingleOrDefault();
 
             return tokenTable;
         }
@@ -423,7 +452,8 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.PERMISSION_LEVEL, new PermissionLevel(){
                     actor = accountName,
                     permission = permission
-                }}
+                }},
+                { EosParameterNames.PROPOSAL_HASH, proposalHash }
             };
         }
 
@@ -454,6 +484,24 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.CLAIMER, claimer },
                 { EosParameterNames.CONTRACT, NetworkConfigurations.BlockBaseOperationsContract}
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForBlackListProd(string owner, string producer)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.PRODUCER, producer }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForProdPunish(string owner)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.CONTRACT, NetworkConfigurations.BlockBaseOperationsContract }
             };
         }
 
@@ -521,9 +569,9 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<T> TryAgain<T>(Func<Task<OpResult<T>>> func, int maxTry)
         {
-            ApiErrorException exception = null;
+            Exception exception = null;
 
-            for (int i = 0; i < maxTry-1; i++)
+            for (int i = 0; i < maxTry - 1; i++)
             {
                 var opResult = await func.Invoke();
 
@@ -533,12 +581,15 @@ namespace BlockBase.Network.Mainchain
                 }
                 else
                 {
-                    exception = (ApiErrorException)opResult.Exception;
-                    _logger.LogDebug($"Send Transaction Try #{i+1} failed with error: {exception.error.name}");
+                    exception = opResult.Exception;
                 }
             }
 
-            _logger.LogCritical($"Error sending transaction: {exception.error.name}");
+            var errorMessage = exception is ApiErrorException apiException ?
+                        $"Error sending transaction: {apiException.error.name} Trace: {exception}" :
+                        $"Error sending transaction: {exception}";
+
+            _logger.LogCritical(errorMessage);
 
             throw exception;
         }

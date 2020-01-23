@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlockBase.Network.Mainchain.Pocos;
+using EosSharp.Core.Api.v1;
 
 namespace BlockBase.Network.Mainchain
 {
@@ -17,22 +18,25 @@ namespace BlockBase.Network.Mainchain
         Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active");
         Task<string> StartChain(string owner, string publicKey, string permission = "active");
         Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, string permission = "active");
+        Task<string> EndChain(string owner, string permission = "active");
         Task<string> StartCandidatureTime(string owner, string permission = "active");
+        Task<string> PunishProd(string owner, string permission = "active");
+        Task<string> BlacklistProducer(string owner, string producerToPunish, string permission = "active");
         Task<int> ExecuteChainMaintainerAction(string actionname, string accountname, string permission = "active");
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string permission = "active", string accountPermission = "active");
         Task<string> LinkAuthorization(string actionName ,string accountname, string permission = "active");
 
-        Task<ClientTable> RetrieveClientTable(string smartContractAccount);
-        Task<List<ProducerInTable>> RetrieveProducersFromTable(string smartContractAccount);
-        Task<List<CurrentProducerTable>> RetrieveCurrentProducer(string smartContractAccount);
-        Task<List<CandidateTable>> RetrieveCandidates(string smartContractAccount);
-        Task<List<BlockheaderTable>> RetrieveBlockheaderList(string smartContractAccount);
-        Task<List<IPAddressTable>> RetrieveIPAddresses(string smartContractAccount);
+        Task<ClientTable> RetrieveClientTable(string chain);
+        Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);
+        Task<List<CurrentProducerTable>> RetrieveCurrentProducer(string chain);
+        Task<List<CandidateTable>> RetrieveCandidates(string chain);
+        Task<List<BlockheaderTable>> RetrieveBlockheaderList(string chain);
+        Task<List<IPAddressTable>> RetrieveIPAddresses(string chain);
         Task<List<TransactionProposalApprovalsTable>> RetrieveApprovals(string proposerAccount);
-        Task<ContractInformationTable> RetrieveContractInformation(string smartContractAccount);
-        Task<ContractStateTable> RetrieveContractState(string smartContractAccount);
-        Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string smartContractAccount);
-        Task<BlockheaderTable> GetLastSubmittedBlockheader(string smartContractAccount);
+        Task<ContractInformationTable> RetrieveContractInformation(string chain);
+        Task<ContractStateTable> RetrieveContractState(string chain);
+        Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string chain);
+        Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain);
         Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain);
         Task<BlockheaderTable> GetLastValidSubmittedBlockheaderFromLastProduction(string chain, long currentProductionStartTime);
         Task<List<BlockCountTable>> GetBlockCount(string chain);

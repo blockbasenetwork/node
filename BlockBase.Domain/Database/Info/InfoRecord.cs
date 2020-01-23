@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace BlockBase.Domain.Database.Info
 {

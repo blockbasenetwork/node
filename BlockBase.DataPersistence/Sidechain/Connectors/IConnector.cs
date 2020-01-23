@@ -1,4 +1,4 @@
-﻿using BlockBase.Domain.Database.Info;
+using BlockBase.Domain.Database.Info;
 using BlockBase.Domain.Database.Operations;
 using System.Collections.Generic;
 using System.Threading.Tasks;

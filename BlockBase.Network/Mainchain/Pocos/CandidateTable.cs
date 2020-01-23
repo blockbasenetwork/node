@@ -1,22 +1,20 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class CandidateTable
     {
-        [JsonProperty("key")]
+        [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
 
-        [JsonProperty("publickey")]
+        [JsonProperty(EosAtributeNames.PUBLIC_KEY)]
         public string PublicKey { get; set; }
 
-        [JsonProperty("stake")]
+        [JsonProperty(EosAtributeNames.STAKE)]
         public uint Stake { get; set; }
 
-        [JsonProperty("worktimeinseconds")]
+        [JsonProperty(EosAtributeNames.WORK_DURATION_IN_SECONDS)]
         public uint WorkTimeInSeconds { get; set; }
     }    
 }

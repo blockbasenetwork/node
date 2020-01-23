@@ -19,14 +19,16 @@ namespace BlockBase.Network.Sidechain
         public uint BlocksBetweenSettlement { get; set; }
         public uint BlockTimeDuration { get; set; }
         public DateTime NextTimeToCheckSmartContract { get; set; }
+
+        public TaskContainer ManagerTask { get; set; }
  
         public SidechainPool()
         {
         }
 
-        public SidechainPool(string smartContractAccount)
+        public SidechainPool(string clientAccountName)
         {
-            ClientAccountName = smartContractAccount;
+            ClientAccountName = clientAccountName;
             State = SidechainPoolStateEnum.RecoverInfo;
             ProducersInPool = new ThreadSafeList<ProducerInPool>();
         }

@@ -21,8 +21,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlockBase.DataProxy", "Bloc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlockBase.Node", "BlockBase.Node\BlockBase.Node.csproj", "{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Blockbase.TestsConsole", "BlockBase.TestsConsole\Blockbase.TestsConsole.csproj", "{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -141,18 +139,6 @@ Global
 		{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}.Release|x64.Build.0 = Release|Any CPU
 		{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}.Release|x86.ActiveCfg = Release|Any CPU
 		{F88CEFD8-6DB0-48DA-B7D2-7BE1F110D391}.Release|x86.Build.0 = Release|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Debug|x64.Build.0 = Debug|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Debug|x86.Build.0 = Debug|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Release|x64.ActiveCfg = Release|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Release|x64.Build.0 = Release|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Release|x86.ActiveCfg = Release|Any CPU
-		{D5E75BE2-CC00-4C2C-94EE-623C4F21AE4C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

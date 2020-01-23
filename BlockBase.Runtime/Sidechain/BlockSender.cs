@@ -49,7 +49,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 _logger.LogDebug("Going to send block: " + block.BlockHeader.SequenceNumber);
                 var data = BlockProtoToMessageData(block.ConvertToProto(), args.ClientAccountName);
-                var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, args.Sender);
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, args.Sender);
                 await _networkService.SendMessageAsync(message);
             }
         }
@@ -63,7 +63,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 //_logger.LogDebug($"Block sent to {producerConnected.ProducerInfo.AccountName}. Signed by: {blockProto.BlockHeader.Producer}");
 
-                var message = new NetworkMessage(NetworkMessageTypeEnum.SendMinedBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, endPoint, producerConnected.PeerConnection.IPEndPoint);
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendMinedBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, endPoint, _nodeConfigurations.AccountName, producerConnected.PeerConnection.IPEndPoint);
                 await _networkService.SendMessageAsync(message);
             }
         }

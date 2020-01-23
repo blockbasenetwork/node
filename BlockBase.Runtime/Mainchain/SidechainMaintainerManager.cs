@@ -23,6 +23,7 @@ namespace BlockBase.Runtime.Mainchain
         private IMainchainService _mainchainService;
         private long _timeDiff;
         private int _timeToExecuteTrx;
+        private int _roundsUntilSettlement;
         private IEnumerable<int> _latestTrxTimes;
         private double _previousWaitTime;
         private ILogger _logger;
@@ -42,6 +43,7 @@ namespace BlockBase.Runtime.Mainchain
             _peerConnectionsHandler = peerConnectionsHandler;
             _sidechain = sidechain;
             _mainchainService = mainchainService;
+            _roundsUntilSettlement = 0;
             _logger = logger;
             _latestTrxTimes = new List<int>();
             _nodeConfigurations = nodeConfigurations;
@@ -54,6 +56,7 @@ namespace BlockBase.Runtime.Mainchain
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
+                _roundsUntilSettlement = (int)contractInfo.BlocksBetweenSettlement;
 
                 var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
                 if(stateTable.ProductionTime) await ConnectToProducers();
@@ -113,19 +116,24 @@ namespace BlockBase.Runtime.Mainchain
             if (stateTable.IPSendTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
                 //await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SmartContractAccount);
+                await UpdateAuthorization(_sidechain.ClientAccountName);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
             }
             if (stateTable.IPReceiveTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.ClientAccountName);
+            {   
+                await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName);
+                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
                 await ConnectToProducers();
             }
-            if (stateTable.ProductionTime &&
+            if (stateTable.ProductionTime && currentProducerTable.Any() &&
                (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
                 latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
+                _roundsUntilSettlement--;
+                _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
+                if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
             }
 
             if (latestTrxTime != 0) _latestTrxTimes.Append(latestTrxTime);
@@ -151,7 +159,7 @@ namespace BlockBase.Runtime.Mainchain
 
             if (!_sidechain.ProducingBlocks) return;
 
-            var nextBlockTime = currentProducer.StartProductionTime + _sidechain.BlockTimeDuration;
+            var nextBlockTime = currentProducer != null ? currentProducer.StartProductionTime + _sidechain.BlockTimeDuration : _sidechain.NextStateWaitEndTime;
             if (nextBlockTime < _sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= _sidechain.NextStateWaitEndTime)
                 _sidechain.NextStateWaitEndTime = nextBlockTime;
         }
@@ -212,6 +220,23 @@ namespace BlockBase.Runtime.Mainchain
             return decryptedProducerIPs;
             
         }
+        private async Task ExecuteSettlementActions()
+        {
+            _logger.LogDebug("Settlement starting...");
+            _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
+
+            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            if (!producers.Where(p => p.Warning == 2).Any()) return;
+
+            foreach(var producer in producers)
+            {
+                if (producer.Warning == 2) await _mainchainService.BlacklistProducer(_sidechain.ClientAccountName, producer.Key);
+            }
+
+            await _mainchainService.PunishProd(_sidechain.ClientAccountName);
+            await UpdateAuthorization(_sidechain.ClientAccountName);
+        }
+
         #endregion Auxiliar Methods
     }
 }

@@ -25,30 +25,30 @@ namespace BlockBase.Domain.Protos {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChlOZXR3b3JrTWVzc2FnZVByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWlu",
-            "LlByb3RvcyLQBgoTTmV0d29ya01lc3NhZ2VQcm90bxJfChJOZXR3b3JrTWVz",
+            "LlByb3RvcyLkBgoTTmV0d29ya01lc3NhZ2VQcm90bxJfChJOZXR3b3JrTWVz",
             "c2FnZVR5cGUYASABKA4yQy5CbG9ja0Jhc2UuRG9tYWluLlByb3Rvcy5OZXR3",
             "b3JrTWVzc2FnZVByb3RvLk5ldHdvcmtNZXNzYWdlVHlwZUVudW0SDwoHVmVy",
             "c2lvbhgCIAEoBRIPCgdQYXlsb2FkGAMgASgMEhEKCVB1YmxpY0tleRgEIAEo",
-            "CRIRCglTaWduYXR1cmUYBSABKAkSEwoLTWVzc2FnZUhhc2gYBiABKAwSEwoL",
-            "RGVzdGluYXRpb24YByABKAki5QQKFk5ldHdvcmtNZXNzYWdlVHlwZUVudW0S",
-            "CwoHVW5rbm93bhAAEg8KC1JlcXVlc3RJbmZvEAESIQodUmVxdWVzdFByb2R1",
-            "Y2VySWRlbnRpZmljYXRpb24QAhIUChBSZXF1ZXN0Tm9kZXNJbmZvEAMSEQoN",
-            "UmVxdWVzdEJsb2NrcxAEEhcKE1JlcXVlc3RCbG9ja0hlYWRlcnMQBRIXChNS",
-            "ZXF1ZXN0VHJhbnNhY3Rpb25zEAYSGAoUUmVxdWVzdEN1cnJlbnRIZWlnaHQQ",
-            "BxIXChNSZXF1ZXN0TWF4QmxvY2tTaXplEAgSFAoQUmVxdWVzdFByb2R1Y2Vy",
-            "cxAJEhgKFFJlcXVlc3RQcm9kdWNlcnNMaXN0EAoSDQoJU2VuZEJsb2NrEAsS",
-            "HgoaU2VuZFNlbGVjdGVkQ2FuZGlkYXRlc0luZm8QDBIeChpTZW5kUHJvZHVj",
-            "ZXJJZGVudGlmaWNhdGlvbhANEhAKDFNlbmROb2RlSW5mbxAOEhEKDVNlbmRO",
-            "b2Rlc0luZm8QDxISCg5TZW5kTWluZWRCbG9jaxAQEg4KClNlbmRCbG9ja3MQ",
-            "ERIUChBTZW5kQmxvY2tIZWFkZXJzEBISEwoPU2VuZFRyYW5zYWN0aW9uEBMS",
-            "FAoQU2VuZFRyYW5zYWN0aW9ucxAUEhUKEVNlbmRDdXJyZW50SGVpZ2h0EBUS",
-            "GwoXU2VuZEN1cnJlbnRNYXhCbG9ja1NpemUQFhIWChJTZWFyY2hRdWVyeVJl",
-            "cXVlc3QQFxITCg9TZW5kUXVlcnlSZXN1bHQQGBIICgRQaW5nEBkSCAoEUG9u",
-            "ZxAaYgZwcm90bzM="));
+            "CRISCgpFb3NBY2NvdW50GAUgASgJEhEKCVNpZ25hdHVyZRgGIAEoCRITCgtN",
+            "ZXNzYWdlSGFzaBgHIAEoDBITCgtEZXN0aW5hdGlvbhgIIAEoCSLlBAoWTmV0",
+            "d29ya01lc3NhZ2VUeXBlRW51bRILCgdVbmtub3duEAASDwoLUmVxdWVzdElu",
+            "Zm8QARIhCh1SZXF1ZXN0UHJvZHVjZXJJZGVudGlmaWNhdGlvbhACEhQKEFJl",
+            "cXVlc3ROb2Rlc0luZm8QAxIRCg1SZXF1ZXN0QmxvY2tzEAQSFwoTUmVxdWVz",
+            "dEJsb2NrSGVhZGVycxAFEhcKE1JlcXVlc3RUcmFuc2FjdGlvbnMQBhIYChRS",
+            "ZXF1ZXN0Q3VycmVudEhlaWdodBAHEhcKE1JlcXVlc3RNYXhCbG9ja1NpemUQ",
+            "CBIUChBSZXF1ZXN0UHJvZHVjZXJzEAkSGAoUUmVxdWVzdFByb2R1Y2Vyc0xp",
+            "c3QQChINCglTZW5kQmxvY2sQCxIeChpTZW5kU2VsZWN0ZWRDYW5kaWRhdGVz",
+            "SW5mbxAMEh4KGlNlbmRQcm9kdWNlcklkZW50aWZpY2F0aW9uEA0SEAoMU2Vu",
+            "ZE5vZGVJbmZvEA4SEQoNU2VuZE5vZGVzSW5mbxAPEhIKDlNlbmRNaW5lZEJs",
+            "b2NrEBASDgoKU2VuZEJsb2NrcxAREhQKEFNlbmRCbG9ja0hlYWRlcnMQEhIT",
+            "Cg9TZW5kVHJhbnNhY3Rpb24QExIUChBTZW5kVHJhbnNhY3Rpb25zEBQSFQoR",
+            "U2VuZEN1cnJlbnRIZWlnaHQQFRIbChdTZW5kQ3VycmVudE1heEJsb2NrU2l6",
+            "ZRAWEhYKElNlYXJjaFF1ZXJ5UmVxdWVzdBAXEhMKD1NlbmRRdWVyeVJlc3Vs",
+            "dBAYEggKBFBpbmcQGRIICgRQb25nEBpiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.NetworkMessageProto), global::BlockBase.Domain.Protos.NetworkMessageProto.Parser, new[]{ "NetworkMessageType", "Version", "Payload", "PublicKey", "Signature", "MessageHash", "Destination" }, null, new[]{ typeof(global::BlockBase.Domain.Protos.NetworkMessageProto.Types.NetworkMessageTypeEnum) }, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.NetworkMessageProto), global::BlockBase.Domain.Protos.NetworkMessageProto.Parser, new[]{ "NetworkMessageType", "Version", "Payload", "PublicKey", "EosAccount", "Signature", "MessageHash", "Destination" }, null, new[]{ typeof(global::BlockBase.Domain.Protos.NetworkMessageProto.Types.NetworkMessageTypeEnum) }, null)
           }));
     }
     #endregion
@@ -84,6 +84,7 @@ namespace BlockBase.Domain.Protos {
       version_ = other.version_;
       payload_ = other.payload_;
       publicKey_ = other.publicKey_;
+      eosAccount_ = other.eosAccount_;
       signature_ = other.signature_;
       messageHash_ = other.messageHash_;
       destination_ = other.destination_;
@@ -139,8 +140,19 @@ namespace BlockBase.Domain.Protos {
       }
     }
 
+    /// <summary>Field number for the "EosAccount" field.</summary>
+    public const int EosAccountFieldNumber = 5;
+    private string eosAccount_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string EosAccount {
+      get { return eosAccount_; }
+      set {
+        eosAccount_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "Signature" field.</summary>
-    public const int SignatureFieldNumber = 5;
+    public const int SignatureFieldNumber = 6;
     private string signature_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Signature {
@@ -151,7 +163,7 @@ namespace BlockBase.Domain.Protos {
     }
 
     /// <summary>Field number for the "MessageHash" field.</summary>
-    public const int MessageHashFieldNumber = 6;
+    public const int MessageHashFieldNumber = 7;
     private pb::ByteString messageHash_ = pb::ByteString.Empty;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pb::ByteString MessageHash {
@@ -162,7 +174,7 @@ namespace BlockBase.Domain.Protos {
     }
 
     /// <summary>Field number for the "Destination" field.</summary>
-    public const int DestinationFieldNumber = 7;
+    public const int DestinationFieldNumber = 8;
     private string destination_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Destination {
@@ -189,6 +201,7 @@ namespace BlockBase.Domain.Protos {
       if (Version != other.Version) return false;
       if (Payload != other.Payload) return false;
       if (PublicKey != other.PublicKey) return false;
+      if (EosAccount != other.EosAccount) return false;
       if (Signature != other.Signature) return false;
       if (MessageHash != other.MessageHash) return false;
       if (Destination != other.Destination) return false;
@@ -202,6 +215,7 @@ namespace BlockBase.Domain.Protos {
       if (Version != 0) hash ^= Version.GetHashCode();
       if (Payload.Length != 0) hash ^= Payload.GetHashCode();
       if (PublicKey.Length != 0) hash ^= PublicKey.GetHashCode();
+      if (EosAccount.Length != 0) hash ^= EosAccount.GetHashCode();
       if (Signature.Length != 0) hash ^= Signature.GetHashCode();
       if (MessageHash.Length != 0) hash ^= MessageHash.GetHashCode();
       if (Destination.Length != 0) hash ^= Destination.GetHashCode();
@@ -234,16 +248,20 @@ namespace BlockBase.Domain.Protos {
         output.WriteRawTag(34);
         output.WriteString(PublicKey);
       }
-      if (Signature.Length != 0) {
+      if (EosAccount.Length != 0) {
         output.WriteRawTag(42);
+        output.WriteString(EosAccount);
+      }
+      if (Signature.Length != 0) {
+        output.WriteRawTag(50);
         output.WriteString(Signature);
       }
       if (MessageHash.Length != 0) {
-        output.WriteRawTag(50);
+        output.WriteRawTag(58);
         output.WriteBytes(MessageHash);
       }
       if (Destination.Length != 0) {
-        output.WriteRawTag(58);
+        output.WriteRawTag(66);
         output.WriteString(Destination);
       }
       if (_unknownFields != null) {
@@ -265,6 +283,9 @@ namespace BlockBase.Domain.Protos {
       }
       if (PublicKey.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(PublicKey);
+      }
+      if (EosAccount.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(EosAccount);
       }
       if (Signature.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Signature);
@@ -297,6 +318,9 @@ namespace BlockBase.Domain.Protos {
       }
       if (other.PublicKey.Length != 0) {
         PublicKey = other.PublicKey;
+      }
+      if (other.EosAccount.Length != 0) {
+        EosAccount = other.EosAccount;
       }
       if (other.Signature.Length != 0) {
         Signature = other.Signature;
@@ -335,14 +359,18 @@ namespace BlockBase.Domain.Protos {
             break;
           }
           case 42: {
-            Signature = input.ReadString();
+            EosAccount = input.ReadString();
             break;
           }
           case 50: {
-            MessageHash = input.ReadBytes();
+            Signature = input.ReadString();
             break;
           }
           case 58: {
+            MessageHash = input.ReadBytes();
+            break;
+          }
+          case 66: {
             Destination = input.ReadString();
             break;
           }

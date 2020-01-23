@@ -9,6 +9,7 @@ using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
 using BlockBase.Utils.Operation;
+using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Open.P2P;
@@ -29,8 +30,8 @@ namespace BlockBase.Runtime.Network
         //TODO: marciak - UpdatePeerConnectionRating, should they win back reputation with time?
         private readonly SidechainKeeper _sidechainKeeper;
         private readonly INetworkService _networkService;
-        public List<PeerConnection> CurrentPeerConnections {private set; get;}
-        private List<Peer> _waitingForApprovalPeers;
+        public ThreadSafeList<PeerConnection> CurrentPeerConnections {private set; get;}
+        private ThreadSafeList<Peer> _waitingForApprovalPeers;
         private NodeConfigurations _nodeConfigurations;
         private SystemConfig _systemConfig;
         private ILogger _logger;
@@ -53,8 +54,9 @@ namespace BlockBase.Runtime.Network
             _networkConfigurations = networkConfigurations?.Value;
 
             _nodeConfigurations = nodeConfigurations?.Value;
-            CurrentPeerConnections = new List<PeerConnection>();
-            _waitingForApprovalPeers = new List<Peer>();
+
+            CurrentPeerConnections = new ThreadSafeList<PeerConnection>();
+            _waitingForApprovalPeers = new ThreadSafeList<Peer>();
 
             _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
             _networkService.SubscribePeerDisconnectedEvent(TcpConnector_PeerDisconnected);
@@ -76,7 +78,7 @@ namespace BlockBase.Runtime.Network
                 await SendIdentificationMessage(producerIP.Value);
                 } catch(Exception e)
                 {
-                    _logger.LogError("Couldn't connect to producer.");
+                    _logger.LogError("Couldn't connect to producer.", e);
 
                 }
             }
@@ -87,7 +89,7 @@ namespace BlockBase.Runtime.Network
         {
             _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
-            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.PublicKey == _nodeConfigurations.ActivePublicKey));
+            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
 
             var numberOfConnections = (int) Math.Ceiling(producersInPoolList.Count/4.0);
             
@@ -107,7 +109,7 @@ namespace BlockBase.Runtime.Network
                 TryToRemoveConnection(producerInPool.PeerConnection);
             }
 
-            var clientConnection = CurrentPeerConnections.Where(c => c.PublicKey == sidechain.ClientPublicKey).SingleOrDefault();
+            var clientConnection = CurrentPeerConnections.GetEnumerable().Where(c => c.PublicKey == sidechain.ClientPublicKey).SingleOrDefault();
             TryToRemoveConnection(clientConnection);
         }
 
@@ -124,12 +126,12 @@ namespace BlockBase.Runtime.Network
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
         {
-            _logger.LogDebug("Connect to Producer: " + producer.ProducerInfo.PublicKey);
+            _logger.LogDebug("Connect to Producer: " + producer.ProducerInfo.AccountName);
 
             if (producer.ProducerInfo.IPEndPoint != null)
             { 
                 producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.PublicKey);
-                var peerConnected = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
+                var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
                 if (peerConnected == null)
                 {
@@ -159,27 +161,25 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        //marciak - async void because event handler needs void, is this ok?
         private async void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
         {
-            var peerConnection = CurrentPeerConnections.Where(p => p.IPEndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
+            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
             if (peerConnection != null)
             {
                 peerConnection.ConnectionState = ConnectionStateEnum.Disconnected;
                 await UpdatePeerConnectionRating(peerConnection, RATING_LOST_FOR_DISCONECT);
                 _logger.LogDebug("Peer Connections handler :: Removing peer connection.");
                 CurrentPeerConnections.Remove(peerConnection);
-                //TODO: marciak - try to connect to another one?
             }
 
-            var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
-            if (peerConnection != null) _waitingForApprovalPeers.Remove(peer);
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
+            if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
-            var peerConnection = CurrentPeerConnections.Where(p => p.IPEndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
-            var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
+            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
 
             if (peerConnection != null)
             {
@@ -203,7 +203,7 @@ namespace BlockBase.Runtime.Network
 
         private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
         {
-            var peer = _waitingForApprovalPeers.Where(p => p.EndPoint.Equals(args.SenderIPEndPoint)).SingleOrDefault();
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.SenderIPEndPoint)).SingleOrDefault();
             if (peer == null) {
                 _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
                 return;
@@ -277,7 +277,7 @@ namespace BlockBase.Runtime.Network
         private async Task AskForKnownPeer(ProducerInfo producerInfo, IPAddress ipAddress, int tcpPort)
         {
             var payload = Encoding.ASCII.GetBytes("askforip " + producerInfo.PublicKey);
-            var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlockHeaders, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, new IPEndPoint(ipAddress, tcpPort));
+            var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlockHeaders, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, new IPEndPoint(ipAddress, tcpPort));
             await _networkService.SendMessageAsync(message);
         }
 
@@ -287,7 +287,7 @@ namespace BlockBase.Runtime.Network
 
             if (ipEndPoint != null)
             {
-                peerConnection = CurrentPeerConnections.SingleOrDefault(p => p.IPEndPoint.Equals(ipEndPoint) || p.PublicKey == publicKey);
+                peerConnection = CurrentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint.Equals(ipEndPoint) || p.PublicKey == publicKey);
                 if (peerConnection == null)
                 {
                     peerConnection = new PeerConnection
@@ -315,7 +315,7 @@ namespace BlockBase.Runtime.Network
         private async Task SendIdentificationMessage(IPEndPoint destinationEndPoint)
         {
             byte[] payload = new byte[0];
-            var message = new NetworkMessage(NetworkMessageTypeEnum.SendProducerIdentification, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, destinationEndPoint);
+            var message = new NetworkMessage(NetworkMessageTypeEnum.SendProducerIdentification, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, destinationEndPoint);
             await _networkService.SendMessageAsync(message);
             _logger.LogDebug("Identification message sent.");
         }

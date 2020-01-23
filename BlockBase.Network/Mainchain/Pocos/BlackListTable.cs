@@ -1,15 +1,10 @@
-using BlockBase.Domain.Blockchain;
-using BlockBase.Utils.Crypto;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
+using BlockBase.Domain.Eos;
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class BlackListTable
     {
-        [JsonProperty("key")]
+        [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
     }
 }
