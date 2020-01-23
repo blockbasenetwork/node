@@ -14,6 +14,7 @@ using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Runtime.Mainchain;
 using Newtonsoft.Json;
 using BlockBase.Runtime.Network;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace BlockBase.Node.Controllers
 {
