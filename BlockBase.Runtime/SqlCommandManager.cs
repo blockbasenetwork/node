@@ -26,7 +26,8 @@ namespace BlockBase.Runtime
         private IConnector _connector;
         private ILogger _logger;
 
-        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, INetworkService networkService)
+        // public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, INetworkService networkService)
+        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);

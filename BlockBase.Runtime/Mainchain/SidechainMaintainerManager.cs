@@ -9,6 +9,10 @@ using BlockBase.Domain.Eos;
 using BlockBase.Domain.Enums;
 using System.Collections.Generic;
 using EosSharp.Core.Exceptions;
+using BlockBase.Runtime.Network;
+using System.Net;
+using BlockBase.Utils.Crypto;
+using BlockBase.Domain.Configurations;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -22,6 +26,8 @@ namespace BlockBase.Runtime.Mainchain
         private IEnumerable<int> _latestTrxTimes;
         private double _previousWaitTime;
         private ILogger _logger;
+        private NodeConfigurations _nodeConfigurations;
+        private PeerConnectionsHandler _peerConnectionsHandler;
         private const float DELAY_IN_SECONDS = 0.5f;
 
         public TaskContainer Start()
@@ -31,12 +37,14 @@ namespace BlockBase.Runtime.Mainchain
             return TaskContainer;
         }
 
-        public SidechainMaintainerManager(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService)
+        public SidechainMaintainerManager(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler)
         {
+            _peerConnectionsHandler = peerConnectionsHandler;
             _sidechain = sidechain;
             _mainchainService = mainchainService;
             _logger = logger;
             _latestTrxTimes = new List<int>();
+            _nodeConfigurations = nodeConfigurations;
         }
 
         public async Task SuperMethod()
@@ -46,6 +54,10 @@ namespace BlockBase.Runtime.Mainchain
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
+
+                var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
+                if(stateTable.ProductionTime) await ConnectToProducers();
+                
 
                 while (true)
                 {
@@ -108,6 +120,7 @@ namespace BlockBase.Runtime.Mainchain
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
                 latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.ClientAccountName);
+                await ConnectToProducers();
             }
             if (stateTable.ProductionTime &&
                (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
@@ -116,6 +129,12 @@ namespace BlockBase.Runtime.Mainchain
             }
 
             if (latestTrxTime != 0) _latestTrxTimes.Append(latestTrxTime);
+        }
+
+        private async Task ConnectToProducers()
+        {
+            var ipAddresses = await GetProducersIPs();
+            await _peerConnectionsHandler.ConnectToProducers(ipAddresses);
         }
 
         private async Task CheckContractAndUpdateWaitTimes()
@@ -177,6 +196,22 @@ namespace BlockBase.Runtime.Mainchain
             _timeToExecuteTrx = _latestTrxTimes.Any() ? _latestTrxTimes.Sum() / _latestTrxTimes.Count() : 0;
         }
 
+        private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
+        {
+            var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
+            var producerEncryptedIPAdresses = ipAddressesTables.Select(t => t.EncryptedIPs[t.EncryptedIPs.Count-1]).ToList();
+
+            var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
+            for(int i = 0; i < ipAddressesTables.Count; i++)
+            {
+                var producerPublicKey = ipAddressesTables[i].PublicKey;
+                decryptedProducerIPs.Add(producerPublicKey,
+                 IPEncryption.DecryptIP(producerEncryptedIPAdresses[i], _nodeConfigurations.ActivePrivateKey, producerPublicKey));
+
+            }
+            return decryptedProducerIPs;
+            
+        }
         #endregion Auxiliar Methods
     }
 }

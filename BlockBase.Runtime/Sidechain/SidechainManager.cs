@@ -336,7 +336,7 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     _logger.LogInformation("Some producer Left.");
                     var leavingProducer = Sidechain.ProducersInPool.Get(i);
-                    _peerConnectionsHandler.RemoveProducerConnectionIfPossible(leavingProducer);
+                    _peerConnectionsHandler.TryToRemoveConnection(leavingProducer.PeerConnection);
                     Sidechain.ProducersInPool.Remove(leavingProducer);
                     poolChanged = true;
                 }
@@ -407,7 +407,7 @@ namespace BlockBase.Runtime.Sidechain
             foreach (string receiverPublicKey in keysToUse)
             {
                 _logger.LogDebug("Key to use: " + receiverPublicKey);
-                listEncryptedIps.Add(EncryptIP(receiverPublicKey));
+                listEncryptedIps.Add(IPEncryption.EncryptIP(EndPoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
             }
 
             try
@@ -420,27 +420,7 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private string EncryptIP(string receiverPublicKey)
-        {
-            // _logger.LogDebug($"Receiver public key {receiverPublicKey}, Endpoint {EndPoint}");
-            var ipBytes = Encoding.UTF8.GetBytes(EndPoint);
-            // _logger.LogDebug($"endpoint bytes {HashHelper.ByteArrayToFormattedHexaString(ipBytes)}");
-            var encryptedIP = AssymetricEncryptionHelper.EncryptData(receiverPublicKey, _nodeConfigurations.ActivePrivateKey, ipBytes);
-            // _logger.LogDebug($"encryptedIP {HashHelper.ByteArrayToFormattedHexaString(encryptedIP)}");
-            return HashHelper.ByteArrayToFormattedHexaString(encryptedIP);
-        }
-
-        private string DecryptIP(string encryptedIP, string senderPublicKey)
-        {
-            // _logger.LogDebug($"Sender public key {senderPublicKey}, Encrypted IP {EndPoint}");
-            var encryptedIPBytes = HashHelper.FormattedHexaStringToByteArray(encryptedIP);
-            // _logger.LogDebug($"encryptedIP {HashHelper.ByteArrayToFormattedHexaString(encryptedIPBytes)}");
-            var ipBytes = AssymetricEncryptionHelper.DecryptData(senderPublicKey, _nodeConfigurations.ActivePrivateKey, encryptedIPBytes);
-            // _logger.LogDebug($"endpoint bytes {HashHelper.ByteArrayToFormattedHexaString(ipBytes)}");
-            _logger.LogDebug("Decrypted IP: " + Encoding.UTF8.GetString(ipBytes));
-
-            return Encoding.UTF8.GetString(ipBytes);
-        }
+       
 
         private void UpdateIPsInSidechain(List<IPAddressTable> IpsAddressTableEntries)
         {
@@ -459,14 +439,7 @@ namespace BlockBase.Runtime.Sidechain
                 var listEncryptedIPEndPoints = reorganizedIpsAddressTableEntries[i].EncryptedIPs;
                 var encryptedIpEndPoint = listEncryptedIPEndPoints[i];
                 _logger.LogDebug("Received IP from producer " + producer.ProducerInfo.AccountName + " with pk " + producer.ProducerInfo.PublicKey);
-                var ipEndPoint = DecryptIP(encryptedIpEndPoint, producer.ProducerInfo.PublicKey);
-
-                string[] splitIPEndPoint = ipEndPoint.Split(':');
-
-                if (!IPAddress.TryParse(splitIPEndPoint[0], out var ipAddress)) continue;
-                if (!int.TryParse(splitIPEndPoint[1], out var port)) continue;
-
-                producer.ProducerInfo.IPEndPoint = new IPEndPoint(ipAddress, port);
+                producer.ProducerInfo.IPEndPoint = IPEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
             }
         }
 
