@@ -66,7 +66,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task Execute()
         {
-            var databaseName = _sidechainPool.SidechainName;
+            var databaseName = _sidechainPool.ClientAccountName;
             try
             {
                 while (true)
@@ -77,7 +77,7 @@ namespace BlockBase.Runtime.Sidechain
                         if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
                         {
-                            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.SidechainName)).SingleOrDefault();
+                            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName)).SingleOrDefault();
 
                             if (currentProducerTable != null)
                             {
@@ -91,7 +91,7 @@ namespace BlockBase.Runtime.Sidechain
 
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
-                                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.SidechainName, currentProducerTable.StartProductionTime);
+                                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.ClientAccountName, currentProducerTable.StartProductionTime);
                                 if (lastValidBlockheaderSmartContractFromLastProduction != null)
                                 {
                                     if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash, currentProducerTable.StartProductionTime))
@@ -141,7 +141,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 try
                 {
-                    var lastBlock = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.SidechainName);
+                    var lastBlock = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
                     uint currentSequenceNumber;
                     byte[] previousBlockhash;
 
@@ -156,7 +156,7 @@ namespace BlockBase.Runtime.Sidechain
                         previousBlockhash = new byte[32];
                     }
 
-                    var databaseName = _sidechainPool.SidechainName;
+                    var databaseName = _sidechainPool.ClientAccountName;
                     var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(databaseName);
                     ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(databaseName))?.SequenceNumber ?? 0;
                     var transactions = new List<Transaction>();
@@ -208,12 +208,12 @@ namespace BlockBase.Runtime.Sidechain
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
 
-            var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.SidechainName, _nodeConfigurations.AccountName, blockheaderEOS);
+            var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
 
             var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
             if (proposal != null) await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
 
-            var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.SidechainName, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
+            var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
 
             while (proposal == null && (_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
@@ -284,7 +284,7 @@ namespace BlockBase.Runtime.Sidechain
 
             try
             {
-                await _mainchainService.NotifyReady(_sidechainPool.SidechainName, _nodeConfigurations.AccountName);
+                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             }
             catch (ApiErrorException)
             {

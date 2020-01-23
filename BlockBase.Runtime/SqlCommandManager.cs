@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
-using System.Collections.Generic;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using System.Linq;
 using BlockBase.DataProxy.Encryption;
@@ -16,10 +11,12 @@ using BlockBase.DataPersistence.Sidechain.Connectors;
 using Antlr4.Runtime;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using BlockBase.DataProxy;
+using BlockBase.Runtime.Network;
 
-namespace BlockBase.DataProxy
+namespace BlockBase.Runtime
 {
-    public class ExecuteSqlCommand
+    public class SqlCommandManager
     {
         private Transformer_v2 _transformer;
         private IGenerator _generator;
@@ -29,7 +26,8 @@ namespace BlockBase.DataProxy
         private IConnector _connector;
         private ILogger _logger;
 
-        public ExecuteSqlCommand(MiddleMan middleMan, ILogger logger, IConnector connector)
+        // public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, INetworkService networkService)
+        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
@@ -37,7 +35,6 @@ namespace BlockBase.DataProxy
             _logger = logger;
             _connector = connector;
             _transformer = new Transformer_v2(middleMan);
-
         }
 
         public async Task Execute(string sqlString)

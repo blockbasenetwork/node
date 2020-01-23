@@ -1,29 +1,19 @@
 using System;
-using System.Reflection;
-using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using BlockBase.Utils;
 using System.Net;
 using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Logging;
 using BlockBase.Network.Mainchain;
-using BlockBase.Utils.Operation;
 using BlockBase.Network.Sidechain;
-using BlockBase.Domain.Enums;
 using BlockBase.Runtime.SidechainProducer;
-using BlockBase.Domain.Eos;
-using System.Text;
-using BlockBase.Utils.Crypto;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
 using BlockBase.Network.Mainchain.Pocos;
-using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Runtime.Mainchain;
 using Newtonsoft.Json;
+using BlockBase.Runtime.Network;
 
 namespace BlockBase.Node.Controllers
 {
@@ -38,8 +28,9 @@ namespace BlockBase.Node.Controllers
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
+        private PeerConnectionsHandler _peerConnectionsHandler;
 
-        public ChainController(ILogger<ChainController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public ChainController(ILogger<ChainController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
@@ -48,6 +39,7 @@ namespace BlockBase.Node.Controllers
             _sidechainProducerService = sidechainProducerService;
             _mainchainService = mainchainService;
             _mongoDbProducerService = mongoDbProducerService;
+            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         /// <summary>
@@ -152,7 +144,8 @@ namespace BlockBase.Node.Controllers
                 var sidechainMaintainer = new SidechainMaintainerManager(
                     new SidechainPool(NodeConfigurations.AccountName),
                     _logger, 
-                    _mainchainService);
+                    _mainchainService,
+                    NodeConfigurations, _peerConnectionsHandler);
                 
                 sidechainMaintainer.Start();
 

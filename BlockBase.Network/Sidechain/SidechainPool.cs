@@ -1,14 +1,15 @@
 ﻿using BlockBase.Domain.Enums;
 using BlockBase.Utils.Threading;
 using System;
-using System.Collections.Generic;
-using System.Text;
+
 
 namespace BlockBase.Network.Sidechain
 {
     public class SidechainPool
     {
-        public string SidechainName { get; set; }
+        public string ClientAccountName { get; set; }
+        public string ClientPublicKey { get; set; }
+
         public ThreadSafeList<ProducerInPool> ProducersInPool { get; set; }
         public SidechainPoolStateEnum State { get; set; }
         public bool ProducingBlocks { get; set; }
@@ -25,16 +26,16 @@ namespace BlockBase.Network.Sidechain
         {
         }
 
-        public SidechainPool(string sidechainName)
+        public SidechainPool(string clientAccountName)
         {
-            SidechainName = sidechainName;
+            ClientAccountName = clientAccountName;
             State = SidechainPoolStateEnum.RecoverInfo;
             ProducersInPool = new ThreadSafeList<ProducerInPool>();
         }
 
         public override int GetHashCode()
         {
-            return SidechainName.GetHashCode();
+            return ClientAccountName.GetHashCode();
         }
 
 

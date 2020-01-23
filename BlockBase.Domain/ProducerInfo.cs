@@ -15,10 +15,5 @@ namespace BlockBase.Domain
 
         public bool NewlyJoined { get; set; }
 
-//       public long StakeInMiniCoins { get; set; }
-
-//        public int NumberOfBlocksToWork { get; set; }
-
-//        public int StartedWorkingAtBlockWithSequenceNumber { get; set; }
     }
 }
