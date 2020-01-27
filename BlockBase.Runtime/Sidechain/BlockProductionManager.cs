@@ -279,8 +279,12 @@ namespace BlockBase.Runtime.Sidechain
         private async Task BuildChain()
         {
             _logger.LogDebug("Building chain.");
-            var task = _chainBuilder.Execute();
-            task.Wait();
+            var task = _chainBuilder.Start();
+            
+            while(task.Task.Status == TaskStatus.Running)
+            {
+                await Task.Delay(50);
+            }
 
             try
             {
