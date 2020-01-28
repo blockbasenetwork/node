@@ -91,6 +91,7 @@ namespace BlockBase.Domain.Eos
         public const string CODE = "code";
         public const string TYPE = "type";
         public const string REQUIREMENT = "requirement";
+        public const string SIDECHAIN = "sidechain";
         
     }
     

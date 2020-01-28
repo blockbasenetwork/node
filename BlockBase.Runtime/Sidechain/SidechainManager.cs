@@ -94,6 +94,7 @@ namespace BlockBase.Runtime.Sidechain
                                 if (Sidechain.ProducingBlocks)
                                 {
                                     await CheckContractAndUpdatePool();
+                                    await CheckAndGetReward();
                                 };
                             }
                             else await Task.Delay((int)_timeDiff);
@@ -535,6 +536,15 @@ namespace BlockBase.Runtime.Sidechain
             {
                 _logger.LogInformation("Pool changed.");
                 await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
+            }
+        }
+
+        private async Task CheckAndGetReward()
+        {
+            var rewardTable = await _mainchainService.RetrieveRewardTable(_nodeConfigurations.AccountName);
+            if (rewardTable.Any(r => r.Reward > 0))
+            {
+                await _mainchainService.ClainReward(Sidechain.SidechainName, _nodeConfigurations.AccountName);
             }
         }
 
