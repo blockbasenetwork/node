@@ -189,11 +189,11 @@ namespace BlockBase.Runtime.Mainchain
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
-            if (!producers.Where(p => p.Warning == 2).Any()) return;
+            if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
 
             foreach(var producer in producers)
             {
-                if (producer.Warning == 2) await _mainchainService.BlacklistProducer(_sidechain.SidechainName, producer.Key);
+                if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.SidechainName, producer.Key);
             }
 
             await _mainchainService.PunishProd(_sidechain.SidechainName);

@@ -18,9 +18,14 @@ namespace BlockBase.Domain.Eos
         public const string TOKEN_TABLE_NAME = "accounts";
         public const string PENDING_REWARD_TABLE = "rewards";
         public const string BLACKLIST_TABLE = "blacklist";
-        
-    }    
-    
+    }
+
+    public class EosTableValues
+    {
+        public const int WARNING_FLAGGED = 1;
+        public const int WARNING_PUNISH = 2;
+    }
+
     public class EosMsigConstants
     {
         public const string EOSIO_MSIG_ACCOUNT_NAME = "eosio.msig";
@@ -92,9 +97,9 @@ namespace BlockBase.Domain.Eos
         public const string TYPE = "type";
         public const string REQUIREMENT = "requirement";
         public const string SIDECHAIN = "sidechain";
-        
+
     }
-    
+
     public class EosAtributeNames
     {
         public const string EOSIO = "eosio";
@@ -129,7 +134,7 @@ namespace BlockBase.Domain.Eos
         public const string NUM_BLOCKS_BETWEEN_SETTLEMENTS = "num_blocks_between_settlements";
         public const string BLOCK_SIZE_IN_BYTES = "block_size_in_bytes";
         public const string HAS_CHAIN_STARTED = "has_chain_started";
-        public const string IS_CONFIGURATION_PHASE = "is_configuration_phase"; 
+        public const string IS_CONFIGURATION_PHASE = "is_configuration_phase";
         public const string IS_CANDIDATURE_PHASE = "is_candidature_phase";
         public const string IS_SECRET_SENDING_PHASE = "is_secret_sending_phase";
         public const string IS_IP_SENDING_PHASE = "is_ip_sending_phase";
@@ -143,8 +148,8 @@ namespace BlockBase.Domain.Eos
         public const string PRODUCER_STAKE = "producerstake";
         public const string BALANCE = "balance";
         public const string OWNER = "owner";
-        public const string SIDECHAIN = "sidechain";  
-        public const string PROPOSAL_NAME = "proposal_name";  
+        public const string SIDECHAIN = "sidechain";
+        public const string PROPOSAL_NAME = "proposal_name";
         public const string REQUESTED_APPROVALS = "requested_approvals";
         public const string PROVIDED_APPROVALS = "provided_approvals";
         public const string PACKED_TRANSACTION = "packed_transaction";
