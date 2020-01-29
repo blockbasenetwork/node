@@ -46,17 +46,13 @@ namespace BlockBase.Runtime.Sidechain
         private List<Block> _blocksReceived;
         private Block _lastValidSavedBlock;
         private BlockheaderTable _lastSidechainBlockheader;
-
-        private List<ProducerInPool> _badBehaviourList;
-        private IEnumerable<ProducerInPool> _validConnectedProducers;
         private ISidechainDatabasesManager _sidechainDatabaseManager;
-        private ProducerInPool _currentSendingProducer;
         private bool _completed;
         private bool _receiving;
         private DateTime _lastReceivedDate;
 
         private static readonly object Locker = new object();
-        private static readonly ulong MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 10;
+        private static readonly int MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 10;
 
         public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
         {
@@ -68,50 +64,57 @@ namespace BlockBase.Runtime.Sidechain
             _mainchainService = mainchainService;
             _endPoint = endPoint;
             _networkService.SubscribeRecoverBlockReceivedEvent(MessageForwarder_RecoverBlockReceived);
-            _badBehaviourList = new List<ProducerInPool>();
             _blocksReceived = new List<Block>();
             _sidechainDatabaseManager = sidechainDatabaseManager;
+        }
+
+        public TaskContainer Start()
+        {
+            TaskContainer = TaskContainer.Create(async () => await Execute());
+            TaskContainer.Start();
+            return TaskContainer;
         }
 
         public async Task Execute()
         {
             _completed = false;
             _receiving = true;
-
-            var databaseName = _sidechainPool.ClientAccountName;
-            _validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).Except(_badBehaviourList);
-            await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
-            _lastValidSavedBlock = await _mongoDbProducerService.GetLastValidSidechainBlockAsync(databaseName);
-            _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
-
-            _currentSendingProducer = _validConnectedProducers.FirstOrDefault();
-            var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
-            _logger.LogDebug("Last saved block " + beginSequenceNumber);
-
-
-            //TODO: what to do when it is equal to 0??
-            if (_validConnectedProducers.Count() != 0)
-            {
-                //TODO: ask another if the first fails
-                _logger.LogDebug("Sending Block Request.");
-                var message = BuildRequestBlocksNetworkMessage(_validConnectedProducers.FirstOrDefault(), beginSequenceNumber, _lastSidechainBlockheader.SequenceNumber, _sidechainPool.ClientAccountName);
-                await _networkService.SendMessageAsync(message);
-            }
-
-            _lastReceivedDate = DateTime.UtcNow;
+            var currentSendingProducer = new ProducerInPool();
+            var databaseName = _sidechainPool.SidechainName;
 
             while (!_completed)
             {
-                if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
+                var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
+                if (!validConnectedProducers.Any())
                 {
-                    _receiving = false;
-                    _logger.LogDebug("Too much time without receiving block.");
-                    _badBehaviourList.Add(_currentSendingProducer);
-                    _blocksReceived.Clear(); //TODO: Maybe change to not ask all of blocks again
-                    _completed = true;
+                    _logger.LogDebug("No connected producers to request blocks");
                     return;
                 }
-                Thread.Sleep(100);
+
+                await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
+                _lastValidSavedBlock = await _mongoDbProducerService.GetLastValidSidechainBlockAsync(databaseName);
+                _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.SidechainName);
+
+                var selectedProducerToSend = validConnectedProducers.Last() == currentSendingProducer ? 0 : validConnectedProducers.IndexOf(currentSendingProducer);
+                currentSendingProducer = validConnectedProducers.ElementAt(selectedProducerToSend);
+                var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
+                _logger.LogDebug("Last saved block " + beginSequenceNumber);
+
+                _logger.LogDebug("Sending Block Request.");
+                var message = BuildRequestBlocksNetworkMessage(currentSendingProducer, beginSequenceNumber, _lastSidechainBlockheader.SequenceNumber, _sidechainPool.SidechainName);
+                await _networkService.SendMessageAsync(message);
+
+                _lastReceivedDate = DateTime.UtcNow;
+                while(_receiving &&  DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
+                {
+                    await Task.Delay(MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS * 100);
+                }
+
+                if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
+                {
+                    _logger.LogDebug("Too much time without receiving block.");
+                    _blocksReceived.Clear(); //TODO: Change to not ask all blocks again
+                }
             }
         }
 
@@ -152,7 +155,7 @@ namespace BlockBase.Runtime.Sidechain
             var valid = false;
 
             var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
-            
+
             lock (Locker)
             {
                 if (_blocksReceived.Count() == 0)
@@ -184,21 +187,13 @@ namespace BlockBase.Runtime.Sidechain
                 _receiving = false;
                 await UpdateDatabase();
             }
-            if (!valid)
-            {
-                _receiving = false;
-                _logger.LogDebug("Block Received is Invalid.");
-                _badBehaviourList.Add(_currentSendingProducer);
-                _blocksReceived.Clear(); //TODO: Maybe change to not ask all of blocks again
-                _completed = true;
-            }
         }
 
         private async Task UpdateDatabase()
         {
             _logger.LogDebug("Adding blocks to database.");
             var orderedBlocks = _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber);
-             var databaseName = _sidechainPool.ClientAccountName;
+            var databaseName = _sidechainPool.SidechainName;
 
             foreach (Block block in orderedBlocks)
             {

@@ -81,6 +81,8 @@ namespace BlockBase.Runtime.Mainchain
                         await Task.Delay(10);
                         _sidechain.State = SidechainPoolStateEnum.WaitForNextState;
                     }
+
+                    TaskContainer.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 }
             }
             catch (OperationCanceledException)
@@ -102,38 +104,43 @@ namespace BlockBase.Runtime.Mainchain
             var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
             int latestTrxTime = 0;
 
-            if (stateTable.CandidatureTime &&
-               _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            try
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.ClientAccountName);
-            }
-            if (stateTable.SecretTime &&
+                if (stateTable.CandidatureTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.ClientAccountName);
-                //await UpdateAuthorization(_sidechain.SmartContractAccount);
+                {
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.SecretTime &&
+                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.IPSendTime &&
+                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    await UpdateAuthorization(_sidechain.SidechainName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.IPReceiveTime &&
+                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SidechainName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.ProductionTime && currentProducerTable.Any() &&
+                   (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SidechainName);
+                    _roundsUntilSettlement--;
+                    _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
+                    if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                }
             }
-            if (stateTable.IPSendTime &&
-               _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            catch (ApiErrorException eosException)
             {
-                //await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SmartContractAccount);
-                await UpdateAuthorization(_sidechain.ClientAccountName);
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
-            }
-            if (stateTable.IPReceiveTime &&
-               _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {   
-                await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName);
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
-                await ConnectToProducers();
-            }
-            if (stateTable.ProductionTime && currentProducerTable.Any() &&
-               (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
-                _roundsUntilSettlement--;
-                _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
-                if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                _logger.LogCritical($"Eos transaction failed with error {eosException.error.name}. Please verify your cpu/net stake or if there is heavy congestion in the network. Trying again in 60 seconds");
+                await Task.Delay(60000);
             }
 
             if (latestTrxTime != 0) _latestTrxTimes.Append(latestTrxTime);
@@ -185,7 +192,7 @@ namespace BlockBase.Runtime.Mainchain
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             await _mainchainService.AuthorizationAssign(accountName, producerList);
         }
-        
+
         private async Task LinkAuthorizarion(string actionsName, string owner)
         {
             try
@@ -225,12 +232,12 @@ namespace BlockBase.Runtime.Mainchain
             _logger.LogDebug("Settlement starting...");
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
-            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
-            if (!producers.Where(p => p.Warning == 2).Any()) return;
+            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
+            if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
 
-            foreach(var producer in producers)
+            foreach (var producer in producers)
             {
-                if (producer.Warning == 2) await _mainchainService.BlacklistProducer(_sidechain.ClientAccountName, producer.Key);
+                if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.SidechainName, producer.Key);
             }
 
             await _mainchainService.PunishProd(_sidechain.ClientAccountName);

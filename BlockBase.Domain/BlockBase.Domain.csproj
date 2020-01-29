@@ -13,11 +13,11 @@
     <PackageReference Include="Dapper" Version="1.50.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.1.1" />
     <PackageReference Include="Wiry.Base32.Patched" Version="1.0.6.1" />
+    <PackageReference Include="eos-sharp" Version="2.2.0"/>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BlockBase.Utils\BlockBase.Utils.csproj" />
-    <ProjectReference Include="..\eos-sharp\EosSharp\EosSharp\EosSharp.csproj"/>
   </ItemGroup>
 
 </Project>

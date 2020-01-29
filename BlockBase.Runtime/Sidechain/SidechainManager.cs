@@ -93,6 +93,7 @@ namespace BlockBase.Runtime.Sidechain
                                 if (Sidechain.ProducingBlocks)
                                 {
                                     await CheckContractAndUpdatePool();
+                                    await CheckAndGetReward();
                                 };
                             }
                             else await Task.Delay((int)_timeDiff);
@@ -473,8 +474,8 @@ namespace BlockBase.Runtime.Sidechain
             if (!Sidechain.ProducingBlocks) return;
 
             var nextBlockTime = lastBlockFromSettlement != null ?
-                lastBlockFromSettlement.Timestamp + Sidechain.BlockTimeDuration :
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
+                lastBlockFromSettlement.Timestamp + (Sidechain.BlockTimeDuration / 2) :
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (Sidechain.BlockTimeDuration / 2);
             if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
                 Sidechain.NextStateWaitEndTime = nextBlockTime;
         }
@@ -507,6 +508,15 @@ namespace BlockBase.Runtime.Sidechain
             {
                 _logger.LogInformation("Pool changed.");
                 await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
+            }
+        }
+
+        private async Task CheckAndGetReward()
+        {
+            var rewardTable = await _mainchainService.RetrieveRewardTable(_nodeConfigurations.AccountName);
+            if (rewardTable.Any(r => r.Reward > 0))
+            {
+                await _mainchainService.ClainReward(Sidechain.SidechainName, _nodeConfigurations.AccountName);
             }
         }
 
