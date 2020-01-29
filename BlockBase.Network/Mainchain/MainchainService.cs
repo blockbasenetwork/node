@@ -484,9 +484,8 @@ namespace BlockBase.Network.Mainchain
         {
             return new Dictionary<string, object>()
             {
-                { EosParameterNames.OWNER, owner },
-                { EosParameterNames.CLAIMER, claimer },
-                { EosParameterNames.CONTRACT, NetworkConfigurations.BlockBaseOperationsContract}
+                { EosParameterNames.SIDECHAIN, owner },
+                { EosParameterNames.CLAIMER, claimer }
             };
         }
 
