@@ -388,9 +388,7 @@ namespace BlockBase.Runtime.Sidechain
 
             UpdateIPsInSidechain(ipAddresses);
 
-            Sidechain.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.NewlyJoined = false);
-            if (!(Sidechain.ProducersInPool.GetEnumerable().Count() == 1 ||
-               (Sidechain.ProducersInPool.GetEnumerable().Count() == 2 && Sidechain.ProducersInPool.GetEnumerable().First().ProducerInfo.AccountName == _nodeConfigurations.AccountName)))
+            if (!(Sidechain.ProducersInPool.GetEnumerable().Count() == 1))
             {
                 await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
             }
