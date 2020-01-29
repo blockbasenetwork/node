@@ -80,7 +80,7 @@ namespace BlockBase.Runtime.Sidechain
             _completed = false;
             _receiving = true;
             var currentSendingProducer = new ProducerInPool();
-            var databaseName = _sidechainPool.SidechainName;
+            var databaseName = _sidechainPool.ClientAccountName;
 
             while (!_completed)
             {
@@ -93,7 +93,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
                 _lastValidSavedBlock = await _mongoDbProducerService.GetLastValidSidechainBlockAsync(databaseName);
-                _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.SidechainName);
+                _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
 
                 var selectedProducerToSend = validConnectedProducers.Last() == currentSendingProducer ? 0 : validConnectedProducers.IndexOf(currentSendingProducer);
                 currentSendingProducer = validConnectedProducers.ElementAt(selectedProducerToSend);
@@ -101,7 +101,7 @@ namespace BlockBase.Runtime.Sidechain
                 _logger.LogDebug("Last saved block " + beginSequenceNumber);
 
                 _logger.LogDebug("Sending Block Request.");
-                var message = BuildRequestBlocksNetworkMessage(currentSendingProducer, beginSequenceNumber, _lastSidechainBlockheader.SequenceNumber, _sidechainPool.SidechainName);
+                var message = BuildRequestBlocksNetworkMessage(currentSendingProducer, beginSequenceNumber, _lastSidechainBlockheader.SequenceNumber, _sidechainPool.ClientAccountName);
                 await _networkService.SendMessageAsync(message);
 
                 _lastReceivedDate = DateTime.UtcNow;
@@ -193,7 +193,7 @@ namespace BlockBase.Runtime.Sidechain
         {
             _logger.LogDebug("Adding blocks to database.");
             var orderedBlocks = _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber);
-            var databaseName = _sidechainPool.SidechainName;
+            var databaseName = _sidechainPool.ClientAccountName;
 
             foreach (Block block in orderedBlocks)
             {

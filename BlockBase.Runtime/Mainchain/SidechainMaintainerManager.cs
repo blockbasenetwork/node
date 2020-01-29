@@ -109,29 +109,29 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.CandidatureTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.SidechainName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.SecretTime &&
                    _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.SidechainName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.IPSendTime &&
                    _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorization(_sidechain.SidechainName);
-                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.SidechainName);
+                    await UpdateAuthorization(_sidechain.ClientAccountName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.IPReceiveTime &&
                    _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SidechainName);
-                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.SidechainName);
+                    await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.ProductionTime && currentProducerTable.Any() &&
                    (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SidechainName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
                     if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
@@ -232,12 +232,12 @@ namespace BlockBase.Runtime.Mainchain
             _logger.LogDebug("Settlement starting...");
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
-            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
+            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
 
             foreach (var producer in producers)
             {
-                if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.SidechainName, producer.Key);
+                if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.ClientAccountName, producer.Key);
             }
 
             await _mainchainService.PunishProd(_sidechain.ClientAccountName);
