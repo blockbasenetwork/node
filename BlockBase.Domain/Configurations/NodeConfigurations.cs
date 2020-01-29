@@ -8,5 +8,11 @@ namespace BlockBase.Domain.Configurations
         public string SecretPassword { get; set; }
         public string MongoDbConnectionString { get; set; }
         public string MongoDbPrefix { get; set; }
+        public string PostgresHost { get; set; }
+        public string PostgresUser { get; set; }
+        public int PostgresPort { get; set; }
+        public string PostgresPassword { get; set; }
+        public string EncryptionMasterKey { get; set; }
+        public string EncryptionPassword { get; set; }
     }
 }

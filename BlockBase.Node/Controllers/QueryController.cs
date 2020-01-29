@@ -1,15 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
 using BlockBase.DataProxy.Encryption;
+using BlockBase.Domain.Configurations;
+using BlockBase.Domain.Pocos;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime;
+using BlockBase.Runtime.Network;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
+using Wiry.Base32;
 
 namespace BlockBase.Node.Controllers
 {
@@ -19,16 +25,12 @@ namespace BlockBase.Node.Controllers
     public class QueryController : ControllerBase
     {
         private SqlCommandManager _sqlCommandManager;
-        public QueryController(ILogger<QueryController> logger)
+        public QueryController(ILogger<QueryController> logger,  IOptions<NodeConfigurations> nodeConfigurations, DatabaseKeyManager databaseKeyManager)
         {
-            var psqlConnector = new PSqlConnector("localhost", "postgres", 5432, "qwerty123", logger);
-            var secretStore = new SecretStore();
-            
-            //TODO - remove this from here
-            secretStore.SetSecret("master_key", KeyAndIVGenerator_v2.CreateRandomKey());
-            secretStore.SetSecret("master_iv", KeyAndIVGenerator_v2.CreateMasterIV("qwerty123"));
-
-            _sqlCommandManager = new SqlCommandManager(new MiddleMan(new DatabaseKeyManager(secretStore), secretStore), logger, psqlConnector);
+            var nodeConfigurationsValue = nodeConfigurations.Value;
+            var psqlConnector = new PSqlConnector(nodeConfigurationsValue.PostgresHost, nodeConfigurationsValue.PostgresUser, 
+            nodeConfigurationsValue.PostgresPort, nodeConfigurationsValue.PostgresPassword, logger);
+            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector);
 
         }
 
@@ -58,6 +60,33 @@ namespace BlockBase.Node.Controllers
             catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<QueryResult>>(e));
+            }
+        }
+
+
+        /// <summary>
+        /// Asks for databases, tables and columns structure
+        /// </summary>
+        /// <returns> Structure of databases </returns>
+        /// <response code="200">Structure retrieved with success</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="500">Error getting structure information</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Asks for databases, tables and columns structure",
+            Description = "The requester uses this service to know databases structure",
+            OperationId = "GetStructure"
+        )]
+        public ObjectResult GetStructure()
+        {
+            try
+            {
+                var structure = _sqlCommandManager.GetStructure();
+                return Ok(new OperationResponse<IList<DatabasePoco>>(structure));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<DatabasePoco>>(e));
             }
         }
     }

@@ -1,4 +1,5 @@
 using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Connectors;
 using BlockBase.Network.IO.Analysis;
@@ -132,6 +133,7 @@ namespace BlockBase.Api
                 services.AddSingleton<SidechainKeeper>();
                 services.AddSingleton<BlockValidator>();
                 services.AddSingleton<TransactionValidator>();
+                services.AddSingleton<DatabaseKeyManager>();
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
             });
 

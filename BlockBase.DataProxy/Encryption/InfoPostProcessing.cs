@@ -5,6 +5,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using BlockBase.Domain.Database.Sql.SqlCommand;
+using BlockBase.Domain.Pocos;
 using BlockBase.Domain.Results;
 using System;
 using System.Collections.Generic;
@@ -97,7 +98,7 @@ namespace BlockBase.DataProxy.Encryption
                 if (columnInfoRecord.LData.EncryptedIVColumnName == null) continue;
 
                 var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
-                var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName  + "." + columnInfoRecord.LData.EncryptedIVColumnName);
+                var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName + "." + columnInfoRecord.LData.EncryptedIVColumnName);
 
                 foreach (var row in filteredResults)
                 {
@@ -279,6 +280,35 @@ namespace BlockBase.DataProxy.Encryption
             throw new FormatException("Comparison operator not recognized.");
         }
 
+        public IList<DatabasePoco> GetStructure()
+        {
+            var structure = new List<DatabasePoco>();
+            var databasesInfoRecords = _encryptor.FindChildren("0");
 
+            foreach (var databaseInfoRecord in databasesInfoRecords)
+            {
+                
+                var databaseName = databaseInfoRecord.KeyName != null? _encryptor.DecryptName(databaseInfoRecord) : databaseInfoRecord.Name;
+                var database = new DatabasePoco(databaseName);
+                
+                var tablesInfoRecords = _encryptor.FindChildren(databaseInfoRecord.IV);
+                foreach (var tableInfoRecord in tablesInfoRecords)
+                {
+                    var tableName = tableInfoRecord.KeyName != null? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                    var table = new TablePoco(tableName);
+
+                    var columnsInfoRecords = _encryptor.FindChildren(tableInfoRecord.IV);
+                    foreach (var columnInfoRecord in columnsInfoRecords) 
+                    {
+                        var columnName = columnInfoRecord.KeyName != null? _encryptor.DecryptName(columnInfoRecord) : columnInfoRecord.Name;
+                        var column = new FieldPoco(columnName,_encryptor.GetColumnDataType(columnInfoRecord).DataTypeName.ToString(), null );
+                        table.Fields.Add(column);    
+                    }
+                    database.Tables.Add(table);
+                }
+                structure.Add(database);
+            }
+            return structure;
+        }
     }
 }

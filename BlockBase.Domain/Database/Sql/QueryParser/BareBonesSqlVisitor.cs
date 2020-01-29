@@ -21,6 +21,7 @@ namespace BlockBase.Domain.Database.QueryParser
         private estring _databaseName { get; set; }
         public override object VisitSql_stmt_list([NotNull] Sql.QueryParser.BareBonesSqlParser.Sql_stmt_listContext context)
         {
+            ThrowIfParserHasException(context);
             var builder = new Builder();
 
             var stms = context.sql_stmt();
@@ -391,7 +392,7 @@ namespace BlockBase.Domain.Database.QueryParser
                         (estring)Visit(expr.column_name().complex_name())),
                     new Value(expr.literal_value().GetText()),
                     GetLogicalOperatorFromString(exprString));
-                ;
+                
                 return comparisonExpression;
 
 

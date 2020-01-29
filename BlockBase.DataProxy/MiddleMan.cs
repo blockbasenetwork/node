@@ -11,12 +11,11 @@ namespace BlockBase.DataProxy
     public class MiddleMan : IEncryptor
     {
         private DatabaseKeyManager _databaseKeyManager;
-        private SecretStore _secretStore;
 
-        public MiddleMan(DatabaseKeyManager databaseKeyManager, SecretStore secretStore)
+        public MiddleMan(DatabaseKeyManager databaseKeyManager)
         {
             _databaseKeyManager = databaseKeyManager;
-            _secretStore = secretStore;
+
         }
 
         public InfoRecord CreateInfoRecord(estring name, string parentIV)
@@ -27,7 +26,7 @@ namespace BlockBase.DataProxy
                 var parentManageKey = _databaseKeyManager.GetKeyManageFromInfoRecord(parentInfoRecord);
                 return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.TableRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV));
             }
-            return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, _secretStore.GetSecret("master_key"), _secretStore.GetSecret("master_iv"));
+            return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, _databaseKeyManager.SecretStore.GetSecret("master_key"), _databaseKeyManager.SecretStore.GetSecret("master_iv"));
         }
         public InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data)
         {
