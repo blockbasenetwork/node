@@ -154,15 +154,16 @@ namespace BlockBase.Runtime
                 catch (Exception e)
                 {
                     _logger.LogError("Error executing sql command.", e);
-                }
+                    results.Add(CreateQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
+                                    }
             }
             return results;
         }
 
-        private QueryResult CreateQueryResult(bool success, string statementType)
+        private QueryResult CreateQueryResult(bool success, string statementType, string exceptionMessage = null)
         {
             var executed = success ? "True" : "False";
-            var message = $"The {statementType} statement " + (success ? "executed correctly." : "didn't execute.");
+            var message = $"The {statementType} statement " + (success ? "executed correctly." : "didn't execute. Exception: " + exceptionMessage);
             return new QueryResult(
                 new List<IList<string>>()
                 {
