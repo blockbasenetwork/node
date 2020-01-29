@@ -61,7 +61,6 @@ namespace BlockBase.Runtime.Mainchain
                 var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
                 if(stateTable.ProductionTime) await ConnectToProducers();
                 
-
                 while (true)
                 {
                     _timeDiff = (_sidechain.NextStateWaitEndTime * 1000) - _timeToExecuteTrx - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -219,8 +218,9 @@ namespace BlockBase.Runtime.Mainchain
             var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
             for(int i = 0; i < ipAddressesTables.Count; i++)
             {
+                var producer = ipAddressesTables[i].Key;
                 var producerPublicKey = ipAddressesTables[i].PublicKey;
-                decryptedProducerIPs.Add(producerPublicKey,
+                decryptedProducerIPs.Add(producer,
                  IPEncryption.DecryptIP(producerEncryptedIPAdresses[i], _nodeConfigurations.ActivePrivateKey, producerPublicKey));
 
             }

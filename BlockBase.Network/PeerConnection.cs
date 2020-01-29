@@ -7,7 +7,7 @@ namespace BlockBase.Network
     {
         public IPEndPoint IPEndPoint { get; set; }
 
-        public string PublicKey { get; set; }
+        public string ConnectionAccountName { get; set; }
 
         public int Rating { get; set; }
 

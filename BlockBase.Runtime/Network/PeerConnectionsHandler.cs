@@ -109,7 +109,7 @@ namespace BlockBase.Runtime.Network
                 TryToRemoveConnection(producerInPool.PeerConnection);
             }
 
-            var clientConnection = CurrentPeerConnections.GetEnumerable().Where(c => c.PublicKey == sidechain.ClientPublicKey).SingleOrDefault();
+            var clientConnection = CurrentPeerConnections.GetEnumerable().Where(c => c.ConnectionAccountName == sidechain.ClientAccountName).SingleOrDefault();
             TryToRemoveConnection(clientConnection);
         }
 
@@ -281,13 +281,13 @@ namespace BlockBase.Runtime.Network
             await _networkService.SendMessageAsync(message);
         }
 
-        private PeerConnection AddIfNotExistsPeerConnection(IPEndPoint ipEndPoint, string publicKey)
+        private PeerConnection AddIfNotExistsPeerConnection(IPEndPoint ipEndPoint, string accountName)
         {
             PeerConnection peerConnection = null;
 
             if (ipEndPoint != null)
             {
-                peerConnection = CurrentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint.Equals(ipEndPoint) || p.PublicKey == publicKey);
+                peerConnection = CurrentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint.Equals(ipEndPoint) || p.ConnectionAccountName == accountName);
                 if (peerConnection == null)
                 {
                     peerConnection = new PeerConnection
@@ -295,7 +295,7 @@ namespace BlockBase.Runtime.Network
                         ConnectionState = ConnectionStateEnum.Disconnected,
                         Rating = STARTING_RATING,
                         IPEndPoint = ipEndPoint,
-                        PublicKey = publicKey
+                        ConnectionAccountName = accountName
                         
                     };
                     CurrentPeerConnections.Add(peerConnection);
