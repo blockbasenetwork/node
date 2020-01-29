@@ -96,7 +96,7 @@ namespace BlockBase.Runtime.Sidechain
                 _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
 
                 var selectedProducerToSend = validConnectedProducers.Last() == currentSendingProducer ? 0 : validConnectedProducers.IndexOf(currentSendingProducer);
-                currentSendingProducer = validConnectedProducers.ElementAt(selectedProducerToSend);
+                currentSendingProducer = selectedProducerToSend >= 0 ? validConnectedProducers.ElementAt(selectedProducerToSend) : validConnectedProducers.ElementAt(0);
                 var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
                 _logger.LogDebug("Last saved block " + beginSequenceNumber);
 
