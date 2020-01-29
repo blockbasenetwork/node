@@ -94,6 +94,15 @@ namespace BlockBase.Runtime.SidechainProducer
             var sidechainsDB = await _mongoDbProducerService.GetAllProducingSidechainsAsync();
             foreach(var sidechainDB in sidechainsDB)
             {
+                var contractState = await _mainchainService.RetrieveContractState(sidechainDB.Id);
+                if (contractState == null || (!contractState.ProductionTime && !contractState.CandidatureTime)) continue;
+
+                var producersInChain = await _mainchainService.RetrieveProducersFromTable(sidechainDB.Id);
+                if (!producersInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
+
+                var candidatesInChain = await _mainchainService.RetrieveCandidates(sidechainDB.Id);
+                if (candidatesInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
+
                 var sidechainPool = new SidechainPool(sidechainDB.Id);
                 AddSidechainToProducer(sidechainPool);
             }
