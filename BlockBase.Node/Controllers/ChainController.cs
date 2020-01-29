@@ -140,7 +140,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
+                string tx = null;
+                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                
+                if (!contractSt.CandidatureTime && !contractSt.ProductionTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
 
                 var sidechainMaintainer = new SidechainMaintainerManager(
                     new SidechainPool(NodeConfigurations.AccountName),
@@ -150,7 +153,9 @@ namespace BlockBase.Node.Controllers
                 
                 sidechainMaintainer.Start();
 
-                return Ok(new OperationResponse<bool>(true, $"Chain maintenance started and start candidature sent: Tx: {tx}"));
+                var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
+
+                return Ok(new OperationResponse<bool>(true, okMessage));
             }
             catch(Exception e)
             {
