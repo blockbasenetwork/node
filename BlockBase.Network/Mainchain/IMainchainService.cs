@@ -25,7 +25,7 @@ namespace BlockBase.Network.Mainchain
         Task<int> ExecuteChainMaintainerAction(string actionname, string accountname, string permission = "active");
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string permission = "active", string accountPermission = "active");
         Task<string> LinkAuthorization(string actionName ,string accountname, string permission = "active");
-        Task<string> ClainReward(string chain, string producerName, string permission = "active");
+        Task<string> ClaimReward(string chain, string producerName, string permission = "active");
 
         Task<ClientTable> RetrieveClientTable(string chain);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);

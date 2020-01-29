@@ -123,7 +123,7 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
-        public async Task<string> ClainReward(string chain, string producerName, string permission = "active") =>
+        public async Task<string> ClaimReward(string chain, string producerName, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.CLAIM_REWARD,
                 NetworkConfigurations.BlockBaseTokenContract,
