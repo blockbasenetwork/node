@@ -82,10 +82,10 @@ namespace BlockBase.Runtime.Sidechain
                             if (currentProducerTable != null)
                             {
                                 _nextTimeToCheckSmartContract = currentProducerTable.StartProductionTime + _sidechainPool.BlockTimeDuration;
-                                _logger.LogDebug($"StartProductionTime: {currentProducerTable.StartProductionTime}");
-                                _logger.LogDebug($" Start Production Time: {DateTimeOffset.FromUnixTimeSeconds(currentProducerTable.StartProductionTime).UtcDateTime} Next time to check smart contract: {DateTimeOffset.FromUnixTimeSeconds(_nextTimeToCheckSmartContract).UtcDateTime}");
 
                                 if (_nextTimeToCheckSmartContract == _previousTimeToCheck) continue;
+                                _logger.LogDebug($"StartProductionTime: {currentProducerTable.StartProductionTime}");
+                                _logger.LogDebug($" Start Production Time: {DateTimeOffset.FromUnixTimeSeconds(currentProducerTable.StartProductionTime).UtcDateTime} Next time to check smart contract: {DateTimeOffset.FromUnixTimeSeconds(_nextTimeToCheckSmartContract).UtcDateTime}");
 
                                 _previousTimeToCheck = _nextTimeToCheckSmartContract;
 

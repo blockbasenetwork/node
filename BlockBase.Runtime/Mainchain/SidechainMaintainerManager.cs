@@ -69,6 +69,8 @@ namespace BlockBase.Runtime.Mainchain
                         await Task.Delay(10);
                         _sidechain.State = SidechainPoolStateEnum.WaitForNextState;
                     }
+
+                    TaskContainer.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 }
             }
             catch (OperationCanceledException)
@@ -90,35 +92,43 @@ namespace BlockBase.Runtime.Mainchain
             var stateTable = await _mainchainService.RetrieveContractState(_sidechain.SidechainName);
             int latestTrxTime = 0;
 
-            if (stateTable.CandidatureTime &&
+            try
+            {
+                if (stateTable.CandidatureTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.SidechainName);
+                {
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.SecretTime &&
+                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.IPSendTime &&
+                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    await UpdateAuthorization(_sidechain.SidechainName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.IPReceiveTime &&
+                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SidechainName);
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.SidechainName);
+                }
+                if (stateTable.ProductionTime && currentProducerTable.Any() &&
+                   (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SidechainName);
+                    _roundsUntilSettlement--;
+                    _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
+                    if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                }
             }
-            if (stateTable.SecretTime &&
-               _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            catch (ApiErrorException eosException)
             {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.SidechainName);
-            }
-            if (stateTable.IPSendTime &&
-               _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                await UpdateAuthorization(_sidechain.SidechainName);
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.SidechainName);
-            }
-            if (stateTable.IPReceiveTime &&
-               _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.SidechainName);
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUTION_TIME, _sidechain.SidechainName);
-            }
-            if (stateTable.ProductionTime && currentProducerTable.Any() &&
-               (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.SidechainName);
-                _roundsUntilSettlement--;
-                _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
-                if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                _logger.LogCritical($"Eos transaction failed with error {eosException.error.name}. Please verify your cpu/net stake or if there is heavy congestion in the network. Trying again in 60 seconds");
+                await Task.Delay(60000);
             }
 
             if (latestTrxTime != 0) _latestTrxTimes.Append(latestTrxTime);
@@ -164,7 +174,7 @@ namespace BlockBase.Runtime.Mainchain
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
             await _mainchainService.AuthorizationAssign(accountName, producerList);
         }
-        
+
         private async Task LinkAuthorizarion(string actionsName, string owner)
         {
             try
@@ -191,7 +201,7 @@ namespace BlockBase.Runtime.Mainchain
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.SidechainName);
             if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
 
-            foreach(var producer in producers)
+            foreach (var producer in producers)
             {
                 if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.SidechainName, producer.Key);
             }
