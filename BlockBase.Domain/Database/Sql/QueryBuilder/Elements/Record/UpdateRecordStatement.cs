@@ -39,5 +39,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
             }
             return updateRecordStatementClone;
         }
+
+        public string GetStatementType()
+        {
+            return "update record";
+        }
     }
 }

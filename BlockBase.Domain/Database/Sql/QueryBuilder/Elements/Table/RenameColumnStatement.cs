@@ -20,5 +20,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         {
             return new RenameColumnStatement() { TableName = TableName.Clone(), ColumnName = ColumnName.Clone(), NewColumnName = NewColumnName.Clone() };
         }
+
+        public override string GetStatementType()
+        {
+            return "rename column";
+        }
     }
 }

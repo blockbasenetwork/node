@@ -29,7 +29,7 @@ namespace BlockBase.Node.Controllers
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
         
-        public ProducerController(ILogger<ChainController> logger, IOptions<NodeConfigurations> nodeConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public ProducerController(ILogger<ProducerController> logger, IOptions<NodeConfigurations> nodeConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             NodeConfigurations = nodeConfigurations?.Value;
 

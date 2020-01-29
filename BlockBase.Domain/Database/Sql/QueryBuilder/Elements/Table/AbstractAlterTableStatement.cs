@@ -7,6 +7,6 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public estring TableName { get; set; }
 
         public abstract ISqlStatement Clone();
-        
+        public abstract string GetStatementType();
     }
 }

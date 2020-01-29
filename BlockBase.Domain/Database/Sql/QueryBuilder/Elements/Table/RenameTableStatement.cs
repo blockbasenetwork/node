@@ -18,5 +18,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         {
             return new RenameTableStatement() { TableName = TableName.Clone(), NewTableName = NewTableName.Clone() };
         }
+
+        public override string GetStatementType()
+        {
+            return "rename table";
+        }
     }
 }

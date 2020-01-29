@@ -19,5 +19,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database
         {
             return new DropDatabaseStatement() { DatabaseName = DatabaseName.Clone() };
         }
+
+        public string GetStatementType()
+        {
+            return "drop database";
+        }
     }
 }

@@ -12,7 +12,8 @@ using Antlr4.Runtime;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using BlockBase.DataProxy;
-using BlockBase.Runtime.Network;
+using System.Collections.Generic;
+using BlockBase.Domain.Results;
 
 namespace BlockBase.Runtime
 {
@@ -37,7 +38,7 @@ namespace BlockBase.Runtime
             _transformer = new Transformer_v2(middleMan);
         }
 
-        public async Task Execute(string sqlString)
+        public async Task<IList<QueryResult>> Execute(string sqlString)
         {
             Console.WriteLine("");
             Console.WriteLine(sqlString);
@@ -46,15 +47,17 @@ namespace BlockBase.Runtime
             CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
             BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
 
+            var results = new List<QueryResult>();
+
             var context = parser.sql_stmt_list();
-            try
+            var builder = (Builder)_visitor.Visit(context);
+            _transformer.TransformBuilder(builder);
+            builder.BuildSqlStatements(_generator);
+
+
+            foreach (var sqlCommand in builder.SqlCommands)
             {
-                var builder = (Builder)_visitor.Visit(context);
-                _transformer.TransformBuilder(builder);
-                builder.BuildSqlStatements(_generator);
-
-
-                foreach (var sqlCommand in builder.SqlCommands)
+                try
                 {
                     Console.WriteLine("");
                     string sqlTextToExecute = "";
@@ -67,11 +70,14 @@ namespace BlockBase.Runtime
                             sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
                             Console.WriteLine(sqlTextToExecute);
                             var resultList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                            var filteredResults = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultList, _databaseName);
-                            foreach (var row in filteredResults)
+                            var queryResult = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultList, _databaseName);
+                            results.Add(queryResult);
+
+                            foreach (var title in queryResult.Columns) _logger.LogDebug(title + " ");
+                            foreach (var row in queryResult.Data)
                             {
                                 Console.WriteLine();
-                                foreach (var value in row) Console.Write(value + " ");
+                                foreach (var value in row) _logger.LogDebug(value + " ");
                             }
                             break;
 
@@ -89,6 +95,8 @@ namespace BlockBase.Runtime
                                 await _connector.ExecuteCommand(updateToExecute, _databaseName);
                             }
 
+                            results.Add(CreateQueryResult(true, updateSqlCommand.OriginalSqlStatement.GetStatementType()));
+
                             break;
 
 
@@ -99,10 +107,15 @@ namespace BlockBase.Runtime
                                 Console.WriteLine(sqlTextToExecute);
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
                             }
+                            results.Add(CreateQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
 
                         case DatabaseSqlCommand databaseSqlCommand:
-                            if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement) continue;
+                            if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement) 
+                            {
+                                results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
+                                continue;
+                            }
                             for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
                             {
                                 sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
@@ -112,25 +125,53 @@ namespace BlockBase.Runtime
                                 else
                                     await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
                             }
+                            results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
                         case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
                             if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
                             {
-                               
+
                                 var databasesList = _infoPostProcessing.GetDatabasesList();
                                 Console.WriteLine("Databases:");
                                 foreach (var database in databasesList) Console.WriteLine(database);
+                                results.Add(new QueryResult(
+                                    new List<IList<string>>(databasesList.Select(d => new List<string>(){d}).ToList()),
+                                    new List<string>() {"databases"}                              )
+                                );
                             }
 
-                            else Console.WriteLine("Current Database: " + _infoPostProcessing.DecryptDatabaseName(_databaseName) ?? "none");
+                            else 
+                            {
+                                var currentDatabase = _infoPostProcessing.DecryptDatabaseName(_databaseName) ?? "none";
+                                results.Add(new QueryResult(
+                                    new List<IList<string>>(){ new List<string>() {currentDatabase}},
+                                    new List<string>() {"current_database"})
+                                );
+                            }
                             break;
                     }
                 }
+                catch (Exception e)
+                {
+                    _logger.LogError("Error executing sql command.", e);
+                }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
+            return results;
+        }
+
+        private QueryResult CreateQueryResult(bool success, string statementType)
+        {
+            var executed = success ? "True" : "False";
+            var message = $"The {statementType} statement " + (success ? "executed correctly." : "didn't execute.");
+            return new QueryResult(
+                new List<IList<string>>()
+                {
+                    new List<string>() {executed, message}
+                },
+                new List<string>() { "Executed", "Message" }
+            );
+
         }
     }
+
 }
