@@ -18,5 +18,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         {
             return new AddColumnStatement() { ColumnDefinition = ColumnDefinition.Clone(), TableName = TableName.Clone() };
         }
+
+        public override string GetStatementType()
+        {
+            return "add column";
+        }
     }
 }

@@ -28,5 +28,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
                 Offset = Offset
             };
         }
+
+        public string GetStatementType()
+        {
+            return "simple select";
+        }
     }
 }

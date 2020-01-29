@@ -20,5 +20,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database
         {
             return new CreateDatabaseStatement() { DatabaseName = DatabaseName.Clone() };
         }
+
+        public string GetStatementType()
+        {
+            return "create database";
+        }
     }
 }

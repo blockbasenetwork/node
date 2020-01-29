@@ -24,5 +24,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         {
             return new CreateTableStatement() { TableName = TableName.Clone(), ColumnDefinitions = ColumnDefinitions.Select(c => c.Clone()).ToList() };
         }
+
+        public string GetStatementType()
+        {
+            return "create table";
+        }
     }
 }

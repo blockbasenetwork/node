@@ -24,5 +24,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
             foreach (var keyPair in ValuesPerColumn) valuesPerColumnClone.Add(keyPair.Key, keyPair.Value.Select(v => v.Clone()).ToList());
             return new InsertRecordStatement() { TableName = TableName.Clone(), ValuesPerColumn = valuesPerColumnClone };
         }
+
+        public string GetStatementType()
+        {
+            return "insert record";
+        }
     }
 }

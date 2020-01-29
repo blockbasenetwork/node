@@ -8,5 +8,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database
         {
             throw new System.NotImplementedException();
         }
+
+        public string GetStatementType()
+        {
+            return "list database";
+        }
     }
 }

@@ -20,5 +20,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
         {
             return new DeleteRecordStatement() { TableName = TableName.Clone(), WhereClause = WhereClause.Clone() };
         }
+
+        public string GetStatementType()
+        {
+            return "delete record";
+        }
     }
 }

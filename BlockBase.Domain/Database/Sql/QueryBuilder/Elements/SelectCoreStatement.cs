@@ -57,5 +57,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         {
             WhereExpression = expression;
         }
+
+        public string GetStatementType()
+        {
+            return "select core";
+        }
     }
 }

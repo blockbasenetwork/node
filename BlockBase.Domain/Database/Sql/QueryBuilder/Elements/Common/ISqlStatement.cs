@@ -2,5 +2,6 @@
 {
     public interface ISqlStatement
     {
+        string GetStatementType();
     }
 }
