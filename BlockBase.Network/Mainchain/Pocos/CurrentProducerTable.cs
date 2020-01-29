@@ -10,5 +10,8 @@ namespace BlockBase.Network.Mainchain.Pocos
 
         [JsonProperty(EosAtributeNames.PRODUCTION_START_DATE_IN_SECONDS)]
         public long StartProductionTime { get; set; }
+
+        [JsonProperty(EosAtributeNames.HAS_PRODUCED_BLOCK)]
+        public bool HasProducedBlock { get; set; }
     }
 }

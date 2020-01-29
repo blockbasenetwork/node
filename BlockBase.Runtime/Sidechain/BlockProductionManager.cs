@@ -108,7 +108,7 @@ namespace BlockBase.Runtime.Sidechain
                                     }
                                 }
 
-                                if (_currentProducingProducerAccountName == _nodeConfigurations.AccountName)
+                                if (_currentProducingProducerAccountName == _nodeConfigurations.AccountName && !currentProducerTable.HasProducedBlock)
                                 {
                                     var block = await ProduceBlock();
                                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);

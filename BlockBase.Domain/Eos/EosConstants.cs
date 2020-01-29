@@ -141,6 +141,7 @@ namespace BlockBase.Domain.Eos
         public const string IS_IP_RETRIEVING_PHASE = "is_ip_retrieving_phase";
         public const string IS_PRODUCTION_PHASE = "is_production_phase";
         public const string PRODUCTION_START_DATE_IN_SECONDS = "production_start_date_in_seconds";
+        public const string HAS_PRODUCED_BLOCK = "has_produced_block";
         public const string ENCRYPTED_IPS = "encrypted_ips";
         public const string REWARD = "reward";
         public const string WARNING_TYPE = "warning_type";
