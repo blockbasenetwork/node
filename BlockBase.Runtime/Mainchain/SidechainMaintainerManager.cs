@@ -22,6 +22,7 @@ namespace BlockBase.Runtime.Mainchain
         public TaskContainer TaskContainer { get; private set; }
         private IMainchainService _mainchainService;
         private long _timeDiff;
+        private bool _forceTryAgain;
         private int _timeToExecuteTrx;
         private int _roundsUntilSettlement;
         private IEnumerable<int> _latestTrxTimes;
@@ -68,7 +69,7 @@ namespace BlockBase.Runtime.Mainchain
 
                     if (_timeDiff <= 0)
                     {
-                        if (_previousWaitTime != _sidechain.NextStateWaitEndTime) await CheckContractEndState();
+                        if (_previousWaitTime != _sidechain.NextStateWaitEndTime || _forceTryAgain) await CheckContractEndState();
                         UpdateAverageTrxTime();
                         await CheckContractAndUpdateStates();
                         await CheckContractAndUpdateWaitTimes();
@@ -102,6 +103,7 @@ namespace BlockBase.Runtime.Mainchain
             var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechain.ClientAccountName);
             var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
             int latestTrxTime = 0;
+            _forceTryAgain = false;
 
             try
             {
@@ -140,6 +142,7 @@ namespace BlockBase.Runtime.Mainchain
             {
                 _logger.LogCritical($"Eos transaction failed with error {eosException.error.name}. Please verify your cpu/net stake or if there is heavy congestion in the network. Trying again in 60 seconds");
                 await Task.Delay(60000);
+                _forceTryAgain = true;
             }
 
             if (latestTrxTime != 0) _latestTrxTimes.Append(latestTrxTime);
