@@ -428,6 +428,7 @@ namespace BlockBase.Runtime.Sidechain
             var producerIndex = IpsAddressTableEntries.FindIndex(m => m.Key == _nodeConfigurations.AccountName);
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
             _logger.LogDebug($"Updating {numberOfIpsToUpdate} ips.");
+            if (numberOfIpsToUpdate == 0) return;
             var reorganizedIpsAddressTableEntries = ListHelper.GetListSortedCountingBackFromIndex(IpsAddressTableEntries, producerIndex).Take(numberOfIpsToUpdate).ToList();
 
             for (int i = 0; i < reorganizedIpsAddressTableEntries.Count(); i++)
