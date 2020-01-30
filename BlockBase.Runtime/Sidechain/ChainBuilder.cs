@@ -96,12 +96,18 @@ namespace BlockBase.Runtime.Sidechain
                 _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
 
                 var selectedProducerToSend = validConnectedProducers.Last() == currentSendingProducer ? 0 : validConnectedProducers.IndexOf(currentSendingProducer);
-                currentSendingProducer = selectedProducerToSend >= 0 ? validConnectedProducers.ElementAt(selectedProducerToSend) : validConnectedProducers.ElementAt(0);
+                currentSendingProducer = selectedProducerToSend >= 0 ? 
+                    validConnectedProducers.ElementAt(selectedProducerToSend) : 
+                    validConnectedProducers.ElementAt(0);
+                
                 var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
-                _logger.LogDebug("Last saved block " + beginSequenceNumber);
+                var endSequenceNumber = _blocksReceived.Any() ? 
+                    _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber).First().BlockHeader.SequenceNumber : 
+                    _lastSidechainBlockheader.SequenceNumber;
+                
+                _logger.LogDebug($"Asking for blocks {beginSequenceNumber} to {endSequenceNumber}");
 
-                _logger.LogDebug("Sending Block Request.");
-                var message = BuildRequestBlocksNetworkMessage(currentSendingProducer, beginSequenceNumber, _lastSidechainBlockheader.SequenceNumber, _sidechainPool.ClientAccountName);
+                var message = BuildRequestBlocksNetworkMessage(currentSendingProducer, beginSequenceNumber, endSequenceNumber, _sidechainPool.ClientAccountName);
                 await _networkService.SendMessageAsync(message);
 
                 _lastReceivedDate = DateTime.UtcNow;
@@ -112,8 +118,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
                 {
-                    _logger.LogDebug("Too much time without receiving block.");
-                    _blocksReceived.Clear(); //TODO: Change to not ask all blocks again
+                    _logger.LogDebug("Too much time without receiving block. Asking another producer for remaining blocks.");
                 }
             }
         }
