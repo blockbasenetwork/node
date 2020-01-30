@@ -172,9 +172,9 @@ namespace BlockBase.Runtime.Sidechain
                 }).ToList();
 
                 Sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
-            }
 
-            if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
+                if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
+            }
 
             _logger.LogDebug("State " + Sidechain.State);
         }
