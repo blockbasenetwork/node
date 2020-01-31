@@ -175,6 +175,10 @@ namespace BlockBase.Runtime.Sidechain
 
                 if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
             }
+            else
+            {
+                Sidechain.CandidatureOnStandby = true;
+            }
 
             _logger.LogDebug("State " + Sidechain.State);
         }
