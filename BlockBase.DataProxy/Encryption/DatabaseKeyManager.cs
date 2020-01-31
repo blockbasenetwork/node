@@ -68,7 +68,8 @@ namespace BlockBase.DataProxy.Encryption
             var keyManage = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyManageBytes, keyManageBytes, ivBytes));
             var keyName = !name.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyNameBytes, keyNameBytes, ivBytes));
             string pIV = recordTypeEnum == InfoRecordTypeEnum.DatabaseRecord ? null : Base32Encoding.ZBase32.GetString(parentIV);
-            if(FindChildren(pIV ?? "0").Where(c => c.LocalNameHash == localNameHash).Count() != 0) throw new Exception("Name already taken on this scope.");
+            var twin = FindChildren(pIV ?? "0").Where(c => c.LocalNameHash == localNameHash).SingleOrDefault();
+            if(twin != null) return twin;
             string encryptedData = data == null ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(data), keyManageBytes, ivBytes));
 
             SecretStore.SetSecret(iv, keyManageBytes);
