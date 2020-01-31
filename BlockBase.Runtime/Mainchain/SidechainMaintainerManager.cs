@@ -193,6 +193,7 @@ namespace BlockBase.Runtime.Mainchain
         private async Task UpdateAuthorization(string accountName)
         {
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            if (!producerList.Any()) return;
             await _mainchainService.AuthorizationAssign(accountName, producerList);
         }
 
