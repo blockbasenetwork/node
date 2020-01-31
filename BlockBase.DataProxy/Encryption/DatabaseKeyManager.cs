@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -56,6 +57,7 @@ namespace BlockBase.DataProxy.Encryption
 
         public InfoRecord AddInfoRecord(estring name, InfoRecordTypeEnum recordTypeEnum, byte[] parentManageKey, byte[] parentIV, string data = null)
         {
+            
             var ivBytes = KeyAndIVGenerator_v2.CreateRandomIV();
             var keyManageBytes = KeyAndIVGenerator_v2.CreateDerivateKey(parentManageKey, parentIV);
             var keyNameBytes = KeyAndIVGenerator_v2.CreateDerivateKey(keyManageBytes, ivBytes);
@@ -66,6 +68,8 @@ namespace BlockBase.DataProxy.Encryption
             var keyManage = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyManageBytes, keyManageBytes, ivBytes));
             var keyName = !name.ToEncrypt ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyNameBytes, keyNameBytes, ivBytes));
             string pIV = recordTypeEnum == InfoRecordTypeEnum.DatabaseRecord ? null : Base32Encoding.ZBase32.GetString(parentIV);
+            var twin = FindChildren(pIV ?? "0").Where(c => c.LocalNameHash == localNameHash).SingleOrDefault();
+            if(twin != null) return twin;
             string encryptedData = data == null ? null : Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(data), keyManageBytes, ivBytes));
 
             SecretStore.SetSecret(iv, keyManageBytes);

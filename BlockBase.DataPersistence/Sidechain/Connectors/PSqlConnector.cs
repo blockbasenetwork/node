@@ -203,6 +203,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 catch (Exception e)
                 {
                     _logger.LogWarning(e.Message, "Error executing command.");
+                    throw e;
                 }
                 finally
                 {
@@ -237,6 +238,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 catch (Exception e)
                 {
                     _logger.LogWarning(e.Message, "Error executing query.");
+                    throw e;
                 }
                 finally
                 {
