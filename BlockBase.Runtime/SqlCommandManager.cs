@@ -53,9 +53,6 @@ namespace BlockBase.Runtime
                 BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
                 CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
                 BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
-                // parser.RemoveErrorListeners();
-                // parser.AddErrorListener(ThrowingErrorListener.INSTANCE);
-
 
                 var context = parser.sql_stmt_list();
                 var builder = (Builder)_visitor.Visit(context);
@@ -126,6 +123,13 @@ namespace BlockBase.Runtime
                                     results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                                     continue;
                                 }
+                                
+                                if(databaseSqlCommand.OriginalSqlStatement is CreateDatabaseStatement)
+                                    await _connector.InsertToDatabasesTable(((CreateDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
+                                
+                                else if(databaseSqlCommand.OriginalSqlStatement is DropDatabaseStatement)
+                                    await _connector.InsertToDatabasesTable(((DropDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
+
                                 for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
                                 {
                                     sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];

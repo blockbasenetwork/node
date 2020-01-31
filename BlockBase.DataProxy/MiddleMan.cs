@@ -15,7 +15,6 @@ namespace BlockBase.DataProxy
         public MiddleMan(DatabaseKeyManager databaseKeyManager)
         {
             _databaseKeyManager = databaseKeyManager;
-
         }
 
         public InfoRecord CreateInfoRecord(estring name, string parentIV)

@@ -9,6 +9,9 @@ using System.Text;
 using Wiry.Base32;
 using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using BlockBase.DataPersistence.Sidechain.Connectors;
+using System.Threading.Tasks;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -16,19 +19,24 @@ namespace BlockBase.DataProxy.Encryption
     {
         public ISecretStore SecretStore {get; private set;}
         private readonly InfoRecordManager _infoRecordManager;
+        private ILogger<DatabaseKeyManager> _logger;
+        private IConnector _connector;
 
-        public DatabaseKeyManager(IOptions<NodeConfigurations> nodeConfigurations)
+        public DatabaseKeyManager(IOptions<NodeConfigurations> nodeConfigurations, ILogger<DatabaseKeyManager> logger, IConnector connector)
         {
-            SecretStore = new SecretStore();
+            _logger = logger;
+            SecretStore = new SecretStore(logger);
             SecretStore.SetSecret("master_key", Base32Encoding.ZBase32.ToBytes(nodeConfigurations.Value.EncryptionMasterKey));
             SecretStore.SetSecret("master_iv", KeyAndIVGenerator_v2.CreateMasterIV(nodeConfigurations.Value.EncryptionPassword));
             _infoRecordManager = new InfoRecordManager();
+            _connector = connector;
+            SyncData().Wait();
         }
 
-        public void SyncData()
+        public async Task SyncData()
         {
-            var infoRecords = FetchInfoRecords();
-            LoadInfoRecordsToRecordManager(infoRecords);
+            var infoRecords = await _connector.GetInfoRecords();
+            LoadInfoRecordsToRecordManager( infoRecords);
         }
 
         public InfoRecord FindInfoRecord(estring name, string parentIV)
@@ -70,12 +78,12 @@ namespace BlockBase.DataProxy.Encryption
                 string template = "{0}{1}";
                 if (dataType.BucketInfo.EqualityBucketSize.HasValue)
                 {
-                    localData.EncryptedEqualityColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "e", recordName)), keyManageBytes, ivBytes));
-                    localData.EncryptedIVColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "i", recordName)), keyManageBytes, ivBytes));
+                    localData.EncryptedEqualityColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "e",  name.Value)), keyManageBytes, ivBytes));
+                    localData.EncryptedIVColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "i",  name.Value)), keyManageBytes, ivBytes));
                 }
                 if (dataType.BucketInfo.RangeBucketSize.HasValue)
                 {
-                    localData.EncryptedRangeColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "r", recordName)), keyManageBytes, ivBytes));
+                    localData.EncryptedRangeColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "r",  name.Value)), keyManageBytes, ivBytes));
                 }
             }
 
@@ -116,63 +124,40 @@ namespace BlockBase.DataProxy.Encryption
             }
         }
 
-        private void LoadInfoRecordsToRecordManager(List<InfoRecord> infoRecords)
+        private void LoadInfoRecordsToRecordManager(IList<InfoRecord> infoRecords)
         {
             foreach (var infoRecord in infoRecords)
             {
-                TryAddLocalHashToInfoRecord(infoRecord);
+                AddAdditionalInfoToInfoRecord(infoRecord);
                 _infoRecordManager.AddInfoRecord(infoRecord);
             }
         }
 
-        private void TryAddLocalHashToInfoRecord(InfoRecord infoRecord)
+        private void AddAdditionalInfoToInfoRecord(InfoRecord infoRecord)
         {
-            if (infoRecord.KeyName == null)
+            var name = infoRecord.KeyName != null ? DecryptName(infoRecord) : infoRecord.Name;
+            infoRecord.LocalNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(Encoding.Unicode.GetBytes(name)));                       
+            if(infoRecord.Data != null)
             {
-                //the recordName isn't encrypted
-                return;
+                var keyManageBytes = GetKeyManageFromInfoRecord(infoRecord);
+                var ivBytes = Base32Encoding.ZBase32.ToBytes(infoRecord.IV);
+                var dataType = GetColumnDataType(infoRecord);
+                var localData = new InfoRecord.LocalData();
+                string template = "{0}{1}";
+                if (dataType.BucketInfo.EqualityBucketSize.HasValue)
+                {
+                    localData.EncryptedEqualityColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "e", name)), keyManageBytes, ivBytes));
+                    localData.EncryptedIVColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "i", name)), keyManageBytes, ivBytes));
+                }
+                if (dataType.BucketInfo.RangeBucketSize.HasValue)
+                {
+                    localData.EncryptedRangeColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "r", name)), keyManageBytes, ivBytes));
+                }
+                infoRecord.LData = localData;
+                
             }
-
-            //check if its keymanage
-
-            var decryptedManageKeyData = GetKeyManageFromInfoRecord(infoRecord);
-            var iv = Base32Encoding.ZBase32.ToBytes(infoRecord.IV);
-
-            if (decryptedManageKeyData != null)
-            {
-                //user has the key manage
-                //derive key name from key manage
-
-                var keyName = KeyAndIVGenerator_v2.CreateDerivateKey(decryptedManageKeyData, iv);
-                var decryptedRecordNameInBytes = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.Name), keyName, iv);
-                var localNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(decryptedRecordNameInBytes));
-
-                infoRecord.LocalNameHash = localNameHash;
-                return;
-            }
-
-            var decryptedKeyNameData = GetKeyNameFromInfoRecord(infoRecord);
-
-            if (decryptedKeyNameData != null)
-            {
-                //user has the key read
-                var decryptedRecordNameInBytes = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.Name), decryptedKeyNameData, iv);
-                var localNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(decryptedRecordNameInBytes));
-
-                infoRecord.LocalNameHash = localNameHash;
-
-                return;
-            }
-
-            //user has no key
         }
-
-        private List<InfoRecord> FetchInfoRecords()
-        {
-            //queries the database server to retrieve the infotable
-            return new List<InfoRecord>();
-        }
-
+ 
         public DataType GetColumnDataType(InfoRecord columnInfoRecord)
         {
             if (columnInfoRecord.Data == null) throw new FormatException("Column Data is empty!");
