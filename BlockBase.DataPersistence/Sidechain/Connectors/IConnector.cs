@@ -7,8 +7,10 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 {
     public interface IConnector
     {
-        Task<IList<InfoRecord>> GetInfoRecords(string databaseName);
+        Task<IList<InfoRecord>> GetInfoRecords();
         Task ExecuteCommand(string sqlCommand, string databaseName);
         Task<IList<IList<string>>> ExecuteQuery(string sqlQuery, string databaseName);
+        Task InsertToDatabasesTable(string databaseName);
+        Task DeleteFromDatabasesTable(string databaseName);
     }
 }

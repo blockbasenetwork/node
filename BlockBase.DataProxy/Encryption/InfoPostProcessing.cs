@@ -25,11 +25,16 @@ namespace BlockBase.DataProxy.Encryption
 
         public QueryResult TranslateSelectResults(ReadQuerySqlCommand readQuerySqlCommand, IList<IList<string>> allResults, string databaseName)
         {
-            var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out IList<TableAndColumnName> columnNames);
-            var filteredResults = FilterExpression(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
-            var removedExtraColumns = FilterSelectColumns(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName, out IList<string> columnsToMantain);
+            if (!((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.Encrypted)
+            {
+                var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out IList<TableAndColumnName> columnNames);
+                var filteredResults = FilterExpression(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
+                var removedExtraColumns = FilterSelectColumns(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName, out IList<string> columnsToMantain);
 
-            return new QueryResult(removedExtraColumns, columnsToMantain);
+                return new QueryResult(removedExtraColumns, columnsToMantain);
+            }
+            var encryptedColumnNames = ((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0]).SelectCoreStatement.ResultColumns.Select(r => r.TableName.Value + "." + r.ColumnName.Value).ToList();
+            return new QueryResult(allResults, encryptedColumnNames);   
         }
 
         public IList<UpdateRecordStatement> UpdateUpdateRecordStatement(UpdateSqlCommand updateSqlCommand, IList<IList<string>> allResults, string databaseName)
@@ -288,19 +293,19 @@ namespace BlockBase.DataProxy.Encryption
             foreach (var databaseInfoRecord in databasesInfoRecords)
             {
                 
-                var databaseName = databaseInfoRecord.KeyName != null? _encryptor.DecryptName(databaseInfoRecord) : databaseInfoRecord.Name;
+                var databaseName = databaseInfoRecord.KeyName != null? _encryptor.DecryptName(databaseInfoRecord) : "!" + databaseInfoRecord.Name;
                 var database = new DatabasePoco(databaseName);
                 
                 var tablesInfoRecords = _encryptor.FindChildren(databaseInfoRecord.IV);
                 foreach (var tableInfoRecord in tablesInfoRecords)
                 {
-                    var tableName = tableInfoRecord.KeyName != null? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                    var tableName = tableInfoRecord.KeyName != null? _encryptor.DecryptName(tableInfoRecord) : "!" + tableInfoRecord.Name;
                     var table = new TablePoco(tableName);
 
                     var columnsInfoRecords = _encryptor.FindChildren(tableInfoRecord.IV);
                     foreach (var columnInfoRecord in columnsInfoRecords) 
                     {
-                        var columnName = columnInfoRecord.KeyName != null? _encryptor.DecryptName(columnInfoRecord) : columnInfoRecord.Name;
+                        var columnName = columnInfoRecord.KeyName != null? _encryptor.DecryptName(columnInfoRecord) : "!" + columnInfoRecord.Name;
                         var column = new FieldPoco(columnName,_encryptor.GetColumnDataType(columnInfoRecord).DataTypeName.ToString(), null );
                         table.Fields.Add(column);    
                     }

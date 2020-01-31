@@ -1,4 +1,5 @@
 using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Connectors;
@@ -127,13 +128,14 @@ namespace BlockBase.Api
         {
             _webHostBuider.ConfigureServices((hostContext, services) =>
             {
+                services.AddSingleton<IConnector, PSqlConnector>();
                 services.AddSingleton<BlockSender>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<PeerConnectionsHandler>();
                 services.AddSingleton<SidechainKeeper>();
                 services.AddSingleton<BlockValidator>();
                 services.AddSingleton<TransactionValidator>();
-                services.AddSingleton<DatabaseKeyManager>();
+                services.AddSingleton<DatabaseKeyManager>();                
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
             });
 

@@ -79,11 +79,6 @@ namespace BlockBase.DataProxy.Encryption
             return _infoRecordsLookup.Values.SelectMany(r => r).SingleOrDefault(r => r.IV == recordIV);
         }
 
-        public IEnumerable<InfoRecord> GetAllInfoRecords()
-        {
-            throw new NotImplementedException();
-        }
-
         public void AddInfoRecord(InfoRecord infoRecord)
         {
             string parentIV = infoRecord.ParentIV != null ? infoRecord.ParentIV : ROOT_DUMMY_IV;
@@ -93,7 +88,6 @@ namespace BlockBase.DataProxy.Encryption
 
             _infoRecordsLookup[parentIV].Add(infoRecord);
         }
-
       
         public void RemoveInfoRecord(InfoRecord infoRecord)
         {

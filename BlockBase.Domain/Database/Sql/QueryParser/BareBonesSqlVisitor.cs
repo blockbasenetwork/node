@@ -239,6 +239,7 @@ namespace BlockBase.Domain.Database.QueryParser
             }
             if (context.join_clause() != null) selectCoreStatement.JoinClause = (JoinClause)Visit(context.join_clause());
             if (context.expr() != null) selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+            if (context.K_ENCRYPTED() != null) selectCoreStatement.Encrypted = true;
             return selectCoreStatement;
         }
 

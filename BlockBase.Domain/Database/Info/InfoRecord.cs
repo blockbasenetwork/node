@@ -10,8 +10,8 @@ namespace BlockBase.Domain.Database.Info
         public string KeyManage { get; set; }
         public string ParentIV { get; set; }
         public string IV { get; set; }
-        public string LocalNameHash { get; set; }
         public string Data { get; set; }
+        public string LocalNameHash { get; set; }        
         public LocalData LData { get; set; }
 
         public InfoRecord()
@@ -34,6 +34,13 @@ namespace BlockBase.Domain.Database.Info
             public string EncryptedEqualityColumnName { get; set; }
             public string EncryptedRangeColumnName { get; set; }
             public string EncryptedIVColumnName { get; set; }
+            public LocalData(){}
+            public LocalData(string encryptedEqualityColumnName, string encryptedRangeColumnName, string encryptedIVColumnName)
+            {
+                EncryptedEqualityColumnName = encryptedEqualityColumnName;
+                EncryptedRangeColumnName = encryptedRangeColumnName;
+                EncryptedIVColumnName = encryptedIVColumnName;
+            }
         }
     }
 }

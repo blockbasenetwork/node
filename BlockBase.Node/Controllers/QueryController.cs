@@ -25,13 +25,9 @@ namespace BlockBase.Node.Controllers
     public class QueryController : ControllerBase
     {
         private SqlCommandManager _sqlCommandManager;
-        public QueryController(ILogger<QueryController> logger,  IOptions<NodeConfigurations> nodeConfigurations, DatabaseKeyManager databaseKeyManager)
+        public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector)
         {
-            var nodeConfigurationsValue = nodeConfigurations.Value;
-            var psqlConnector = new PSqlConnector(nodeConfigurationsValue.PostgresHost, nodeConfigurationsValue.PostgresUser, 
-            nodeConfigurationsValue.PostgresPort, nodeConfigurationsValue.PostgresPassword, logger);
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector);
-
         }
 
 
@@ -63,6 +59,39 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+         /// <summary>
+        /// Sends a query to get all the values from a certain table in a certain database
+        /// </summary>
+        /// <param name="databaseName">The database name</param>
+        /// <param name="tableName">The table name</param>
+        /// <param name="encrypted">Bool that indicates if the returned data is supposed to be encrypted or not</param>
+        /// <returns> Success or list of results </returns>
+        /// <response code="200">Query executed with success</response>
+        /// <response code="400">Query invalid</response>
+        /// <response code="500">Error executing query</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends a query to get all the values from a certain table in a certain database",
+            Description = "The requester uses this service to see all values encrypted or not from a certain table",
+            OperationId = "GetAllTableValues"
+        )]
+        public async Task<ObjectResult> GetAllTableValues(string databaseName, string tableName, bool encrypted)
+        {
+            try
+            {
+                var query = $"USE {databaseName}; SELECT {tableName}.* FROM {tableName}";
+                if(encrypted) query += " ENCRYPTED";
+                query += ";";
+
+                var queryResults = await _sqlCommandManager.Execute(query);
+
+                return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<QueryResult>>(e));
+            }
+        }
 
         /// <summary>
         /// Asks for databases, tables and columns structure
