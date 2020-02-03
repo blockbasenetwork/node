@@ -5,7 +5,7 @@
     {
         void SetSecret(string keyId, byte[] key);
 
-        void RemoveSecret(string keyId);
+        // void RemoveSecret(string keyId);
 
         byte[] GetSecret(string keyId);
     }

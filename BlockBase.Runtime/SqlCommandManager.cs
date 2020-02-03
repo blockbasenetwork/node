@@ -128,7 +128,7 @@ namespace BlockBase.Runtime
                                     await _connector.InsertToDatabasesTable(((CreateDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
                                 
                                 else if(databaseSqlCommand.OriginalSqlStatement is DropDatabaseStatement)
-                                    await _connector.InsertToDatabasesTable(((DropDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
+                                    await _connector.DeleteFromDatabasesTable(((DropDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
 
                                 for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
                                 {
