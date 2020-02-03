@@ -90,7 +90,7 @@ namespace BlockBase.Runtime.Sidechain
                                 await CheckContractAndUpdateStates();
                                 await CheckContractAndUpdateWaitTimes();
                                 await CheckContractEndState();
-                                if (Sidechain.ProducingBlocks)
+                                if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby)
                                 {
                                     await CheckContractAndUpdatePool();
                                     await CheckAndGetReward();
@@ -172,9 +172,13 @@ namespace BlockBase.Runtime.Sidechain
                 }).ToList();
 
                 Sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
-            }
 
-            if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
+                if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
+            }
+            else
+            {
+                Sidechain.CandidatureOnStandby = true;
+            }
 
             _logger.LogDebug("State " + Sidechain.State);
         }
@@ -428,6 +432,7 @@ namespace BlockBase.Runtime.Sidechain
             var producerIndex = IpsAddressTableEntries.FindIndex(m => m.Key == _nodeConfigurations.AccountName);
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
             _logger.LogDebug($"Updating {numberOfIpsToUpdate} ips.");
+            if (numberOfIpsToUpdate == 0) return;
             var reorganizedIpsAddressTableEntries = ListHelper.GetListSortedCountingBackFromIndex(IpsAddressTableEntries, producerIndex).Take(numberOfIpsToUpdate).ToList();
 
             for (int i = 0; i < reorganizedIpsAddressTableEntries.Count(); i++)

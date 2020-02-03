@@ -97,7 +97,6 @@ namespace BlockBase.Runtime.Sidechain
                                     if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash, currentProducerTable.StartProductionTime))
                                     {
                                         await BuildChain();
-                                        continue;
                                     }
 
                                     if (!await _mongoDbProducerService.IsBlockConfirmed(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
