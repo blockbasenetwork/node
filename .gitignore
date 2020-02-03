@@ -36,7 +36,7 @@ bld/
 TestResult.xml
 
 # Keys file
-keys.txt
+**/keys.txt
 
 # Build Results of an ATL Project
 [Dd]ebugPS/

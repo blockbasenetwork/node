@@ -197,6 +197,7 @@ namespace BlockBase.DataProxy.Encryption
 
         public void RemoveInfoRecord(InfoRecord infoRecord)
         {
+            // SecretStore.RemoveSecret(infoRecord.IV);
             _infoRecordManager.RemoveInfoRecord(infoRecord);
         }
 
