@@ -100,7 +100,7 @@ namespace BlockBase.Node.Controllers
         /// <response code="200">Structure retrieved with success</response>
         /// <response code="400">Invalid request</response>
         /// <response code="500">Error getting structure information</response>
-        [HttpPost]
+        [HttpGet]
         [SwaggerOperation(
             Summary = "Asks for databases, tables and columns structure",
             Description = "The requester uses this service to know databases structure",
