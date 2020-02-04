@@ -250,7 +250,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         private string AddDatabaseNameToServerConnectionString(string databaseName)
         {
-            return _serverConnectionString + ";Database=" + databaseName;
+            return _serverConnectionString + ";Database=" + databaseName + ";Pooling=false";
         }
 
 
