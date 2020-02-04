@@ -474,7 +474,7 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.State == SidechainPoolStateEnum.IPSendTime && contractInfo.SendEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SendEndDate;
             if (Sidechain.State == SidechainPoolStateEnum.IPReceiveTime && contractInfo.ReceiveEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.ReceiveEndDate;
 
-            if (!Sidechain.ProducingBlocks) return;
+            if (!Sidechain.ProducingBlocks || Sidechain.CandidatureOnStandby) return;
 
             var nextBlockTime = lastBlockFromSettlement != null ?
                 lastBlockFromSettlement.Timestamp + (Sidechain.BlockTimeDuration / 2) :
