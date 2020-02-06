@@ -33,5 +33,7 @@ namespace BlockBase.Runtime.Network
         void SubscribeTransactionReceivedEvent(TransactionReceivedEventHandler eventHandler);
 
         void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler);
+        
+        void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler);
     }
 }

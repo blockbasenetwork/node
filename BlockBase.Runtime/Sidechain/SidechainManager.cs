@@ -19,6 +19,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -92,6 +93,7 @@ namespace BlockBase.Runtime.Sidechain
                                 await CheckContractEndState();
                                 if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby)
                                 {
+                                    await CheckPeerConnections();
                                     await CheckContractAndUpdatePool();
                                     await CheckAndGetReward();
                                 };
@@ -498,6 +500,12 @@ namespace BlockBase.Runtime.Sidechain
 
                 TaskContainer.Stop();
             }
+        }
+
+        private async Task CheckPeerConnections()
+        {
+            if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected))
+                await _peerConnectionsHandler.CheckConnectionStatus(Sidechain);
         }
 
         private async Task CheckContractAndUpdatePool()

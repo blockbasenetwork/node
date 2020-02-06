@@ -61,6 +61,7 @@ namespace BlockBase.Runtime.Network
             _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
             _networkService.SubscribePeerDisconnectedEvent(TcpConnector_PeerDisconnected);
             _networkService.SubscribeIdentificationMessageReceivedEvent(MessageForwarder_IdentificationMessageReceived);
+            _networkService.SubscribePingReceivedEvent(MessageForwarder_PingMessageReceived);
 
             _endPoint = systemConfig.IPAddress + ":" + systemConfig.TcpPort;
         }
@@ -245,6 +246,11 @@ namespace BlockBase.Runtime.Network
             _waitingForApprovalPeers.Remove(peer);
         }
 
+        private async void MessageForwarder_PingMessageReceived(PingReceivedEventArgs args, IPEndPoint sender)
+        {
+            await SendPingPongMessage(false, sender, args.nonce);
+        }
+
         public async Task UpdatePeerConnectionRating(PeerConnection peerConnection, int ratingLost)
         {
             peerConnection.Rating -= ratingLost;
@@ -266,6 +272,30 @@ namespace BlockBase.Runtime.Network
                 if(producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Disconnected)
                 {
                     await ConnectToProducer(sidechain, producer);
+                }
+            }
+        }
+
+        public async Task CheckConnectionStatus(SidechainPool sidechain)
+        {
+            var random = new Random();
+
+            foreach(var producer in sidechain.ProducersInPool)
+            {
+                if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
+                {
+                    var randomInt = random.Next();
+                    await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
+                    var pongResponse = await _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
+
+                    if (pongResponse.Succeeded)
+                    {
+                        var pongNonce = BitConverter.ToInt32(pongResponse.Result.Payload, 0);
+                        if (randomInt == pongNonce) continue;
+                    }
+
+                    _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
+                    Disconnect(producer.PeerConnection.Peer);
                 }
             }
         }
@@ -318,6 +348,14 @@ namespace BlockBase.Runtime.Network
             var message = new NetworkMessage(NetworkMessageTypeEnum.SendProducerIdentification, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, destinationEndPoint);
             await _networkService.SendMessageAsync(message);
             _logger.LogDebug("Identification message sent.");
+        }
+
+        private async Task SendPingPongMessage(bool isPingMessage, IPEndPoint destinationEndPoint, int nonce)
+        {
+            byte[] payload = BitConverter.GetBytes(nonce);
+            var type = isPingMessage ? NetworkMessageTypeEnum.Ping : NetworkMessageTypeEnum.Pong;
+            var message = new NetworkMessage(type, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, destinationEndPoint);
+            await _networkService.SendMessageAsync(message);
         }
 
         private async Task<Peer> ConnectAsync(IPEndPoint remoteEndPoint, EndPoint localEndPoint = null)

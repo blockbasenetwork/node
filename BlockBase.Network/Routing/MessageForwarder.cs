@@ -94,6 +94,8 @@ namespace BlockBase.Network.Rounting
 
                 if (message.NetworkMessageType == NetworkMessageTypeEnum.SendMinedBlock) MinedBlockReceived?.Invoke(ParseMinedBlockMessage(message.Payload));
 
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.Ping) PingReceived?.Invoke(ParsePingMessage(message.Payload), message.Sender);
+
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendBlock) RecoverBlockReceived?.Invoke(ParseMinedBlockMessage(message.Payload), message.Sender);
 
                 else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendProducerIdentification)IdentificationMessageReceived?.Invoke(new IdentificationMessageReceivedEventArgs {PublicKey = message.PublicKey, EosAccount = message.EosAccount, SenderIPEndPoint = message.Sender});
@@ -161,6 +163,13 @@ namespace BlockBase.Network.Rounting
             return new BlocksRequestReceivedEventArgs{ ClientAccountName = Encoding.UTF8.GetString(stringBytes), BeginBlockSequenceNumber = beginBlockSequenceNumber, EndBlockSequenceNumber = endBlockSequenceNumber, Sender = sender};
         }
 
+        private PingReceivedEventArgs ParsePingMessage(byte[] payload)
+        {
+            var nonce = BitConverter.ToInt32(payload);
+
+            return new PingReceivedEventArgs{ nonce = nonce };
+        }
+
         public event RecoverBlockReceivedEventHandler RecoverBlockReceived;
         public delegate void RecoverBlockReceivedEventHandler(BlockReceivedEventArgs args, IPEndPoint sender);
 
@@ -191,6 +200,13 @@ namespace BlockBase.Network.Rounting
             public IPEndPoint SenderIPEndPoint { get; set; }
             public string PublicKey { get; set; }
             public string EosAccount { get; set; }
+        }
+
+        public event PingReceivedEventHandler PingReceived;
+        public delegate void PingReceivedEventHandler(PingReceivedEventArgs args, IPEndPoint sender);
+        public class PingReceivedEventArgs
+        {
+            public int nonce { get; set; }
         }
 
         public event TransactionReceivedEventHandler TransactionReceived;
