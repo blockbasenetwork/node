@@ -504,7 +504,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task CheckPeerConnections()
         {
-            if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected))
+            if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
                 await _peerConnectionsHandler.CheckConnectionStatus(Sidechain);
         }
 
