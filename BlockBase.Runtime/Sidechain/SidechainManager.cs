@@ -91,7 +91,7 @@ namespace BlockBase.Runtime.Sidechain
                                 await CheckContractAndUpdateStates();
                                 await CheckContractAndUpdateWaitTimes();
                                 await CheckContractEndState();
-                                if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby)
+                                if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby && _previousWaitTime != Sidechain.NextStateWaitEndTime)
                                 {
                                     await CheckPeerConnections();
                                     await CheckContractAndUpdatePool();
