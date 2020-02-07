@@ -48,6 +48,7 @@ namespace BlockBase.Runtime.Mainchain
             _logger = logger;
             _latestTrxTimes = new List<int>();
             _nodeConfigurations = nodeConfigurations;
+            _forceTryAgain = true;
         }
 
         public async Task SuperMethod()
