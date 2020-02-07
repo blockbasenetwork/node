@@ -286,11 +286,12 @@ namespace BlockBase.Runtime.Network
                 {
                     var randomInt = random.Next();
                     await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
-                    var pongResponse = await _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
 
-                    if (pongResponse.Succeeded)
+                    var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
+                    pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000);
+                    if (pongResponseTask.Result.Succeeded)
                     {
-                        var pongNonce = BitConverter.ToInt32(pongResponse.Result.Payload, 0);
+                        var pongNonce = BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0);
                         if (randomInt == pongNonce) continue;
                     }
 
