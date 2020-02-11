@@ -161,7 +161,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
                 for (int j = i; j < context.literal_value().Length; j += context.column_name().Length)
                 {
-                    insertRecordStatement.ValuesPerColumn[columnName].Add(new Value(context.literal_value()[j].GetText()));
+                    insertRecordStatement.ValuesPerColumn[columnName].Add(new Value(context.literal_value()[j].GetText().Trim('\'')));
                 }
             }
             return insertRecordStatement;
@@ -186,7 +186,7 @@ namespace BlockBase.Domain.Database.QueryParser
             {
                 updateRecordStatement.ColumnNamesAndUpdateValues.Add(
                     (estring)Visit(context.column_name()[i].complex_name()),
-                    new Value(context.literal_value()[i].GetText())
+                    new Value(context.literal_value()[i].GetText().Trim('\''))
                     );
             }
 
@@ -215,9 +215,9 @@ namespace BlockBase.Domain.Database.QueryParser
             };
 
             if (context.K_LIMIT() != null)
-                simpleSelectStatement.Limit = Int32.Parse(context.literal_value()[0].GetText());
+                simpleSelectStatement.Limit = Int32.Parse(context.literal_value()[0].GetText().Trim('\''));
             if (context.K_OFFSET() != null)
-                simpleSelectStatement.Offset = Int32.Parse(context.literal_value()[1].GetText());
+                simpleSelectStatement.Offset = Int32.Parse(context.literal_value()[1].GetText().Trim('\''));
 
             return simpleSelectStatement;
         }
@@ -391,7 +391,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     new TableAndColumnName(
                         (estring)Visit(expr.table_name().complex_name()),
                         (estring)Visit(expr.column_name().complex_name())),
-                    new Value(expr.literal_value().GetText()),
+                    new Value(expr.literal_value().GetText().Trim('\'')),
                     GetLogicalOperatorFromString(exprString));
                 
                 return comparisonExpression;
