@@ -469,7 +469,7 @@ namespace BlockBase.Runtime.Sidechain
         {
             _previousWaitTime = Sidechain.NextStateWaitEndTime;
             var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
-            var lastBlockFromSettlement = await _mainchainService.RetrieveLastBlockFromLastSettlement(Sidechain.ClientAccountName);
+            var currentProd = (await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName)).SingleOrDefault();
             if (Sidechain.State == SidechainPoolStateEnum.ConfigTime) Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (contractInfo.CandidatureTime / 2);
             if (Sidechain.State == SidechainPoolStateEnum.CandidatureTime && contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
             if (Sidechain.State == SidechainPoolStateEnum.SecretTime && contractInfo.SecretEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SecretEndDate;
@@ -478,9 +478,9 @@ namespace BlockBase.Runtime.Sidechain
 
             if (!Sidechain.ProducingBlocks || Sidechain.CandidatureOnStandby) return;
 
-            var nextBlockTime = lastBlockFromSettlement != null ?
-                lastBlockFromSettlement.Timestamp + (Sidechain.BlockTimeDuration / 2) :
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (Sidechain.BlockTimeDuration / 2);
+            var nextBlockTime = currentProd != null ?
+                currentProd.StartProductionTime + Sidechain.BlockTimeDuration :
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
             if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
                 Sidechain.NextStateWaitEndTime = nextBlockTime;
         }
@@ -515,11 +515,8 @@ namespace BlockBase.Runtime.Sidechain
 
             bool poolChanged = UpdateAndCheckIfProducersInSidechainChanged(producersInTable);
             await _peerConnectionsHandler.TryReconnectWithDisconnectedAccounts(Sidechain);
-            if (poolChanged)
-            {
-                _logger.LogInformation("Pool changed.");
-                await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
-            }
+            if (poolChanged) _logger.LogInformation("Pool changed.");
+            await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
         }
 
         private async Task CheckAndGetReward()

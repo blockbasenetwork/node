@@ -76,15 +76,32 @@ namespace BlockBase.Runtime.Sidechain
                 if (await AlreadyProcessedThisBlock(databaseName, blockHashString)) return;
                 if (!await IsTimeForThisProducerToProduce(sidechainPool, blockReceived.BlockHeader.Producer)) return;
 
-                BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName)).ConvertToBlockHeader();
-
-                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool))
+                var i = 0;
+                while (i < 3)
                 {
-                    await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
-                    await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
+                    try
+                    {
+                        BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement)).ConvertToBlockHeader();
 
-                    var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
-                    if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
+                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool))
+                        {
+                            await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
+                            await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
+
+                            var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+                            if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
+                            break;
+                        }
+                        i++;
+                        await Task.Delay(150);
+                    }
+                    catch (Exception e)
+                    {
+                        i++;
+                        _logger.LogCritical($"Failed try #{i} to approve received block");
+                        _logger.LogDebug(e.ToString());
+                        throw e;
+                    }
                 }
             }
             catch (Exception e)
@@ -140,7 +157,7 @@ namespace BlockBase.Runtime.Sidechain
 
             var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.ClientAccountName)).SingleOrDefault().StartProductionTime;
 
-            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.ClientAccountName, startProductionTime);
+            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.ClientAccountName, startProductionTime, (int)sidechainPoolValuePair.Value.BlocksBetweenSettlement);
 
             if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.ClientAccountName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
             {

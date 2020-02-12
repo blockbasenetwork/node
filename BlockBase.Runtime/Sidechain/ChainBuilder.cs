@@ -93,7 +93,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
                 _lastValidSavedBlock = await _mongoDbProducerService.GetLastValidSidechainBlockAsync(databaseName);
-                _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
+                _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
                 var selectedProducerToSend = validConnectedProducers.Last() == currentSendingProducer ? 0 : validConnectedProducers.IndexOf(currentSendingProducer);
                 currentSendingProducer = selectedProducerToSend >= 0 ? 
