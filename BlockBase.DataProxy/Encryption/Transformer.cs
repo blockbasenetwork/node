@@ -524,6 +524,8 @@ namespace BlockBase.DataProxy.Encryption
                 return transformedComparisonExpression;
             }
 
+            if(leftColumnDataType.DataTypeName == DataTypeEnum.TEXT) comparisonExpression.Value.IsText = true;
+            
             transformedComparisonExpression = new ComparisonExpression(
                     new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)),
                     comparisonExpression.Value,
