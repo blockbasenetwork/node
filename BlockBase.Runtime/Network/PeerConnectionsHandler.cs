@@ -88,7 +88,6 @@ namespace BlockBase.Runtime.Network
 
         public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
         {
-            _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
 
@@ -96,6 +95,7 @@ namespace BlockBase.Runtime.Network
             
             var producersWhoIAmSupposedToBeConnected = orderedProducersInPool.Where(m => IsPeerConnectionValid(m)).Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState != ConnectionStateEnum.Connected).ToList();
 
+            if (producersWhoIAmSupposedToBeConnected.Any()) _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
             { 
                 await ConnectToProducer(sidechain, producer);
@@ -288,10 +288,9 @@ namespace BlockBase.Runtime.Network
                     await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
 
                     var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                    pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000);
-                    if (pongResponseTask.Result.Succeeded)
+                    if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
                     {
-                        var pongNonce = BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0);
+                        var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
                         if (randomInt == pongNonce) continue;
                     }
 

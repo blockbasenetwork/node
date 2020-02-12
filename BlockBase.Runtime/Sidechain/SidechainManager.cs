@@ -515,11 +515,8 @@ namespace BlockBase.Runtime.Sidechain
 
             bool poolChanged = UpdateAndCheckIfProducersInSidechainChanged(producersInTable);
             await _peerConnectionsHandler.TryReconnectWithDisconnectedAccounts(Sidechain);
-            if (poolChanged)
-            {
-                _logger.LogInformation("Pool changed.");
-                await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
-            }
+            if (poolChanged) _logger.LogInformation("Pool changed.");
+            await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
         }
 
         private async Task CheckAndGetReward()
