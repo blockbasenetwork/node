@@ -223,11 +223,33 @@ namespace BlockBase.DataProxy.Encryption
             var bucket = Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(upperBoundBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)));
             return Base32Encoding.ZBase32.GetString(bucket);
         }
+
+        public IList<string> GetRangeBktValues(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDataType, bool superior)
+        {
+            var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
+
+            var listBounds = new List<string>();
+
+
+            var listIntBounds = CalculateBounds(columnDataType.BucketInfo.RangeBucketSize.Value,
+                                                 columnDataType.BucketInfo.BucketMinRange.Value,
+                                                 columnDataType.BucketInfo.BucketMaxRange.Value,
+                                                 valueToInsert,
+                                                 superior);
+            foreach(var bound in listIntBounds)
+            {
+                var boundBytes = BitConverter.GetBytes(bound);
+                var bucket = Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(boundBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)));
+                listBounds.Add(Base32Encoding.ZBase32.GetString(bucket));
+            }
+
+            return listBounds;
+        }
         private int CalculateUpperBound(int N, int min, int max, double value)
         {
             if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
-
-            for (int i = min + N - 1; i <= max; i += N)
+            var bktSize = (int)((max - min)/N);
+            for (int i = min + bktSize; i <= max + bktSize; i += bktSize)
             {
                 if (value <= i)
                 {
@@ -235,6 +257,20 @@ namespace BlockBase.DataProxy.Encryption
                 }
             }
             throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
+        }
+
+        private IList<int> CalculateBounds(int N, int min, int max, double value, bool superior)
+        {
+            var bounds = new List<int>();
+            var bktSize = (int)((max - min)/N);
+            for(int i = min + bktSize; i <= max + bktSize; i += bktSize )
+            {
+                if((superior && value <= i) || (!superior && value >= i))
+                {
+                    bounds.Add(i);
+                }
+            }
+            return bounds;
         }
 
         public string EncryptNormalValue(string valueToInsert, InfoRecord columnInfoRecord, out string generatedIV)

@@ -25,6 +25,7 @@ namespace BlockBase.DataProxy.Encryption
 
 
         string CreateRangeBktValue(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDatatype);
+        IList<string> GetRangeBktValues(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDatatype, bool superior);
         string CreateEqualityBktValue(string valueToInsert, InfoRecord columnInfoRecord, DataType columnDatatype);
 
         string EncryptNormalValue(string valueToInsert, InfoRecord columnInfoRecord, out string generatedIV);

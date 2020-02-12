@@ -64,6 +64,10 @@ namespace BlockBase.DataProxy
         {
             return _databaseKeyManager.CreateRangeBktValue(valueToInsert, columnInfoRecord, columnDataType);
         }
+        public IList<string> GetRangeBktValues(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDataType, bool superior)
+        {
+             return _databaseKeyManager.GetRangeBktValues(valueToInsert, columnInfoRecord, columnDataType, superior);
+        }
 
         public string EncryptNormalValue(string valueToInsert, InfoRecord columnInfoRecord, out string generatedIV)
         {
@@ -87,5 +91,7 @@ namespace BlockBase.DataProxy
         {
             return _databaseKeyManager.DecryptName(infoRecord);
         }
+
+
     }
 }

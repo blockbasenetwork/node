@@ -14,15 +14,13 @@ using System.Threading.Tasks;
 using BlockBase.DataProxy;
 using System.Collections.Generic;
 using BlockBase.Domain.Results;
-using BlockBase.Runtime.Network;
-using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Pocos;
 
 namespace BlockBase.Runtime
 {
     public class SqlCommandManager
     {
-        private Transformer_v2 _transformer;
+        private Transformer _transformer;
         private IGenerator _generator;
         private string _databaseName = "";
         private InfoPostProcessing _infoPostProcessing;
@@ -38,7 +36,7 @@ namespace BlockBase.Runtime
             _generator = new PSqlGenerator();
             _logger = logger;
             _connector = connector;
-            _transformer = new Transformer_v2(middleMan);
+            _transformer = new Transformer(middleMan);
         }
 
         public async Task<IList<QueryResult>> Execute(string sqlString)
@@ -101,9 +99,7 @@ namespace BlockBase.Runtime
                                     await _connector.ExecuteCommand(updateToExecute, _databaseName);
 
                                 }
-
                                 results.Add(CreateQueryResult(true, updateSqlCommand.OriginalSqlStatement.GetStatementType()));
-
                                 break;
 
 
@@ -144,7 +140,6 @@ namespace BlockBase.Runtime
                             case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
                                 if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
                                 {
-
                                     var databasesList = _infoPostProcessing.GetDatabasesList();
                                     Console.WriteLine("Databases:");
                                     foreach (var database in databasesList) Console.WriteLine(database);
@@ -195,6 +190,11 @@ namespace BlockBase.Runtime
         public IList<DatabasePoco> GetStructure()
         {
             return _infoPostProcessing.GetStructure();
+        }
+
+        private async Task SendTransactionToProducers(string queryToExecute, string databaseName)
+        {
+            // new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, payload, TransportTypeEnum.Tcp, senderPrivateKey, senderPublicKey, senderEndPoint, destination)
         }
     }
 }

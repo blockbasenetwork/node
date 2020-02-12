@@ -14,10 +14,11 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.ComparisonExpression;
 using BlockBase.Domain.Database.Sql.SqlCommand;
+using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.LogicalExpression;
 
 namespace BlockBase.DataProxy.Encryption
 {
-    public class Transformer_v2
+    public class Transformer
     {
         private static readonly estring INFO_TABLE_NAME = new estring(InfoTableConstants.INFO_TABLE_NAME);
         private static readonly estring NAME = new estring(InfoTableConstants.NAME);
@@ -30,7 +31,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private IEncryptor _encryptor;
 
-        public Transformer_v2(MiddleMan middleMan)
+        public Transformer(MiddleMan middleMan)
         {
             _encryptor = middleMan;
         }
@@ -549,7 +550,15 @@ namespace BlockBase.DataProxy.Encryption
                 {
                     transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedRangeColumnName);
                     if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))
-                        transformedComparisonExpression.Value = new Value(_encryptor.CreateRangeBktValue(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType), true);
+                    {
+                        IList<string> bktValues;
+                        if(comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerOrEqualThan || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerThan)
+                            bktValues = _encryptor.GetRangeBktValues(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType, true);
+                        else
+                            bktValues = _encryptor.GetRangeBktValues(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType, false);
+                        
+                        return TransformBktValuesInLogicalExpression(bktValues, transformedComparisonExpression.LeftTableNameAndColumnName);
+                    }
                     else
                         throw new Exception("Tried to compare variable that is not a number.");
                 }
@@ -714,6 +723,29 @@ namespace BlockBase.DataProxy.Encryption
             return new DeleteRecordStatement(INFO_TABLE_NAME,
                 new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, NAME), new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal)
                     );
+        }
+
+        private LogicalExpression TransformBktValuesInLogicalExpression(IList<string> bktValues, TableAndColumnName tableAndColumnName)
+        {
+            var logicalExpression = new LogicalExpression(
+                new ComparisonExpression(tableAndColumnName, new Value(bktValues[0], true), ComparisonOperatorEnum.Equal), null, LogicalOperatorEnum.OR
+            );
+            AddBktValueExpression(bktValues, logicalExpression, 1, bktValues.Count-1, tableAndColumnName);
+            logicalExpression.HasParenthesis = true;
+            return logicalExpression;
+        }
+
+        private AbstractExpression AddBktValueExpression(IList<string> bktValues, LogicalExpression logicalExpression, int depth, int maxDepth, TableAndColumnName tableAndColumnName)
+        {
+            if(depth == maxDepth)
+            {
+                logicalExpression.RightExpression = new ComparisonExpression(tableAndColumnName, new Value(bktValues[maxDepth], true), ComparisonOperatorEnum.Equal);
+                return logicalExpression;
+            }
+            var newLogicalExpression = new LogicalExpression(new ComparisonExpression(tableAndColumnName, new Value(bktValues[depth], true), ComparisonOperatorEnum.Equal), null, LogicalOperatorEnum.OR);
+            logicalExpression.RightExpression = newLogicalExpression;
+            depth++;
+            return AddBktValueExpression(bktValues, newLogicalExpression, depth, maxDepth, tableAndColumnName);           
         }
     }
 }
