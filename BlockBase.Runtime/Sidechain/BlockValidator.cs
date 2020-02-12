@@ -81,7 +81,7 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     try
                     {
-                        BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName)).ConvertToBlockHeader();
+                        BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement)).ConvertToBlockHeader();
 
                         if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool))
                         {
@@ -157,7 +157,7 @@ namespace BlockBase.Runtime.Sidechain
 
             var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.ClientAccountName)).SingleOrDefault().StartProductionTime;
 
-            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.ClientAccountName, startProductionTime);
+            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.ClientAccountName, startProductionTime, (int)sidechainPoolValuePair.Value.BlocksBetweenSettlement);
 
             if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.ClientAccountName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
             {

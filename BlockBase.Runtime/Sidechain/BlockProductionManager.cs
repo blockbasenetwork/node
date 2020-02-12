@@ -91,7 +91,7 @@ namespace BlockBase.Runtime.Sidechain
 
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
-                                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.ClientAccountName, currentProducerTable.StartProductionTime);
+                                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.ClientAccountName, currentProducerTable.StartProductionTime, (int)_sidechainPool.BlocksBetweenSettlement);
                                 if (lastValidBlockheaderSmartContractFromLastProduction != null)
                                 {
                                     if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash, currentProducerTable.StartProductionTime))
@@ -140,7 +140,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 try
                 {
-                    var lastBlock = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName);
+                    var lastBlock = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
                     uint currentSequenceNumber;
                     byte[] previousBlockhash;
 

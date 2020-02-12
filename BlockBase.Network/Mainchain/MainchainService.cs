@@ -272,8 +272,8 @@ namespace BlockBase.Network.Mainchain
         public async Task<List<CandidateTable>> RetrieveCandidates(string chain) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CandidateTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CANDIDATES_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
 
-        public async Task<List<BlockheaderTable>> RetrieveBlockheaderList(string chain) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKHEADERS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+        public async Task<List<BlockheaderTable>> RetrieveBlockheaderList(string chain, int numberOfBlocks) =>
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKHEADERS_TABLE_NAME, chain, numberOfBlocks), MAX_NUMBER_OF_TRIES);
 
         public async Task<List<IPAddressTable>> RetrieveIPAddresses(string chain) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<IPAddressTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.IP_ADDRESS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
@@ -303,7 +303,7 @@ namespace BlockBase.Network.Mainchain
             return contractState;
         }
 
-        public async Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string chain)
+        public async Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string chain, int numberOfBlocks)
         {
             var listLastBlock = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKHEADERS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
             var lastBlockTable = listLastBlock.Where(b => b.IsLastBlock == true).FirstOrDefault();
@@ -319,23 +319,23 @@ namespace BlockBase.Network.Mainchain
             return clientTable;
         }
 
-        public async Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain)
+        public async Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain)).LastOrDefault();
+            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).LastOrDefault();
 
             return lastSubmittedBlock;
         }
 
-        public async Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain)
+        public async Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain)).Where(b => b.IsVerified).LastOrDefault();
+            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).LastOrDefault();
 
             return lastValidSubmittedBlock;
         }
 
-        public async Task<BlockheaderTable> GetLastValidSubmittedBlockheaderFromLastProduction(string chain, long currentProductionStartTime)
+        public async Task<BlockheaderTable> GetLastValidSubmittedBlockheaderFromLastProduction(string chain, long currentProductionStartTime, int numberOfBlocks)
         {
-            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain)).Where(b => b.IsVerified && b.Timestamp < currentProductionStartTime).LastOrDefault();
+            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified && b.Timestamp < currentProductionStartTime).LastOrDefault();
 
             return lastValidSubmittedBlock;
         }

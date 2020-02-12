@@ -20,7 +20,6 @@ namespace BlockBase.Network.Mainchain
     public class EosStub
     {
         private uint _transactionExpirationTimeInSeconds;
-        private const int LIMIT = 21;
         private Eos _eosConnection;
         private EosConfigurator _eosConfig;
         private readonly string _privateKey;
@@ -74,7 +73,7 @@ namespace BlockBase.Network.Mainchain
             return opResult;
         }
 
-        public async Task<OpResult<List<TPoco>>> GetRowsFromSmartContractTable<TPoco>(string smartContractAccountName, string tableName, string scope = null)
+        public async Task<OpResult<List<TPoco>>> GetRowsFromSmartContractTable<TPoco>(string smartContractAccountName, string tableName, string scope = null, int limit = 100)
         {
             var opResult = await Op.RunAsync(async () => (await _eosConnection.GetTableRows<TPoco>(
                 new GetTableRowsRequest()
@@ -83,7 +82,7 @@ namespace BlockBase.Network.Mainchain
                     code = smartContractAccountName,
                     scope = scope ?? smartContractAccountName,
                     table = tableName,
-                    limit = LIMIT
+                    limit = limit
                 }
             )).rows);
 
