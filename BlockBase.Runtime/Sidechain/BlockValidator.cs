@@ -92,6 +92,7 @@ namespace BlockBase.Runtime.Sidechain
                             if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
                             break;
                         }
+                        i++;
                         await Task.Delay(150);
                     }
                     catch (Exception e)
