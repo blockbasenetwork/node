@@ -725,11 +725,12 @@ namespace BlockBase.DataProxy.Encryption
                     );
         }
 
-        private LogicalExpression TransformBktValuesInLogicalExpression(IList<string> bktValues, TableAndColumnName tableAndColumnName)
+        private AbstractExpression TransformBktValuesInLogicalExpression(IList<string> bktValues, TableAndColumnName tableAndColumnName)
         {
-            var logicalExpression = new LogicalExpression(
-                new ComparisonExpression(tableAndColumnName, new Value(bktValues[0], true), ComparisonOperatorEnum.Equal), null, LogicalOperatorEnum.OR
-            );
+            var comparisonExpression = new ComparisonExpression(tableAndColumnName, new Value(bktValues[0], true), ComparisonOperatorEnum.Equal);
+            if(bktValues.Count == 1) return comparisonExpression;
+            
+            var logicalExpression = new LogicalExpression( comparisonExpression , null, LogicalOperatorEnum.OR);
             AddBktValueExpression(bktValues, logicalExpression, 1, bktValues.Count-1, tableAndColumnName);
             logicalExpression.HasParenthesis = true;
             return logicalExpression;

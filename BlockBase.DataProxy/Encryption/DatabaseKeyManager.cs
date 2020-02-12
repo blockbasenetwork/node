@@ -230,11 +230,15 @@ namespace BlockBase.DataProxy.Encryption
 
             var listBounds = new List<string>();
 
+            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketSize.Value,
+                                                 columnDataType.BucketInfo.BucketMinRange.Value,
+                                                 columnDataType.BucketInfo.BucketMaxRange.Value,
+                                                 valueToInsert);
 
             var listIntBounds = CalculateBounds(columnDataType.BucketInfo.RangeBucketSize.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
-                                                 valueToInsert,
+                                                 upperBound,
                                                  superior);
             foreach(var bound in listIntBounds)
             {
@@ -259,13 +263,13 @@ namespace BlockBase.DataProxy.Encryption
             throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
         }
 
-        private IList<int> CalculateBounds(int N, int min, int max, double value, bool superior)
+        private IList<int> CalculateBounds(int N, int min, int max, double upperBound, bool superior)
         {
             var bounds = new List<int>();
             var bktSize = (int)((max - min)/N);
             for(int i = min + bktSize; i <= max + bktSize; i += bktSize )
             {
-                if((superior && value <= i) || (!superior && value >= i))
+                if((superior && upperBound <= i) || (!superior && upperBound >= i))
                 {
                     bounds.Add(i);
                 }
