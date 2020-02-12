@@ -210,7 +210,7 @@ namespace BlockBase.Runtime.Network
                 return;
             }
 
-            var sidechainPool = _sidechainKeeper.Sidechains.Values.Where(s => s.ClientPublicKey == args.PublicKey).SingleOrDefault();
+            var sidechainPool = _sidechainKeeper.Sidechains.Values.Where(s => s.ClientAccountName == args.EosAccount).SingleOrDefault();
             if( sidechainPool != null)
             {
                 _logger.LogDebug("Acceptable client connection.");
@@ -220,7 +220,7 @@ namespace BlockBase.Runtime.Network
                 return;
             }
 
-            var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.PublicKey == args.PublicKey)).FirstOrDefault();
+            var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount)).FirstOrDefault();
 
             if (producer == null)
             {
