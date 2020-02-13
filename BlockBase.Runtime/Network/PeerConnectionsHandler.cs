@@ -132,7 +132,7 @@ namespace BlockBase.Runtime.Network
 
             if (producer.ProducerInfo.IPEndPoint != null)
             { 
-                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.PublicKey);
+                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                 var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
                 if (peerConnected == null)
@@ -215,7 +215,7 @@ namespace BlockBase.Runtime.Network
             if( sidechainPool != null)
             {
                 _logger.LogDebug("Acceptable client connection.");
-                var peerConnection = AddIfNotExistsPeerConnection(args.SenderIPEndPoint, sidechainPool.ClientPublicKey);
+                var peerConnection = AddIfNotExistsPeerConnection(args.SenderIPEndPoint, sidechainPool.ClientAccountName);
                 peerConnection.ConnectionState = ConnectionStateEnum.Connected;
                 peerConnection.Peer = peer;
                 return;
@@ -233,7 +233,7 @@ namespace BlockBase.Runtime.Network
             {
                 _logger.LogDebug("Acceptable producer.");
                 producer.ProducerInfo.IPEndPoint = peer.EndPoint;
-                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.PublicKey);
+                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                 producer.PeerConnection.ConnectionState = ConnectionStateEnum.Connected;
                 producer.PeerConnection.Peer = peer;
             }
