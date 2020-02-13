@@ -266,8 +266,7 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.CandidatureOnStandby) return;
 
             _logger.LogInformation("Init producer send IP.");
-            var producersPublicKeys = Sidechain.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.PublicKey).ToList();
-            await EncryptAndSendIPToSmartContract(producersPublicKeys, Sidechain.ClientPublicKey, Sidechain.ClientAccountName);
+            await EncryptAndSendIPToSmartContract(Sidechain.ClientPublicKey, Sidechain.ClientAccountName);
         }
 
         private async Task InitProducerReceiveIPs()
@@ -396,10 +395,11 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private async Task EncryptAndSendIPToSmartContract(List<string> producersPublicKeys, string clientPublicKey, string SidechainName)
+        private async Task EncryptAndSendIPToSmartContract(string clientPublicKey, string SidechainName)
         {
             int numberOfIpsToSend = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
-            var keysToUse = ListHelper.GetListSortedCountingFrontFromIndex(producersPublicKeys, producersPublicKeys.IndexOf(_nodeConfigurations.ActivePublicKey)).Take(numberOfIpsToSend).ToList();
+            var producerList = Sidechain.ProducersInPool.GetEnumerable().ToList();
+            var keysToUse = ListHelper.GetListSortedCountingFrontFromIndex(producerList, producerList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToSend).Select(p => p.ProducerInfo.PublicKey).ToList();
             keysToUse.Add(clientPublicKey);
 
             _logger.LogDebug($"Sending {keysToUse.Count} ips.");
@@ -427,17 +427,19 @@ namespace BlockBase.Runtime.Sidechain
         {
             foreach (var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
 
-            var producerIndex = IpsAddressTableEntries.FindIndex(m => m.Key == _nodeConfigurations.AccountName);
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
             if (numberOfIpsToUpdate == 0) return;
-            var reorganizedIpsAddressTableEntries = ListHelper.GetListSortedCountingBackFromIndex(IpsAddressTableEntries, producerIndex).Take(numberOfIpsToUpdate).ToList();
 
-            for (int i = 0; i < reorganizedIpsAddressTableEntries.Count(); i++)
+            var producersInPoolList = Sidechain.ProducersInPool.GetEnumerable().ToList();
+            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToUpdate).ToList();
+            
+            foreach (var producer in orderedProducersInPool)
             {
-                var producer = Sidechain.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == reorganizedIpsAddressTableEntries[i].Key).SingleOrDefault();
-                if (producer == null || producer.ProducerInfo.IPEndPoint != null) continue;
+                var producerIps = IpsAddressTableEntries.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
+                if (producerIps == null && producer.ProducerInfo.IPEndPoint != null) continue;
 
-                var listEncryptedIPEndPoints = reorganizedIpsAddressTableEntries[i].EncryptedIPs;
+                var i = IpsAddressTableEntries.IndexOf(producerIps);
+                var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
                 var encryptedIpEndPoint = listEncryptedIPEndPoints[i];
                 producer.ProducerInfo.IPEndPoint = IPEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
             }
