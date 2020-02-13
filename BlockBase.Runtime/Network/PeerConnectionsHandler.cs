@@ -94,7 +94,7 @@ namespace BlockBase.Runtime.Network
             var numberOfConnections = (int) Math.Ceiling(producersInPoolList.Count/4.0);
             
             var producersWhoIAmSupposedToBeConnected = orderedProducersInPool.Where(m => IsPeerConnectionValid(m)).Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState != ConnectionStateEnum.Connected).ToList();
-            producersWhoIAmSupposedToBeConnected = producersWhoIAmSupposedToBeConnected.Where(p => !CurrentPeerConnections.GetEnumerable().Any(c => c.IPEndPoint == p.PeerConnection.IPEndPoint)).ToList();
+            producersWhoIAmSupposedToBeConnected = producersWhoIAmSupposedToBeConnected.Where(p => !CurrentPeerConnections.GetEnumerable().Any(c => c.IPEndPoint == p.PeerConnection?.IPEndPoint)).ToList();
 
             if (producersWhoIAmSupposedToBeConnected.Any()) _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
