@@ -30,6 +30,9 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                 case UpdateRecordStatement updateRecordStatement:
                     sqlCommand = new UpdateSqlCommand(updateRecordStatement);
                     break;
+                case DeleteRecordStatement deleteRecordStatement:
+                    sqlCommand = new DeleteSqlCommand(deleteRecordStatement);
+                    break;
                 case UseDatabaseStatement useDatabaseStatement:
                     sqlCommand = new DatabaseSqlCommand(useDatabaseStatement);
                     break;

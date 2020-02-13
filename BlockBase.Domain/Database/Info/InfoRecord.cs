@@ -29,6 +29,21 @@ namespace BlockBase.Domain.Database.Info
             Data = (string)jObject[InfoTableConstants.DATA];
         }
 
+        public InfoRecord Clone()
+        {
+            return new InfoRecord()
+            {
+                Name = Name,
+                KeyName = KeyName,
+                KeyManage = KeyManage,
+                LData = LData,
+                Data = Data,
+                ParentIV = ParentIV,
+                IV = IV,
+                LocalNameHash = LocalNameHash
+            };
+        }
+
         public class LocalData
         {
             public string EncryptedEqualityColumnName { get; set; }

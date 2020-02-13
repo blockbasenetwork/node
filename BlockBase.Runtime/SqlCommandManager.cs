@@ -44,10 +44,11 @@ namespace BlockBase.Runtime
             Console.WriteLine("");
             Console.WriteLine(sqlString);
             var results = new List<QueryResult>();
+            IList<IList<string>> resultsList;
 
             try
             {
-                AntlrInputStream inputStream = new AntlrInputStream(sqlString);                
+                AntlrInputStream inputStream = new AntlrInputStream(sqlString);
                 BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
                 CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
                 BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
@@ -88,7 +89,7 @@ namespace BlockBase.Runtime
                                 sqlTextToExecute = updateSqlCommand.TransformedSqlStatementText[0];
                                 Console.WriteLine(sqlTextToExecute);
 
-                                var resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
                                 var finalListOfUpdates = _infoPostProcessing.UpdateUpdateRecordStatement(updateSqlCommand, resultsList, _databaseName);
 
                                 var updatesToExecute = finalListOfUpdates.Select(u => _generator.BuildString(u)).ToList();
@@ -100,6 +101,24 @@ namespace BlockBase.Runtime
 
                                 }
                                 results.Add(CreateQueryResult(true, updateSqlCommand.OriginalSqlStatement.GetStatementType()));
+                                break;
+
+                            case DeleteSqlCommand deleteSqlCommand:
+                                sqlTextToExecute = deleteSqlCommand.TransformedSqlStatementText[0];
+                                Console.WriteLine(sqlTextToExecute);
+
+                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                                var finalListOfDeletes = _infoPostProcessing.UpdateDeleteRecordStatement(deleteSqlCommand, resultsList, _databaseName);
+
+                                var deletesToExecute = finalListOfDeletes.Select(u => _generator.BuildString(u)).ToList();
+
+                                foreach (var deleteToExecute in deletesToExecute)
+                                {
+                                    Console.WriteLine(deleteToExecute);
+                                    await _connector.ExecuteCommand(deleteToExecute, _databaseName);
+
+                                }
+                                results.Add(CreateQueryResult(true, deleteSqlCommand.OriginalSqlStatement.GetStatementType()));
                                 break;
 
 
@@ -119,11 +138,11 @@ namespace BlockBase.Runtime
                                     results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                                     continue;
                                 }
-                                
-                                if(databaseSqlCommand.OriginalSqlStatement is CreateDatabaseStatement)
+
+                                if (databaseSqlCommand.OriginalSqlStatement is CreateDatabaseStatement)
                                     await _connector.InsertToDatabasesTable(((CreateDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
-                                
-                                else if(databaseSqlCommand.OriginalSqlStatement is DropDatabaseStatement)
+
+                                else if (databaseSqlCommand.OriginalSqlStatement is DropDatabaseStatement)
                                     await _connector.DeleteFromDatabasesTable(((DropDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
 
                                 for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)

@@ -34,9 +34,10 @@ namespace BlockBase.DataProxy.Encryption
                 return new QueryResult(removedExtraColumns, columnsToMantain);
             }
             var encryptedColumnNames = ((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0]).SelectCoreStatement.ResultColumns.Select(r => r.TableName.Value + "." + r.ColumnName.Value).ToList();
-            return new QueryResult(allResults, encryptedColumnNames);   
+            return new QueryResult(allResults, encryptedColumnNames);
         }
 
+        //TODO: Refactor Delete and Update methods are similiar
         public IList<UpdateRecordStatement> UpdateUpdateRecordStatement(UpdateSqlCommand updateSqlCommand, IList<IList<string>> allResults, string databaseName)
         {
             var originalUpdateRecordStatement = (UpdateRecordStatement)updateSqlCommand.OriginalSqlStatement;
@@ -128,6 +129,53 @@ namespace BlockBase.DataProxy.Encryption
 
         }
 
+        public IList<DeleteRecordStatement> UpdateDeleteRecordStatement(DeleteSqlCommand deleteSqlCommand, IList<IList<string>> allResults, string databaseName)
+        {
+            var originalDeleteRecordStatement = (DeleteRecordStatement)deleteSqlCommand.OriginalSqlStatement;
+            var transformedSimpleSelectStatement = (SimpleSelectStatement)deleteSqlCommand.TransformedSqlStatement[0];
+
+            var deleteRecordStatements = new List<DeleteRecordStatement>();
+
+            var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
+            var filteredResults = FilterExpression(originalDeleteRecordStatement.WhereClause, decryptedResults, columnNames);
+
+            var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
+            var tableInfoRecord = _encryptor.FindInfoRecord(originalDeleteRecordStatement.TableName, databaseInfoRecord.IV);
+
+            var wrongResults = decryptedResults.Except(filteredResults).ToList(); //these are needed to remove extra results on the first
+
+            var transformedDeleteRecordStatement = (DeleteRecordStatement)deleteSqlCommand.TransformedSqlStatement[1];
+            transformedDeleteRecordStatement.WhereClause.HasParenthesis = true;
+            deleteRecordStatements.Add(transformedDeleteRecordStatement);
+            if (wrongResults.Count() != 0)
+            {
+                foreach (var tableColumn in columnNames)
+                {
+                    var columnInfoRecord = _encryptor.FindInfoRecord(tableColumn.ColumnName, tableInfoRecord.IV);
+                    if (columnInfoRecord != null && columnInfoRecord.LData.EncryptedIVColumnName != null)
+                    {
+                        foreach (var row in wrongResults)
+                        {
+                            var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                            var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName + "." + columnInfoRecord.LData.EncryptedIVColumnName);
+
+                            if (transformedDeleteRecordStatement.WhereClause != null)
+                            { 
+                                transformedDeleteRecordStatement.WhereClause = new LogicalExpression(
+                                    transformedDeleteRecordStatement.WhereClause,
+                                    new ComparisonExpression(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)),
+                                    new Value(row[ivIndexColumn], true),
+                                    ComparisonExpression.ComparisonOperatorEnum.Different),
+                                    LogicalExpression.LogicalOperatorEnum.AND);
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            return deleteRecordStatements;
+        }
+
         public IList<IList<string>> DecryptRows(SimpleSelectStatement simpleSelectStatement, IList<IList<string>> allResults, string databaseName, out IList<TableAndColumnName> columnNames)
         {
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
@@ -142,6 +190,7 @@ namespace BlockBase.DataProxy.Encryption
             for (int i = 0; i < selectCoreStatement.ResultColumns.Count; i++)
             {
                 var resultColumn = selectCoreStatement.ResultColumns[i];
+                
                 var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseInfoRecord.IV);
 
                 var decryptedTableName = tableInfoRecord.KeyName != null ? new estring(_encryptor.DecryptName(tableInfoRecord), true) : new estring(tableInfoRecord.Name, false);
@@ -292,22 +341,22 @@ namespace BlockBase.DataProxy.Encryption
 
             foreach (var databaseInfoRecord in databasesInfoRecords)
             {
-                
-                var databaseName = databaseInfoRecord.KeyName != null? _encryptor.DecryptName(databaseInfoRecord) : "!" + databaseInfoRecord.Name;
+
+                var databaseName = databaseInfoRecord.KeyName != null ? _encryptor.DecryptName(databaseInfoRecord) : "!" + databaseInfoRecord.Name;
                 var database = new DatabasePoco(databaseName);
-                
+
                 var tablesInfoRecords = _encryptor.FindChildren(databaseInfoRecord.IV);
                 foreach (var tableInfoRecord in tablesInfoRecords)
                 {
-                    var tableName = tableInfoRecord.KeyName != null? _encryptor.DecryptName(tableInfoRecord) : "!" + tableInfoRecord.Name;
+                    var tableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : "!" + tableInfoRecord.Name;
                     var table = new TablePoco(tableName);
 
                     var columnsInfoRecords = _encryptor.FindChildren(tableInfoRecord.IV);
-                    foreach (var columnInfoRecord in columnsInfoRecords) 
+                    foreach (var columnInfoRecord in columnsInfoRecords)
                     {
-                        var columnName = columnInfoRecord.KeyName != null? _encryptor.DecryptName(columnInfoRecord) : "!" + columnInfoRecord.Name;
-                        var column = new FieldPoco(columnName,_encryptor.GetColumnDataType(columnInfoRecord).DataTypeName.ToString(), null );
-                        table.Fields.Add(column);    
+                        var columnName = columnInfoRecord.KeyName != null ? _encryptor.DecryptName(columnInfoRecord) : "!" + columnInfoRecord.Name;
+                        var column = new FieldPoco(columnName, _encryptor.GetColumnDataType(columnInfoRecord).DataTypeName.ToString(), null);
+                        table.Fields.Add(column);
                     }
                     database.Tables.Add(table);
                 }

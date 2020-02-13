@@ -83,6 +83,10 @@ namespace BlockBase.DataProxy.Encryption
                         command.TransformedSqlStatement = GetTransformedUpdateRecordStatement(updateRecordStatement, _databaseInfoRecord.IV);
                         break;
 
+                    case DeleteRecordStatement deleteRecordStatement:
+                        command.TransformedSqlStatement = GetTransformedDeleteRecordStatement(deleteRecordStatement, _databaseInfoRecord.IV);
+                        break;
+
                 }
             }
         }
@@ -195,17 +199,7 @@ namespace BlockBase.DataProxy.Encryption
 
             sqlStatements.Add(new RenameTableStatement(new estring(transformedOldTableName), new estring(transformedNewTableName)));
 
-            sqlStatements.Add(
-                new UpdateRecordStatement(
-                    INFO_TABLE_NAME,
-                    new Dictionary<estring, Value>() {
-                        { NAME, new Value(transformedNewTableName, true) },
-                        { KEY_NAME, tableInfoRecord.KeyName != null ? new Value(tableInfoRecord.KeyName, true) : new Value("null", false) }
-                    },
-                    new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, IV),
-                        new Value(tableInfoRecord.IV, true),
-                        ComparisonExpression.ComparisonOperatorEnum.Equal)
-                    ));
+            sqlStatements.Add(CreateUpdateToChangeInfoRecordName(transformedNewTableName, tableInfoRecord.IV, tableInfoRecord.KeyName));
 
             return sqlStatements;
         }
@@ -216,26 +210,33 @@ namespace BlockBase.DataProxy.Encryption
             var tableInfoRecord = _encryptor.FindInfoRecord(renameColumnStatement.TableName, databaseIV);
 
             var columnInfoRecord = _encryptor.FindInfoRecord(renameColumnStatement.ColumnName, tableInfoRecord.IV);
-            var transformedOldColumnName = columnInfoRecord.Name;
+            var oldInfoRecord = columnInfoRecord.Clone();
 
             columnInfoRecord = _encryptor.ChangeInfoRecordName(columnInfoRecord, renameColumnStatement.NewColumnName);
-            var transformedNewColumnName = columnInfoRecord.Name;
+
 
             sqlStatements.Add(
                 new RenameColumnStatement(
                     new estring(tableInfoRecord.Name),
-                    new estring(transformedOldColumnName),
-                    new estring(transformedNewColumnName)));
+                    new estring(oldInfoRecord.Name),
+                    new estring(columnInfoRecord.Name)));
+            
+            if (columnInfoRecord.LData.EncryptedEqualityColumnName != null)
+                sqlStatements.Add(new RenameColumnStatement( new estring(tableInfoRecord.Name), 
+                new estring(oldInfoRecord.LData.EncryptedEqualityColumnName), 
+                new estring(columnInfoRecord.LData.EncryptedEqualityColumnName)));
 
-            sqlStatements.Add(
-               new UpdateRecordStatement(
-                   INFO_TABLE_NAME,
-                   new Dictionary<estring, Value>() { { NAME, new Value(transformedNewColumnName, true) },
-                   { KEY_NAME, tableInfoRecord.KeyName != null ? new Value(columnInfoRecord.KeyName, true) : new Value("null", false) }},
-                   new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, IV),
-                       new Value(columnInfoRecord.IV, true),
-                       ComparisonExpression.ComparisonOperatorEnum.Equal)
-                   ));
+            if (columnInfoRecord.LData.EncryptedIVColumnName != null)
+                sqlStatements.Add(new RenameColumnStatement( new estring(tableInfoRecord.Name), 
+                new estring(oldInfoRecord.LData.EncryptedIVColumnName), 
+                new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+
+            if (columnInfoRecord.LData.EncryptedRangeColumnName != null)
+                sqlStatements.Add(new RenameColumnStatement( new estring(tableInfoRecord.Name), 
+                new estring(oldInfoRecord.LData.EncryptedRangeColumnName), 
+                new estring(columnInfoRecord.LData.EncryptedRangeColumnName)));
+
+            sqlStatements.Add(CreateUpdateToChangeInfoRecordName(columnInfoRecord.Name, columnInfoRecord.IV, columnInfoRecord.KeyName));
             return sqlStatements;
         }
         private IList<ISqlStatement> GetTransformedAddColumnStatement(AddColumnStatement addColumnStatement, string databaseIV)
@@ -362,7 +363,7 @@ namespace BlockBase.DataProxy.Encryption
 
             }
 
-            if(selectCoreStatement.JoinClause  != null) transformedSelectStatement.JoinClause = GetTransformedJoinClause(selectCoreStatement.JoinClause, databaseIV);
+            if (selectCoreStatement.JoinClause != null) transformedSelectStatement.JoinClause = GetTransformedJoinClause(selectCoreStatement.JoinClause, databaseIV);
 
             transformedSelectStatement.TablesOrSubqueries = selectCoreStatement.TablesOrSubqueries.Select(t => GetTransformedTableOrSubquery(t, databaseIV)).ToList();
 
@@ -406,10 +407,13 @@ namespace BlockBase.DataProxy.Encryption
                 }
 
                 else
+                {
+                    if (columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME) columnValue.Value.IsText = true;
                     transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
                            new estring(columnInfoRecord.Name),
                            columnValue.Value
                            );
+                }
             }
 
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
@@ -420,6 +424,27 @@ namespace BlockBase.DataProxy.Encryption
                 transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
                 sqlStatements.Add(transformedUpdateRecordStatement);
             }
+
+            return sqlStatements;
+        }
+
+        private IList<ISqlStatement> GetTransformedDeleteRecordStatement(DeleteRecordStatement deleteRecordStatement, string databaseIV)
+        {
+            var sqlStatements = new List<ISqlStatement>();
+
+            var selectStatement = new SimpleSelectStatement();
+
+            var transformedDeleteRecordStatement = new DeleteRecordStatement();
+
+            var tableInfoRecord = _encryptor.FindInfoRecord(deleteRecordStatement.TableName, databaseIV);
+
+            transformedDeleteRecordStatement.TableName = new estring(tableInfoRecord.Name);
+
+            selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(deleteRecordStatement.WhereClause, databaseIV, selectStatement.SelectCoreStatement);
+            sqlStatements.Add(selectStatement);
+
+            transformedDeleteRecordStatement.WhereClause = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+            sqlStatements.Add(transformedDeleteRecordStatement);
 
             return sqlStatements;
         }
@@ -437,7 +462,7 @@ namespace BlockBase.DataProxy.Encryption
 
         }
 
-            private TableOrSubquery GetTransformedTableOrSubquery(TableOrSubquery tableOrSubquery, string databaseIV)
+        private TableOrSubquery GetTransformedTableOrSubquery(TableOrSubquery tableOrSubquery, string databaseIV)
         {
             var transformedTableOrSubquery = new TableOrSubquery();
 
@@ -449,7 +474,7 @@ namespace BlockBase.DataProxy.Encryption
             if (tableOrSubquery.JoinClause != null)
             {
                 transformedTableOrSubquery.JoinClause = GetTransformedJoinClause(tableOrSubquery.JoinClause, databaseIV);
-                }
+            }
 
             if (tableOrSubquery.SimpleSelectStatement != null)
             {
@@ -524,8 +549,8 @@ namespace BlockBase.DataProxy.Encryption
                 return transformedComparisonExpression;
             }
 
-            if(leftColumnDataType.DataTypeName == DataTypeEnum.TEXT) comparisonExpression.Value.IsText = true;
-            
+            if (leftColumnDataType.DataTypeName == DataTypeEnum.TEXT || leftColumnDataType.DataTypeName == DataTypeEnum.DATETIME) comparisonExpression.Value.IsText = true;
+
             transformedComparisonExpression = new ComparisonExpression(
                     new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)),
                     comparisonExpression.Value,
@@ -554,11 +579,11 @@ namespace BlockBase.DataProxy.Encryption
                     if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))
                     {
                         IList<string> bktValues;
-                        if(comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerOrEqualThan || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerThan)
+                        if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerOrEqualThan || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerThan)
                             bktValues = _encryptor.GetRangeBktValues(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType, true);
                         else
                             bktValues = _encryptor.GetRangeBktValues(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType, false);
-                        
+
                         return TransformBktValuesInLogicalExpression(bktValues, transformedComparisonExpression.LeftTableNameAndColumnName);
                     }
                     else
@@ -723,24 +748,39 @@ namespace BlockBase.DataProxy.Encryption
         private DeleteRecordStatement CreateDeleteRecordStatementForInfoTable(string iv)
         {
             return new DeleteRecordStatement(INFO_TABLE_NAME,
-                new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, NAME), new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal)
+                new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, IV), new Value(iv, true), ComparisonExpression.ComparisonOperatorEnum.Equal)
                     );
+        }
+
+        private UpdateRecordStatement CreateUpdateToChangeInfoRecordName(string name, string iv, string keyName)
+        {
+            return new UpdateRecordStatement(
+                    INFO_TABLE_NAME,
+                    new Dictionary<estring, Value>() {
+                        { NAME, new Value(name, true) },
+                        { KEY_NAME, keyName != null ? new Value(keyName, true) : new Value("null", false) }
+                    },
+                    new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, IV),
+                        new Value(iv, true),
+                        ComparisonExpression.ComparisonOperatorEnum.Equal)
+                    );
+
         }
 
         private AbstractExpression TransformBktValuesInLogicalExpression(IList<string> bktValues, TableAndColumnName tableAndColumnName)
         {
             var comparisonExpression = new ComparisonExpression(tableAndColumnName, new Value(bktValues[0], true), ComparisonOperatorEnum.Equal);
-            if(bktValues.Count == 1) return comparisonExpression;
-            
-            var logicalExpression = new LogicalExpression( comparisonExpression , null, LogicalOperatorEnum.OR);
-            AddBktValueExpression(bktValues, logicalExpression, 1, bktValues.Count-1, tableAndColumnName);
+            if (bktValues.Count == 1) return comparisonExpression;
+
+            var logicalExpression = new LogicalExpression(comparisonExpression, null, LogicalOperatorEnum.OR);
+            AddBktValueExpression(bktValues, logicalExpression, 1, bktValues.Count - 1, tableAndColumnName);
             logicalExpression.HasParenthesis = true;
             return logicalExpression;
         }
 
         private AbstractExpression AddBktValueExpression(IList<string> bktValues, LogicalExpression logicalExpression, int depth, int maxDepth, TableAndColumnName tableAndColumnName)
         {
-            if(depth == maxDepth)
+            if (depth == maxDepth)
             {
                 logicalExpression.RightExpression = new ComparisonExpression(tableAndColumnName, new Value(bktValues[maxDepth], true), ComparisonOperatorEnum.Equal);
                 return logicalExpression;
@@ -748,7 +788,7 @@ namespace BlockBase.DataProxy.Encryption
             var newLogicalExpression = new LogicalExpression(new ComparisonExpression(tableAndColumnName, new Value(bktValues[depth], true), ComparisonOperatorEnum.Equal), null, LogicalOperatorEnum.OR);
             logicalExpression.RightExpression = newLogicalExpression;
             depth++;
-            return AddBktValueExpression(bktValues, newLogicalExpression, depth, maxDepth, tableAndColumnName);           
+            return AddBktValueExpression(bktValues, newLogicalExpression, depth, maxDepth, tableAndColumnName);
         }
     }
 }
