@@ -435,12 +435,12 @@ namespace BlockBase.Runtime.Sidechain
             
             foreach (var producer in orderedProducersInPool)
             {
+                var producerIndex = orderedProducersInPool.IndexOf(producer);
                 var producerIps = IpsAddressTableEntries.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
-                if (producerIps == null && producer.ProducerInfo.IPEndPoint != null) continue;
+                if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
 
-                var i = IpsAddressTableEntries.IndexOf(producerIps);
                 var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
-                var encryptedIpEndPoint = listEncryptedIPEndPoints[i];
+                var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
                 producer.ProducerInfo.IPEndPoint = IPEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
             }
         }
