@@ -218,6 +218,7 @@ namespace BlockBase.Runtime.Network
                 var peerConnection = AddIfNotExistsPeerConnection(args.SenderIPEndPoint, sidechainPool.ClientAccountName);
                 peerConnection.ConnectionState = ConnectionStateEnum.Connected;
                 peerConnection.Peer = peer;
+                _waitingForApprovalPeers.Remove(peer);
                 return;
             }
 
