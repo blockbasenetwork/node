@@ -429,7 +429,6 @@ namespace BlockBase.Runtime.Sidechain
 
             var producerIndex = IpsAddressTableEntries.FindIndex(m => m.Key == _nodeConfigurations.AccountName);
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
-            _logger.LogDebug($"Updating {numberOfIpsToUpdate} ips.");
             if (numberOfIpsToUpdate == 0) return;
             var reorganizedIpsAddressTableEntries = ListHelper.GetListSortedCountingBackFromIndex(IpsAddressTableEntries, producerIndex).Take(numberOfIpsToUpdate).ToList();
 
@@ -440,7 +439,6 @@ namespace BlockBase.Runtime.Sidechain
 
                 var listEncryptedIPEndPoints = reorganizedIpsAddressTableEntries[i].EncryptedIPs;
                 var encryptedIpEndPoint = listEncryptedIPEndPoints[i];
-                _logger.LogDebug("Received IP from producer " + producer.ProducerInfo.AccountName + " with pk " + producer.ProducerInfo.PublicKey);
                 producer.ProducerInfo.IPEndPoint = IPEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
             }
         }
@@ -508,13 +506,15 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     AccountName = m.Key,
                     PublicKey = m.PublicKey,
-                    NewlyJoined = false,
-                    IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
+                    NewlyJoined = false
                 },
                 PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
             }).ToList();
 
             Sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
+
+            var ipAddresses = await _mainchainService.RetrieveIPAddresses(Sidechain.ClientAccountName);
+            UpdateIPsInSidechain(ipAddresses);
 
             if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
                 await _peerConnectionsHandler.CheckConnectionStatus(Sidechain);
