@@ -120,7 +120,7 @@ namespace BlockBase.Runtime.Network
             {
                 if (CanDeleteConnection(peerConnection))
                 {
-                    Disconnect(peerConnection.Peer);
+                    Disconnect(peerConnection);
                 }
             }
         }
@@ -257,7 +257,7 @@ namespace BlockBase.Runtime.Network
             if (peerConnection.Rating < MINIMUM_RATING)
             {
                 var pools = _sidechainKeeper.Sidechains.Where(p => p.Value.ProducersInPool.GetEnumerable().Count(m => m.PeerConnection == peerConnection) != 0);
-                Disconnect(peerConnection.Peer);
+                Disconnect(peerConnection);
                 foreach (KeyValuePair<string, SidechainPool> keyValuePair in pools)
                 {
                     await UpdateConnectedProducersInSidechainPool(keyValuePair.Value);
@@ -295,7 +295,7 @@ namespace BlockBase.Runtime.Network
                     }
 
                     _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
-                    Disconnect(producer.PeerConnection.Peer);
+                    Disconnect(producer.PeerConnection);
                 }
             }
         }
@@ -370,6 +370,13 @@ namespace BlockBase.Runtime.Network
                 _logger.LogError("Could not connect to producer: " + ex.Message);
                 return null;
             }
+        }
+
+        private void Disconnect(PeerConnection peerConnection)
+        {
+            _logger.LogInformation("Disconnect from peer " + peerConnection.Peer.EndPoint.Address + ":" + peerConnection.Peer.EndPoint.Port + ".");
+            _networkService.DisconnectPeer(peerConnection.Peer);
+            CurrentPeerConnections.Remove(peerConnection);
         }
 
         private void Disconnect(Peer peer)
