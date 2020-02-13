@@ -17,6 +17,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Domain;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -27,10 +28,10 @@ namespace BlockBase.Runtime.Sidechain
         private SidechainPool _sidechainPool;
         private INetworkService _networkService;
         private IMainchainService _mainchainService;
+        private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private string _endPoint;
         private BlockSender _blockSender;
-        private ChainBuilder _chainBuilder;
         private long _nextTimeToCheckSmartContract;
         private long _previousTimeToCheck;
         private ILogger _logger;
@@ -40,11 +41,12 @@ namespace BlockBase.Runtime.Sidechain
         private ISidechainDatabasesManager _sidechainDatabaseManager;
 
 
-        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockSender blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
+        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockSender blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
         {
             _logger = logger;
             _networkService = networkService;
             _mainchainService = mainchainService;
+            _peerConnectionsHandler = peerConnectionsHandler;
             _logger.LogDebug("Creating block producer.");
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
@@ -52,8 +54,6 @@ namespace BlockBase.Runtime.Sidechain
             _endPoint = endPoint;
             _blockSender = blockSender;
             _sidechainDatabaseManager = sidechainDatabaseManager;
-            _chainBuilder = new ChainBuilder(logger, sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, nodeConfigurations, networkService, mainchainService, endPoint);
-
         }
 
         //TODO: Probably a good idea to protect from having a task already running in instance and replace taskcontainer with a new one and have multiple threads running per instance
@@ -113,6 +113,8 @@ namespace BlockBase.Runtime.Sidechain
                                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                                     await ProposeBlock(block);
                                 }
+
+                                await UpdatePeers();
                             }
                         }
                         catch (Exception ex)
@@ -278,7 +280,8 @@ namespace BlockBase.Runtime.Sidechain
         private async Task BuildChain()
         {
             _logger.LogDebug("Building chain.");
-            var task = _chainBuilder.Start();
+            var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
+            var task = chainBuilder.Start();
             
             while(task.Task.Status == TaskStatus.Running)
             {
@@ -293,6 +296,24 @@ namespace BlockBase.Runtime.Sidechain
             {
                 _logger.LogInformation("Already notified ready.");
             }
+        }
+
+        private async Task UpdatePeers()
+        {
+            var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            var producersInPool = producersInTable.Select(m => new ProducerInPool
+            {
+                ProducerInfo = new ProducerInfo
+                {
+                    AccountName = m.Key,
+                    PublicKey = m.PublicKey,
+                    NewlyJoined = true
+                },
+                PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
+            }).ToList();
+
+            _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
         }
     }
 }

@@ -25,10 +25,6 @@ namespace BlockBase.Runtime.Sidechain
 {
     public class SidechainManager : IThreadableComponent
     {
-        //encrypt and decrypt IPs methods
-
-        //rpinto - this isn't thread safe. Anything that may be accessed from a different running thread must be thread safe.  -> done - marciak
-        //private SidechainKeeper _sidechainKeeper;
         public SidechainPool Sidechain { get; set; }
 
         public TaskContainer TaskContainer { get; private set; }
@@ -73,7 +69,7 @@ namespace BlockBase.Runtime.Sidechain
             //TODO - commented this code in order to be able to remove completely the old Query Builder and its direct dependencies
             //TODO - it should receive an IConnector passed through dependency injection
             IConnector connector = null; // new MySqlConnector(_nodeConfigurations.MySqlServer, _nodeConfigurations.MySqlUser, _nodeConfigurations.MySqlPort, _nodeConfigurations.MySqlPassword, logger);
-            _blockProductionManager = new BlockProductionManager(Sidechain, _nodeConfigurations, _logger, _networkService, _mainchainService, _mongoDbProducerService, EndPoint, _blockSender, new SidechainDatabasesManager(connector));
+            _blockProductionManager = new BlockProductionManager(Sidechain, _nodeConfigurations, _logger, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, EndPoint, _blockSender, new SidechainDatabasesManager(connector));
         }
 
         public async Task SuperMethod()
@@ -504,6 +500,22 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task CheckPeerConnections()
         {
+            var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
+            var producersInPool = producersInTable.Select(m => new ProducerInPool
+            {
+                ProducerInfo = new ProducerInfo
+                {
+                    AccountName = m.Key,
+                    PublicKey = m.PublicKey,
+                    NewlyJoined = false,
+                    IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
+                },
+                PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
+            }).ToList();
+
+            Sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
+
             if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
                 await _peerConnectionsHandler.CheckConnectionStatus(Sidechain);
         }
@@ -513,9 +525,7 @@ namespace BlockBase.Runtime.Sidechain
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
             if (producersInTable == null || !producersInTable.Any() || !IsProducerInTable(producersInTable)) return;
 
-            bool poolChanged = UpdateAndCheckIfProducersInSidechainChanged(producersInTable);
             await _peerConnectionsHandler.TryReconnectWithDisconnectedAccounts(Sidechain);
-            if (poolChanged) _logger.LogInformation("Pool changed.");
             await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
         }
 

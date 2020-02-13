@@ -5,10 +5,9 @@ using BlockBase.Network.Connectors;
 using BlockBase.Network.IO;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Network.Sidechain;
-using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
-using BlockBase.Utils.Operation;
+using BlockBase.Utils.Extensions;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,7 +29,7 @@ namespace BlockBase.Runtime.Network
         //TODO: marciak - UpdatePeerConnectionRating, should they win back reputation with time?
         private readonly SidechainKeeper _sidechainKeeper;
         private readonly INetworkService _networkService;
-        public ThreadSafeList<PeerConnection> CurrentPeerConnections {private set; get;}
+        public ThreadSafeList<PeerConnection> CurrentPeerConnections { private set; get; }
         private ThreadSafeList<Peer> _waitingForApprovalPeers;
         private NodeConfigurations _nodeConfigurations;
         private SystemConfig _systemConfig;
@@ -44,7 +43,7 @@ namespace BlockBase.Runtime.Network
         private const int STARTING_RATING = 100;
         private const int RATING_LOST_FOR_DISCONECT = 10;
         private const int RATING_LOST_FOR_CONNECT_FAILURE = 10;
-        
+
         public PeerConnectionsHandler(INetworkService networkService, SidechainKeeper sidechainKeeper, SystemConfig systemConfig, ILogger<PeerConnectionsHandler> logger, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations)
         {
             _sidechainKeeper = sidechainKeeper;
@@ -70,14 +69,16 @@ namespace BlockBase.Runtime.Network
 
         public async Task ConnectToProducers(IDictionary<string, IPEndPoint> producersIPs)
         {
-            foreach(var producerIP in producersIPs)
+            foreach (var producerIP in producersIPs)
             {
-                try {
-                var peerConnection = AddIfNotExistsPeerConnection(producerIP.Value, producerIP.Key);
-                await ConnectAsync(producerIP.Value);
-                peerConnection.ConnectionState = ConnectionStateEnum.Connected;
-                await SendIdentificationMessage(producerIP.Value);
-                } catch(Exception e)
+                try
+                {
+                    var peerConnection = AddIfNotExistsPeerConnection(producerIP.Value, producerIP.Key);
+                    await ConnectAsync(producerIP.Value);
+                    peerConnection.ConnectionState = ConnectionStateEnum.Connected;
+                    await SendIdentificationMessage(producerIP.Value);
+                }
+                catch (Exception e)
                 {
                     _logger.LogError("Couldn't connect to producer.", e);
 
@@ -91,13 +92,14 @@ namespace BlockBase.Runtime.Network
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
 
-            var numberOfConnections = (int) Math.Ceiling(producersInPoolList.Count/4.0);
-            
+            var numberOfConnections = (int)Math.Ceiling(producersInPoolList.Count / 4.0);
+
             var producersWhoIAmSupposedToBeConnected = orderedProducersInPool.Where(m => IsPeerConnectionValid(m)).Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState != ConnectionStateEnum.Connected).ToList();
+            producersWhoIAmSupposedToBeConnected = producersWhoIAmSupposedToBeConnected.Where(p => !CurrentPeerConnections.GetEnumerable().Any(c => c.IPEndPoint == p.PeerConnection?.IPEndPoint)).ToList();
 
             if (producersWhoIAmSupposedToBeConnected.Any()) _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
-            { 
+            {
                 await ConnectToProducer(sidechain, producer);
             }
         }
@@ -120,7 +122,7 @@ namespace BlockBase.Runtime.Network
             {
                 if (CanDeleteConnection(peerConnection))
                 {
-                    Disconnect(peerConnection.Peer);
+                    Disconnect(peerConnection);
                 }
             }
         }
@@ -130,9 +132,9 @@ namespace BlockBase.Runtime.Network
             _logger.LogDebug("Connect to Producer: " + producer.ProducerInfo.AccountName);
 
             if (producer.ProducerInfo.IPEndPoint != null)
-            { 
-                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.PublicKey);
-                var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
+            {
+                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
+                var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
                 if (peerConnected == null)
                 {
@@ -164,7 +166,7 @@ namespace BlockBase.Runtime.Network
 
         private async void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
         {
-            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
+            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
             if (peerConnection != null)
             {
                 peerConnection.ConnectionState = ConnectionStateEnum.Disconnected;
@@ -173,14 +175,14 @@ namespace BlockBase.Runtime.Network
                 CurrentPeerConnections.Remove(peerConnection);
             }
 
-            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.IPEndPoint)).SingleOrDefault();
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
             if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
-            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
-            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.Peer.EndPoint)).SingleOrDefault();
+            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
 
             if (peerConnection != null)
             {
@@ -204,23 +206,25 @@ namespace BlockBase.Runtime.Network
 
         private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
         {
-            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.Equals(args.SenderIPEndPoint)).SingleOrDefault();
-            if (peer == null) {
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.SenderIPEndPoint)).SingleOrDefault();
+            if (peer == null)
+            {
                 _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
                 return;
             }
 
-            var sidechainPool = _sidechainKeeper.Sidechains.Values.Where(s => s.ClientPublicKey == args.PublicKey).SingleOrDefault();
-            if( sidechainPool != null)
+            var sidechainPool = _sidechainKeeper.Sidechains.Values.Where(s => s.ClientAccountName == args.EosAccount).SingleOrDefault();
+            if (sidechainPool != null)
             {
                 _logger.LogDebug("Acceptable client connection.");
-                var peerConnection = AddIfNotExistsPeerConnection(args.SenderIPEndPoint, sidechainPool.ClientPublicKey);
+                var peerConnection = AddIfNotExistsPeerConnection(args.SenderIPEndPoint, sidechainPool.ClientAccountName);
                 peerConnection.ConnectionState = ConnectionStateEnum.Connected;
                 peerConnection.Peer = peer;
+                _waitingForApprovalPeers.Remove(peer);
                 return;
             }
 
-            var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.PublicKey == args.PublicKey)).FirstOrDefault();
+            var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount)).FirstOrDefault();
 
             if (producer == null)
             {
@@ -232,7 +236,7 @@ namespace BlockBase.Runtime.Network
             {
                 _logger.LogDebug("Acceptable producer.");
                 producer.ProducerInfo.IPEndPoint = peer.EndPoint;
-                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.PublicKey);
+                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                 producer.PeerConnection.ConnectionState = ConnectionStateEnum.Connected;
                 producer.PeerConnection.Peer = peer;
             }
@@ -257,7 +261,7 @@ namespace BlockBase.Runtime.Network
             if (peerConnection.Rating < MINIMUM_RATING)
             {
                 var pools = _sidechainKeeper.Sidechains.Where(p => p.Value.ProducersInPool.GetEnumerable().Count(m => m.PeerConnection == peerConnection) != 0);
-                Disconnect(peerConnection.Peer);
+                Disconnect(peerConnection);
                 foreach (KeyValuePair<string, SidechainPool> keyValuePair in pools)
                 {
                     await UpdateConnectedProducersInSidechainPool(keyValuePair.Value);
@@ -267,9 +271,9 @@ namespace BlockBase.Runtime.Network
 
         public async Task TryReconnectWithDisconnectedAccounts(SidechainPool sidechain)
         {
-            foreach(var producer in sidechain.ProducersInPool)
+            foreach (var producer in sidechain.ProducersInPool)
             {
-                if(producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Disconnected)
+                if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Disconnected)
                 {
                     await ConnectToProducer(sidechain, producer);
                 }
@@ -280,7 +284,7 @@ namespace BlockBase.Runtime.Network
         {
             var random = new Random();
 
-            foreach(var producer in sidechain.ProducersInPool)
+            foreach (var producer in sidechain.ProducersInPool)
             {
                 if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
                 {
@@ -295,7 +299,7 @@ namespace BlockBase.Runtime.Network
                     }
 
                     _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
-                    Disconnect(producer.PeerConnection.Peer);
+                    Disconnect(producer.PeerConnection);
                 }
             }
         }
@@ -317,7 +321,7 @@ namespace BlockBase.Runtime.Network
 
             if (ipEndPoint != null)
             {
-                peerConnection = CurrentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint.Equals(ipEndPoint) || p.ConnectionAccountName == accountName);
+                peerConnection = CurrentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint.IsEqualTo(ipEndPoint) || p.ConnectionAccountName == accountName);
                 if (peerConnection == null)
                 {
                     peerConnection = new PeerConnection
@@ -326,7 +330,7 @@ namespace BlockBase.Runtime.Network
                         Rating = STARTING_RATING,
                         IPEndPoint = ipEndPoint,
                         ConnectionAccountName = accountName
-                        
+
                     };
                     CurrentPeerConnections.Add(peerConnection);
                 }
@@ -372,6 +376,13 @@ namespace BlockBase.Runtime.Network
             }
         }
 
+        private void Disconnect(PeerConnection peerConnection)
+        {
+            _logger.LogInformation("Disconnect from peer " + peerConnection.Peer.EndPoint.Address + ":" + peerConnection.Peer.EndPoint.Port + ".");
+            _networkService.DisconnectPeer(peerConnection.Peer);
+            CurrentPeerConnections.Remove(peerConnection);
+        }
+
         private void Disconnect(Peer peer)
         {
             _logger.LogInformation("Disconnect from peer " + peer.EndPoint.Address + ":" + peer.EndPoint.Port + ".");
@@ -380,7 +391,7 @@ namespace BlockBase.Runtime.Network
 
         private bool CanDeleteConnection(PeerConnection peerConnection)
         {
-            var numberOfSidechainsWherePeerConnectionExists = _sidechainKeeper.Sidechains.Values.Count(s => s.ProducersInPool.GetEnumerable().Count(m => m.PeerConnection != null && m.PeerConnection.IPEndPoint.Equals(peerConnection.IPEndPoint)) != 0);
+            var numberOfSidechainsWherePeerConnectionExists = _sidechainKeeper.Sidechains.Values.Count(s => s.ProducersInPool.GetEnumerable().Count(m => m.PeerConnection != null && m.PeerConnection.IPEndPoint.IsEqualTo(peerConnection.IPEndPoint)) != 0);
             if (numberOfSidechainsWherePeerConnectionExists > 1)
             {
                 return false;

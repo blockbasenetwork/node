@@ -90,15 +90,17 @@ namespace BlockBase.Runtime.Sidechain
                     _logger.LogDebug("No connected producers to request blocks");
                     return;
                 }
+                if (currentSendingProducer == validConnectedProducers.Last())
+                {
+                    _logger.LogDebug("Tried all producers and didn't manage to build chain, trying again later...");
+                }
 
                 await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
                 _lastValidSavedBlock = await _mongoDbProducerService.GetLastValidSidechainBlockAsync(databaseName);
                 _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
-                var selectedProducerToSend = validConnectedProducers.Last() == currentSendingProducer ? 0 : validConnectedProducers.IndexOf(currentSendingProducer);
-                currentSendingProducer = selectedProducerToSend >= 0 ? 
-                    validConnectedProducers.ElementAt(selectedProducerToSend) : 
-                    validConnectedProducers.ElementAt(0);
+                var selectedProducerToSend = !validConnectedProducers.Contains(currentSendingProducer) ? 0 : validConnectedProducers.IndexOf(currentSendingProducer) + 1;
+                currentSendingProducer = validConnectedProducers.ElementAt(selectedProducerToSend);
                 
                 var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
                 var endSequenceNumber = _blocksReceived.Any() ? 
