@@ -70,7 +70,7 @@ namespace BlockBase.Runtime.Mainchain
 
                     if (_timeDiff <= 0)
                     {
-                        if (_previousWaitTime != _sidechain.NextStateWaitEndTime || _forceTryAgain) await CheckContractEndState();
+                        if (_previousWaitTime != _sidechain.NextStateWaitEndTime || _forceTryAgain || _timeDiff + _sidechain.BlockTimeDuration <= 0) await CheckContractEndState();
                         UpdateAverageTrxTime();
                         await CheckContractAndUpdateStates();
                         await CheckContractAndUpdateWaitTimes();
