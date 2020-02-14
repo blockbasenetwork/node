@@ -137,7 +137,7 @@ namespace BlockBase.Runtime.Sidechain
 
             _logger.LogDebug(_nodeConfigurations.ActivePrivateKey);
 
-            return new NetworkMessage(NetworkMessageTypeEnum.RequestBlocks, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, producer.ProducerInfo.IPEndPoint);
+            return new NetworkMessage(NetworkMessageTypeEnum.RequestBlocks, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
         }
 
         private async void MessageForwarder_RecoverBlockReceived(BlockReceivedEventArgs args, IPEndPoint sender)

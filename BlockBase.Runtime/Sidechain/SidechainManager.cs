@@ -508,7 +508,8 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     AccountName = m.Key,
                     PublicKey = m.PublicKey,
-                    NewlyJoined = false
+                    NewlyJoined = false,
+                    IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
                 },
                 PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
             }).ToList();
