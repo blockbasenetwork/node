@@ -29,6 +29,7 @@ namespace BlockBase.Runtime.Sidechain
         private INetworkService _networkService;
         private IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
+        private ChainBuilder _chainBuilder;
         private NodeConfigurations _nodeConfigurations;
         private string _endPoint;
         private BlockSender _blockSender;
@@ -54,6 +55,7 @@ namespace BlockBase.Runtime.Sidechain
             _endPoint = endPoint;
             _blockSender = blockSender;
             _sidechainDatabaseManager = sidechainDatabaseManager;
+            _chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
         }
 
         //TODO: Probably a good idea to protect from having a task already running in instance and replace taskcontainer with a new one and have multiple threads running per instance
@@ -281,8 +283,7 @@ namespace BlockBase.Runtime.Sidechain
         private async Task BuildChain()
         {
             _logger.LogDebug("Building chain.");
-            var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
-            var task = chainBuilder.Start();
+            var task = _chainBuilder.Start(_sidechainPool);
 
             while (task.Task.Status == TaskStatus.Running)
             {
