@@ -229,9 +229,9 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task TryVerifyAndExecuteTransaction(string proposer, TransactionProposal proposal)
         {
-            try
+            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                try
                 {
                     var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
 
@@ -248,10 +248,11 @@ namespace BlockBase.Runtime.Sidechain
 
                     await Task.Delay(100);
                 }
-            }
-            catch (ApiErrorException)
-            {
-                _logger.LogInformation("Unable to execute proposed transaction, number of required approvals might not have been reached");
+                catch (ApiErrorException)
+                {
+                    _logger.LogInformation("Unable to execute proposed transaction, number of required approvals might not have been reached");
+                    await Task.Delay(100);
+                }
             }
 
             try
@@ -282,8 +283,8 @@ namespace BlockBase.Runtime.Sidechain
             _logger.LogDebug("Building chain.");
             var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
             var task = chainBuilder.Start();
-            
-            while(task.Task.Status == TaskStatus.Running)
+
+            while (task.Task.Status == TaskStatus.Running)
             {
                 await Task.Delay(50);
             }
