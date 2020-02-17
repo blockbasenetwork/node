@@ -528,7 +528,6 @@ namespace BlockBase.Runtime.Sidechain
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
             if (producersInTable == null || !producersInTable.Any() || !IsProducerInTable(producersInTable)) return;
 
-            await _peerConnectionsHandler.TryReconnectWithDisconnectedAccounts(Sidechain);
             await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
         }
 
