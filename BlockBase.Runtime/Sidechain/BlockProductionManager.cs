@@ -157,9 +157,9 @@ namespace BlockBase.Runtime.Sidechain
                         previousBlockhash = new byte[32];
                     }
 
-                    var databaseName = _sidechainPool.ClientAccountName;
-                    var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(databaseName);
-                    ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(databaseName))?.SequenceNumber ?? 0;
+                    var transactionsDatabaseName = _sidechainPool.ClientAccountName;
+                    var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(transactionsDatabaseName);
+                    ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
                     var transactions = new List<Transaction>();
 
                     foreach (var looseTransaction in allLooseTransactions)

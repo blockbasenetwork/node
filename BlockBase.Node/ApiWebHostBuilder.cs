@@ -7,6 +7,7 @@ using BlockBase.Network.IO.Analysis;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
 using BlockBase.Node;
+using BlockBase.Runtime;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
@@ -129,6 +130,7 @@ namespace BlockBase.Api
             _webHostBuider.ConfigureServices((hostContext, services) =>
             {
                 services.AddSingleton<IConnector, PSqlConnector>();
+                services.AddSingleton<DatabaseAccess>();
                 services.AddSingleton<BlockSender>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<PeerConnectionsHandler>();

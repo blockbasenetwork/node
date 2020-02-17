@@ -75,7 +75,7 @@ namespace BlockBase.DataProxy.Encryption
         }
 
         public InfoRecord FindInfoRecord(string recordIV)
-        {    
+        {
             return _infoRecordsLookup.Values.SelectMany(r => r).SingleOrDefault(r => r.IV == recordIV);
         }
 

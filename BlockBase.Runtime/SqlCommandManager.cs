@@ -15,6 +15,10 @@ using BlockBase.DataProxy;
 using System.Collections.Generic;
 using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
+using System.Collections.Concurrent;
+using System.Threading;
+using BlockBase.Utils.Threading;
+
 
 namespace BlockBase.Runtime
 {
@@ -22,14 +26,16 @@ namespace BlockBase.Runtime
     {
         private Transformer _transformer;
         private IGenerator _generator;
-        private string _databaseName = "";
         private InfoPostProcessing _infoPostProcessing;
         private BareBonesSqlBaseVisitor<object> _visitor;
         private IConnector _connector;
         private ILogger _logger;
+        private int _transaction_sequence_number = 0;
+        private DatabaseAccess _databaseAccess;
+
 
         // public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, INetworkService networkService)
-        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector)
+        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, DatabaseAccess databaseAccess)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
@@ -37,14 +43,14 @@ namespace BlockBase.Runtime
             _logger = logger;
             _connector = connector;
             _transformer = new Transformer(middleMan);
+            _databaseAccess = databaseAccess;
         }
 
         public async Task<IList<QueryResult>> Execute(string sqlString)
         {
             Console.WriteLine("");
             Console.WriteLine(sqlString);
-            var results = new List<QueryResult>();
-            IList<IList<string>> resultsList;
+            IList<QueryResult> results = new List<QueryResult>();
 
             try
             {
@@ -55,136 +61,9 @@ namespace BlockBase.Runtime
 
                 var context = parser.sql_stmt_list();
                 var builder = (Builder)_visitor.Visit(context);
-                _transformer.TransformBuilder(builder);
-                builder.BuildSqlStatements(_generator);
-
-
-                foreach (var sqlCommand in builder.SqlCommands)
-                {
-                    try
-                    {
-                        Console.WriteLine("");
-                        string sqlTextToExecute = "";
-                        if (sqlCommand is DatabaseSqlCommand)
-                            _databaseName = ((DatabaseSqlCommand)sqlCommand).DatabaseName;
-
-                        switch (sqlCommand)
-                        {
-                            case ReadQuerySqlCommand readQuerySql:
-                                sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
-                                Console.WriteLine(sqlTextToExecute);
-                                var resultList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                var queryResult = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultList, _databaseName);
-                                results.Add(queryResult);
-
-                                foreach (var title in queryResult.Columns) _logger.LogDebug(title + " ");
-                                foreach (var row in queryResult.Data)
-                                {
-                                    Console.WriteLine();
-                                    foreach (var value in row) _logger.LogDebug(value + " ");
-                                }
-                                break;
-
-                            case UpdateSqlCommand updateSqlCommand:
-                                sqlTextToExecute = updateSqlCommand.TransformedSqlStatementText[0];
-                                Console.WriteLine(sqlTextToExecute);
-
-                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                var finalListOfUpdates = _infoPostProcessing.UpdateUpdateRecordStatement(updateSqlCommand, resultsList, _databaseName);
-
-                                var updatesToExecute = finalListOfUpdates.Select(u => _generator.BuildString(u)).ToList();
-
-                                foreach (var updateToExecute in updatesToExecute)
-                                {
-                                    Console.WriteLine(updateToExecute);
-                                    await _connector.ExecuteCommand(updateToExecute, _databaseName);
-
-                                }
-                                results.Add(CreateQueryResult(true, updateSqlCommand.OriginalSqlStatement.GetStatementType()));
-                                break;
-
-                            case DeleteSqlCommand deleteSqlCommand:
-                                sqlTextToExecute = deleteSqlCommand.TransformedSqlStatementText[0];
-                                Console.WriteLine(sqlTextToExecute);
-
-                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                var finalListOfDeletes = _infoPostProcessing.UpdateDeleteRecordStatement(deleteSqlCommand, resultsList, _databaseName);
-
-                                var deletesToExecute = finalListOfDeletes.Select(u => _generator.BuildString(u)).ToList();
-
-                                foreach (var deleteToExecute in deletesToExecute)
-                                {
-                                    Console.WriteLine(deleteToExecute);
-                                    await _connector.ExecuteCommand(deleteToExecute, _databaseName);
-
-                                }
-                                results.Add(CreateQueryResult(true, deleteSqlCommand.OriginalSqlStatement.GetStatementType()));
-                                break;
-
-
-                            case GenericSqlCommand genericSqlCommand:
-                                for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
-                                {
-                                    sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
-                                    Console.WriteLine(sqlTextToExecute);
-                                    await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                }
-                                results.Add(CreateQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
-                                break;
-
-                            case DatabaseSqlCommand databaseSqlCommand:
-                                if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement)
-                                {
-                                    results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
-                                    continue;
-                                }
-
-                                if (databaseSqlCommand.OriginalSqlStatement is CreateDatabaseStatement)
-                                    await _connector.InsertToDatabasesTable(((CreateDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
-
-                                else if (databaseSqlCommand.OriginalSqlStatement is DropDatabaseStatement)
-                                    await _connector.DeleteFromDatabasesTable(((DropDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
-
-                                for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
-                                {
-                                    sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
-                                    Console.WriteLine(sqlTextToExecute);
-                                    if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
-                                        await _connector.ExecuteCommand(sqlTextToExecute, null);
-                                    else
-                                        await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                }
-                                results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
-                                break;
-                            case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
-                                if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
-                                {
-                                    var databasesList = _infoPostProcessing.GetDatabasesList();
-                                    Console.WriteLine("Databases:");
-                                    foreach (var database in databasesList) Console.WriteLine(database);
-                                    results.Add(new QueryResult(
-                                        new List<IList<string>>(databasesList.Select(d => new List<string>() { d }).ToList()),
-                                        new List<string>() { "databases" })
-                                    );
-                                }
-
-                                else
-                                {
-                                    var currentDatabase = _infoPostProcessing.DecryptDatabaseName(_databaseName) ?? "none";
-                                    results.Add(new QueryResult(
-                                        new List<IList<string>>() { new List<string>() { currentDatabase } },
-                                        new List<string>() { "current_database" })
-                                    );
-                                }
-                                break;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError("Error executing sql command.", e);
-                        results.Add(CreateQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
-                    }
-                }
+                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _databaseAccess);
+                results = await executioner.ExecuteBuilder(builder, CreateQueryResult);
+                
             }
             catch (Exception e)
             {
@@ -193,7 +72,8 @@ namespace BlockBase.Runtime
             return results;
         }
 
-        private QueryResult CreateQueryResult(bool success, string statementType, string exceptionMessage = null)
+        
+         private QueryResult CreateQueryResult(bool success, string statementType, string exceptionMessage = null)
         {
             var executed = success ? "True" : "False";
             var message = $"The {statementType} statement " + (success ? "executed correctly." : "didn't execute. Exception: " + exceptionMessage);

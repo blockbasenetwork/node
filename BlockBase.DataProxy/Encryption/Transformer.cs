@@ -36,58 +36,55 @@ namespace BlockBase.DataProxy.Encryption
             _encryptor = middleMan;
         }
 
-        public void TransformBuilder(Builder builder)
+        public void TransformCommand(ISqlCommand command)
         {
-            foreach (var command in builder.SqlCommands)
+            var statement = command.OriginalSqlStatement;
+            switch (statement)
             {
-                var statement = command.OriginalSqlStatement;
-                switch (statement)
-                {
-                    case CreateDatabaseStatement createDatabaseStatement:
-                        command.TransformedSqlStatement = GetTransformedCreateDatabaseStatement(createDatabaseStatement, out _databaseInfoRecord);
-                        var createDatabaseCommand = (DatabaseSqlCommand)command;
-                        createDatabaseCommand.DatabaseName = ((CreateDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
-                        break;
+                case CreateDatabaseStatement createDatabaseStatement:
+                    command.TransformedSqlStatement = GetTransformedCreateDatabaseStatement(createDatabaseStatement, out _databaseInfoRecord);
+                    var createDatabaseCommand = (DatabaseSqlCommand)command;
+                    createDatabaseCommand.DatabaseName = ((CreateDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
+                    break;
 
-                    case DropDatabaseStatement dropDatabaseStatement:
-                        command.TransformedSqlStatement = GetTransformedDropDatabaseStatement(dropDatabaseStatement);
-                        break;
+                case DropDatabaseStatement dropDatabaseStatement:
+                    command.TransformedSqlStatement = GetTransformedDropDatabaseStatement(dropDatabaseStatement);
+                    break;
 
-                    case UseDatabaseStatement useDatabaseStatement:
-                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedUseDatabaseStatement(useDatabaseStatement, out _databaseInfoRecord) };
-                        var useDatabaseCommand = (DatabaseSqlCommand)command;
-                        useDatabaseCommand.DatabaseName = ((UseDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
-                        break;
+                case UseDatabaseStatement useDatabaseStatement:
+                    command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedUseDatabaseStatement(useDatabaseStatement, out _databaseInfoRecord) };
+                    var useDatabaseCommand = (DatabaseSqlCommand)command;
+                    useDatabaseCommand.DatabaseName = ((UseDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
+                    break;
 
-                    case CreateTableStatement createTableStatement:
-                        command.TransformedSqlStatement = GetTransformedCreateTableStatement(createTableStatement, _databaseInfoRecord.IV);
-                        break;
+                case CreateTableStatement createTableStatement:
+                    command.TransformedSqlStatement = GetTransformedCreateTableStatement(createTableStatement, _databaseInfoRecord.IV);
+                    break;
 
-                    case DropTableStatement dropTableStatement:
-                        command.TransformedSqlStatement = GetTransformedDropTableStatement(dropTableStatement, _databaseInfoRecord.IV);
-                        break;
+                case DropTableStatement dropTableStatement:
+                    command.TransformedSqlStatement = GetTransformedDropTableStatement(dropTableStatement, _databaseInfoRecord.IV);
+                    break;
 
-                    case AbstractAlterTableStatement abstractAlterTableStatement:
-                        command.TransformedSqlStatement = GetTransformedAlterTableStatement(abstractAlterTableStatement, _databaseInfoRecord.IV);
-                        break;
+                case AbstractAlterTableStatement abstractAlterTableStatement:
+                    command.TransformedSqlStatement = GetTransformedAlterTableStatement(abstractAlterTableStatement, _databaseInfoRecord.IV);
+                    break;
 
-                    case InsertRecordStatement insertRecordStatement:
-                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedInsertRecordStatement(insertRecordStatement, _databaseInfoRecord.IV) };
-                        break;
+                case InsertRecordStatement insertRecordStatement:
+                    command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedInsertRecordStatement(insertRecordStatement, _databaseInfoRecord.IV) };
+                    break;
 
-                    case SimpleSelectStatement simpleSelectStatement:
-                        command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedSimpleSelectStatement(simpleSelectStatement, _databaseInfoRecord.IV) };
-                        break;
+                case SimpleSelectStatement simpleSelectStatement:
+                    command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedSimpleSelectStatement(simpleSelectStatement, _databaseInfoRecord.IV) };
+                    break;
 
-                    case UpdateRecordStatement updateRecordStatement:
-                        command.TransformedSqlStatement = GetTransformedUpdateRecordStatement(updateRecordStatement, _databaseInfoRecord.IV);
-                        break;
+                case UpdateRecordStatement updateRecordStatement:
+                    command.TransformedSqlStatement = GetTransformedUpdateRecordStatement(updateRecordStatement, _databaseInfoRecord.IV);
+                    break;
 
-                    case DeleteRecordStatement deleteRecordStatement:
-                        command.TransformedSqlStatement = GetTransformedDeleteRecordStatement(deleteRecordStatement, _databaseInfoRecord.IV);
-                        break;
+                case DeleteRecordStatement deleteRecordStatement:
+                    command.TransformedSqlStatement = GetTransformedDeleteRecordStatement(deleteRecordStatement, _databaseInfoRecord.IV);
+                    break;
 
-                }
             }
         }
         #region Transform SqlStatements
@@ -220,20 +217,20 @@ namespace BlockBase.DataProxy.Encryption
                     new estring(tableInfoRecord.Name),
                     new estring(oldInfoRecord.Name),
                     new estring(columnInfoRecord.Name)));
-            
+
             if (columnInfoRecord.LData.EncryptedEqualityColumnName != null)
-                sqlStatements.Add(new RenameColumnStatement( new estring(tableInfoRecord.Name), 
-                new estring(oldInfoRecord.LData.EncryptedEqualityColumnName), 
+                sqlStatements.Add(new RenameColumnStatement(new estring(tableInfoRecord.Name),
+                new estring(oldInfoRecord.LData.EncryptedEqualityColumnName),
                 new estring(columnInfoRecord.LData.EncryptedEqualityColumnName)));
 
             if (columnInfoRecord.LData.EncryptedIVColumnName != null)
-                sqlStatements.Add(new RenameColumnStatement( new estring(tableInfoRecord.Name), 
-                new estring(oldInfoRecord.LData.EncryptedIVColumnName), 
+                sqlStatements.Add(new RenameColumnStatement(new estring(tableInfoRecord.Name),
+                new estring(oldInfoRecord.LData.EncryptedIVColumnName),
                 new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
 
             if (columnInfoRecord.LData.EncryptedRangeColumnName != null)
-                sqlStatements.Add(new RenameColumnStatement( new estring(tableInfoRecord.Name), 
-                new estring(oldInfoRecord.LData.EncryptedRangeColumnName), 
+                sqlStatements.Add(new RenameColumnStatement(new estring(tableInfoRecord.Name),
+                new estring(oldInfoRecord.LData.EncryptedRangeColumnName),
                 new estring(columnInfoRecord.LData.EncryptedRangeColumnName)));
 
             sqlStatements.Add(CreateUpdateToChangeInfoRecordName(columnInfoRecord.Name, columnInfoRecord.IV, columnInfoRecord.KeyName));
