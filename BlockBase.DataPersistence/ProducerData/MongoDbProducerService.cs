@@ -196,6 +196,7 @@ namespace BlockBase.DataPersistence.ProducerData
         public async Task ConfirmBlock(string databaseName, string blockHash)
         {
             var blockHeader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockHash);
+            if (blockHeader == null) return;
 
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
