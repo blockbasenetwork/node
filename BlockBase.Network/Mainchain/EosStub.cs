@@ -65,7 +65,7 @@ namespace BlockBase.Network.Mainchain
                 var opResult = await sendTransactionFunction.Invoke();
 
                 await Task.Delay(60);
-                var updateRowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope);
+                var updateRowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope, limit);
 
                 if (updateRowsFromTable.Succeeded) updateRowsFromTable.Result?.LastOrDefault()?.TryGetValue(valueChangeToConfirm, out valueAfterChangeToConfirm);
                 var castedValueBeforeChange = (T)valueBeforeChangeToConfirm;

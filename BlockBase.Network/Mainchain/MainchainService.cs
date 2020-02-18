@@ -127,7 +127,7 @@ namespace BlockBase.Network.Mainchain
             );
 
         public async Task<string> SafeExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, int limit, string permission = "active") =>
-            await EosStub.SendSafeTransaction<bool>(async () => await EosStub.SendTransaction(
+            await EosStub.SendSafeTransaction<int>(async () => await EosStub.SendTransaction(
                 EosMsigConstants.EOSIO_MSIG_EXEC_ACTION,
                 EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME,
                 accountName,
