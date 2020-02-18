@@ -281,9 +281,8 @@ namespace BlockBase.Runtime.Sidechain
                     _logger.LogCritical("Unable to execute proposed transaction, number of required approvals might not have been reached");
                     await Task.Delay(100);
                 }
-
-                _logger.LogCritical("Unable to approve and execute transaction during allowed time");
             }
+            _logger.LogCritical("Unable to approve and execute transaction during allowed time");
         }
 
         private async Task TryApproveTransaction(TransactionProposal proposal)
