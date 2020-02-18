@@ -28,6 +28,7 @@ using Newtonsoft.Json;
 using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using static BlockBase.Network.PeerConnection;
 using static BlockBase.Network.Rounting.MessageForwarder;
+using EosSharp.Core.Exceptions;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -52,7 +53,7 @@ namespace BlockBase.Runtime.Sidechain
         private DateTime _lastReceivedDate;
 
         private static readonly object Locker = new object();
-        private static readonly int MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 10;
+        private static readonly int MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 120;
 
         public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
         {
@@ -79,6 +80,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task Execute()
         {
+            if (_receiving) return;
             _completed = false;
             _receiving = true;
             var currentSendingProducer = new ProducerInPool();
@@ -123,6 +125,7 @@ namespace BlockBase.Runtime.Sidechain
                 if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
                 {
                     _logger.LogDebug("Too much time without receiving block. Asking another producer for remaining blocks.");
+                    _receiving = false;
                 }
             }
         }
@@ -214,6 +217,15 @@ namespace BlockBase.Runtime.Sidechain
             _blocksReceived.Clear();
             _receiving = false;
             _completed = true;
+
+            try
+            {
+                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
+            }
+            catch (ApiErrorException)
+            {
+                _logger.LogInformation("Already notified ready.");
+            }
         }
     }
 }

@@ -306,15 +306,6 @@ namespace BlockBase.Runtime.Sidechain
             {
                 await Task.Delay(50);
             }
-
-            try
-            {
-                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
-            }
-            catch (ApiErrorException)
-            {
-                _logger.LogInformation("Already notified ready.");
-            }
         }
 
         private async Task UpdatePeers()
