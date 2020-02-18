@@ -53,7 +53,7 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<string> SendSafeTransaction<T>(Func<Task<OpResult<string>>> sendTransactionFunction, string smartContractAccountName, string tableNameToCheck, string valueChangeToConfirm, string tableScope = null, int limit = 100, int numberOfTries = 5)
         {
-            var rowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope);
+            var rowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope, limit);
             object valueBeforeChangeToConfirm = null;
             object valueAfterChangeToConfirm = null;
 
