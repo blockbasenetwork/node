@@ -210,6 +210,7 @@ namespace BlockBase.Runtime.Sidechain
 
             foreach (Block block in orderedBlocks)
             {
+                _logger.LogDebug($"Adding block #{block.BlockHeader.SequenceNumber} to database.");
                 _lastReceivedDate = DateTime.UtcNow;
                 await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                 var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
@@ -217,9 +218,8 @@ namespace BlockBase.Runtime.Sidechain
                 await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             }
             _blocksReceived.Clear();
-            _receiving = false;
-            _completed = true;
 
+            _logger.LogDebug("Added blocks to database.");
             try
             {
                 await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
@@ -228,6 +228,9 @@ namespace BlockBase.Runtime.Sidechain
             {
                 _logger.LogInformation("Already notified ready.");
             }
+
+            _receiving = false;
+            _completed = true;
         }
     }
 }
