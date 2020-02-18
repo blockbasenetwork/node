@@ -263,7 +263,7 @@ namespace BlockBase.Runtime.Sidechain
                     var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
                     var approvals = (await _mainchainService.RetrieveApprovals(proposer)).FirstOrDefault();
 
-                    if (approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
+                    if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
                     {
                         await TryApproveTransaction(proposal);
                     }
@@ -281,6 +281,8 @@ namespace BlockBase.Runtime.Sidechain
                     _logger.LogCritical("Unable to execute proposed transaction, number of required approvals might not have been reached");
                     await Task.Delay(100);
                 }
+
+                _logger.LogCritical("Unable to approve and execute transaction during allowed time");
             }
         }
 
