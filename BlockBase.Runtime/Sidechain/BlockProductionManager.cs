@@ -228,7 +228,7 @@ namespace BlockBase.Runtime.Sidechain
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
 
-            var addBlockTransaction = await _mainchainService.SafeAddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS, (int)_sidechainPool.BlocksBetweenSettlement);
+            var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
 
             await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
@@ -269,7 +269,7 @@ namespace BlockBase.Runtime.Sidechain
                     }
                     else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
                     {
-                        await _mainchainService.SafeExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+                        await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
                         _logger.LogInformation("Executed block verification");
                         return;
                     }
