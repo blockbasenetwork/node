@@ -228,7 +228,7 @@ namespace BlockBase.Runtime.Sidechain
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
 
-            var addBlockTransaction = await _mainchainService.SafeAddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
+            var addBlockTransaction = await _mainchainService.SafeAddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS, (int)_sidechainPool.BlocksBetweenSettlement);
 
             await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);

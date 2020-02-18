@@ -10,7 +10,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
-        Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
+        Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader, int limit);
         Task<string> AddEncryptedIps(string chain, string accountName, List<string> encryptedIps);
         Task<string> NotifyReady(string chain, string accountName);
         Task<string> ProposeBlockVerification(string chain, string accountName, List<string> requestedApprovals, string blockHash);

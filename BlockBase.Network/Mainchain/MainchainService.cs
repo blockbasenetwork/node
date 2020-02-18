@@ -53,7 +53,7 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
-        public async Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader) =>
+        public async Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader, int limit) =>
             await EosStub.SendSafeTransaction<string>(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_BLOCK,
                 NetworkConfigurations.BlockBaseOperationsContract,
@@ -62,7 +62,8 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
                 EosAtributeNames.BLOCK_HASH,
-                chain
+                chain,
+                limit
             );
 
         public async Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader) =>
