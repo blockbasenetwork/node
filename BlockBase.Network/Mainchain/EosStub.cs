@@ -70,6 +70,7 @@ namespace BlockBase.Network.Mainchain
                 if (updateRowsFromTable.Succeeded) updateRowsFromTable.Result?.LastOrDefault()?.TryGetValue(valueChangeToConfirm, out valueAfterChangeToConfirm);
                 var castedValueBeforeChange = (T)valueBeforeChangeToConfirm;
                 var castedValueAfterChange = (T)valueAfterChangeToConfirm;
+                Console.WriteLine($"Value Before: {castedValueBeforeChange} | Value After: {castedValueAfterChange}");
                 if (castedValueBeforeChange.Equals(castedValueAfterChange)) continue;
 
                 return opResult.Result;
