@@ -13,6 +13,8 @@ using BlockBase.Runtime.Network;
 using System.Net;
 using BlockBase.Utils.Crypto;
 using BlockBase.Domain.Configurations;
+using BlockBase.Domain;
+using System.Net.Http;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -61,8 +63,8 @@ namespace BlockBase.Runtime.Mainchain
                 _roundsUntilSettlement = (int)contractInfo.BlocksBetweenSettlement;
 
                 var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
-                if(stateTable.ProductionTime) await ConnectToProducers();
-                
+                if (stateTable.ProductionTime) await ConnectToProducers();
+
                 while (true)
                 {
                     _timeDiff = (_sidechain.NextStateWaitEndTime * 1000) - _timeToExecuteTrx - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -140,6 +142,12 @@ namespace BlockBase.Runtime.Mainchain
                     if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
                 }
             }
+            catch (HttpRequestException)
+            {
+                _logger.LogCritical($"Eos transaction failed http error. Please verify EOS endpoint. Trying again in 60 seconds.");
+                await Task.Delay(60000);
+                _forceTryAgain = true;
+            }
             catch (ApiErrorException eosException)
             {
                 _logger.LogCritical($"Eos transaction failed with error {eosException.error.name}. Please verify your cpu/net stake or if there is heavy congestion in the network. Trying again in 60 seconds");
@@ -195,6 +203,19 @@ namespace BlockBase.Runtime.Mainchain
         {
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (!producerList.Any()) return;
+            if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key))) return;
+
+            var producersInPool = producerList.Select(m => new ProducerInPool
+            {
+                ProducerInfo = new ProducerInfo
+                {
+                    AccountName = m.Key,
+                    PublicKey = m.PublicKey,
+                    NewlyJoined = true
+                }
+            }).ToList();
+
+            _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
             await _mainchainService.AuthorizationAssign(accountName, producerList);
         }
 
@@ -219,10 +240,10 @@ namespace BlockBase.Runtime.Mainchain
         private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
         {
             var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
-            var producerEncryptedIPAdresses = ipAddressesTables.Select(t => t.EncryptedIPs[t.EncryptedIPs.Count-1]).ToList();
+            var producerEncryptedIPAdresses = ipAddressesTables.Select(t => t.EncryptedIPs[t.EncryptedIPs.Count - 1]).ToList();
 
             var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
-            for(int i = 0; i < ipAddressesTables.Count; i++)
+            for (int i = 0; i < ipAddressesTables.Count; i++)
             {
                 var producer = ipAddressesTables[i].Key;
                 var producerPublicKey = ipAddressesTables[i].PublicKey;
@@ -231,7 +252,6 @@ namespace BlockBase.Runtime.Mainchain
 
             }
             return decryptedProducerIPs;
-            
         }
         private async Task ExecuteSettlementActions()
         {
