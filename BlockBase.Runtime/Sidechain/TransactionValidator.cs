@@ -53,6 +53,7 @@ namespace BlockBase.Runtime.Sidechain
             if (transactionProto == null) return;
 
             var transaction = new Transaction().SetValuesFromProto(transactionProto);
+            _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
 
             var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == args.ClientAccountName);
 

@@ -25,17 +25,14 @@ namespace BlockBase.Domain.Protos {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChZUcmFuc2FjdGlvblByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWluLlBy",
-            "b3RvcyKcAgoQVHJhbnNhY3Rpb25Qcm90bxIXCg9UcmFuc2FjdGlvbkhhc2gY",
+            "b3RvcyKgAQoQVHJhbnNhY3Rpb25Qcm90bxIXCg9UcmFuc2FjdGlvbkhhc2gY",
             "ASABKAwSEQoJU2lnbmF0dXJlGAIgASgJEhEKCVRpbWVzdGFtcBgDIAEoBBIW",
             "Cg5TZXF1ZW5jZU51bWJlchgEIAEoBBIMCgRKc29uGAUgASgJEhEKCUJsb2Nr",
-            "SGFzaBgGIAEoDBIUCgxEYXRhYmFzZU5hbWUYByABKAkSTQoLQ29tbWFuZFR5",
-            "cGUYCCABKA4yOC5CbG9ja0Jhc2UuRG9tYWluLlByb3Rvcy5UcmFuc2FjdGlv",
-            "blByb3RvLlNxbENvbW1hbmRUeXBlIisKDlNxbENvbW1hbmRUeXBlEgsKB0dl",
-            "bmVyaWMQABIMCghEYXRhYmFzZRABYgZwcm90bzM="));
+            "SGFzaBgGIAEoDBIUCgxEYXRhYmFzZU5hbWUYByABKAliBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.TransactionProto), global::BlockBase.Domain.Protos.TransactionProto.Parser, new[]{ "TransactionHash", "Signature", "Timestamp", "SequenceNumber", "Json", "BlockHash", "DatabaseName", "CommandType" }, null, new[]{ typeof(global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType) }, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::BlockBase.Domain.Protos.TransactionProto), global::BlockBase.Domain.Protos.TransactionProto.Parser, new[]{ "TransactionHash", "Signature", "Timestamp", "SequenceNumber", "Json", "BlockHash", "DatabaseName" }, null, null, null)
           }));
     }
     #endregion
@@ -74,7 +71,6 @@ namespace BlockBase.Domain.Protos {
       json_ = other.json_;
       blockHash_ = other.blockHash_;
       databaseName_ = other.databaseName_;
-      commandType_ = other.commandType_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -160,17 +156,6 @@ namespace BlockBase.Domain.Protos {
       }
     }
 
-    /// <summary>Field number for the "CommandType" field.</summary>
-    public const int CommandTypeFieldNumber = 8;
-    private global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType commandType_ = 0;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType CommandType {
-      get { return commandType_; }
-      set {
-        commandType_ = value;
-      }
-    }
-
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as TransactionProto);
@@ -191,7 +176,6 @@ namespace BlockBase.Domain.Protos {
       if (Json != other.Json) return false;
       if (BlockHash != other.BlockHash) return false;
       if (DatabaseName != other.DatabaseName) return false;
-      if (CommandType != other.CommandType) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -205,7 +189,6 @@ namespace BlockBase.Domain.Protos {
       if (Json.Length != 0) hash ^= Json.GetHashCode();
       if (BlockHash.Length != 0) hash ^= BlockHash.GetHashCode();
       if (DatabaseName.Length != 0) hash ^= DatabaseName.GetHashCode();
-      if (CommandType != 0) hash ^= CommandType.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -247,10 +230,6 @@ namespace BlockBase.Domain.Protos {
         output.WriteRawTag(58);
         output.WriteString(DatabaseName);
       }
-      if (CommandType != 0) {
-        output.WriteRawTag(64);
-        output.WriteEnum((int) CommandType);
-      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -279,9 +258,6 @@ namespace BlockBase.Domain.Protos {
       }
       if (DatabaseName.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(DatabaseName);
-      }
-      if (CommandType != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) CommandType);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -314,9 +290,6 @@ namespace BlockBase.Domain.Protos {
       }
       if (other.DatabaseName.Length != 0) {
         DatabaseName = other.DatabaseName;
-      }
-      if (other.CommandType != 0) {
-        CommandType = other.CommandType;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -357,25 +330,9 @@ namespace BlockBase.Domain.Protos {
             DatabaseName = input.ReadString();
             break;
           }
-          case 64: {
-            commandType_ = (global::BlockBase.Domain.Protos.TransactionProto.Types.SqlCommandType) input.ReadEnum();
-            break;
-          }
         }
       }
     }
-
-    #region Nested types
-    /// <summary>Container for nested types declared in the TransactionProto message type.</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static partial class Types {
-      public enum SqlCommandType {
-        [pbr::OriginalName("Generic")] Generic = 0,
-        [pbr::OriginalName("Database")] Database = 1,
-      }
-
-    }
-    #endregion
 
   }
 

@@ -32,7 +32,6 @@ namespace BlockBase.Runtime.Sidechain.Helpers
                 logger.LogCritical($"Failed to deserialize transaction. \nException thrown:{e.Message}");
                 return null;
             }
-        }
-
+        } 
     }
 }

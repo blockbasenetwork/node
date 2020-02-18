@@ -25,9 +25,9 @@ namespace BlockBase.Node.Controllers
     public class QueryController : ControllerBase
     {
         private SqlCommandManager _sqlCommandManager;
-        public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, DatabaseAccess databaseAccess)
+        public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, ConcurrentVariables concurrentVariables, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> optionsNetwork, IOptions<NodeConfigurations> optionsNode)
         {
-            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, databaseAccess);
+            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, networkService, peerConnectionsHandler, optionsNetwork.Value, optionsNode.Value);
         }
 
 

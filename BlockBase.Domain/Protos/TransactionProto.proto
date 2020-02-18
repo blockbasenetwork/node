@@ -10,11 +10,4 @@ message TransactionProto {
   string Json = 5;
   bytes BlockHash = 6;
   string DatabaseName = 7;
-
-  enum SqlCommandType {
-    Generic = 0;
-    Database = 1;
-  }
-
-  SqlCommandType CommandType = 8;
 }

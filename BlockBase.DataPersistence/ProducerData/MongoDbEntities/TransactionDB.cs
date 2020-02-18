@@ -2,7 +2,7 @@
 using BlockBase.Utils.Crypto;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using static BlockBase.Domain.Protos.TransactionProto.Types;
+
 
 namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
 {
@@ -27,10 +27,6 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         [BsonElement("Blockhash")]
         public string BlockHash { get; set; }
 
-        [BsonElement("SqlCommandType")]
-        [BsonRequired()]
-        public SqlCommandType SqlCommandType { get; set; }
-
         [BsonElement("Timestamp")]
         [BsonRequired()]
         public ulong Timestamp { get; set; }
@@ -49,7 +45,6 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             transaction.BlockHash = HashHelper.FormattedHexaStringToByteArray(BlockHash);
             transaction.Json = TransactionJson;
             transaction.DatabaseName = DatabaseName;
-            transaction.SqlCommandType = SqlCommandType;
             return transaction;
         }
 
@@ -62,7 +57,6 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             Timestamp = transaction.Timestamp;
             SequenceNumber = transaction.SequenceNumber;
             DatabaseName = transaction.DatabaseName;
-            SqlCommandType = transaction.SqlCommandType;
             return this;
         }
     }

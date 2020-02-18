@@ -40,12 +40,11 @@ namespace BlockBase.Network.Mainchain.Pocos
 
         public BlockHeader ConvertToBlockHeader()
         {
-            
             return new BlockHeader(HashHelper.FormattedHexaStringToByteArray(BlockHash),
                     HashHelper.FormattedHexaStringToByteArray(PreviousBlockHash), 
                     Producer, ProducerSignature, 
                     HashHelper.FormattedHexaStringToByteArray(MerkleTreeRootHash), 
-                    SequenceNumber, Timestamp);
+                    SequenceNumber, TransactionCount, Timestamp);
         }
     }
 }

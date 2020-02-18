@@ -5,7 +5,6 @@ using System.Text;
 using BlockBase.Domain.Database.Operations;
 using BlockBase.Domain.Protos;
 using Google.Protobuf;
-using static BlockBase.Domain.Protos.TransactionProto.Types;
 
 namespace BlockBase.Domain.Blockchain
 {
@@ -17,14 +16,12 @@ namespace BlockBase.Domain.Blockchain
         public ulong Timestamp { get; set; }
         public string Json { get; set; }
         public string DatabaseName { get; set; }
-        public SqlCommandType SqlCommandType { get; set; }
         public byte[] BlockHash { get; set; }
 
         public Transaction() { }
 
-        public Transaction(byte[] transactionHash, ulong sequenceNumber, string signature, SqlCommandType sqlCommandType, byte[] blockHash, string json, string databaseName, ulong? timestamp = null)
+        public Transaction(byte[] transactionHash, ulong sequenceNumber, string signature, byte[] blockHash, string json, string databaseName, ulong? timestamp = null)
         {
-            SqlCommandType = sqlCommandType;
             TransactionHash = transactionHash;
             SequenceNumber = sequenceNumber;
             Signature = signature;
@@ -44,8 +41,7 @@ namespace BlockBase.Domain.Blockchain
                 Timestamp = Timestamp,
                 Json = Json,
                 BlockHash = ByteString.CopyFrom(BlockHash),
-                DatabaseName = DatabaseName,
-                CommandType = SqlCommandType
+                DatabaseName = DatabaseName
             };
 
             return transactionProto;
@@ -60,14 +56,13 @@ namespace BlockBase.Domain.Blockchain
             Json = transactionProto.Json;
             BlockHash = transactionProto.BlockHash.ToByteArray();
             DatabaseName = transactionProto.DatabaseName;
-            SqlCommandType = transactionProto.CommandType;
 
             return this;
         }
 
         public object Clone()
         {
-            return new Transaction(TransactionHash, SequenceNumber, Signature, SqlCommandType, BlockHash, Json, DatabaseName, Timestamp);
+            return new Transaction(TransactionHash, SequenceNumber, Signature, BlockHash, Json, DatabaseName, Timestamp);
         }
     }
 }

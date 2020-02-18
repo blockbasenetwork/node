@@ -26,7 +26,7 @@ namespace BlockBase.Domain.Blockchain
         }
 
         public BlockHeader(byte[] blockHash, byte[] previousBlockHash, string producer, string producerSignature, byte[] merkleRoot,
-            ulong sequenceNumber, ulong? timestamp = null, uint transactionCount = 0)
+            ulong sequenceNumber,uint transactionCount,  ulong? timestamp = null)
         {
             BlockHash = blockHash;
             PreviousBlockHash = previousBlockHash;
@@ -119,7 +119,7 @@ namespace BlockBase.Domain.Blockchain
 
         public object Clone()
         {
-           return new BlockHeader(BlockHash, PreviousBlockHash, Producer, ProducerSignature, MerkleRoot, SequenceNumber, Timestamp, TransactionCount);
+           return new BlockHeader(BlockHash, PreviousBlockHash, Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp);
         }
     }
 }

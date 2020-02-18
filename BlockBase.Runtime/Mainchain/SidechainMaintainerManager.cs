@@ -130,6 +130,7 @@ namespace BlockBase.Runtime.Mainchain
                 {
                     await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
+                    await ConnectToProducers();
                 }
                 if (stateTable.ProductionTime && currentProducerTable.Any() &&
                    (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())

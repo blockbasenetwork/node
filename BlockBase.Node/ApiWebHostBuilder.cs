@@ -130,7 +130,7 @@ namespace BlockBase.Api
             _webHostBuider.ConfigureServices((hostContext, services) =>
             {
                 services.AddSingleton<IConnector, PSqlConnector>();
-                services.AddSingleton<DatabaseAccess>();
+                services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockSender>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<PeerConnectionsHandler>();

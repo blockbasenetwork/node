@@ -37,6 +37,10 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         [BsonRequired()]
         public byte[] MerkleRoot { get; set; }
 
+        [BsonElement("TransactionCount")]
+        [BsonRequired()]
+        public uint TransactionCount { get; set; }
+
         [BsonElement("Confirmed")]
         [BsonRequired()]
         public bool Confirmed { get; set; }
@@ -52,13 +56,14 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             MerkleRoot = blockHeader.MerkleRoot;
             ProducerSignature = blockHeader.ProducerSignature;
             Confirmed = false;
+            TransactionCount = blockHeader.TransactionCount;
             return this;
         }
 
         public BlockHeader BlockHeaderFromBlockHeaderDB()
         {
             return new BlockHeader(HashHelper.FormattedHexaStringToByteArray(BlockHash),
-            HashHelper.FormattedHexaStringToByteArray(PreviousBlockhash), Producer, ProducerSignature, MerkleRoot, SequenceNumber, Timestamp); 
+            HashHelper.FormattedHexaStringToByteArray(PreviousBlockhash), Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp); 
         }
     }
 }

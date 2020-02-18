@@ -10,7 +10,7 @@ using static BlockBase.Network.Rounting.MessageForwarder;
 
 namespace BlockBase.Runtime.Network
 {
-    public interface INetworkService : IService, IDisposable
+    public interface INetworkService : IService
     {
         Task<Peer> ConnectAsync(IPEndPoint endpoint);
 

@@ -18,7 +18,8 @@ using BlockBase.Domain.Pocos;
 using System.Collections.Concurrent;
 using System.Threading;
 using BlockBase.Utils.Threading;
-
+using BlockBase.Runtime.Network;
+using BlockBase.Domain.Configurations;
 
 namespace BlockBase.Runtime
 {
@@ -31,19 +32,27 @@ namespace BlockBase.Runtime
         private IConnector _connector;
         private ILogger _logger;
         private int _transaction_sequence_number = 0;
-        private DatabaseAccess _databaseAccess;
+        private ConcurrentVariables _databaseAccess;
+        private PeerConnectionsHandler _peerConnectionsHandler;
+        private INetworkService _networkService;
+        private NetworkConfigurations _networkConfigurations;
+        private NodeConfigurations _nodeConfigurations;
 
 
-        // public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, INetworkService networkService)
-        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, DatabaseAccess databaseAccess)
+        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, NetworkConfigurations networkConfigurations, NodeConfigurations nodeConfigurations)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
-            _generator = new PSqlGenerator();
+            _generator = new PSqlGenerator(); 
             _logger = logger;
             _connector = connector;
             _transformer = new Transformer(middleMan);
-            _databaseAccess = databaseAccess;
+            _databaseAccess = concurrentVariables;
+            _networkService = networkService;
+            _peerConnectionsHandler = peerConnectionsHandler;
+            _logger = logger;
+            _networkConfigurations = networkConfigurations;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         public async Task<IList<QueryResult>> Execute(string sqlString)
@@ -61,7 +70,7 @@ namespace BlockBase.Runtime
 
                 var context = parser.sql_stmt_list();
                 var builder = (Builder)_visitor.Visit(context);
-                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _databaseAccess);
+                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _databaseAccess, _networkService, _peerConnectionsHandler, _networkConfigurations, _nodeConfigurations);
                 results = await executioner.ExecuteBuilder(builder, CreateQueryResult);
                 
             }
@@ -89,11 +98,6 @@ namespace BlockBase.Runtime
         public IList<DatabasePoco> GetStructure()
         {
             return _infoPostProcessing.GetStructure();
-        }
-
-        private async Task SendTransactionToProducers(string queryToExecute, string databaseName)
-        {
-            // new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, payload, TransportTypeEnum.Tcp, senderPrivateKey, senderPublicKey, senderEndPoint, destination)
         }
     }
 }
