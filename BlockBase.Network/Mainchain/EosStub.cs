@@ -51,7 +51,7 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        public async Task<string> SendSafeTransaction(Func<Task<OpResult<string>>> sendTransactionFunction, string smartContractAccountName, string tableNameToCheck, string valueChangeToConfirm, string tableScope = null, int limit = 100, int numberOfTries = 5)
+        public async Task<string> SendSafeTransaction<T>(Func<Task<OpResult<string>>> sendTransactionFunction, string smartContractAccountName, string tableNameToCheck, string valueChangeToConfirm, string tableScope = null, int limit = 100, int numberOfTries = 5)
         {
             var rowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope);
             object valueBeforeChangeToConfirm = null;
@@ -63,13 +63,14 @@ namespace BlockBase.Network.Mainchain
             for (var i = 0; i < numberOfTries; i++)
             {
                 var opResult = await sendTransactionFunction.Invoke();
-                if (!opResult.Succeeded) continue;
 
                 await Task.Delay(60);
                 var updateRowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope);
 
                 if (updateRowsFromTable.Succeeded) updateRowsFromTable.Result?.LastOrDefault()?.TryGetValue(valueChangeToConfirm, out valueAfterChangeToConfirm);
-                if ((string)valueBeforeChangeToConfirm == (string)valueAfterChangeToConfirm) continue;
+                var castedValueBeforeChange = (T)valueBeforeChangeToConfirm;
+                var castedValueAfterChange = (T)valueAfterChangeToConfirm;
+                if (castedValueBeforeChange.Equals(castedValueAfterChange)) continue;
 
                 return opResult.Result;
             }

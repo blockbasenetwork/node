@@ -54,7 +54,7 @@ namespace BlockBase.Network.Mainchain
             );
 
         public async Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader) =>
-            await EosStub.SendSafeTransaction(async () => await EosStub.SendTransaction(
+            await EosStub.SendSafeTransaction<string>(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_BLOCK,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountName,
@@ -126,7 +126,7 @@ namespace BlockBase.Network.Mainchain
             );
 
         public async Task<string> SafeExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, int limit, string permission = "active") =>
-            await EosStub.SendSafeTransaction(async () => await EosStub.SendTransaction(
+            await EosStub.SendSafeTransaction<bool>(async () => await EosStub.SendTransaction(
                 EosMsigConstants.EOSIO_MSIG_EXEC_ACTION,
                 EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME,
                 accountName,
