@@ -211,11 +211,11 @@ namespace BlockBase.Runtime.Sidechain
         {
             try
             {
-                var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+                var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
                 if (proposal == null) return;
                 
                 _logger.LogInformation("Canceling existing proposal...");
-                await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+                await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName, proposal.ProposalName);
             }
             catch (ApiErrorException apiException)
             {
@@ -241,7 +241,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 try
                 {
-                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
                     if (proposal != null) return;
                     await _mainchainService.ProposeBlockVerification(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, requestedApprovals, blockHash);
                     await Task.Delay(60);
@@ -260,7 +260,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 try
                 {
-                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
                     var approvals = (await _mainchainService.RetrieveApprovals(proposer)).FirstOrDefault();
 
                     if (approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
