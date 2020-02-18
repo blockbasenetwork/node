@@ -97,6 +97,7 @@ namespace BlockBase.Runtime.Sidechain
                 if (currentSendingProducer == validConnectedProducers.Last())
                 {
                     _logger.LogDebug("Tried all producers and didn't manage to build chain, trying again later...");
+                    return;
                 }
 
                 await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
@@ -108,7 +109,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
                 var endSequenceNumber = _blocksReceived.Any() ?
-                    _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber).First().BlockHeader.SequenceNumber :
+                    _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber).Last().BlockHeader.SequenceNumber :
                     _lastSidechainBlockheader.SequenceNumber;
 
                 _logger.LogDebug($"Asking for blocks {beginSequenceNumber} to {endSequenceNumber}");
@@ -209,6 +210,7 @@ namespace BlockBase.Runtime.Sidechain
 
             foreach (Block block in orderedBlocks)
             {
+                _lastReceivedDate = DateTime.UtcNow;
                 await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                 var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
                 //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
