@@ -68,8 +68,10 @@ namespace BlockBase.Runtime.Sidechain
             _sidechainDatabaseManager = sidechainDatabaseManager;
         }
 
-        public TaskContainer Start()
+        public TaskContainer Start(SidechainPool sidechainPool)
         {
+            _sidechainPool = sidechainPool;
+
             TaskContainer = TaskContainer.Create(async () => await Execute());
             TaskContainer.Start();
             return TaskContainer;
@@ -101,19 +103,19 @@ namespace BlockBase.Runtime.Sidechain
 
                 var selectedProducerToSend = !validConnectedProducers.Contains(currentSendingProducer) ? 0 : validConnectedProducers.IndexOf(currentSendingProducer) + 1;
                 currentSendingProducer = validConnectedProducers.ElementAt(selectedProducerToSend);
-                
+
                 var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
-                var endSequenceNumber = _blocksReceived.Any() ? 
-                    _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber).First().BlockHeader.SequenceNumber : 
+                var endSequenceNumber = _blocksReceived.Any() ?
+                    _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber).First().BlockHeader.SequenceNumber :
                     _lastSidechainBlockheader.SequenceNumber;
-                
+
                 _logger.LogDebug($"Asking for blocks {beginSequenceNumber} to {endSequenceNumber}");
 
                 var message = BuildRequestBlocksNetworkMessage(currentSendingProducer, beginSequenceNumber, endSequenceNumber, _sidechainPool.ClientAccountName);
                 await _networkService.SendMessageAsync(message);
 
                 _lastReceivedDate = DateTime.UtcNow;
-                while(_receiving &&  DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
+                while (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
                 {
                     await Task.Delay(MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS * 100);
                 }
@@ -137,7 +139,7 @@ namespace BlockBase.Runtime.Sidechain
 
             _logger.LogDebug(_nodeConfigurations.ActivePrivateKey);
 
-            return new NetworkMessage(NetworkMessageTypeEnum.RequestBlocks, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, producer.ProducerInfo.IPEndPoint);
+            return new NetworkMessage(NetworkMessageTypeEnum.RequestBlocks, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
         }
 
         private async void MessageForwarder_RecoverBlockReceived(BlockReceivedEventArgs args, IPEndPoint sender)

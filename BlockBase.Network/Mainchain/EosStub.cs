@@ -51,6 +51,34 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
+        public async Task<string> SendSafeTransaction<T>(Func<Task<OpResult<string>>> sendTransactionFunction, string smartContractAccountName, string tableNameToCheck, string valueChangeToConfirm, string tableScope = null, int limit = 100, int numberOfTries = 5)
+        {
+            var rowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope, limit);
+            object valueBeforeChangeToConfirm = null;
+            object valueAfterChangeToConfirm = null;
+
+            if (rowsFromTable.Succeeded) rowsFromTable.Result?.LastOrDefault()?.TryGetValue(valueChangeToConfirm, out valueBeforeChangeToConfirm);
+            if (valueBeforeChangeToConfirm == null) throw new ArgumentOutOfRangeException();
+            
+            for (var i = 0; i < numberOfTries; i++)
+            {
+                var opResult = await sendTransactionFunction.Invoke();
+
+                await Task.Delay(60);
+                var updateRowsFromTable = await GetRowsFromSmartContractTable<Dictionary<string, object>>(smartContractAccountName, tableNameToCheck, tableScope, limit);
+
+                if (updateRowsFromTable.Succeeded) updateRowsFromTable.Result?.LastOrDefault()?.TryGetValue(valueChangeToConfirm, out valueAfterChangeToConfirm);
+                var castedValueBeforeChange = (T)valueBeforeChangeToConfirm;
+                var castedValueAfterChange = (T)valueAfterChangeToConfirm;
+                Console.WriteLine($"Value Before: {castedValueBeforeChange} | Value After: {castedValueAfterChange}");
+                if (castedValueBeforeChange.Equals(castedValueAfterChange)) continue;
+
+                return opResult.Result;
+            }
+
+            throw new Exception("Failed to send and confirm sent transaction.");
+        }
+
         public async Task<OpResult<string>> SendTransaction(string actionName, string smartContractAccountName, string accountName, Dictionary<string, object> data, string permission = "active", byte cpuLimit = default(byte))
         {
             var opResult = await Op.RunAsync(async () => await _eosConnection.CreateTransaction(new Transaction()

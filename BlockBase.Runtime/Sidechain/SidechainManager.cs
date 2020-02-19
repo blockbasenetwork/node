@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using static BlockBase.Network.PeerConnection;
@@ -78,57 +79,68 @@ namespace BlockBase.Runtime.Sidechain
             {
                 while (true)
                 {
-                    switch (Sidechain.State)
+                    try
                     {
-                        case SidechainPoolStateEnum.WaitForNextState:
-                            _timeDiff = (Sidechain.NextStateWaitEndTime * 1000) - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                            if (_timeDiff <= 0)
-                            {
-                                await CheckContractAndUpdateStates();
-                                await CheckContractAndUpdateWaitTimes();
-                                await CheckContractEndState();
-                                if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby && _previousWaitTime != Sidechain.NextStateWaitEndTime)
+                        switch (Sidechain.State)
+                        {
+                            case SidechainPoolStateEnum.WaitForNextState:
+                                _timeDiff = (Sidechain.NextStateWaitEndTime * 1000) - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                                if (_timeDiff <= 0)
                                 {
-                                    await CheckPeerConnections();
-                                    await CheckContractAndUpdatePool();
-                                    await CheckAndGetReward();
-                                };
-                            }
-                            else await Task.Delay((int)_timeDiff);
+                                    await CheckContractAndUpdateStates();
+                                    await CheckContractAndUpdateWaitTimes();
+                                    await CheckContractEndState();
+                                    if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby && _previousWaitTime != Sidechain.NextStateWaitEndTime)
+                                    {
+                                        await CheckPeerConnections();
+                                        await CheckContractAndUpdatePool();
+                                        await CheckAndGetReward();
+                                    };
+                                }
+                                else await Task.Delay((int)_timeDiff);
 
-                            if (_previousWaitTime == Sidechain.NextStateWaitEndTime)
-                            {
-                                await Task.Delay(50);
-                                Sidechain.State = SidechainPoolStateEnum.WaitForNextState;
-                            }
-                            break;
+                                if (_previousWaitTime == Sidechain.NextStateWaitEndTime)
+                                {
+                                    await Task.Delay(50);
+                                    Sidechain.State = SidechainPoolStateEnum.WaitForNextState;
+                                }
+                                break;
 
-                        case SidechainPoolStateEnum.CandidatureTime:
-                            await InitCandidature();
-                            break;
+                            case SidechainPoolStateEnum.CandidatureTime:
+                                await InitCandidature();
+                                break;
 
-                        case SidechainPoolStateEnum.SecretTime:
-                            await SendSecret();
-                            break;
+                            case SidechainPoolStateEnum.SecretTime:
+                                await SendSecret();
+                                break;
 
-                        case SidechainPoolStateEnum.IPSendTime:
-                            await CheckCandidatureSuccess();
-                            await InitProducerSendIP();
-                            break;
+                            case SidechainPoolStateEnum.IPSendTime:
+                                await CheckCandidatureSuccess();
+                                await InitProducerSendIP();
+                                break;
 
-                        case SidechainPoolStateEnum.IPReceiveTime:
-                            await InitProducerReceiveIPs();
-                            break;
+                            case SidechainPoolStateEnum.IPReceiveTime:
+                                await InitProducerReceiveIPs();
+                                break;
 
-                        case SidechainPoolStateEnum.InitMining:
-                            await InitMining();
-                            break;
+                            case SidechainPoolStateEnum.InitMining:
+                                await InitMining();
+                                break;
 
-                        case SidechainPoolStateEnum.RecoverInfo:
-                            await RecoverInfo();
-                            break;
+                            case SidechainPoolStateEnum.RecoverInfo:
+                                await RecoverInfo();
+                                break;
+                        }
+                        TaskContainer.CancellationTokenSource.Token.ThrowIfCancellationRequested();
                     }
-                    TaskContainer.CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    catch (ApiErrorException e)
+                    {
+                        _logger.LogCritical($"Failed to send transaction: {e.Message}");
+                    }
+                    catch (HttpRequestException e)
+                    {
+                        _logger.LogCritical($"Failed to communicate with EOS endpoint: {e.Message}");
+                    }
                 }
             }
             catch (OperationCanceledException ex)
@@ -212,14 +224,7 @@ namespace BlockBase.Runtime.Sidechain
 
             _logger.LogDebug($"Sending secret: {HashHelper.ByteArrayToFormattedHexaString(secret)}");
 
-            try
-            {
-                await _mainchainService.AddSecret(Sidechain.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
-            }
-            catch (ApiErrorException e)
-            {
-                _logger.LogCritical($"Failed to send secret: {e.Message}");
-            }
+            await _mainchainService.AddSecret(Sidechain.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
         }
 
         private async Task CheckCandidatureSuccess()
@@ -266,8 +271,7 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.CandidatureOnStandby) return;
 
             _logger.LogInformation("Init producer send IP.");
-            var producersPublicKeys = Sidechain.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.PublicKey).ToList();
-            await EncryptAndSendIPToSmartContract(producersPublicKeys, Sidechain.ClientPublicKey, Sidechain.ClientAccountName);
+            await EncryptAndSendIPToSmartContract(Sidechain.ClientPublicKey, Sidechain.ClientAccountName);
         }
 
         private async Task InitProducerReceiveIPs()
@@ -308,14 +312,7 @@ namespace BlockBase.Runtime.Sidechain
         {
             _logger.LogDebug("Sending transaction to confirm it is ready do produce.");
 
-            try
-            {
-                await _mainchainService.NotifyReady(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
-            }
-            catch (ApiErrorException e)
-            {
-                _logger.LogCritical($"Failed to send notify ready: {e.Message}");
-            }
+            await _mainchainService.NotifyReady(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
         }
 
         private bool UpdateAndCheckIfProducersInSidechainChanged(List<ProducerInTable> producersInTable)
@@ -396,10 +393,11 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private async Task EncryptAndSendIPToSmartContract(List<string> producersPublicKeys, string clientPublicKey, string SidechainName)
+        private async Task EncryptAndSendIPToSmartContract(string clientPublicKey, string SidechainName)
         {
             int numberOfIpsToSend = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
-            var keysToUse = ListHelper.GetListSortedCountingFrontFromIndex(producersPublicKeys, producersPublicKeys.IndexOf(_nodeConfigurations.ActivePublicKey)).Take(numberOfIpsToSend).ToList();
+            var producerList = Sidechain.ProducersInPool.GetEnumerable().ToList();
+            var keysToUse = ListHelper.GetListSortedCountingFrontFromIndex(producerList, producerList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToSend).Select(p => p.ProducerInfo.PublicKey).ToList();
             keysToUse.Add(clientPublicKey);
 
             _logger.LogDebug($"Sending {keysToUse.Count} ips.");
@@ -411,36 +409,27 @@ namespace BlockBase.Runtime.Sidechain
                 listEncryptedIps.Add(IPEncryption.EncryptIP(EndPoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
             }
 
-            try
-            {
-                await _mainchainService.AddEncryptedIps(SidechainName, _nodeConfigurations.AccountName, listEncryptedIps);
-            }
-            catch (ApiErrorException e)
-            {
-                _logger.LogCritical($"Failed to send encrypted ips: {e.Message}");
-            }
+            await _mainchainService.AddEncryptedIps(SidechainName, _nodeConfigurations.AccountName, listEncryptedIps);
         }
-
-       
 
         private void UpdateIPsInSidechain(List<IPAddressTable> IpsAddressTableEntries)
         {
             foreach (var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
 
-            var producerIndex = IpsAddressTableEntries.FindIndex(m => m.Key == _nodeConfigurations.AccountName);
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
-            _logger.LogDebug($"Updating {numberOfIpsToUpdate} ips.");
             if (numberOfIpsToUpdate == 0) return;
-            var reorganizedIpsAddressTableEntries = ListHelper.GetListSortedCountingBackFromIndex(IpsAddressTableEntries, producerIndex).Take(numberOfIpsToUpdate).ToList();
 
-            for (int i = 0; i < reorganizedIpsAddressTableEntries.Count(); i++)
+            var producersInPoolList = Sidechain.ProducersInPool.GetEnumerable().ToList();
+            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToUpdate).ToList();
+
+            foreach (var producer in orderedProducersInPool)
             {
-                var producer = Sidechain.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == reorganizedIpsAddressTableEntries[i].Key).SingleOrDefault();
-                if (producer == null || producer.ProducerInfo.IPEndPoint != null) continue;
+                var producerIndex = orderedProducersInPool.IndexOf(producer);
+                var producerIps = IpsAddressTableEntries.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
+                if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
 
-                var listEncryptedIPEndPoints = reorganizedIpsAddressTableEntries[i].EncryptedIPs;
-                var encryptedIpEndPoint = listEncryptedIPEndPoints[i];
-                _logger.LogDebug("Received IP from producer " + producer.ProducerInfo.AccountName + " with pk " + producer.ProducerInfo.PublicKey);
+                var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
+                var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
                 producer.ProducerInfo.IPEndPoint = IPEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
             }
         }
@@ -516,6 +505,9 @@ namespace BlockBase.Runtime.Sidechain
 
             Sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
 
+            var ipAddresses = await _mainchainService.RetrieveIPAddresses(Sidechain.ClientAccountName);
+            UpdateIPsInSidechain(ipAddresses);
+
             if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
                 await _peerConnectionsHandler.CheckConnectionStatus(Sidechain);
         }
@@ -525,7 +517,6 @@ namespace BlockBase.Runtime.Sidechain
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
             if (producersInTable == null || !producersInTable.Any() || !IsProducerInTable(producersInTable)) return;
 
-            await _peerConnectionsHandler.TryReconnectWithDisconnectedAccounts(Sidechain);
             await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
         }
 

@@ -53,6 +53,19 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
+        public async Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader, int limit) =>
+            await EosStub.SendSafeTransaction<string>(async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_BLOCK,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                accountName,
+                CreateDataForAddBlock(chain, accountName, blockHeader)),
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.BLOCKHEADERS_TABLE_NAME,
+                EosAtributeNames.BLOCK_HASH,
+                chain,
+                limit
+            );
+
         public async Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader) =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_BLOCK,
@@ -88,7 +101,7 @@ namespace BlockBase.Network.Mainchain
                 accountName,
                 CreateDataForVerifyBlock(chain, accountName, blockHash),
                 requestedApprovals,
-                EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME,
+                chain,
                 EosMsigConstants.VERIFY_BLOCK_PERMISSION),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -111,6 +124,20 @@ namespace BlockBase.Network.Mainchain
                 CreateDataForExecTransaction(proposerName, proposedTransactionName, accountName),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
+        public async Task<string> SafeExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, int limit, string permission = "active") =>
+            await EosStub.SendSafeTransaction<long>(async () => await EosStub.SendTransaction(
+                EosMsigConstants.EOSIO_MSIG_EXEC_ACTION,
+                EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME,
+                accountName,
+                CreateDataForExecTransaction(proposerName, proposedTransactionName, accountName),
+                permission),
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.BLOCKHEADERS_TABLE_NAME,
+                EosAtributeNames.IS_VERIFIED,
+                proposedTransactionName,
+                limit
             );
 
         public async Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active") =>

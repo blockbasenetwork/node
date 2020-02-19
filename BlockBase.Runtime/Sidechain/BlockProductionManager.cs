@@ -29,6 +29,7 @@ namespace BlockBase.Runtime.Sidechain
         private INetworkService _networkService;
         private IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
+        private ChainBuilder _chainBuilder;
         private NodeConfigurations _nodeConfigurations;
         private string _endPoint;
         private BlockSender _blockSender;
@@ -54,6 +55,7 @@ namespace BlockBase.Runtime.Sidechain
             _endPoint = endPoint;
             _blockSender = blockSender;
             _sidechainDatabaseManager = sidechainDatabaseManager;
+            _chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
         }
 
         //TODO: Probably a good idea to protect from having a task already running in instance and replace taskcontainer with a new one and have multiple threads running per instance
@@ -88,8 +90,9 @@ namespace BlockBase.Runtime.Sidechain
                                 _logger.LogDebug($" Start Production Time: {DateTimeOffset.FromUnixTimeSeconds(currentProducerTable.StartProductionTime).UtcDateTime} Next time to check smart contract: {DateTimeOffset.FromUnixTimeSeconds(_nextTimeToCheckSmartContract).UtcDateTime}");
 
                                 _previousTimeToCheck = _nextTimeToCheckSmartContract;
-
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
+
+                                await CancelProposalTransactionIfExists();
 
                                 var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.ClientAccountName, currentProducerTable.StartProductionTime, (int)_sidechainPool.BlocksBetweenSettlement);
                                 if (lastValidBlockheaderSmartContractFromLastProduction != null)
@@ -204,6 +207,22 @@ namespace BlockBase.Runtime.Sidechain
             throw new OperationCanceledException("Failed to produce block");
         }
 
+        private async Task CancelProposalTransactionIfExists()
+        {
+            try
+            {
+                var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
+                if (proposal == null) return;
+                
+                _logger.LogInformation("Canceling existing proposal...");
+                await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName, proposal.ProposalName);
+            }
+            catch (ApiErrorException apiException)
+            {
+                _logger.LogCritical($"Unable to cancel existing proposal with error: {apiException?.error?.name}");
+            }
+        }
+
         private async Task ProposeBlock(Block block)
         {
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
@@ -211,31 +230,40 @@ namespace BlockBase.Runtime.Sidechain
 
             var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
 
-            var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
-            if (proposal != null) await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
-
-            var proposedTransaction = await _mainchainService.ProposeBlockVerification(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
-
-            while (proposal == null && (_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
-                if (proposal == null) await Task.Delay(50);
-            }
-
+            await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
-
-            await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName, proposal);
+            await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName);
         }
 
-        private async Task TryVerifyAndExecuteTransaction(string proposer, TransactionProposal proposal)
+        private async Task TryProposeTransaction(List<string> requestedApprovals, string blockHash)
         {
-            try
+            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
-                while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                try
                 {
-                    var approvals = _mainchainService.RetrieveApprovals(proposer)?.Result?.FirstOrDefault();
+                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
+                    if (proposal != null) return;
+                    await _mainchainService.ProposeBlockVerification(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, requestedApprovals, blockHash);
+                    await Task.Delay(60);
+                }
+                catch (ApiErrorException)
+                {
+                    _logger.LogCritical("Unable to propose transaction.");
+                    await Task.Delay(100);
+                }
+            }
+        }
 
-                    if (approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
+        private async Task TryVerifyAndExecuteTransaction(string proposer)
+        {
+            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            {
+                try
+                {
+                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
+                    var approvals = (await _mainchainService.RetrieveApprovals(proposer)).FirstOrDefault();
+
+                    if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
                     {
                         await TryApproveTransaction(proposal);
                     }
@@ -248,21 +276,13 @@ namespace BlockBase.Runtime.Sidechain
 
                     await Task.Delay(100);
                 }
+                catch (ApiErrorException)
+                {
+                    _logger.LogCritical("Unable to execute proposed transaction, number of required approvals might not have been reached");
+                    await Task.Delay(100);
+                }
             }
-            catch (ApiErrorException)
-            {
-                _logger.LogInformation("Unable to execute proposed transaction, number of required approvals might not have been reached");
-            }
-
-            try
-            {
-                _logger.LogInformation("Canceling proposal...");
-                await _mainchainService.CancelTransaction(proposer, proposal.ProposalName);
-            }
-            catch (ApiErrorException)
-            {
-                _logger.LogCritical("Failed to cancel proposal after failed execution");
-            }
+            _logger.LogCritical("Unable to approve and execute transaction during allowed time");
         }
 
         private async Task TryApproveTransaction(TransactionProposal proposal)
@@ -280,10 +300,9 @@ namespace BlockBase.Runtime.Sidechain
         private async Task BuildChain()
         {
             _logger.LogDebug("Building chain.");
-            var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
-            var task = chainBuilder.Start();
-            
-            while(task.Task.Status == TaskStatus.Running)
+            var task = _chainBuilder.Start(_sidechainPool);
+
+            while (task.Task.Status == TaskStatus.Running)
             {
                 await Task.Delay(50);
             }

@@ -88,7 +88,7 @@ namespace BlockBase.Runtime.Sidechain
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
                             await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
 
-                            var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, EosMsigConstants.ADD_BLOCK_PROPOSAL_NAME);
+                            var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
                             if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
                             break;
                         }
