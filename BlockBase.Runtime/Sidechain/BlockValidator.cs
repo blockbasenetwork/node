@@ -135,37 +135,44 @@ namespace BlockBase.Runtime.Sidechain
 
         private async void MessageForwarder_MinedBlockReceived(BlockReceivedEventArgs args)
         {
-            var blockProto = SerializationHelper.DeserializeBlock(args.BlockBytes, _logger);
-            if (blockProto == null) return;
-
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.SingleOrDefault(s => s.Key == args.ClientAccountName);
-
-            var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
-            if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
+            try
             {
-                _logger.LogDebug($"Block received but sidechain {args.ClientAccountName} is unknown.");
-                return;
+                var blockProto = SerializationHelper.DeserializeBlock(args.BlockBytes, _logger);
+                if (blockProto == null) return;
+
+                var sidechainPoolValuePair = _sidechainKeeper.Sidechains.SingleOrDefault(s => s.Key == args.ClientAccountName);
+
+                var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
+                if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
+                {
+                    _logger.LogDebug($"Block received but sidechain {args.ClientAccountName} is unknown.");
+                    return;
+                }
+
+                var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPoolValuePair.Value.ClientAccountName)).ProductionTime;
+
+                if (!isProductionTime)
+                {
+                    _logger.LogDebug($"Mined block received but it's not mining time.");
+                    return;
+                }
+
+                var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.ClientAccountName)).SingleOrDefault().StartProductionTime;
+
+                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.ClientAccountName, startProductionTime, (int)sidechainPoolValuePair.Value.BlocksBetweenSettlement);
+
+                if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.ClientAccountName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
+                {
+                    _logger.LogDebug($"Mined block received but producer is not up to date.");
+                    return;
+                }
+
+                await HandleReceivedBlock(sidechainPoolValuePair.Value, blockProto);
             }
-
-            var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPoolValuePair.Value.ClientAccountName)).ProductionTime;
-
-            if (!isProductionTime)
+            catch (Exception e)
             {
-                _logger.LogDebug($"Mined block received but it's not mining time.");
-                return;
-            }
-
-            var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.ClientAccountName)).SingleOrDefault().StartProductionTime;
-
-            var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(sidechainPoolValuePair.Value.ClientAccountName, startProductionTime, (int)sidechainPoolValuePair.Value.BlocksBetweenSettlement);
-
-            if (lastValidBlockheaderSmartContractFromLastProduction != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.ClientAccountName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
-            {
-                _logger.LogDebug($"Mined block received but producer is not up to date.");
-                return;
-            }
-
-            await HandleReceivedBlock(sidechainPoolValuePair.Value, blockProto);
+                _logger.LogCritical($"Failed to process received block with error: {e.Message}");
+            }            
         }
 
         private async Task TryApproveTransaction(string proposer, TransactionProposal proposal)
@@ -174,7 +181,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 await _mainchainService.ApproveTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
             }
-            catch(ApiErrorException)
+            catch (ApiErrorException)
             {
                 _logger.LogInformation("Unable to approve transaction, proposed transaction might have already been executed");
             }
@@ -183,11 +190,11 @@ namespace BlockBase.Runtime.Sidechain
         private async Task<bool> ValidateBlockTransactions(Block block, SidechainPool sidechain)
         {
             ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(sidechain.ClientAccountName))?.SequenceNumber ?? 0;
-            foreach(var transaction in block.Transactions)
+            foreach (var transaction in block.Transactions)
             {
-                if(transaction.SequenceNumber != ++lastSequenceNumber) return false;
-                if(!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash)) return false;
-                if(!SignatureHelper.VerifySignature(sidechain.ClientPublicKey, transaction.Signature, transactionHash)) return false;
+                if (transaction.SequenceNumber != ++lastSequenceNumber) return false;
+                if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash)) return false;
+                if (!SignatureHelper.VerifySignature(sidechain.ClientPublicKey, transaction.Signature, transactionHash)) return false;
             }
             return true;
         }
