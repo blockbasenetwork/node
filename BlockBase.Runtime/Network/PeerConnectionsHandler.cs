@@ -139,7 +139,14 @@ namespace BlockBase.Runtime.Network
                 {
                     _logger.LogInformation("     Connect to ip: " + producer.ProducerInfo.IPEndPoint.Address + ":" + producer.ProducerInfo.IPEndPoint.Port);
                     var peer = await ConnectAsync(producer.ProducerInfo.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
-                    if (peer != null) await SendIdentificationMessage(producer.ProducerInfo.IPEndPoint);
+                    if (peer != null)
+                    {
+                        await SendIdentificationMessage(producer.ProducerInfo.IPEndPoint);
+                    }
+                    else
+                    {
+                        CurrentPeerConnections.Remove(producer.PeerConnection);
+                    }
                 }
             }
             else
