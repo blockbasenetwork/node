@@ -101,7 +101,7 @@ namespace BlockBase.DataProxy.Encryption
         }
         private List<ISqlStatement> GetTransformedDropDatabaseStatement(DropDatabaseStatement dropDatabaseStatement)
         {
-            var infoRecord = _encryptor.FindInfoRecord(dropDatabaseStatement.DatabaseName, null);
+            var infoRecord = GetInfoRecordThrowErrorIfNotExists(dropDatabaseStatement.DatabaseName, null);
 
             var sqlStatements = new List<ISqlStatement>()
             {
@@ -117,7 +117,7 @@ namespace BlockBase.DataProxy.Encryption
         }
         private UseDatabaseStatement GetTransformedUseDatabaseStatement(UseDatabaseStatement useDatabaseStatement, out InfoRecord databaseInfoRecord)
         {
-            databaseInfoRecord = _encryptor.FindInfoRecord(useDatabaseStatement.DatabaseName, null);
+            databaseInfoRecord = GetInfoRecordThrowErrorIfNotExists(useDatabaseStatement.DatabaseName, null);
             return new UseDatabaseStatement(new estring(databaseInfoRecord.Name));
         }
 
@@ -144,7 +144,7 @@ namespace BlockBase.DataProxy.Encryption
         }
         private IList<ISqlStatement> GetTransformedDropTableStatement(DropTableStatement dropTableStatement, string databaseIV)
         {
-            var infoRecord = _encryptor.FindInfoRecord(dropTableStatement.TableName, databaseIV);
+            var infoRecord = GetInfoRecordThrowErrorIfNotExists(dropTableStatement.TableName, databaseIV);
 
             var sqlStatements = new List<ISqlStatement>()
             {
@@ -188,7 +188,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             var sqlStatements = new List<ISqlStatement>();
 
-            var tableInfoRecord = _encryptor.FindInfoRecord(renameTableStatement.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(renameTableStatement.TableName, databaseIV);
             var transformedOldTableName = tableInfoRecord.Name;
 
             tableInfoRecord = _encryptor.ChangeInfoRecordName(tableInfoRecord, renameTableStatement.NewTableName);
@@ -204,9 +204,9 @@ namespace BlockBase.DataProxy.Encryption
         {
             var sqlStatements = new List<ISqlStatement>();
 
-            var tableInfoRecord = _encryptor.FindInfoRecord(renameColumnStatement.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(renameColumnStatement.TableName, databaseIV);
 
-            var columnInfoRecord = _encryptor.FindInfoRecord(renameColumnStatement.ColumnName, tableInfoRecord.IV);
+            var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(renameColumnStatement.ColumnName, tableInfoRecord.IV);
             var oldInfoRecord = columnInfoRecord.Clone();
 
             columnInfoRecord = _encryptor.ChangeInfoRecordName(columnInfoRecord, renameColumnStatement.NewColumnName);
@@ -239,7 +239,7 @@ namespace BlockBase.DataProxy.Encryption
         private IList<ISqlStatement> GetTransformedAddColumnStatement(AddColumnStatement addColumnStatement, string databaseIV)
         {
             var sqlStatements = new List<ISqlStatement>();
-            var tableInfoRecord = _encryptor.FindInfoRecord(addColumnStatement.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(addColumnStatement.TableName, databaseIV);
 
             var columnDefinitionsAndAdditionalInsert = GetTransformedColumnDefinition(addColumnStatement.ColumnDefinition, tableInfoRecord.IV, databaseIV);
 
@@ -253,9 +253,9 @@ namespace BlockBase.DataProxy.Encryption
 
         private IList<ISqlStatement> GetTransformedDropColumnStatement(DropColumnStatement dropColumnStatement, string databaseIV)
         {
-            var tableInfoRecord = _encryptor.FindInfoRecord(dropColumnStatement.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(dropColumnStatement.TableName, databaseIV);
 
-            var columnInfoRecord = _encryptor.FindInfoRecord(dropColumnStatement.ColumnName, tableInfoRecord.IV);
+            var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(dropColumnStatement.ColumnName, tableInfoRecord.IV);
 
             var sqlStatements = new List<ISqlStatement>()
             {
@@ -281,7 +281,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private ISqlStatement GetTransformedInsertRecordStatement(InsertRecordStatement insertRecordStatement, string databaseIV)
         {
-            var tableInfoRecord = _encryptor.FindInfoRecord(insertRecordStatement.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(insertRecordStatement.TableName, databaseIV);
 
 
             var transformedInsertRecordStatement = new InsertRecordStatement(new estring(tableInfoRecord.Name));
@@ -307,11 +307,11 @@ namespace BlockBase.DataProxy.Encryption
 
             foreach (var resultColumn in selectCoreStatement.ResultColumns)
             {
-                var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseIV);
+                var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(resultColumn.TableName, databaseIV);
 
                 if (!resultColumn.AllColumnsfFlag)
                 {
-                    var columnInfoRecord = !resultColumn.AllColumnsfFlag ? _encryptor.FindInfoRecord(resultColumn.ColumnName, tableInfoRecord.IV) : null;
+                    var columnInfoRecord = !resultColumn.AllColumnsfFlag ? GetInfoRecordThrowErrorIfNotExists(resultColumn.ColumnName, tableInfoRecord.IV) : null;
 
                     transformedSelectStatement.ResultColumns.Add(new ResultColumn()
                     {
@@ -377,13 +377,13 @@ namespace BlockBase.DataProxy.Encryption
 
             var transformedUpdateRecordStatement = new UpdateRecordStatement();
 
-            var tableInfoRecord = _encryptor.FindInfoRecord(updateRecordStatement.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(updateRecordStatement.TableName, databaseIV);
 
             transformedUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
             foreach (var columnValue in updateRecordStatement.ColumnNamesAndUpdateValues)
             {
-                var columnInfoRecord = _encryptor.FindInfoRecord(columnValue.Key, tableInfoRecord.IV);
+                var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnValue.Key, tableInfoRecord.IV);
 
                 var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
 
@@ -433,7 +433,7 @@ namespace BlockBase.DataProxy.Encryption
 
             var transformedDeleteRecordStatement = new DeleteRecordStatement();
 
-            var tableInfoRecord = _encryptor.FindInfoRecord(deleteRecordStatement.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(deleteRecordStatement.TableName, databaseIV);
 
             transformedDeleteRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
@@ -465,7 +465,7 @@ namespace BlockBase.DataProxy.Encryption
 
             if (tableOrSubquery.TableName != null)
             {
-                transformedTableOrSubquery.TableName = new estring(_encryptor.FindInfoRecord(tableOrSubquery.TableName, databaseIV).Name);
+                transformedTableOrSubquery.TableName = new estring(GetInfoRecordThrowErrorIfNotExists(tableOrSubquery.TableName, databaseIV).Name);
             }
 
             if (tableOrSubquery.JoinClause != null)
@@ -522,9 +522,9 @@ namespace BlockBase.DataProxy.Encryption
 
         private AbstractExpression GetTransformedComparisonExpression(ComparisonExpression comparisonExpression, string databaseIV, SelectCoreStatement transformedSelectCoreStatement)
         {
-            var leftTableInfoRecord = _encryptor.FindInfoRecord(comparisonExpression.LeftTableNameAndColumnName.TableName, databaseIV);
+            var leftTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.LeftTableNameAndColumnName.TableName, databaseIV);
 
-            var leftColumnInfoRecord = _encryptor.FindInfoRecord(comparisonExpression.LeftTableNameAndColumnName.ColumnName, leftTableInfoRecord.IV);
+            var leftColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.LeftTableNameAndColumnName.ColumnName, leftTableInfoRecord.IV);
 
             var leftColumnDataType = _encryptor.GetColumnDataType(leftColumnInfoRecord);
 
@@ -533,8 +533,8 @@ namespace BlockBase.DataProxy.Encryption
             if (comparisonExpression.Value == null)
             {
                 if (leftColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
-                var rightTableInfoRecord = _encryptor.FindInfoRecord(comparisonExpression.RightTableNameAndColumnName.TableName, databaseIV);
-                var rightColumnInfoRecord = _encryptor.FindInfoRecord(comparisonExpression.RightTableNameAndColumnName.ColumnName, rightTableInfoRecord.IV);
+                var rightTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.TableName, databaseIV);
+                var rightColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.ColumnName, rightTableInfoRecord.IV);
 
                 var rightColumnDataType = _encryptor.GetColumnDataType(rightColumnInfoRecord);
                 if (rightColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
@@ -600,7 +600,7 @@ namespace BlockBase.DataProxy.Encryption
 
             var valuesPerColumn = new Dictionary<estring, IList<Value>>();
 
-            var columnInfoRecord = _encryptor.FindInfoRecord(columnName, tableIV);
+            var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnName, tableIV);
 
             if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
@@ -699,12 +699,12 @@ namespace BlockBase.DataProxy.Encryption
         }
         private ForeignKeyClause TransformForeignKeyClause(ForeignKeyClause foreignKeyClause, string databaseIV)
         {
-            var tableInfoRecord = _encryptor.FindInfoRecord(foreignKeyClause.TableName, databaseIV);
+            var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(foreignKeyClause.TableName, databaseIV);
 
             var transformedForeignKeyClause = new ForeignKeyClause(new estring(tableInfoRecord.Name));
             foreach (var columnName in foreignKeyClause.ColumnNames)
             {
-                var columnInfoRecord = _encryptor.FindInfoRecord(columnName, tableInfoRecord.IV);
+                var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnName, tableInfoRecord.IV);
                 transformedForeignKeyClause.ColumnNames.Add(new estring(columnInfoRecord.Name));
             }
             return transformedForeignKeyClause;
@@ -787,5 +787,13 @@ namespace BlockBase.DataProxy.Encryption
             depth++;
             return AddBktValueExpression(bktValues, newLogicalExpression, depth, maxDepth, tableAndColumnName);
         }
+
+        private InfoRecord GetInfoRecordThrowErrorIfNotExists(estring name, string parentIV)
+        {
+            var infoRecord = _encryptor.FindInfoRecord(name, parentIV);
+            if(infoRecord == null) throw new Exception("Relation '" + name.Value + "' does not exist.");
+            return infoRecord;
+        }
+
     }
 }

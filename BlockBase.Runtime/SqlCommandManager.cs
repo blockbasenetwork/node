@@ -67,7 +67,6 @@ namespace BlockBase.Runtime
                 BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
                 CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
                 BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
-
                 var context = parser.sql_stmt_list();
                 var builder = (Builder)_visitor.Visit(context);
                 var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _databaseAccess, _networkService, _peerConnectionsHandler, _networkConfigurations, _nodeConfigurations);

@@ -21,15 +21,23 @@ namespace BlockBase.Domain.Database.QueryParser
         private estring _databaseName { get; set; }
         public override object VisitSql_stmt_list([NotNull] Sql.QueryParser.BareBonesSqlParser.Sql_stmt_listContext context)
         {
-            ThrowIfParserHasException(context);
+            if(context.exception != null) throw new Exception("Error parsing script.");
+            
             var builder = new Builder();
-
             var stms = context.sql_stmt();
 
             foreach (var stm in stms)
             {
-                var sqlStatement = (ISqlStatement)Visit(stm);
-                builder.AddStatement(sqlStatement);
+                try
+                {
+                    var sqlStatement = (ISqlStatement)Visit(stm);
+                    if (sqlStatement == null) throw new Exception("The sql command:'" + stm.GetText() + "' was not recognized.");
+                    builder.AddStatement(sqlStatement);
+                }
+                catch (Exception)
+                {
+                    throw new Exception("Error parsing command:'" + stm.GetText() + "'.");
+                }
             }
 
             return builder;
@@ -393,7 +401,7 @@ namespace BlockBase.Domain.Database.QueryParser
                         (estring)Visit(expr.column_name().complex_name())),
                     new Value(expr.literal_value().GetText().Trim('\'')),
                     GetLogicalOperatorFromString(exprString));
-                
+
                 return comparisonExpression;
 
 
@@ -412,7 +420,7 @@ namespace BlockBase.Domain.Database.QueryParser
                         (estring)Visit(expr.table_column_name()[1].table_name().complex_name()),
                         (estring)Visit(expr.table_column_name()[1].column_name().complex_name())),
                     GetLogicalOperatorFromString(exprString));
-                
+
                 return comparisonExpression;
             }
 
