@@ -77,7 +77,6 @@ namespace BlockBase.Runtime.Mainchain
                         UpdateAverageTrxTime();
                         await CheckContractAndUpdateStates();
                         await CheckContractAndUpdateWaitTimes();
-                        await CheckPeerConnections();
                     }
                     else await Task.Delay((int)_timeDiff);
 
@@ -143,6 +142,7 @@ namespace BlockBase.Runtime.Mainchain
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
                     if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                    await CheckPeerConnections();
                 }
             }
             catch (HttpRequestException)
