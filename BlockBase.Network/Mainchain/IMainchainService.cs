@@ -19,7 +19,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> SafeExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, int limit, string permission = "active");
         Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active");
         Task<string> StartChain(string owner, string publicKey, string permission = "active");
-        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, string permission = "active");
+        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, string permission = "active");
         Task<string> EndChain(string owner, string permission = "active");
         Task<string> StartCandidatureTime(string owner, string permission = "active");
         Task<string> PunishProd(string owner, string permission = "active");

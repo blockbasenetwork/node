@@ -171,12 +171,12 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
-        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, string permission = "active") =>
+        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.CONFIG_CHAIN,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
-                CreateDataForConfigurations(owner, contractInformation),
+                CreateDataForConfigurations(owner, contractInformation, reservedSeats),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -553,12 +553,14 @@ namespace BlockBase.Network.Mainchain
         }
 
 
-        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation)
+        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats)
         {
+            reservedSeats = reservedSeats ?? new List<string>();
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.CONFIG_INFO_JSON, contractInformation },
+                { EosParameterNames.RESERVED_SEATS, reservedSeats}
             };
         }
 

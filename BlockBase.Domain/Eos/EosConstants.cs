@@ -72,6 +72,7 @@ namespace BlockBase.Domain.Eos
         public const string PRODUCER = "producer";
         public const string NAME = "name";
         public const string CONFIG_INFO_JSON = "infoJson";
+        public const string RESERVED_SEATS = "reservedSeats";
         public const string PUBLIC_KEY = "publicKey";
         public const string SECRET_HASH = "secretHash";
         public const string SECRET = "secret";
