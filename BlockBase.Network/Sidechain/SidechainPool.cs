@@ -18,6 +18,7 @@ namespace BlockBase.Network.Sidechain
         public long NextStateWaitEndTime { get; set; }
         public uint BlocksBetweenSettlement { get; set; }
         public uint BlockTimeDuration { get; set; }
+        public uint BlockSizeInBytes { get; set; }
         public DateTime NextTimeToCheckSmartContract { get; set; }
 
         public TaskContainer ManagerTask { get; set; }

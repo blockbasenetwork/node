@@ -166,6 +166,7 @@ namespace BlockBase.Runtime.Sidechain
 
             Sidechain.BlockTimeDuration = contractInformation.BlockTimeDuration;
             Sidechain.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;
+            Sidechain.BlockSizeInBytes = contractInformation.SizeOfBlockInBytes;
 
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
 

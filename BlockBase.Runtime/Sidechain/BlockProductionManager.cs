@@ -18,6 +18,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Domain;
+using Google.Protobuf;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -160,18 +161,7 @@ namespace BlockBase.Runtime.Sidechain
                         previousBlockhash = new byte[32];
                     }
 
-                    var transactionsDatabaseName = _sidechainPool.ClientAccountName;
-                    var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(transactionsDatabaseName);
-                    ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
-                    var transactions = new List<Transaction>();
-
-                    foreach (var looseTransaction in allLooseTransactions)
-                    {
-                        if (looseTransaction.SequenceNumber != lastSequenceNumber + 1) break;
-                        lastSequenceNumber = looseTransaction.SequenceNumber;
-                        transactions.Add(looseTransaction);
-                        _logger.LogDebug($"Including transaction {lastSequenceNumber}");
-                    }
+                    
 
                     var blockHeader = new BlockHeader()
                     {
@@ -180,10 +170,15 @@ namespace BlockBase.Runtime.Sidechain
                         PreviousBlockHash = previousBlockhash,
                         SequenceNumber = currentSequenceNumber,
                         Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
-                        TransactionCount = (uint)transactions.Count(),
+                        TransactionCount = 0,
                         ProducerSignature = "",
-                        MerkleRoot = MerkleTreeHelper.CalculateMerkleRootHash(transactions.Select(t => t.TransactionHash).ToList())
+                        MerkleRoot = new byte[32]
                     };
+
+                    var transactions = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
+
+                    blockHeader.TransactionCount = (uint)transactions.Count();
+                    blockHeader.MerkleRoot = MerkleTreeHelper.CalculateMerkleRootHash(transactions.Select(t => t.TransactionHash).ToList());
 
                     var block = new Block(blockHeader, transactions);
                     var serializedBlockHeader = JsonConvert.SerializeObject(block.BlockHeader);
@@ -207,13 +202,35 @@ namespace BlockBase.Runtime.Sidechain
             throw new OperationCanceledException("Failed to produce block");
         }
 
+        private async Task<IList<Transaction>> GetTransactionsToIncludeInBlock(int blockHeaderSizeInBytes)
+        {
+            var transactionsDatabaseName = _sidechainPool.ClientAccountName;
+            var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(transactionsDatabaseName);
+            ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
+            var transactions = new List<Transaction>();
+            uint sizeInBytes = 0 ;
+
+            foreach (var looseTransaction in allLooseTransactions)
+            {
+                if (looseTransaction.SequenceNumber != lastSequenceNumber + 1) break;
+                var transactionSize = looseTransaction.ConvertToProto().ToByteArray().Count();
+                _logger.LogDebug("transaction size in bytes " + _sidechainPool.BlockSizeInBytes);
+                if ((sizeInBytes + blockHeaderSizeInBytes + transactionSize) > _sidechainPool.BlockSizeInBytes) break;
+                sizeInBytes += (uint) (transactionSize);
+                lastSequenceNumber = looseTransaction.SequenceNumber;
+                transactions.Add(looseTransaction);
+                _logger.LogDebug($"Including transaction {lastSequenceNumber}");
+            }
+            return transactions;
+        }
+
         private async Task CancelProposalTransactionIfExists()
         {
             try
             {
                 var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
                 if (proposal == null) return;
-                
+
                 _logger.LogInformation("Canceling existing proposal...");
                 await _mainchainService.CancelTransaction(_nodeConfigurations.AccountName, proposal.ProposalName);
             }

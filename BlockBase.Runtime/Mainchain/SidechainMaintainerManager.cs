@@ -58,6 +58,7 @@ namespace BlockBase.Runtime.Mainchain
             try
             {
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
+                _sidechain.BlockSizeInBytes = contractInfo.SizeOfBlockInBytes;
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
                 _roundsUntilSettlement = (int)contractInfo.BlocksBetweenSettlement;
