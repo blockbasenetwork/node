@@ -174,7 +174,7 @@ namespace BlockBase.Runtime
                                     await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
                                 
                                 _logger.LogDebug(sqlTextToExecute);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName); 
+                                await SendTransactionToProducers(sqlTextToExecute, _databaseName ?? ""); 
                             }
                             results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
