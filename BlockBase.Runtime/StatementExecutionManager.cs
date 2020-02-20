@@ -114,9 +114,9 @@ namespace BlockBase.Runtime
 
                             foreach (var updateToExecute in updatesToExecute)
                             {
-                                _logger.LogDebug(updateToExecute);
-                                await SendTransactionToProducers(updateToExecute, _databaseName);                               
+                                _logger.LogDebug(updateToExecute);                                                            
                                 await _connector.ExecuteCommand(updateToExecute, _databaseName);
+                                await SendTransactionToProducers(updateToExecute, _databaseName); 
 
                             }
                             results.Add(createQueryResult(true, updateSqlCommand.OriginalSqlStatement.GetStatementType()));
@@ -134,9 +134,8 @@ namespace BlockBase.Runtime
                             foreach (var deleteToExecute in deletesToExecute)
                             {
                                 _logger.LogDebug(deleteToExecute);
-                                await SendTransactionToProducers(deleteToExecute, _databaseName);               
                                 await _connector.ExecuteCommand(deleteToExecute, _databaseName);
-
+                                await SendTransactionToProducers(deleteToExecute, _databaseName);               
                             }
                             results.Add(createQueryResult(true, deleteSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -146,9 +145,9 @@ namespace BlockBase.Runtime
                             for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
                             {
                                 sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
-                                _logger.LogDebug(sqlTextToExecute);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName); 
+                                _logger.LogDebug(sqlTextToExecute);                               
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
+                                await SendTransactionToProducers(sqlTextToExecute, _databaseName); 
                             }
                             results.Add(createQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
