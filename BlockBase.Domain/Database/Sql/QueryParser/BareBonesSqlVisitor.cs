@@ -34,7 +34,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     if (sqlStatement == null) throw new Exception("The sql command:'" + stm.GetText() + "' was not recognized.");
                     builder.AddStatement(sqlStatement);
                 }
-                catch (Exception)
+                catch (Antlr4.Runtime.InputMismatchException)
                 {
                     throw new Exception("Error parsing command:'" + stm.GetText() + "'.");
                 }
