@@ -31,8 +31,7 @@ namespace BlockBase.Runtime
         private BareBonesSqlBaseVisitor<object> _visitor;
         private IConnector _connector;
         private ILogger _logger;
-        private int _transaction_sequence_number = 0;
-        private ConcurrentVariables _databaseAccess;
+        private ConcurrentVariables _concurrentVariables;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private INetworkService _networkService;
         private NetworkConfigurations _networkConfigurations;
@@ -47,7 +46,7 @@ namespace BlockBase.Runtime
             _logger = logger;
             _connector = connector;
             _transformer = new Transformer(middleMan);
-            _databaseAccess = concurrentVariables;
+            _concurrentVariables = concurrentVariables;
             _networkService = networkService;
             _peerConnectionsHandler = peerConnectionsHandler;
             _logger = logger;
@@ -69,9 +68,8 @@ namespace BlockBase.Runtime
                 BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
                 var context = parser.sql_stmt_list();
                 var builder = (Builder)_visitor.Visit(context);
-                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _databaseAccess, _networkService, _peerConnectionsHandler, _networkConfigurations, _nodeConfigurations);
+                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _concurrentVariables, _networkService, _peerConnectionsHandler, _networkConfigurations, _nodeConfigurations);
                 results = await executioner.ExecuteBuilder(builder, CreateQueryResult);
-                
             }
             catch (Exception e)
             {

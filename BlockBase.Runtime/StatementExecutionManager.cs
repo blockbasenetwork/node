@@ -169,13 +169,13 @@ namespace BlockBase.Runtime
                             for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
                             {
                                 sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
-                                
-                                _logger.LogDebug(sqlTextToExecute);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName); 
                                 if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
                                     await _connector.ExecuteCommand(sqlTextToExecute, null);
                                 else
                                     await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
+                                
+                                _logger.LogDebug(sqlTextToExecute);
+                                await SendTransactionToProducers(sqlTextToExecute, _databaseName); 
                             }
                             results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
