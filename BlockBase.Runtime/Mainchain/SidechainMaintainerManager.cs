@@ -149,6 +149,12 @@ namespace BlockBase.Runtime.Mainchain
                 await Task.Delay(60000);
                 _forceTryAgain = true;
             }
+            catch (ApiException apiException)
+            {
+                _logger.LogCritical($"Eos transaction failed http error {apiException.Message}. Please verify EOS endpoint. Trying again in 60 seconds.");
+                await Task.Delay(60000);
+                _forceTryAgain = true;
+            }
             catch (ApiErrorException eosException)
             {
                 _logger.LogCritical($"Eos transaction failed with error {eosException.error.name}. Please verify your cpu/net stake or if there is heavy congestion in the network. Trying again in 60 seconds");

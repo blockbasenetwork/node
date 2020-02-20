@@ -28,6 +28,7 @@ using Newtonsoft.Json;
 using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using static BlockBase.Network.PeerConnection;
 using static BlockBase.Network.Rounting.MessageForwarder;
+using EosSharp.Core.Exceptions;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -52,7 +53,7 @@ namespace BlockBase.Runtime.Sidechain
         private DateTime _lastReceivedDate;
 
         private static readonly object Locker = new object();
-        private static readonly int MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 10;
+        private static readonly int MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 120;
 
         public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
         {
@@ -79,6 +80,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task Execute()
         {
+            if (_receiving) return;
             _completed = false;
             _receiving = true;
             var currentSendingProducer = new ProducerInPool();
@@ -95,6 +97,7 @@ namespace BlockBase.Runtime.Sidechain
                 if (currentSendingProducer == validConnectedProducers.Last())
                 {
                     _logger.LogDebug("Tried all producers and didn't manage to build chain, trying again later...");
+                    return;
                 }
 
                 await _mongoDbProducerService.RemoveUnconfirmedBlocks(databaseName);
@@ -106,7 +109,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 var beginSequenceNumber = _lastValidSavedBlock != null ? _lastValidSavedBlock.BlockHeader.SequenceNumber : 0;
                 var endSequenceNumber = _blocksReceived.Any() ?
-                    _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber).First().BlockHeader.SequenceNumber :
+                    _blocksReceived.OrderBy(b => b.BlockHeader.SequenceNumber).Last().BlockHeader.SequenceNumber :
                     _lastSidechainBlockheader.SequenceNumber;
 
                 _logger.LogDebug($"Asking for blocks {beginSequenceNumber} to {endSequenceNumber}");
@@ -123,6 +126,7 @@ namespace BlockBase.Runtime.Sidechain
                 if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS)
                 {
                     _logger.LogDebug("Too much time without receiving block. Asking another producer for remaining blocks.");
+                    _receiving = false;
                 }
             }
         }
@@ -206,12 +210,25 @@ namespace BlockBase.Runtime.Sidechain
 
             foreach (Block block in orderedBlocks)
             {
+                _logger.LogDebug($"Adding block #{block.BlockHeader.SequenceNumber} to database.");
+                _lastReceivedDate = DateTime.UtcNow;
                 await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                 var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
                 //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
                 await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             }
             _blocksReceived.Clear();
+
+            _logger.LogDebug("Added blocks to database.");
+            try
+            {
+                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
+            }
+            catch (ApiErrorException)
+            {
+                _logger.LogInformation("Already notified ready.");
+            }
+
             _receiving = false;
             _completed = true;
         }
