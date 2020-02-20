@@ -36,6 +36,7 @@ namespace BlockBase.Runtime.Network
         private NetworkConfigurations _networkConfigurations;
 
         private string _endPoint;
+        private bool _checkingConnection;
 
         //TODO: this will not be a constant, it will vary with the number of producers in pool
         private const int MINIMUM_RATING = 1;
@@ -73,6 +74,7 @@ namespace BlockBase.Runtime.Network
                 try
                 {
                     var peerConnection = AddIfNotExistsPeerConnection(producerIP.Value, producerIP.Key);
+                    if (peerConnection.ConnectionState == ConnectionStateEnum.Connected) continue;
                     await ConnectAsync(producerIP.Value);
                     peerConnection.ConnectionState = ConnectionStateEnum.Connected;
                     await SendIdentificationMessage(producerIP.Value);
@@ -255,6 +257,9 @@ namespace BlockBase.Runtime.Network
 
         public async Task CheckConnectionStatus(SidechainPool sidechain)
         {
+            if (_checkingConnection) return;
+
+            _checkingConnection = true;
             var random = new Random();
 
             foreach (var producer in sidechain.ProducersInPool)
@@ -275,6 +280,7 @@ namespace BlockBase.Runtime.Network
                     Disconnect(producer.PeerConnection);
                 }
             }
+            _checkingConnection = false;
         }
 
         #endregion Enter Points

@@ -15,6 +15,7 @@ using BlockBase.Utils.Crypto;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain;
 using System.Net.Http;
+using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -76,6 +77,7 @@ namespace BlockBase.Runtime.Mainchain
                         UpdateAverageTrxTime();
                         await CheckContractAndUpdateStates();
                         await CheckContractAndUpdateWaitTimes();
+                        await CheckPeerConnections();
                     }
                     else await Task.Delay((int)_timeDiff);
 
@@ -275,6 +277,30 @@ namespace BlockBase.Runtime.Mainchain
 
             await _mainchainService.PunishProd(_sidechain.ClientAccountName);
             await UpdateAuthorization(_sidechain.ClientAccountName);
+        }
+
+        private async Task CheckPeerConnections()
+        {
+            var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            var producersInPool = producersInTable.Select(m => new ProducerInPool
+            {
+                ProducerInfo = new ProducerInfo
+                {
+                    AccountName = m.Key,
+                    PublicKey = m.PublicKey,
+                    NewlyJoined = false,
+                    IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
+                },
+                PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
+            }).ToList();
+
+            _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
+
+            await ConnectToProducers();
+
+            if (_sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
+                _peerConnectionsHandler.CheckConnectionStatus(_sidechain).Start();
         }
 
         #endregion Auxiliar Methods
