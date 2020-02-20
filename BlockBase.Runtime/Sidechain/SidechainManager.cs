@@ -509,7 +509,10 @@ namespace BlockBase.Runtime.Sidechain
             UpdateIPsInSidechain(ipAddresses);
 
             if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
-                _peerConnectionsHandler.CheckConnectionStatus(Sidechain).Start();
+            {
+                var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(Sidechain));
+                checkConnectionTask.Start();
+            }
         }
 
         private async Task CheckContractAndUpdatePool()

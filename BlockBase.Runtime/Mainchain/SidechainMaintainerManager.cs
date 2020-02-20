@@ -300,7 +300,10 @@ namespace BlockBase.Runtime.Mainchain
             await ConnectToProducers();
 
             if (_sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
-                _peerConnectionsHandler.CheckConnectionStatus(_sidechain).Start();
+            {
+                var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(_sidechain));
+                checkConnectionTask.Start();
+            }
         }
 
         #endregion Auxiliar Methods

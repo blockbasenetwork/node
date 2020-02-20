@@ -259,28 +259,35 @@ namespace BlockBase.Runtime.Network
         {
             if (_checkingConnection) return;
 
-            _checkingConnection = true;
-            var random = new Random();
-
-            foreach (var producer in sidechain.ProducersInPool)
+            try
             {
-                if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
+                _checkingConnection = true;
+                var random = new Random();
+
+                foreach (var producer in sidechain.ProducersInPool)
                 {
-                    var randomInt = random.Next();
-                    await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
-
-                    var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                    if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                    if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
                     {
-                        var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
-                        if (randomInt == pongNonce) continue;
-                    }
+                        var randomInt = random.Next();
+                        await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
 
-                    _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
-                    Disconnect(producer.PeerConnection);
+                        var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
+                        if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                        {
+                            var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                            if (randomInt == pongNonce) continue;
+                        }
+
+                        _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
+                        Disconnect(producer.PeerConnection);
+                    }
                 }
+                _checkingConnection = false;
             }
-            _checkingConnection = false;
+            catch (Exception e)
+            {
+                _logger.LogCritical($"Check connection failed with exception: {e}");
+            }
         }
 
         #endregion Enter Points
