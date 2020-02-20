@@ -22,6 +22,7 @@ namespace BlockBase.Network.Mainchain
         private MongoDBConfigurations MongoDBConfigurations;
         private readonly ILogger _logger;
         private const int MAX_NUMBER_OF_TRIES = 5;
+        private const int TRANSACTION_EXPIRATION = 20;
 
         public MainchainService(IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, IOptions<MongoDBConfigurations> mongoDBConfigurations, ILogger<MainchainService> logger)
         {
@@ -30,7 +31,7 @@ namespace BlockBase.Network.Mainchain
             MongoDBConfigurations = mongoDBConfigurations.Value;
 
             _logger = logger;
-            EosStub = new EosStub(NetworkConfigurations.ConnectionExpirationTimeInSeconds, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
+            EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
         }
 
         #region Transactions
