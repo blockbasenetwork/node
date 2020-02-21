@@ -66,6 +66,8 @@ namespace BlockBase.Runtime.Mainchain
                 var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
                 if (stateTable.ProductionTime) await ConnectToProducers();
 
+                await CheckContractAndUpdateWaitTimes();
+
                 while (true)
                 {
                     _timeDiff = (_sidechain.NextStateWaitEndTime * 1000) - _timeToExecuteTrx - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
