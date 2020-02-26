@@ -368,12 +368,6 @@ namespace BlockBase.Network.Mainchain
             return lastValidSubmittedBlock;
         }
 
-        public async Task<List<BlockCountTable>> GetBlockCount(string chain)
-        {
-            var blocks = await RetrieveBlockCount(chain);
-            return blocks;
-        }
-
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)
         {
             var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, proposerName), MAX_NUMBER_OF_TRIES);

@@ -43,7 +43,7 @@ namespace BlockBase.Network.Mainchain
         Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks);
         Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks);
         Task<BlockheaderTable> GetLastValidSubmittedBlockheaderFromLastProduction(string chain, long currentProductionStartTime, int numberOfBlocks);
-        Task<List<BlockCountTable>> GetBlockCount(string chain);
+        Task<List<BlockCountTable>> RetrieveBlockCount(string chain);
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string account);
         Task<TokenAccountTable> RetrieveTokenBalance(string account);

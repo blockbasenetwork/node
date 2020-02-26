@@ -59,9 +59,11 @@ namespace BlockBase.Runtime.Mainchain
             try
             {
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
+                var blocksCount = await _mainchainService.RetrieveBlockCount(_sidechain.ClientAccountName);
+                var numberOfRoundsAlreadyPassed = blocksCount.Sum(b => b.blocksproduced) + blocksCount.Sum(b => b.blocksfailed);
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
-                _roundsUntilSettlement = (int)contractInfo.BlocksBetweenSettlement;
+                _roundsUntilSettlement = Convert.ToInt32(contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
 
                 var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
                 if (stateTable.ProductionTime) await ConnectToProducers();
