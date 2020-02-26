@@ -214,7 +214,8 @@ namespace BlockBase.Runtime.Mainchain
         {
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (!producerList.Any()) return;
-            if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key))) return;
+            if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) && 
+                producerList.Count() == _sidechain.ProducersInPool.GetEnumerable().Count()) return;
 
             var producersInPool = producerList.Select(m => new ProducerInPool
             {
