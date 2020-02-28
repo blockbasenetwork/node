@@ -73,6 +73,7 @@ namespace BlockBase.Runtime
             }
             catch (Exception e)
             {
+                _logger.LogCritical($"Error executing query: {e}");
                 results.Add(CreateQueryResult(false, "script", e.Message));
             }
             return results;
