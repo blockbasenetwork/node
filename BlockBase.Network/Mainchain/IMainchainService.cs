@@ -7,6 +7,7 @@ namespace BlockBase.Network.Mainchain
 {
     public interface IMainchainService
     {
+        Task<GetAccountResponse> GetAccount(string accountName);
         Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);

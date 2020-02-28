@@ -118,7 +118,7 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.CandidatureTime &&
                _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorization(_sidechain.ClientAccountName);
+                    await UpdateAuthorization();
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.SecretTime &&
@@ -129,7 +129,7 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.IPSendTime &&
                    _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorization(_sidechain.ClientAccountName);
+                    await UpdateAuthorization();
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.IPReceiveTime &&
@@ -212,12 +212,14 @@ namespace BlockBase.Runtime.Mainchain
             }
         }
 
-        private async Task UpdateAuthorization(string accountName)
+        private async Task UpdateAuthorization()
         {
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            var sidechainAccountInfo = await _mainchainService.GetAccount(_sidechain.ClientAccountName);
+            var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
             if (!producerList.Any()) return;
             if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) && 
-                producerList.Count() == _sidechain.ProducersInPool.GetEnumerable().Count()) return;
+                producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return;
 
             var producersInPool = producerList.Select(m => new ProducerInPool
             {
@@ -230,7 +232,7 @@ namespace BlockBase.Runtime.Mainchain
             }).ToList();
 
             _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
-            await _mainchainService.AuthorizationAssign(accountName, producerList);
+            await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, producerList);
         }
 
         private async Task LinkAuthorizarion(string actionsName, string owner)
@@ -272,6 +274,8 @@ namespace BlockBase.Runtime.Mainchain
             _logger.LogDebug("Settlement starting...");
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
+            await UpdateAuthorization();
+
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
 
@@ -281,7 +285,6 @@ namespace BlockBase.Runtime.Mainchain
             }
 
             await _mainchainService.PunishProd(_sidechain.ClientAccountName);
-            await UpdateAuthorization(_sidechain.ClientAccountName);
         }
 
         private async Task CheckPeerConnections()

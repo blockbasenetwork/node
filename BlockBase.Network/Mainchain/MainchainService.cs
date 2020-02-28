@@ -34,6 +34,9 @@ namespace BlockBase.Network.Mainchain
             EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
         }
 
+        public async Task<GetAccountResponse> GetAccount(string accountName)
+            => await TryAgain(async () => await EosStub.GetAccount(accountName), NetworkConfigurations.MaxNumberOfConnectionRetries);
+
         #region Transactions
 
         public async Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash) =>
