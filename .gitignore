@@ -245,3 +245,4 @@ ModelManifest.xml
 .fake/
 
 .vscode/
+BlockBase.Node/transactionNumber.txt
