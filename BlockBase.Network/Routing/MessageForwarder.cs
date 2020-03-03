@@ -6,6 +6,7 @@ using BlockBase.Utils.Operation;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -148,19 +149,30 @@ namespace BlockBase.Network.Rounting
 
         private BlocksRequestReceivedEventArgs ParseRequestBlocksMessage(byte[] payload, IPEndPoint sender)
         {
-            var beginBlockSequenceNumberBytes = new byte[8];
-            Array.Copy(payload, 0, beginBlockSequenceNumberBytes, 0, 8);
-            var endBlockSequenceNumberBytes = new byte[8];
-            Array.Copy(payload, 8, endBlockSequenceNumberBytes, 0, 8);
+            var numberBlocksBytes = new byte[4];
+            Array.Copy(payload, 0, numberBlocksBytes, 0, 4);
+            var numberOfBlocks = BitConverter.ToInt32(numberBlocksBytes);
+            _logger.LogDebug("Payload size " + payload.Length + " bytes.");
+            _logger.LogDebug("Number of blocks to send: " + numberOfBlocks);
+            var sequenceNumbers = new List<int>();
 
-            var beginBlockSequenceNumber = BitConverter.ToUInt64(beginBlockSequenceNumberBytes);
-            var endBlockSequenceNumber = BitConverter.ToUInt64(endBlockSequenceNumberBytes);
+            int i;
 
-            int sidechainBytesLength = payload.Length - 16;
+            for(i = 4; i < numberOfBlocks * 4 + 4; i += 4)
+            {
+                // _logger.LogDebug("Index: " + i);
+                var sequenceNumberBytes = new byte[4];
+                Array.Copy(payload, i, sequenceNumberBytes, 0, 4);
+                var sequenceNumber = BitConverter.ToInt32(sequenceNumberBytes);
+                sequenceNumbers.Add(sequenceNumber);
+            }
+
+            
+            int sidechainBytesLength = payload.Length - i;
             byte[] stringBytes = new byte[sidechainBytesLength];
-            Array.Copy(payload, 16, stringBytes, 0, sidechainBytesLength);
+            Array.Copy(payload, i, stringBytes, 0, sidechainBytesLength);
 
-            return new BlocksRequestReceivedEventArgs{ ClientAccountName = Encoding.UTF8.GetString(stringBytes), BeginBlockSequenceNumber = beginBlockSequenceNumber, EndBlockSequenceNumber = endBlockSequenceNumber, Sender = sender};
+            return new BlocksRequestReceivedEventArgs{ ClientAccountName = Encoding.UTF8.GetString(stringBytes), BlocksSequenceNumber = sequenceNumbers, Sender = sender};
         }
 
         private PingReceivedEventArgs ParsePingMessage(byte[] payload)
@@ -188,8 +200,7 @@ namespace BlockBase.Network.Rounting
         public class BlocksRequestReceivedEventArgs
         {
             public string ClientAccountName { get; set; }
-            public ulong BeginBlockSequenceNumber { get; set; }
-            public ulong EndBlockSequenceNumber { get; set; }
+            public IList<int> BlocksSequenceNumber { get; set; }
             public IPEndPoint Sender { get; set; }
         }
 

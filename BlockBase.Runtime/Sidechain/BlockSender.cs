@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using static BlockBase.Network.PeerConnection;
 using static BlockBase.Network.Rounting.MessageForwarder;
+using System.Collections.Generic;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -43,8 +44,18 @@ namespace BlockBase.Runtime.Sidechain
         private async void MessageForwarder_BlockRequest(BlocksRequestReceivedEventArgs args)
         {
             _logger.LogDebug("Block request received.");
-            var blocksToSend = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, args.BeginBlockSequenceNumber, args.EndBlockSequenceNumber);
-            if(blocksToSend.Count() == 0) _logger.LogDebug("No blocks to send after " + args.BeginBlockSequenceNumber + " and before or equal to " + args.EndBlockSequenceNumber);
+            var blocksToSend = new List<Block>();
+            foreach(var sequenceNumber in args.BlocksSequenceNumber)
+            {
+                var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, (ulong) sequenceNumber, (ulong) sequenceNumber)).SingleOrDefault();
+                if(block == null) 
+                {
+                    _logger.LogWarning("No block with sequence number "+ sequenceNumber + " to send.");
+                    return;
+                }              
+                blocksToSend.Add(block);
+            } 
+
             foreach(Block block in blocksToSend)
             {
                 _logger.LogDebug("Going to send block: " + block.BlockHeader.SequenceNumber);
