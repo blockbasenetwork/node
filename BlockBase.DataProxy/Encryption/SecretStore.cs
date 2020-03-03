@@ -28,7 +28,7 @@ namespace BlockBase.DataProxy.Encryption
                 throw new Exception("There's already a key to that IV.");
 
             _secretStoreDict.Add(secretId, key);
-            FileWriterReader.Write(keysFileName, secretId + ":" + Base32Encoding.ZBase32.GetString(key));
+            FileWriterReader.Write(keysFileName, secretId + ":" + Base32Encoding.ZBase32.GetString(key), System.IO.FileMode.Append);
         }
 
         public void LoadSecrets()

@@ -7,9 +7,9 @@ namespace BlockBase.Utils
 {
     public static class FileWriterReader
     {
-        public static void Write(string fileName, string text)
+        public static void Write(string fileName, string text, System.IO.FileMode fileMode)
         {
-            using (FileStream file = new FileStream(fileName, FileMode.Append, FileAccess.Write, FileShare.Read))
+            using (FileStream file = new FileStream(fileName, fileMode, FileAccess.Write, FileShare.Read))
             {
                 using (StreamWriter writer = new StreamWriter(file, Encoding.Unicode))
                 {
