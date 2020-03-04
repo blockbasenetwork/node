@@ -273,6 +273,7 @@ namespace BlockBase.Runtime.Mainchain
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
 
+            _logger.LogDebug("Blacklisting producers...");
             foreach (var producer in producers)
             {
                 if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.ClientAccountName, producer.Key);
