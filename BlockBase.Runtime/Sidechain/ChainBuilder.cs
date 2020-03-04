@@ -54,7 +54,7 @@ namespace BlockBase.Runtime.Sidechain
         private DateTime _lastReceivedDate;
         private ProducerInPool _currentSendingProducer;
 
-        private static readonly int MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 10;
+        private static readonly int MAX_TIME_BETWEEN_BLOCKS_IN_SECONDS = 2;
         private static readonly int SLICE_SIZE = 3;
 
         public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
@@ -95,7 +95,19 @@ namespace BlockBase.Runtime.Sidechain
             while (true)
             {
                 _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks()).Take(SLICE_SIZE).ToList();
-                if (_missingBlocksSequenceNumber.Count() == 0) return;
+                if (_missingBlocksSequenceNumber.Count() == 0)
+                {
+                    try
+                    {
+                        await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
+                        _logger.LogDebug("Notified ready.");
+                    }
+                    catch (ApiErrorException)
+                    {
+                        _logger.LogInformation("Already notified ready.");
+                    }
+                    return;
+                }
 
                 _receiving = true;
 
@@ -129,9 +141,11 @@ namespace BlockBase.Runtime.Sidechain
         public NetworkMessage BuildRequestBlocksNetworkMessage(ProducerInPool producer, IList<int> missingSequenceNumbers, string sidechainPoolName)
         {
             var payload = new List<byte>();
+
             var l = missingSequenceNumbers.Count();
             var bt = BitConverter.GetBytes(l);
             payload.AddRange(bt);
+
             foreach (var missingSequenceNumber in missingSequenceNumbers)
                 payload.AddRange(BitConverter.GetBytes(missingSequenceNumber));
 
@@ -145,8 +159,8 @@ namespace BlockBase.Runtime.Sidechain
         private async void MessageForwarder_RecoverBlockReceived(BlockReceivedEventArgs args, IPEndPoint sender)
         {
             if (!_receiving ||
-            !_currentSendingProducer.ProducerInfo.IPEndPoint.Address.Equals(sender.Address)
-            || _currentSendingProducer.ProducerInfo.IPEndPoint.Port != sender.Port)
+            !_currentSendingProducer.PeerConnection.IPEndPoint.Address.Equals(sender.Address)
+            || _currentSendingProducer.PeerConnection.IPEndPoint.Port != sender.Port)
                 return;
 
             _lastReceivedDate = DateTime.UtcNow;
@@ -189,7 +203,7 @@ namespace BlockBase.Runtime.Sidechain
                 var blockAfter = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, blockReceived.BlockHeader.SequenceNumber + 1, blockReceived.BlockHeader.SequenceNumber + 1)).SingleOrDefault();
                 if (blockAfter == null) blockAfter = _blocksApproved.Where(b => b.BlockHeader.SequenceNumber == blockReceived.BlockHeader.SequenceNumber + 1).SingleOrDefault();
 
-                if (blockAfter == null && _missingBlocksSequenceNumber.Contains((int) blockReceived.BlockHeader.SequenceNumber))
+                if (blockAfter == null && _missingBlocksSequenceNumber.Contains((int)blockReceived.BlockHeader.SequenceNumber))
                     _orphanBlocks.Add(blockReceived);
 
                 else if (blockAfter.BlockHeader.PreviousBlockHash.SequenceEqual(blockReceived.BlockHeader.BlockHash))
@@ -197,8 +211,8 @@ namespace BlockBase.Runtime.Sidechain
             }
             if (_missingBlocksSequenceNumber.OrderByDescending(n => n).SequenceEqual(_blocksApproved.Select(b => (int)(b.BlockHeader.SequenceNumber)).OrderByDescending(n => n)))
             {
-                _receiving = false;
                 await UpdateDatabase();
+                _receiving = false;               
             }
         }
 
@@ -215,7 +229,6 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task UpdateDatabase()
         {
-            _logger.LogDebug("Adding blocks to database.");
             var orderedBlocks = _blocksApproved.OrderBy(b => b.BlockHeader.SequenceNumber);
             var databaseName = _sidechainPool.ClientAccountName;
 
@@ -229,6 +242,7 @@ namespace BlockBase.Runtime.Sidechain
                 await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             }
             _blocksApproved.Clear();
+            _logger.LogDebug("Added blocks to database.");
         }
 
 
