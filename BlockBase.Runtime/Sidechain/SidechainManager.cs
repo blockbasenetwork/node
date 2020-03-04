@@ -137,6 +137,10 @@ namespace BlockBase.Runtime.Sidechain
                     {
                         _logger.LogCritical($"Failed to send transaction: {e.Message}");
                     }
+                    catch (ApiException e)
+                    {
+                        _logger.LogCritical($"Failed to communicate with EOS endpoint: {e.Message}");
+                    }
                     catch (HttpRequestException e)
                     {
                         _logger.LogCritical($"Failed to communicate with EOS endpoint: {e.Message}");
