@@ -137,6 +137,10 @@ namespace BlockBase.Runtime.Sidechain
                     {
                         _logger.LogCritical($"Failed to send transaction: {e.Message}");
                     }
+                    catch (ApiException e)
+                    {
+                        _logger.LogCritical($"Failed to communicate with EOS endpoint: {e.Message}");
+                    }
                     catch (HttpRequestException e)
                     {
                         _logger.LogCritical($"Failed to communicate with EOS endpoint: {e.Message}");
@@ -415,6 +419,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private void UpdateIPsInSidechain(List<IPAddressTable> IpsAddressTableEntries)
         {
+            if (!IpsAddressTableEntries.Any() || IpsAddressTableEntries.Any(t => !t.EncryptedIPs.Any())) return;
             foreach (var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
 
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
@@ -510,7 +515,10 @@ namespace BlockBase.Runtime.Sidechain
             UpdateIPsInSidechain(ipAddresses);
 
             if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
-                await _peerConnectionsHandler.CheckConnectionStatus(Sidechain);
+            {
+                var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(Sidechain));
+                checkConnectionTask.Start();
+            }
         }
 
         private async Task CheckContractAndUpdatePool()

@@ -22,6 +22,7 @@ namespace BlockBase.Network.Mainchain
         private MongoDBConfigurations MongoDBConfigurations;
         private readonly ILogger _logger;
         private const int MAX_NUMBER_OF_TRIES = 5;
+        private const int TRANSACTION_EXPIRATION = 20;
 
         public MainchainService(IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, IOptions<MongoDBConfigurations> mongoDBConfigurations, ILogger<MainchainService> logger)
         {
@@ -30,8 +31,11 @@ namespace BlockBase.Network.Mainchain
             MongoDBConfigurations = mongoDBConfigurations.Value;
 
             _logger = logger;
-            EosStub = new EosStub(NetworkConfigurations.ConnectionExpirationTimeInSeconds, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
+            EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
         }
+
+        public async Task<GetAccountResponse> GetAccount(string accountName)
+            => await TryAgain(async () => await EosStub.GetAccount(accountName), NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         #region Transactions
 
@@ -170,12 +174,12 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
-        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, string permission = "active") =>
+        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.CONFIG_CHAIN,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
-                CreateDataForConfigurations(owner, contractInformation),
+                CreateDataForConfigurations(owner, contractInformation, reservedSeats),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -359,20 +363,7 @@ namespace BlockBase.Network.Mainchain
 
             return lastValidSubmittedBlock;
         }
-
-        public async Task<BlockheaderTable> GetLastValidSubmittedBlockheaderFromLastProduction(string chain, long currentProductionStartTime, int numberOfBlocks)
-        {
-            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified && b.Timestamp < currentProductionStartTime).LastOrDefault();
-
-            return lastValidSubmittedBlock;
-        }
-
-        public async Task<List<BlockCountTable>> GetBlockCount(string chain)
-        {
-            var blocks = await RetrieveBlockCount(chain);
-            return blocks;
-        }
-
+        
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)
         {
             var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, proposerName), MAX_NUMBER_OF_TRIES);
@@ -552,12 +543,14 @@ namespace BlockBase.Network.Mainchain
         }
 
 
-        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation)
+        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats)
         {
+            reservedSeats = reservedSeats ?? new List<string>();
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.CONFIG_INFO_JSON, contractInformation },
+                { EosParameterNames.RESERVED_SEATS, reservedSeats}
             };
         }
 

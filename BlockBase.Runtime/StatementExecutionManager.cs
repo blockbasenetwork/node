@@ -193,7 +193,7 @@ namespace BlockBase.Runtime
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError("Error executing sql command.", e);
+                    _logger.LogError($"Error executing sql command.{e}");
                     results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
                 }
             }

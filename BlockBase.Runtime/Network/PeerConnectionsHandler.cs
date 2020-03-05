@@ -36,6 +36,7 @@ namespace BlockBase.Runtime.Network
         private NetworkConfigurations _networkConfigurations;
 
         private string _endPoint;
+        private bool _checkingConnection;
 
         //TODO: this will not be a constant, it will vary with the number of producers in pool
         private const int MINIMUM_RATING = 1;
@@ -73,6 +74,7 @@ namespace BlockBase.Runtime.Network
                 try
                 {
                     var peerConnection = AddIfNotExistsPeerConnection(producerIP.Value, producerIP.Key);
+                    if (peerConnection.ConnectionState == ConnectionStateEnum.Connected) continue;
                     await ConnectAsync(producerIP.Value);
                     peerConnection.ConnectionState = ConnectionStateEnum.Connected;
                     await SendIdentificationMessage(producerIP.Value);
@@ -255,25 +257,36 @@ namespace BlockBase.Runtime.Network
 
         public async Task CheckConnectionStatus(SidechainPool sidechain)
         {
-            var random = new Random();
+            if (_checkingConnection) return;
 
-            foreach (var producer in sidechain.ProducersInPool)
+            try
             {
-                if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
+                _checkingConnection = true;
+                var random = new Random();
+
+                foreach (var producer in sidechain.ProducersInPool)
                 {
-                    var randomInt = random.Next();
-                    await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
-
-                    var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                    if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                    if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
                     {
-                        var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
-                        if (randomInt == pongNonce) continue;
-                    }
+                        var randomInt = random.Next();
+                        await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
 
-                    _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
-                    Disconnect(producer.PeerConnection);
+                        var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
+                        if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                        {
+                            var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                            if (randomInt == pongNonce) continue;
+                        }
+
+                        _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
+                        Disconnect(producer.PeerConnection);
+                    }
                 }
+                _checkingConnection = false;
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical($"Check connection failed with exception: {e}");
             }
         }
 

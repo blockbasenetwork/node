@@ -226,7 +226,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var blockcount = await _mainchainService.GetBlockCount(chainName);
+                var blockcount = await _mainchainService.RetrieveBlockCount(chainName);
                 var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
                 return Ok(new OperationResponse<double>((blockcount.Count * contractInfo.Payment)));
             }

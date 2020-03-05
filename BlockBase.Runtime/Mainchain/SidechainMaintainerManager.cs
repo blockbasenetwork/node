@@ -15,6 +15,7 @@ using BlockBase.Utils.Crypto;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain;
 using System.Net.Http;
+using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -58,13 +59,18 @@ namespace BlockBase.Runtime.Mainchain
             try
             {
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
-                _sidechain.BlockSizeInBytes = contractInfo.SizeOfBlockInBytes;
+                var blocksCount = await _mainchainService.RetrieveBlockCount(_sidechain.ClientAccountName);
+                var numberOfRoundsAlreadyPassed = blocksCount.Sum(b => b.blocksproduced) + blocksCount.Sum(b => b.blocksfailed);
+
+                _sidechain.BlockSizeInBytes = contractInfo.SizeOfBlockInBytes;                
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
-                _roundsUntilSettlement = (int)contractInfo.BlocksBetweenSettlement;
+                _roundsUntilSettlement = Convert.ToInt32(contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
 
                 var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
                 if (stateTable.ProductionTime) await ConnectToProducers();
+
+                await CheckContractAndUpdateWaitTimes();
 
                 while (true)
                 {
@@ -105,6 +111,7 @@ namespace BlockBase.Runtime.Mainchain
         private async Task CheckContractEndState()
         {
             var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechain.ClientAccountName);
+            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
             var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
             int latestTrxTime = 0;
             _forceTryAgain = false;
@@ -112,24 +119,24 @@ namespace BlockBase.Runtime.Mainchain
             try
             {
                 if (stateTable.CandidatureTime &&
-               _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                    contractInfo.CandidatureEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorization(_sidechain.ClientAccountName);
+                    await UpdateAuthorization();
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.SecretTime &&
-                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                    contractInfo.SecretEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.IPSendTime &&
-                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                    contractInfo.SendEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorization(_sidechain.ClientAccountName);
+                    await UpdateAuthorization();
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.IPReceiveTime &&
-                   _sidechain.NextStateWaitEndTime * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                    contractInfo.ReceiveEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
@@ -142,6 +149,7 @@ namespace BlockBase.Runtime.Mainchain
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
                     if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                    await CheckPeerConnections();
                 }
             }
             catch (HttpRequestException)
@@ -207,11 +215,14 @@ namespace BlockBase.Runtime.Mainchain
             }
         }
 
-        private async Task UpdateAuthorization(string accountName)
+        private async Task UpdateAuthorization()
         {
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            var sidechainAccountInfo = await _mainchainService.GetAccount(_sidechain.ClientAccountName);
+            var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
             if (!producerList.Any()) return;
-            if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key))) return;
+            if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) && 
+                producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return;
 
             var producersInPool = producerList.Select(m => new ProducerInPool
             {
@@ -224,7 +235,7 @@ namespace BlockBase.Runtime.Mainchain
             }).ToList();
 
             _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
-            await _mainchainService.AuthorizationAssign(accountName, producerList);
+            await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, producerList);
         }
 
         private async Task LinkAuthorizarion(string actionsName, string owner)
@@ -266,16 +277,45 @@ namespace BlockBase.Runtime.Mainchain
             _logger.LogDebug("Settlement starting...");
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
+            await UpdateAuthorization();
+
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
 
+            _logger.LogDebug("Blacklisting producers...");
             foreach (var producer in producers)
             {
                 if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.ClientAccountName, producer.Key);
             }
 
             await _mainchainService.PunishProd(_sidechain.ClientAccountName);
-            await UpdateAuthorization(_sidechain.ClientAccountName);
+        }
+
+        private async Task CheckPeerConnections()
+        {
+            var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            var producersInPool = producersInTable.Select(m => new ProducerInPool
+            {
+                ProducerInfo = new ProducerInfo
+                {
+                    AccountName = m.Key,
+                    PublicKey = m.PublicKey,
+                    NewlyJoined = false,
+                    IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
+                },
+                PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
+            }).ToList();
+
+            _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
+
+            await ConnectToProducers();
+
+            if (_sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
+            {
+                var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(_sidechain));
+                checkConnectionTask.Start();
+            }
         }
 
         #endregion Auxiliar Methods

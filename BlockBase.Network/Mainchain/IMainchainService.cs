@@ -7,6 +7,7 @@ namespace BlockBase.Network.Mainchain
 {
     public interface IMainchainService
     {
+        Task<GetAccountResponse> GetAccount(string accountName);
         Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
@@ -19,7 +20,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> SafeExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, int limit, string permission = "active");
         Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active");
         Task<string> StartChain(string owner, string publicKey, string permission = "active");
-        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, string permission = "active");
+        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, string permission = "active");
         Task<string> EndChain(string owner, string permission = "active");
         Task<string> StartCandidatureTime(string owner, string permission = "active");
         Task<string> PunishProd(string owner, string permission = "active");
@@ -42,8 +43,7 @@ namespace BlockBase.Network.Mainchain
         Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string chain, int numberOfBlocks);
         Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks);
         Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks);
-        Task<BlockheaderTable> GetLastValidSubmittedBlockheaderFromLastProduction(string chain, long currentProductionStartTime, int numberOfBlocks);
-        Task<List<BlockCountTable>> GetBlockCount(string chain);
+        Task<List<BlockCountTable>> RetrieveBlockCount(string chain);
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string account);
         Task<TokenAccountTable> RetrieveTokenBalance(string account);
