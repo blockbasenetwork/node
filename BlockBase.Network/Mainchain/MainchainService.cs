@@ -363,14 +363,7 @@ namespace BlockBase.Network.Mainchain
 
             return lastValidSubmittedBlock;
         }
-
-        public async Task<BlockheaderTable> GetLastValidSubmittedBlockheaderFromLastProduction(string chain, long currentProductionStartTime, int numberOfBlocks)
-        {
-            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified && b.Timestamp < currentProductionStartTime).LastOrDefault();
-
-            return lastValidSubmittedBlock;
-        }
-
+        
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)
         {
             var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, proposerName), MAX_NUMBER_OF_TRIES);

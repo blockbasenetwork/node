@@ -93,20 +93,21 @@ namespace BlockBase.Runtime.Sidechain
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
                                 await CancelProposalTransactionIfExists();
+                                await CheckIfBlockHeadersInSmartContractAreUpdated(currentProducerTable.StartProductionTime);
 
-                                var lastValidBlockheaderSmartContractFromLastProduction = await _mainchainService.GetLastValidSubmittedBlockheaderFromLastProduction(_sidechainPool.ClientAccountName, currentProducerTable.StartProductionTime, (int)_sidechainPool.BlocksBetweenSettlement);
-                                if (lastValidBlockheaderSmartContractFromLastProduction != null)
+                                var lastValidBlockheaderSmartContract = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+                                if (lastValidBlockheaderSmartContract != null)
                                 {
-                                    if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash, currentProducerTable.StartProductionTime))
+                                    if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime))
                                     {
                                         await BuildChain();
                                     }
 
-                                    if (!await _mongoDbProducerService.IsBlockConfirmed(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash))
+                                    if (!await _mongoDbProducerService.IsBlockConfirmed(databaseName, lastValidBlockheaderSmartContract.BlockHash))
                                     {
-                                        var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash);
+                                        var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(databaseName, lastValidBlockheaderSmartContract.BlockHash);
                                         //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
-                                        await _mongoDbProducerService.ConfirmBlock(databaseName, lastValidBlockheaderSmartContractFromLastProduction.BlockHash);
+                                        await _mongoDbProducerService.ConfirmBlock(databaseName, lastValidBlockheaderSmartContract.BlockHash);
                                     }
                                 }
 
@@ -220,6 +221,16 @@ namespace BlockBase.Runtime.Sidechain
             catch (ApiErrorException apiException)
             {
                 _logger.LogCritical($"Unable to cancel existing proposal with error: {apiException?.error?.name}");
+            }
+        }
+
+        private async Task CheckIfBlockHeadersInSmartContractAreUpdated(long currentStartProductionTime)
+        {
+            while (true)
+            {
+                var lastSubmittedBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+                if (lastSubmittedBlock.IsVerified || lastSubmittedBlock.Timestamp > currentStartProductionTime) break;
+                await Task.Delay(50);
             }
         }
 
