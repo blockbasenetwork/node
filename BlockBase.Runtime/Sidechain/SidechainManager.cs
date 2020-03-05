@@ -418,6 +418,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private void UpdateIPsInSidechain(List<IPAddressTable> IpsAddressTableEntries)
         {
+            if (!IpsAddressTableEntries.Any() || IpsAddressTableEntries.Any(t => !t.EncryptedIPs.Any())) return;
             foreach (var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
 
             int numberOfIpsToUpdate = (int)Math.Ceiling(Sidechain.ProducersInPool.Count() / 4.0);
