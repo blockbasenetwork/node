@@ -13,6 +13,8 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Protos;
 using BlockBase.Domain.Results;
@@ -103,41 +105,29 @@ namespace BlockBase.Runtime
                             }
                             break;
 
-                        case UpdateSqlCommand updateSqlCommand:
-                            sqlTextToExecute = updateSqlCommand.TransformedSqlStatementText[0];
+                        case ChangeRecordSqlCommand changeRecordSqlCommand:
+                            sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
                             _logger.LogDebug(sqlTextToExecute);
-
-                            resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                            var finalListOfUpdates = _infoPostProcessing.UpdateUpdateRecordStatement(updateSqlCommand, resultsList, _databaseName);
-
-                            var updatesToExecute = finalListOfUpdates.Select(u => _generator.BuildString(u)).ToList();
-
-                            foreach (var updateToExecute in updatesToExecute)
+                            if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
                             {
-                                _logger.LogDebug(updateToExecute);                                                            
-                                await _connector.ExecuteCommand(updateToExecute, _databaseName);
-                                await SendTransactionToProducers(updateToExecute, _databaseName); 
+                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                                var finalListOfUpdates = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, resultsList, _databaseName);
 
+                                var changesToExecute = finalListOfUpdates.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement) u)).ToList();
+
+                                foreach (var changeRecordsToExecute in changesToExecute)
+                                {
+                                    _logger.LogDebug(changeRecordsToExecute);
+                                    await _connector.ExecuteCommand(changeRecordsToExecute, _databaseName);
+                                    await SendTransactionToProducers(changeRecordsToExecute, _databaseName);
+                                }
                             }
-                            results.Add(createQueryResult(true, updateSqlCommand.OriginalSqlStatement.GetStatementType()));
-                            break;
-
-                        case DeleteSqlCommand deleteSqlCommand:
-                            sqlTextToExecute = deleteSqlCommand.TransformedSqlStatementText[0];
-                            _logger.LogDebug(sqlTextToExecute);
-
-                            resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                            var finalListOfDeletes = _infoPostProcessing.UpdateDeleteRecordStatement(deleteSqlCommand, resultsList, _databaseName);
-
-                            var deletesToExecute = finalListOfDeletes.Select(u => _generator.BuildString(u)).ToList();
-
-                            foreach (var deleteToExecute in deletesToExecute)
+                            else
                             {
-                                _logger.LogDebug(deleteToExecute);
-                                await _connector.ExecuteCommand(deleteToExecute, _databaseName);
-                                await SendTransactionToProducers(deleteToExecute, _databaseName);               
+                                await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
+                                await SendTransactionToProducers(sqlTextToExecute, _databaseName);
                             }
-                            results.Add(createQueryResult(true, deleteSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            results.Add(createQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
 
 
@@ -145,9 +135,9 @@ namespace BlockBase.Runtime
                             for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
                             {
                                 sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
-                                _logger.LogDebug(sqlTextToExecute);                               
+                                _logger.LogDebug(sqlTextToExecute);
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName); 
+                                await SendTransactionToProducers(sqlTextToExecute, _databaseName);
                             }
                             results.Add(createQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -172,9 +162,9 @@ namespace BlockBase.Runtime
                                     await _connector.ExecuteCommand(sqlTextToExecute, null);
                                 else
                                     await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                
+
                                 _logger.LogDebug(sqlTextToExecute);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName ?? ""); 
+                                await SendTransactionToProducers(sqlTextToExecute, _databaseName ?? "");
                             }
                             results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -215,20 +205,20 @@ namespace BlockBase.Runtime
         private async Task SendTransactionToProducers(string queryToExecute, string databaseName)
         {
             var transactionNumber = Convert.ToUInt64(_databaseAccess.GetNextTransactionNumber());
-            foreach(var peerConnection in _peerConnectionsHandler.CurrentPeerConnections)
+            foreach (var peerConnection in _peerConnectionsHandler.CurrentPeerConnections)
             {
-                var transaction = CreateTransaction(queryToExecute, transactionNumber, databaseName, _nodeConfigurations.ActivePrivateKey);                
-                var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, TransactionProtoToMessageData(transaction.ConvertToProto(), _nodeConfigurations.AccountName), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.LocalIpAddress+":"+_networkConfigurations.LocalTcpPort, peerConnection.ConnectionAccountName, peerConnection.IPEndPoint);
+                var transaction = CreateTransaction(queryToExecute, transactionNumber, databaseName, _nodeConfigurations.ActivePrivateKey);
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, TransactionProtoToMessageData(transaction.ConvertToProto(), _nodeConfigurations.AccountName), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort, peerConnection.ConnectionAccountName, peerConnection.IPEndPoint);
                 await _networkService.SendMessageAsync(message);
             }
         }
 
-         private Transaction CreateTransaction(string json, ulong sequenceNumber, string databaseName, string senderPrivateKey)
+        private Transaction CreateTransaction(string json, ulong sequenceNumber, string databaseName, string senderPrivateKey)
         {
-            var transaction =  new Transaction()
-            { 
-                Json = json, 
-                BlockHash = new byte[0], 
+            var transaction = new Transaction()
+            {
+                Json = json,
+                BlockHash = new byte[0],
                 SequenceNumber = sequenceNumber,
                 Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
                 TransactionHash = new byte[0],
@@ -253,7 +243,7 @@ namespace BlockBase.Runtime
             var sidechainNameBytes = Encoding.UTF8.GetBytes(sidechainName);
             // logger.LogDebug($"Sidechain Name Bytes {HashHelper.ByteArrayToFormattedHexaString(sidechainNameBytes)}");
 
-            short lenght = (short) sidechainNameBytes.Length;
+            short lenght = (short)sidechainNameBytes.Length;
             // logger.LogDebug($"Lenght {lenght}");
 
             var lengthBytes = BitConverter.GetBytes(lenght);

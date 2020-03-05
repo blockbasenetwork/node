@@ -110,9 +110,9 @@ namespace BlockBase.Domain.Database.Sql.Generators
         public string BuildString(DeleteRecordStatement deleteRecordStatement)
         {
             var psqlString = "DELETE FROM " + deleteRecordStatement.TableName.Value;
-            if (deleteRecordStatement.WhereClause != null)
+            if (deleteRecordStatement.WhereExpression != null)
             {
-                psqlString += " WHERE " + BuildString(deleteRecordStatement.WhereClause);
+                psqlString += " WHERE " + BuildString(deleteRecordStatement.WhereExpression);
             }
             return psqlString;
         }

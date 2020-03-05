@@ -6,16 +6,17 @@ using System.Text;
 
 namespace BlockBase.Domain.Database.Sql.SqlCommand
 {
-    public class UpdateSqlCommand : ISqlCommand
+    public class ChangeRecordSqlCommand : ISqlCommand
     {
         public IList<string> TransformedSqlStatementText { get; set; }
 
         public ISqlStatement OriginalSqlStatement { get; set; }
         public IList<ISqlStatement> TransformedSqlStatement { get; set; }
 
-        public UpdateSqlCommand(UpdateRecordStatement updateRecordStatement)
+        public ChangeRecordSqlCommand(IChangeRecordStatement changeRecordStatement)
         {
-            OriginalSqlStatement = updateRecordStatement;
+            OriginalSqlStatement = changeRecordStatement;
         }
+
     }
 }

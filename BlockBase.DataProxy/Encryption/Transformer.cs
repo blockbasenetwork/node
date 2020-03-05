@@ -1,9 +1,6 @@
-﻿using BlockBase.DataPersistence.Sidechain.Connectors;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
-using BlockBase.Domain.Database.Sql.QueryBuilder;
+﻿using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
@@ -30,6 +27,7 @@ namespace BlockBase.DataProxy.Encryption
         private InfoRecord _databaseInfoRecord = null;
 
         private IEncryptor _encryptor;
+        private bool _isSelectStatementNeeded;
 
         public Transformer(MiddleMan middleMan)
         {
@@ -371,6 +369,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private IList<ISqlStatement> GetTransformedUpdateRecordStatement(UpdateRecordStatement updateRecordStatement, string databaseIV)
         {
+            _isSelectStatementNeeded = false;
             var sqlStatements = new List<ISqlStatement>();
 
             var selectStatement = new SimpleSelectStatement();
@@ -397,6 +396,7 @@ namespace BlockBase.DataProxy.Encryption
 
                     else
                     {
+                        _isSelectStatementNeeded = true;
                         selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
                         selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
                         selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
@@ -414,7 +414,7 @@ namespace BlockBase.DataProxy.Encryption
             }
 
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
-            sqlStatements.Add(selectStatement);
+            if(_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
             if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
             {
@@ -427,6 +427,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private IList<ISqlStatement> GetTransformedDeleteRecordStatement(DeleteRecordStatement deleteRecordStatement, string databaseIV)
         {
+            _isSelectStatementNeeded = false;
             var sqlStatements = new List<ISqlStatement>();
 
             var selectStatement = new SimpleSelectStatement();
@@ -437,10 +438,10 @@ namespace BlockBase.DataProxy.Encryption
 
             transformedDeleteRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
-            selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(deleteRecordStatement.WhereClause, databaseIV, selectStatement.SelectCoreStatement);
-            sqlStatements.Add(selectStatement);
+            selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(deleteRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
+            if(_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
-            transformedDeleteRecordStatement.WhereClause = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+            transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
             sqlStatements.Add(transformedDeleteRecordStatement);
 
             return sqlStatements;
@@ -559,7 +560,12 @@ namespace BlockBase.DataProxy.Encryption
             if (leftColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
             {
                 var isColumnUnique = leftColumnInfoRecord.LData.EncryptedIVColumnName == null;
-                if (!isColumnUnique) transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.LData.EncryptedIVColumnName)));
+                if (!isColumnUnique) 
+                {
+                    transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.LData.EncryptedIVColumnName)));
+                    _isSelectStatementNeeded = true;
+                }
+
 
                 if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Equal || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Different)
                 {
@@ -572,6 +578,7 @@ namespace BlockBase.DataProxy.Encryption
                 }
                 else
                 {
+                    _isSelectStatementNeeded = true;
                     transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedRangeColumnName);
                     if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))
                     {

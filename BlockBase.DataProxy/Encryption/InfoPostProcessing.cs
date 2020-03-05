@@ -37,29 +37,31 @@ namespace BlockBase.DataProxy.Encryption
             return new QueryResult(allResults, encryptedColumnNames);
         }
 
-        //TODO: Refactor Delete and Update methods are similiar
-        public IList<UpdateRecordStatement> UpdateUpdateRecordStatement(UpdateSqlCommand updateSqlCommand, IList<IList<string>> allResults, string databaseName)
+        public IList<IChangeRecordStatement> UpdateChangeRecordStatement(ChangeRecordSqlCommand changeRecordSqlCommand, IList<IList<string>> allResults, string databaseName)
         {
-            var originalUpdateRecordStatement = (UpdateRecordStatement)updateSqlCommand.OriginalSqlStatement;
-            var transformedSimpleSelectStatement = (SimpleSelectStatement)updateSqlCommand.TransformedSqlStatement[0];
+            var originalChangeRecordStatement = (IChangeRecordStatement)changeRecordSqlCommand.OriginalSqlStatement;
+            var transformedSimpleSelectStatement = (SimpleSelectStatement)changeRecordSqlCommand.TransformedSqlStatement[0];
 
-            var updateRecordStatements = new List<UpdateRecordStatement>();
+            var changeRecordStatements = new List<IChangeRecordStatement>();
 
             var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
-            var filteredResults = FilterExpression(originalUpdateRecordStatement.WhereExpression, decryptedResults, columnNames);
+            var filteredResults = FilterExpression(originalChangeRecordStatement.WhereExpression, decryptedResults, columnNames);
 
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
-            var tableInfoRecord = _encryptor.FindInfoRecord(originalUpdateRecordStatement.TableName, databaseInfoRecord.IV);
+            var tableInfoRecord = _encryptor.FindInfoRecord(originalChangeRecordStatement.TableName, databaseInfoRecord.IV);
 
-            var additionalUpdateRecordStatements = GetAdditionalUpdateRecordStatements(originalUpdateRecordStatement, columnNames, tableInfoRecord, filteredResults);
-            updateRecordStatements.AddRange(additionalUpdateRecordStatements);
+            if(changeRecordSqlCommand.OriginalSqlStatement is UpdateRecordStatement originalUpdateRecordStatement)
+            {
+                var additionalUpdateRecordStatements = GetAdditionalUpdateRecordStatements(originalUpdateRecordStatement, columnNames, tableInfoRecord, filteredResults);
+                changeRecordStatements.AddRange(additionalUpdateRecordStatements);
+            }
 
             var wrongResults = decryptedResults.Except(filteredResults).ToList(); //these are needed to remove extra results on the first
 
-            if (updateSqlCommand.TransformedSqlStatement.Count == 2)
+            if (changeRecordSqlCommand.TransformedSqlStatement.Count == 2)
             {
-                var transformedUpdateRecordStatement = (UpdateRecordStatement)updateSqlCommand.TransformedSqlStatement[1];
-                updateRecordStatements.Add(transformedUpdateRecordStatement);
+                var transformedChangeRecordStatement = (IChangeRecordStatement)changeRecordSqlCommand.TransformedSqlStatement[1];
+                changeRecordStatements.Add(transformedChangeRecordStatement);
                 if (wrongResults.Count() != 0)
                 {
                     foreach (var tableColumn in columnNames)
@@ -72,11 +74,11 @@ namespace BlockBase.DataProxy.Encryption
                                 var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
                                 var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName + "." + columnInfoRecord.LData.EncryptedIVColumnName);
 
-                                if (transformedUpdateRecordStatement.WhereExpression != null)
+                                if (transformedChangeRecordStatement.WhereExpression != null)
                                 {
-                                    transformedUpdateRecordStatement.WhereExpression.HasParenthesis = true;
-                                    transformedUpdateRecordStatement.WhereExpression = new LogicalExpression(
-                                        transformedUpdateRecordStatement.WhereExpression,
+                                    transformedChangeRecordStatement.WhereExpression.HasParenthesis = true;
+                                    transformedChangeRecordStatement.WhereExpression = new LogicalExpression(
+                                        transformedChangeRecordStatement.WhereExpression,
                                         new ComparisonExpression(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)),
                                         new Value(row[ivIndexColumn], true),
                                         ComparisonExpression.ComparisonOperatorEnum.Different),
@@ -88,10 +90,7 @@ namespace BlockBase.DataProxy.Encryption
                     }
                 }
             }
-
-            return updateRecordStatements;
-
-
+            return changeRecordStatements;
         }
 
         private IList<UpdateRecordStatement> GetAdditionalUpdateRecordStatements(UpdateRecordStatement originalUpdateRecordStatement, IList<TableAndColumnName> columnNames, InfoRecord tableInfoRecord, IList<IList<string>> filteredResults)
@@ -127,53 +126,6 @@ namespace BlockBase.DataProxy.Encryption
 
             return updateRecordStatements;
 
-        }
-
-        public IList<DeleteRecordStatement> UpdateDeleteRecordStatement(DeleteSqlCommand deleteSqlCommand, IList<IList<string>> allResults, string databaseName)
-        {
-            var originalDeleteRecordStatement = (DeleteRecordStatement)deleteSqlCommand.OriginalSqlStatement;
-            var transformedSimpleSelectStatement = (SimpleSelectStatement)deleteSqlCommand.TransformedSqlStatement[0];
-
-            var deleteRecordStatements = new List<DeleteRecordStatement>();
-
-            var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
-            var filteredResults = FilterExpression(originalDeleteRecordStatement.WhereClause, decryptedResults, columnNames);
-
-            var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
-            var tableInfoRecord = _encryptor.FindInfoRecord(originalDeleteRecordStatement.TableName, databaseInfoRecord.IV);
-
-            var wrongResults = decryptedResults.Except(filteredResults).ToList(); //these are needed to remove extra results on the first
-
-            var transformedDeleteRecordStatement = (DeleteRecordStatement)deleteSqlCommand.TransformedSqlStatement[1];
-            transformedDeleteRecordStatement.WhereClause.HasParenthesis = true;
-            deleteRecordStatements.Add(transformedDeleteRecordStatement);
-            if (wrongResults.Count() != 0)
-            {
-                foreach (var tableColumn in columnNames)
-                {
-                    var columnInfoRecord = _encryptor.FindInfoRecord(tableColumn.ColumnName, tableInfoRecord.IV);
-                    if (columnInfoRecord != null && columnInfoRecord.LData.EncryptedIVColumnName != null)
-                    {
-                        foreach (var row in wrongResults)
-                        {
-                            var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
-                            var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName + "." + columnInfoRecord.LData.EncryptedIVColumnName);
-
-                            if (transformedDeleteRecordStatement.WhereClause != null)
-                            { 
-                                transformedDeleteRecordStatement.WhereClause = new LogicalExpression(
-                                    transformedDeleteRecordStatement.WhereClause,
-                                    new ComparisonExpression(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)),
-                                    new Value(row[ivIndexColumn], true),
-                                    ComparisonExpression.ComparisonOperatorEnum.Different),
-                                    LogicalExpression.LogicalOperatorEnum.AND);
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-            return deleteRecordStatements;
         }
 
         public IList<IList<string>> DecryptRows(SimpleSelectStatement simpleSelectStatement, IList<IList<string>> allResults, string databaseName, out IList<TableAndColumnName> columnNames)

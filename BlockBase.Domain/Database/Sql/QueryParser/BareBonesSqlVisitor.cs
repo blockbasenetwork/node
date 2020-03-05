@@ -208,7 +208,7 @@ namespace BlockBase.Domain.Database.QueryParser
             return new DeleteRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
-                WhereClause = context.expr() != null ? (AbstractExpression)Visit(context.expr()) : null
+                WhereExpression = context.expr() != null ? (AbstractExpression)Visit(context.expr()) : null
             };
         }
 

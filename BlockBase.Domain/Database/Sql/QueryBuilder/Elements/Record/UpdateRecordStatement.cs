@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
 {
-    public class UpdateRecordStatement : ISqlStatement
+    public class UpdateRecordStatement : IChangeRecordStatement
     {
         public estring TableName { get; set; }
         public Dictionary<estring, Value> ColumnNamesAndUpdateValues { get; set; }
