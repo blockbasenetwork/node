@@ -229,7 +229,7 @@ namespace BlockBase.Runtime.Sidechain
             while (true)
             {
                 var lastSubmittedBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-                if (lastSubmittedBlock.IsVerified || lastSubmittedBlock.Timestamp > currentStartProductionTime) break;
+                if (lastSubmittedBlock == null || lastSubmittedBlock.IsVerified || lastSubmittedBlock.Timestamp > currentStartProductionTime) break;
                 await Task.Delay(50);
             }
         }
