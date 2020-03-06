@@ -212,18 +212,21 @@ namespace BlockBase.Runtime.Sidechain
             if (_missingBlocksSequenceNumber.OrderByDescending(n => n).SequenceEqual(_blocksApproved.Select(b => (int)(b.BlockHeader.SequenceNumber)).OrderByDescending(n => n)))
             {
                 await UpdateDatabase();
-                _receiving = false;               
+                _receiving = false;
             }
         }
 
         private void AddApprovedBlock(Block block)
         {
-            _blocksApproved.Add(block);
-            foreach (var orphan in _orphanBlocks)
+            if (_blocksApproved.Select(o => o.BlockHeader.BlockHash == block.BlockHeader.BlockHash).Count() != 0)
             {
-                if (orphan.BlockHeader.SequenceNumber + 1 == block.BlockHeader.SequenceNumber
-                && orphan.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.PreviousBlockHash))
-                    _blocksApproved.Add(orphan);
+                _blocksApproved.Add(block);
+                foreach (var orphan in _orphanBlocks)
+                {
+                    if (orphan.BlockHeader.SequenceNumber + 1 == block.BlockHeader.SequenceNumber
+                    && orphan.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.PreviousBlockHash))
+                        _blocksApproved.Add(orphan);
+                }
             }
         }
 
