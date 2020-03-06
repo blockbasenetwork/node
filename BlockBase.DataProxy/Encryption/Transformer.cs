@@ -296,6 +296,8 @@ namespace BlockBase.DataProxy.Encryption
         private ISqlStatement GetTransformedSimpleSelectStatement(SimpleSelectStatement simpleSelectStatement, string databaseIV)
         {
             var transformedSimpleSelectStatement = new SimpleSelectStatement();
+            transformedSimpleSelectStatement.Limit = simpleSelectStatement.Limit;
+            transformedSimpleSelectStatement.Offset = simpleSelectStatement.Offset;
             transformedSimpleSelectStatement.SelectCoreStatement = (SelectCoreStatement)GetTransformedSelectCoreStatement(simpleSelectStatement.SelectCoreStatement, databaseIV);
             return transformedSimpleSelectStatement;
         }
