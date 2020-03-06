@@ -4,7 +4,7 @@ using System.Text;
 
 namespace BlockBase.DataProxy.Encryption
 {
-    public static class KeyAndIVGenerator_v2
+    public static class KeyAndIVGenerator
     {
         public const int AES_BLOCK_SIZE = 16;
         private const int AES_KEY_SIZE = 32;

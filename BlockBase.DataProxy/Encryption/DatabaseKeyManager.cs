@@ -28,7 +28,7 @@ namespace BlockBase.DataProxy.Encryption
             _logger = logger;
             SecretStore = new SecretStore(logger);
             SecretStore.SetSecret("master_key", Base32Encoding.ZBase32.ToBytes(nodeConfigurations.Value.EncryptionMasterKey));
-            SecretStore.SetSecret("master_iv", KeyAndIVGenerator_v2.CreateMasterIV(nodeConfigurations.Value.EncryptionPassword));
+            SecretStore.SetSecret("master_iv", KeyAndIVGenerator.CreateMasterIV(nodeConfigurations.Value.EncryptionPassword));
             _infoRecordManager = new InfoRecordManager();
             _connector = connector;
             SyncData().Wait();
@@ -58,9 +58,9 @@ namespace BlockBase.DataProxy.Encryption
         public InfoRecord AddInfoRecord(estring name, InfoRecordTypeEnum recordTypeEnum, byte[] parentManageKey, byte[] parentIV, string data = null)
         {
 
-            var ivBytes = KeyAndIVGenerator_v2.CreateRandomIV();
-            var keyManageBytes = KeyAndIVGenerator_v2.CreateDerivateKey(parentManageKey, parentIV);
-            var keyNameBytes = KeyAndIVGenerator_v2.CreateDerivateKey(keyManageBytes, ivBytes);
+            var ivBytes = KeyAndIVGenerator.CreateRandomIV();
+            var keyManageBytes = KeyAndIVGenerator.CreateDerivateKey(parentManageKey, parentIV);
+            var keyNameBytes = KeyAndIVGenerator.CreateDerivateKey(keyManageBytes, ivBytes);
 
             var localNameHash = Base32Encoding.ZBase32.GetString(Utils.Crypto.Utils.SHA256(Encoding.Unicode.GetBytes(name.Value)));
             string recordName = !name.ToEncrypt ? name.Value : "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(name.Value), keyNameBytes, ivBytes));
@@ -129,7 +129,7 @@ namespace BlockBase.DataProxy.Encryption
 
             catch (System.Security.Cryptography.CryptographicException)
             {
-                var derivatedKeyRead = KeyAndIVGenerator_v2.CreateDerivateKey(key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
+                var derivatedKeyRead = KeyAndIVGenerator.CreateDerivateKey(key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
                 decryptedKeyNameData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyName), derivatedKeyRead, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
                 return decryptedKeyNameData;
             }
@@ -176,7 +176,7 @@ namespace BlockBase.DataProxy.Encryption
                 if (infoRecord.KeyName != null) keyNameBytes = GetKeyNameFromInfoRecord(infoRecord);
                 else
                 {
-                    keyNameBytes = KeyAndIVGenerator_v2.CreateDerivateKey(GetKeyManageFromInfoRecord(infoRecord), ivBytes);
+                    keyNameBytes = KeyAndIVGenerator.CreateDerivateKey(GetKeyManageFromInfoRecord(infoRecord), ivBytes);
                     infoRecord.KeyName = Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(keyNameBytes, keyNameBytes, ivBytes));
                 }
                 infoRecord.Name = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(newName.Value), keyNameBytes, ivBytes));
@@ -276,7 +276,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
 
-            var randomIV = KeyAndIVGenerator_v2.CreateRandomIV();
+            var randomIV = KeyAndIVGenerator.CreateRandomIV();
             generatedIV = Base32Encoding.ZBase32.GetString(randomIV);
 
             var valueInBytes = Encoding.ASCII.GetBytes(valueToInsert);
