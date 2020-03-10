@@ -152,8 +152,8 @@ namespace BlockBase.DataPersistence.ProducerData
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
-                ulong lowerEndToGet = 0;
-                ulong upperEndToGet = 0;
+                ulong lowerEndToGet = 1;
+                ulong upperEndToGet;
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
@@ -161,9 +161,9 @@ namespace BlockBase.DataPersistence.ProducerData
                 
                 while (true)
                 {
-                    upperEndToGet = lowerEndToGet + 100 > endSequenceNumber ? endSequenceNumber : lowerEndToGet + 100;
+                    upperEndToGet = lowerEndToGet + 99 > endSequenceNumber ? endSequenceNumber : lowerEndToGet + 99;
                     
-                    var blockHeadersResponse = await blockHeaderCollection.FindAsync(b => b.SequenceNumber > lowerEndToGet && b.SequenceNumber <= upperEndToGet);
+                    var blockHeadersResponse = await blockHeaderCollection.FindAsync(b => b.SequenceNumber >= lowerEndToGet && b.SequenceNumber <= upperEndToGet);
                     var blockHeaders = await blockHeadersResponse.ToListAsync();
                     var sequenceNumbers = blockHeaders.Select(b => b.SequenceNumber).OrderBy(s => s);
                     for (ulong i = lowerEndToGet; i <= upperEndToGet; i++)
@@ -173,10 +173,10 @@ namespace BlockBase.DataPersistence.ProducerData
 
                     if (upperEndToGet == endSequenceNumber) break;
                     
-                    lowerEndToGet = upperEndToGet;
+                    lowerEndToGet = upperEndToGet + 1;
                 }
 
-                return missingSequenceNumbers;
+                return missingSequenceNumbers.OrderByDescending(s => s);
             }
         }
 

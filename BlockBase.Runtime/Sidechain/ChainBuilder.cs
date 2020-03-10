@@ -47,6 +47,7 @@ namespace BlockBase.Runtime.Sidechain
         private ThreadSafeList<Block> _blocksApproved;
         private ThreadSafeList<Block> _orphanBlocks;
         private IEnumerable<ulong> _missingBlocksSequenceNumber;
+        private IEnumerable<ulong> _currentlyGettingBlocks;
         private BlockheaderTable _lastSidechainBlockheader;
         private ISidechainDatabasesManager _sidechainDatabaseManager;
         private bool _receiving;
@@ -112,14 +113,16 @@ namespace BlockBase.Runtime.Sidechain
                     return;
                 }
 
+                _currentlyGettingBlocks = _missingBlocksSequenceNumber.Take(SLICE_SIZE);
+
                 await _mongoDbProducerService.RemoveUnconfirmedBlocks(_sidechainPool.ClientAccountName);
 
                 _receiving = true;
 
                 _logger.LogDebug($"Asking for blocks:");
-                foreach (var missingSequenceNumber in _missingBlocksSequenceNumber) _logger.LogDebug(missingSequenceNumber + "");
+                foreach (var missingSequenceNumber in _currentlyGettingBlocks) _logger.LogDebug(missingSequenceNumber + "");
 
-                var message = BuildRequestBlocksNetworkMessage(_currentSendingProducer, _missingBlocksSequenceNumber, _sidechainPool.ClientAccountName);
+                var message = BuildRequestBlocksNetworkMessage(_currentSendingProducer, _currentlyGettingBlocks, _sidechainPool.ClientAccountName);
                 await _networkService.SendMessageAsync(message);
 
                 _lastReceivedDate = DateTime.UtcNow;
@@ -181,7 +184,7 @@ namespace BlockBase.Runtime.Sidechain
         public async Task HandleReceivedBlock(BlockProto blockProtoReceived)
         {
             var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
-            if (!_missingBlocksSequenceNumber.Contains(blockReceived.BlockHeader.SequenceNumber))
+            if (!_currentlyGettingBlocks.Contains(blockReceived.BlockHeader.SequenceNumber))
             {
                 _logger.LogDebug("Block received was not requested.");
                 return;
@@ -229,7 +232,7 @@ namespace BlockBase.Runtime.Sidechain
                 }
             }
 
-            if (_blocksApproved.Count() == _missingBlocksSequenceNumber.Count())
+            if (_blocksApproved.Count() == _currentlyGettingBlocks.Count())
             {
                 await UpdateDatabase();
                 _receiving = false;
