@@ -131,9 +131,6 @@ namespace BlockBase.DataPersistence.ProducerData
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
-                Console.WriteLine("Sidechain name: " + databaseName);
-                Console.WriteLine("Begin Sequence number: " + beginSequenceNumber);
-                Console.WriteLine("End Sequence number: " + endSequenceNumber);
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var blockHeaders = await (await blockHeaderCollection.FindAsync(b => b.SequenceNumber >= beginSequenceNumber && b.SequenceNumber <= endSequenceNumber)).ToListAsync();

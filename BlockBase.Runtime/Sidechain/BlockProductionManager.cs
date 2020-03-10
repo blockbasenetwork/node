@@ -101,11 +101,13 @@ namespace BlockBase.Runtime.Sidechain
                                 {
                                     if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime))
                                     {
+                                        _logger.LogDebug("Producer not up to date, building chain.");
                                         await BuildChain();
                                     }
 
                                     if (!await _mongoDbProducerService.IsBlockConfirmed(databaseName, lastValidBlockheaderSmartContract.BlockHash))
                                     {
+                                        _logger.LogDebug("Confirming block.");
                                         var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(databaseName, lastValidBlockheaderSmartContract.BlockHash);
                                         //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
                                         await _mongoDbProducerService.ConfirmBlock(databaseName, lastValidBlockheaderSmartContract.BlockHash);
@@ -114,6 +116,7 @@ namespace BlockBase.Runtime.Sidechain
 
                                 if (_currentProducingProducerAccountName == _nodeConfigurations.AccountName && !currentProducerTable.HasProducedBlock)
                                 {
+                                    _logger.LogDebug("Producing block.");
                                     var block = await ProduceBlock();
                                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                                     await ProposeBlock(block);
