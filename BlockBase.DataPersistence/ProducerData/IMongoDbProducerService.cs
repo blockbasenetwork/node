@@ -15,6 +15,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<Block> GetLastValidSidechainBlockAsync(string databaseName);
         Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
         Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber);
+        Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber);
         Task RemoveBlockFromDatabaseAsync(string databaseName, string blockHash);
         Task RemoveUnconfirmedBlocks(string databaseName);
         Task<bool> SynchronizeDatabaseWithSmartContract(string databaseName, string blockHash, long lastProductionTime);

@@ -127,6 +127,7 @@ namespace BlockBase.DataPersistence.ProducerData
                 return null;
             }
         }
+
         public async Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -146,6 +147,39 @@ namespace BlockBase.DataPersistence.ProducerData
                 return blockList;
             }
         }
+
+        public async Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                ulong lowerEndToGet = 0;
+                ulong upperEndToGet = 0;
+                session.StartTransaction();
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
+                var missingSequenceNumbers = new List<ulong>();
+                
+                while (true)
+                {
+                    upperEndToGet = lowerEndToGet + 100 > endSequenceNumber ? endSequenceNumber : lowerEndToGet + 100;
+                    
+                    var blockHeadersResponse = await blockHeaderCollection.FindAsync(b => b.SequenceNumber > lowerEndToGet && b.SequenceNumber <= upperEndToGet);
+                    var blockHeaders = await blockHeadersResponse.ToListAsync();
+                    var sequenceNumbers = blockHeaders.Select(b => b.SequenceNumber).OrderBy(s => s);
+                    for (ulong i = lowerEndToGet; i <= upperEndToGet; i++)
+                    {
+                        if(!sequenceNumbers.Contains(i)) missingSequenceNumbers.Add(i);
+                    }
+
+                    if (upperEndToGet == endSequenceNumber) break;
+                    
+                    lowerEndToGet = upperEndToGet;
+                }
+
+                return missingSequenceNumbers;
+            }
+        }
+
         public async Task AddTransactionToSidechainDatabaseAsync(string databaseName, TransactionDB transaction)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())

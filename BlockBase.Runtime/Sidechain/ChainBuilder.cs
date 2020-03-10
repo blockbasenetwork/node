@@ -46,7 +46,7 @@ namespace BlockBase.Runtime.Sidechain
         private string _endPoint;
         private ThreadSafeList<Block> _blocksApproved;
         private ThreadSafeList<Block> _orphanBlocks;
-        private List<int> _missingBlocksSequenceNumber;
+        private IEnumerable<ulong> _missingBlocksSequenceNumber;
         private BlockheaderTable _lastSidechainBlockheader;
         private ISidechainDatabasesManager _sidechainDatabaseManager;
         private bool _receiving;
@@ -84,16 +84,19 @@ namespace BlockBase.Runtime.Sidechain
         {
             var producerIndex = 0;
             var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
+            
             if (!validConnectedProducers.Any())
             {
                 _logger.LogDebug("No connected producers to request blocks.");
                 return;
             }
+
+            _missingBlocksSequenceNumber = await GetSequenceNumberOfMissingBlocks();
+
             while (true)
             {
                 _currentSendingProducer = validConnectedProducers.ElementAt(producerIndex);
 
-                _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks()).Take(SLICE_SIZE).ToList();
                 if (_missingBlocksSequenceNumber.Count() == 0)
                 {
                     _logger.LogDebug("No more missing blocks.");
@@ -138,7 +141,7 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        public NetworkMessage BuildRequestBlocksNetworkMessage(ProducerInPool producer, IList<int> missingSequenceNumbers, string sidechainPoolName)
+        public NetworkMessage BuildRequestBlocksNetworkMessage(ProducerInPool producer, IEnumerable<ulong> missingSequenceNumbers, string sidechainPoolName)
         {
             var payload = new List<byte>();
 
@@ -178,7 +181,7 @@ namespace BlockBase.Runtime.Sidechain
         public async Task HandleReceivedBlock(BlockProto blockProtoReceived)
         {
             var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
-            if (!_missingBlocksSequenceNumber.Contains((int)blockReceived.BlockHeader.SequenceNumber))
+            if (!_missingBlocksSequenceNumber.Contains(blockReceived.BlockHeader.SequenceNumber))
             {
                 _logger.LogDebug("Block received was not requested.");
                 return;
@@ -279,6 +282,7 @@ namespace BlockBase.Runtime.Sidechain
                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                     var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
                     await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
+                    _missingBlocksSequenceNumber = _missingBlocksSequenceNumber.Where(s => s != block.BlockHeader.SequenceNumber);
                 }
                 catch (Exception)
                 {
@@ -291,15 +295,11 @@ namespace BlockBase.Runtime.Sidechain
 
 
 
-        private async Task<IList<int>> GetSequenceNumberOfMissingBlocks()
+        private async Task<IEnumerable<ulong>> GetSequenceNumberOfMissingBlocks()
         {
-            var missingSequenceNumbers = new List<int>();
             _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
-            var savedBlocks = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, 1, _lastSidechainBlockheader.SequenceNumber);
-            missingSequenceNumbers = Enumerable.Range(1, Convert.ToInt32(_lastSidechainBlockheader.SequenceNumber)).Except(savedBlocks.Select(b => Convert.ToInt32(b.BlockHeader.SequenceNumber))).ToList();
-
-            return missingSequenceNumbers.OrderByDescending(s => s).ToList();
+            return await _mongoDbProducerService.GetMissingBlockNumbers(_sidechainPool.ClientAccountName, _lastSidechainBlockheader.SequenceNumber);
         }
     }
 }
