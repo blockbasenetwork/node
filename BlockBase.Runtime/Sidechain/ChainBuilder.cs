@@ -236,7 +236,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private void AddApprovedBlock(Block block)
         {
-            if (_blocksApproved.GetEnumerable().Select(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
+            if (_blocksApproved.GetEnumerable().Where(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
             {
                 _blocksApproved.Add(block);
                 _logger.LogDebug($"Added block {block.BlockHeader.SequenceNumber} to approved blocks.");
@@ -255,7 +255,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private void AddOrphanBlock(Block block)
         {
-            if (_orphanBlocks.GetEnumerable().Select(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
+            if (_orphanBlocks.GetEnumerable().Where(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
             {
                 _orphanBlocks.Add(block);
                 _logger.LogDebug($"Added block {block.BlockHeader.SequenceNumber} to orphan blocks.");
