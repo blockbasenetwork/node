@@ -158,7 +158,7 @@ namespace BlockBase.Network.Rounting
 
             int i;
 
-            for(i = 4; i < numberOfBlocks * 8 + 8; i += 8)
+            for(i = 4; i < numberOfBlocks * 8 + 4; i += 8)
             {
                 // _logger.LogDebug("Index: " + i);
                 var sequenceNumberBytes = new byte[8];
