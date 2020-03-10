@@ -15,6 +15,8 @@ using BlockBase.Runtime.Mainchain;
 using Newtonsoft.Json;
 using BlockBase.Runtime.Network;
 using Swashbuckle.AspNetCore.Annotations;
+using BlockBase.Domain.Blockchain;
+using System.Linq;
 
 namespace BlockBase.Node.Controllers
 {
@@ -177,6 +179,39 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> EndChainMaintenance()
         {
             return NotFound(new NotImplementedException());
+        }
+
+        /// <summary>
+        /// Gets specific block in sidechain
+        /// </summary>
+        /// <param name="chainName">Name of the Sidechain</param>
+        /// <param name="blockNumber">Number of the block</param>
+        /// <returns>The requested block</returns>
+        /// <response code="200">Block retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving the block</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the payment in BBT per block of a given sidechain",
+            Description = "Gets the payment in BBT that a producer will receive when he produces one block of a given sidechain",
+            OperationId = "GetChainPayment"
+        )]
+        //TODO Change name to something more intuitive.
+        public async Task<ObjectResult> GetBlock(string chainName, ulong blockNumber)
+        {
+            try
+            {
+                var blockResponse = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(chainName, blockNumber, blockNumber);
+                var block = blockResponse.FirstOrDefault();
+
+                if (block == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
+
+                return Ok(new OperationResponse<Block>(block));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
         }
     }
 }
