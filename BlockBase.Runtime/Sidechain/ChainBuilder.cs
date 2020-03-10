@@ -81,8 +81,7 @@ namespace BlockBase.Runtime.Sidechain
         }
 
         public async Task Execute()
-        {
-            await _mongoDbProducerService.RemoveUnconfirmedBlocks(_sidechainPool.ClientAccountName);
+        {            
             var producerIndex = 0;
             var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
             if (!validConnectedProducers.Any())
@@ -108,6 +107,8 @@ namespace BlockBase.Runtime.Sidechain
                     }
                     return;
                 }
+                
+                await _mongoDbProducerService.RemoveUnconfirmedBlocks(_sidechainPool.ClientAccountName);
 
                 _receiving = true;
 
@@ -169,9 +170,8 @@ namespace BlockBase.Runtime.Sidechain
             if (args.ClientAccountName != _sidechainPool.ClientAccountName) return;
 
             var blockProto = SerializationHelper.DeserializeBlock(args.BlockBytes, _logger);
-            _logger.LogDebug($"Received block {blockProto.BlockHeader.SequenceNumber}.");
             if (blockProto == null) return;
-
+            _logger.LogDebug($"Received block {blockProto.BlockHeader.SequenceNumber}.");
             await HandleReceivedBlock(blockProto);
         }
 
@@ -218,14 +218,18 @@ namespace BlockBase.Runtime.Sidechain
 
         private void AddApprovedBlock(Block block)
         {
-            if (_blocksApproved.Select(o => o.BlockHeader.BlockHash == block.BlockHeader.BlockHash).Count() != 0)
+            if (_blocksApproved.Select(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
             {
                 _blocksApproved.Add(block);
+                _logger.LogDebug("Added block to approved blocks.");
                 foreach (var orphan in _orphanBlocks)
                 {
                     if (orphan.BlockHeader.SequenceNumber + 1 == block.BlockHeader.SequenceNumber
                     && orphan.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.PreviousBlockHash))
+                    {
                         _blocksApproved.Add(orphan);
+                        _logger.LogDebug("Added block to orphan blocks.");
+                    }
                 }
             }
         }
@@ -241,7 +245,6 @@ namespace BlockBase.Runtime.Sidechain
                 _lastReceivedDate = DateTime.UtcNow;
                 await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                 var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
-                //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
                 await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             }
             _blocksApproved.Clear();

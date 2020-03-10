@@ -104,13 +104,13 @@ namespace BlockBase.Runtime
                                 {
                                     _logger.LogDebug(changeRecordsToExecute);
                                     await _connector.ExecuteCommand(changeRecordsToExecute, _databaseName);
-                                    await SendTransactionToProducers(changeRecordsToExecute, _databaseName);
+                                    SendTransactionToProducers(changeRecordsToExecute, _databaseName);
                                 }
                             }
                             else
                             {
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName);
+                                SendTransactionToProducers(sqlTextToExecute, _databaseName);
                             }
                             results.Add(createQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -122,7 +122,7 @@ namespace BlockBase.Runtime
                                 sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
                                 _logger.LogDebug(sqlTextToExecute);
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName);
+                                SendTransactionToProducers(sqlTextToExecute, _databaseName);
                             }
                             results.Add(createQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -149,7 +149,7 @@ namespace BlockBase.Runtime
                                     await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
 
                                 _logger.LogDebug(sqlTextToExecute);
-                                await SendTransactionToProducers(sqlTextToExecute, _databaseName ?? "");
+                                SendTransactionToProducers(sqlTextToExecute, _databaseName ?? "");
                             }
                             results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
