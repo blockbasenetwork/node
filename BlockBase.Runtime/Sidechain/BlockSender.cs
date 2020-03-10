@@ -43,34 +43,41 @@ namespace BlockBase.Runtime.Sidechain
 
         private async void MessageForwarder_BlockRequest(BlocksRequestReceivedEventArgs args)
         {
-            _logger.LogDebug("Block request received.");
-            var blocksToSend = new List<Block>();
-            foreach(var sequenceNumber in args.BlocksSequenceNumber)
+            try
             {
-                var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, (ulong) sequenceNumber, (ulong) sequenceNumber)).SingleOrDefault();
-                if(block == null) 
+                _logger.LogDebug("Block request received.");
+                var blocksToSend = new List<Block>();
+                foreach (var sequenceNumber in args.BlocksSequenceNumber)
                 {
-                    _logger.LogWarning("No block with sequence number "+ sequenceNumber + " to send.");
-                    return;
-                }              
-                blocksToSend.Add(block);
-            } 
+                    var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, (ulong)sequenceNumber, (ulong)sequenceNumber)).SingleOrDefault();
+                    if (block == null)
+                    {
+                        _logger.LogWarning("No block with sequence number " + sequenceNumber + " to send.");
+                        return;
+                    }
+                    blocksToSend.Add(block);
+                }
 
-            foreach(Block block in blocksToSend)
+                foreach (Block block in blocksToSend)
+                {
+                    _logger.LogDebug("Going to send block: " + block.BlockHeader.SequenceNumber);
+                    var data = BlockProtoToMessageData(block.ConvertToProto(), args.ClientAccountName);
+                    var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _localEndPoint, _nodeConfigurations.AccountName, args.Sender);
+                    await _networkService.SendMessageAsync(message);
+                }
+            }
+            catch (Exception e)
             {
-                _logger.LogDebug("Going to send block: " + block.BlockHeader.SequenceNumber);
-                var data = BlockProtoToMessageData(block.ConvertToProto(), args.ClientAccountName);
-                var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _localEndPoint, _nodeConfigurations.AccountName, args.Sender);
-                await _networkService.SendMessageAsync(message);
+                _logger.LogCritical($"Block request handler crashed with exception: {e}");
             }
         }
-        
+
         internal async Task SendBlockToSidechainMembers(SidechainPool sidechainPool, BlockProto blockProto, string endPoint)
         {
-            
+
             var data = BlockProtoToMessageData(blockProto, sidechainPool.ClientAccountName);
             var connectedProducersInSidechain = sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection != null && m.PeerConnection.ConnectionState == ConnectionStateEnum.Connected);
-            foreach(ProducerInPool producerConnected in connectedProducersInSidechain)
+            foreach (ProducerInPool producerConnected in connectedProducersInSidechain)
             {
                 //_logger.LogDebug($"Block sent to {producerConnected.ProducerInfo.AccountName}. Signed by: {blockProto.BlockHeader.Producer}");
 
@@ -87,7 +94,7 @@ namespace BlockBase.Runtime.Sidechain
             var sidechainNameBytes = Encoding.UTF8.GetBytes(sidechainName);
             // logger.LogDebug($"Sidechain Name Bytes {HashHelper.ByteArrayToFormattedHexaString(sidechainNameBytes)}");
 
-            short lenght = (short) sidechainNameBytes.Length;
+            short lenght = (short)sidechainNameBytes.Length;
             // logger.LogDebug($"Lenght {lenght}");
 
             var lengthBytes = BitConverter.GetBytes(lenght);
