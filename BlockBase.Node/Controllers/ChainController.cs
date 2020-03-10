@@ -202,7 +202,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 var blockResponse = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(chainName, blockNumber, blockNumber);
-                var block = blockResponse.SingleOrDefault();
+                var block = blockResponse.FirstOrDefault();
 
                 if (block == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
 

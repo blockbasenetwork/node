@@ -200,10 +200,13 @@ namespace BlockBase.Runtime.Sidechain
             var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
             if (blockReceived.BlockHeader.SequenceNumber == blockHeaderSC.SequenceNumber)
             {
-                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, _sidechainPool, blockHeaderSC, _logger, out byte[] blockHash))
-                    AddApprovedBlock(blockReceived);
-                else
-                    _logger.LogDebug("Block is not according to sc block.");
+                lock (locker)
+                {
+                    if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, _sidechainPool, blockHeaderSC, _logger, out byte[] blockHash))
+                        AddApprovedBlock(blockReceived);
+                    else
+                        _logger.LogDebug("Block is not according to sc block.");
+                }
 
             }
             else
@@ -214,15 +217,16 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     if (blockAfter == null)
                         blockAfter = _blocksApproved.GetEnumerable().Where(b => b.BlockHeader.PreviousBlockHash.SequenceEqual(blockReceived.BlockHeader.BlockHash)).SingleOrDefault();
-                }
 
-                if (blockAfter == null)
-                    AddOrphanBlock(blockReceived);
-                else
-                    AddApprovedBlock(blockReceived);
+
+                    if (blockAfter == null)
+                        AddOrphanBlock(blockReceived);
+                    else
+                        AddApprovedBlock(blockReceived);
+                }
             }
-            var orderedApprovedBlocks = _blocksApproved.GetEnumerable().Select(b => (int)(b.BlockHeader.SequenceNumber)).OrderByDescending(x => x).ToList().Take(SLICE_SIZE);
-            if (orderedApprovedBlocks.SequenceEqual(_missingBlocksSequenceNumber))
+
+            if (_blocksApproved.Count() == _missingBlocksSequenceNumber.Count())
             {
                 await UpdateDatabase();
                 _receiving = false;
@@ -232,39 +236,33 @@ namespace BlockBase.Runtime.Sidechain
 
         private void AddApprovedBlock(Block block)
         {
-            lock (locker)
+            if (_blocksApproved.GetEnumerable().Select(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
             {
-                if (_blocksApproved.GetEnumerable().Select(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
-                {
-                    _blocksApproved.Add(block);
-                    _logger.LogDebug($"Added block {block.BlockHeader.SequenceNumber} to approved blocks.");
+                _blocksApproved.Add(block);
+                _logger.LogDebug($"Added block {block.BlockHeader.SequenceNumber} to approved blocks.");
 
-                    var orphan = _orphanBlocks.GetEnumerable().Where(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.PreviousBlockHash)).SingleOrDefault();
-                    if (orphan != null)
-                    {
-                        _orphanBlocks.Remove(orphan);
-                        AddApprovedBlock(orphan);
-                        _logger.LogDebug($"Removed block {orphan.BlockHeader.SequenceNumber} from orphan blocks.");
-                    }
+                var orphan = _orphanBlocks.GetEnumerable().Where(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.PreviousBlockHash)).SingleOrDefault();
+                if (orphan != null)
+                {
+                    _orphanBlocks.Remove(orphan);
+                    AddApprovedBlock(orphan);
+                    _logger.LogDebug($"Removed block {orphan.BlockHeader.SequenceNumber} from orphan blocks.");
                 }
-                else
-                    _logger.LogDebug("Block already saved in approved blocks.");
             }
+            else
+                _logger.LogDebug($"Block {block.BlockHeader.SequenceNumber} already saved in approved blocks.");
         }
 
         private void AddOrphanBlock(Block block)
         {
-            lock (locker)
+            if (_orphanBlocks.GetEnumerable().Select(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
             {
-                if (_orphanBlocks.GetEnumerable().Select(o => o.BlockHeader.BlockHash.SequenceEqual(block.BlockHeader.BlockHash)).Count() == 0)
-                {
-                    _orphanBlocks.Add(block);
-                    _logger.LogDebug($"Added block {block.BlockHeader.SequenceNumber} to orphan blocks.");
+                _orphanBlocks.Add(block);
+                _logger.LogDebug($"Added block {block.BlockHeader.SequenceNumber} to orphan blocks.");
 
-                }
-                else
-                    _logger.LogDebug("Block already saved in orphans.");
             }
+            else
+                _logger.LogDebug($"Block {block.BlockHeader.SequenceNumber} already saved in orphans.");
         }
 
         private async Task UpdateDatabase()
