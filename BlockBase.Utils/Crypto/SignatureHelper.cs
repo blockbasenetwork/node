@@ -56,7 +56,6 @@ namespace BlockBase.Utils.Crypto
         {
             try
             {
-                Console.WriteLine($"public key:{publicKeyString} signature: {signature}");
                 byte[] sigBytes = GetSignatureBytesWithoutCheckSum(signature);
                 var publicKeyParameters = EosKeyHelper.GetECPublicKeyParametersFromString(publicKeyString);
                 ISigner signer = SignerUtilities.GetSigner("NONEwithECDSA");
