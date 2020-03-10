@@ -154,16 +154,16 @@ namespace BlockBase.Network.Rounting
             var numberOfBlocks = BitConverter.ToInt32(numberBlocksBytes);
             _logger.LogDebug("Payload size " + payload.Length + " bytes.");
             _logger.LogDebug("Number of blocks to send: " + numberOfBlocks);
-            var sequenceNumbers = new List<int>();
+            var sequenceNumbers = new List<ulong>();
 
             int i;
 
-            for(i = 4; i < numberOfBlocks * 4 + 4; i += 4)
+            for(i = 4; i < numberOfBlocks * 8 + 8; i += 8)
             {
                 // _logger.LogDebug("Index: " + i);
-                var sequenceNumberBytes = new byte[4];
-                Array.Copy(payload, i, sequenceNumberBytes, 0, 4);
-                var sequenceNumber = BitConverter.ToInt32(sequenceNumberBytes);
+                var sequenceNumberBytes = new byte[8];
+                Array.Copy(payload, i, sequenceNumberBytes, 0, 8);
+                var sequenceNumber = BitConverter.ToUInt64(sequenceNumberBytes);
                 sequenceNumbers.Add(sequenceNumber);
             }
 
@@ -200,7 +200,7 @@ namespace BlockBase.Network.Rounting
         public class BlocksRequestReceivedEventArgs
         {
             public string ClientAccountName { get; set; }
-            public IList<int> BlocksSequenceNumber { get; set; }
+            public IList<ulong> BlocksSequenceNumber { get; set; }
             public IPEndPoint Sender { get; set; }
         }
 

@@ -49,7 +49,7 @@ namespace BlockBase.Runtime.Sidechain
                 var blocksToSend = new List<Block>();
                 foreach (var sequenceNumber in args.BlocksSequenceNumber)
                 {
-                    var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, (ulong)sequenceNumber, (ulong)sequenceNumber)).SingleOrDefault();
+                    var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, sequenceNumber, sequenceNumber)).SingleOrDefault();
                     if (block == null)
                     {
                         _logger.LogWarning("No block with sequence number " + sequenceNumber + " to send.");
