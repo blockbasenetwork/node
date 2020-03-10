@@ -184,7 +184,7 @@ namespace BlockBase.DataPersistence.ProducerData
                     }
                     await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
                     var savedBlocks = await GetSidechainBlocksSinceSequenceNumberAsync(databaseName, 1, blockheaderDB.SequenceNumber);
-                    if (savedBlocks.Count() == blockheaderDB.SequenceNumber)
+                    if (savedBlocks.Count() == Convert.ToInt32(blockheaderDB.SequenceNumber))
                     {
                         return true;
                     }
