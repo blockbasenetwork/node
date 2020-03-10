@@ -52,7 +52,7 @@ namespace BlockBase.Runtime.Sidechain
                     var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, sequenceNumber, sequenceNumber)).SingleOrDefault();
                     if (block == null)
                     {
-                        _logger.LogWarning("No block with sequence number " + sequenceNumber + " to send.");
+                        _logger.LogWarning($"No block with sequence number {sequenceNumber} from chain {args.ClientAccountName} to send.");
                         return;
                     }
                     blocksToSend.Add(block);
