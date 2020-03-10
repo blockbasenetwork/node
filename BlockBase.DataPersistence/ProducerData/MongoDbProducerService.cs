@@ -10,6 +10,7 @@ using BlockBase.Domain.Blockchain;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
+using MongoDB.Bson;
 
 namespace BlockBase.DataPersistence.ProducerData
 {
@@ -180,8 +181,8 @@ namespace BlockBase.DataPersistence.ProducerData
                         await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockHeaderDBToRemove.BlockHash, update);
                     }
                     await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
-                    var savedBlocks = await GetSidechainBlocksSinceSequenceNumberAsync(databaseName, 1, blockheaderDB.SequenceNumber);
-                    if (Enumerable.Range(1, Convert.ToInt32(blockheaderDB.SequenceNumber)).Except(savedBlocks.Select(b => Convert.ToInt32(b.BlockHeader.SequenceNumber))).ToList().Count() == 0)
+                    var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
+                    if (Convert.ToInt64(blockheaderDB.SequenceNumber) == numberOfBlocks)
                     {
                         return true;
                     }
