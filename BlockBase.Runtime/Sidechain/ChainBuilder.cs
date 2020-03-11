@@ -55,7 +55,7 @@ namespace BlockBase.Runtime.Sidechain
         private ProducerInPool _currentSendingProducer;
 
         private static readonly int MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS = 10;
-        private static readonly int SLICE_SIZE = 3;
+        private static readonly int SLICE_SIZE = 20;
         private object locker = new object();
 
         public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
@@ -128,7 +128,7 @@ namespace BlockBase.Runtime.Sidechain
                 _lastReceivedDate = DateTime.UtcNow;
                 while (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
                 {
-                    await Task.Delay(MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS * 1000);
+                    await Task.Delay(50);
                 }
 
                 if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
