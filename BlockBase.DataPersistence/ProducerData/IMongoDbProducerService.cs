@@ -27,6 +27,8 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<IList<Transaction>> RetrieveLastLooseTransactions(string databaseName);
         Task<Transaction> LastIncludedTransaction(string databaseName);
         Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash);
+        Task<IList<Transaction>> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
+        Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash);
 
         Task AddProducingSidechainToDatabaseAsync(string sidechain);
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);

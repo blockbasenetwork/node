@@ -295,7 +295,24 @@ namespace BlockBase.DataPersistence.ProducerData
                 return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).ToList();
             }
         }
-        private async Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash)
+
+        public async Task<IList<Transaction>> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+
+                var transactionQuery = from t in transactionCollection.AsQueryable()
+                                       where t.SequenceNumber == transactionNumber
+                                       select t;
+
+                return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).ToList();
+            }
+        }
+
+        public async Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
