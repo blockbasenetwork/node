@@ -26,6 +26,27 @@ namespace BlockBase.DataPersistence.ProducerData
             _dbPrefix = nodeConfigurations.Value.MongoDbPrefix;
         }
 
+        public async Task CreateDatabasesAndIndexes(string databaseName)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var blockheaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+
+                var indexOptions = new CreateIndexOptions { Unique = true };
+
+                var blockHeaderKeys = Builders<BlockheaderDB>.IndexKeys.Ascending(a => a.SequenceNumber);
+                var blockHeadersModel = new CreateIndexModel<BlockheaderDB>(blockHeaderKeys, indexOptions);
+
+                var transactionsKeys = Builders<TransactionDB>.IndexKeys.Ascending(a => a.SequenceNumber);
+                var transactionsModel = new CreateIndexModel<TransactionDB>(transactionsKeys, indexOptions);
+
+                await blockheaderCollection.Indexes.CreateOneAsync(blockHeadersModel);
+                await transactionCollection.Indexes.CreateOneAsync(transactionsModel);
+            }
+        }
+
         public async Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -158,21 +179,21 @@ namespace BlockBase.DataPersistence.ProducerData
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var missingSequenceNumbers = new List<ulong>();
-                
+
                 while (true)
                 {
                     upperEndToGet = lowerEndToGet + 99 > endSequenceNumber ? endSequenceNumber : lowerEndToGet + 99;
-                    
+
                     var blockHeadersResponse = await blockHeaderCollection.FindAsync(b => b.SequenceNumber >= lowerEndToGet && b.SequenceNumber <= upperEndToGet);
                     var blockHeaders = await blockHeadersResponse.ToListAsync();
                     var sequenceNumbers = blockHeaders.Select(b => b.SequenceNumber).OrderBy(s => s);
                     for (ulong i = lowerEndToGet; i <= upperEndToGet; i++)
                     {
-                        if(!sequenceNumbers.Contains(i)) missingSequenceNumbers.Add(i);
+                        if (!sequenceNumbers.Contains(i)) missingSequenceNumbers.Add(i);
                     }
 
                     if (upperEndToGet == endSequenceNumber) break;
-                    
+
                     lowerEndToGet = upperEndToGet + 1;
                 }
 

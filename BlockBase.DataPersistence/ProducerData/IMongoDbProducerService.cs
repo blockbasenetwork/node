@@ -8,6 +8,7 @@ namespace BlockBase.DataPersistence.ProducerData
 {
     public interface IMongoDbProducerService
     {
+        Task CreateDatabasesAndIndexes(string databaseName);
         Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence);
         Task AddTransactionToSidechainDatabaseAsync(string databaseName, TransactionDB transaction);
 
