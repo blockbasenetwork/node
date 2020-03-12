@@ -101,7 +101,18 @@ namespace BlockBase.DataPersistence.ProducerData
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockheaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
-                await blockheaderCollection.DeleteOneAsync(b => b.Confirmed == false);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+                var query = from b in blockheaderCollection.AsQueryable()
+                            where b.Confirmed == false
+                            select b.BlockHash;
+
+                var unconfirmedBlockhashes = await query.ToListAsync();
+                foreach(var blockhash in unconfirmedBlockhashes)
+                {     
+                    var update = Builders<TransactionDB>.Update.Set<string>("BlockHash", "");
+                    await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockhash, update);
+                }
+                await blockheaderCollection.DeleteManyAsync(b => b.Confirmed == false);
                 await session.CommitTransactionAsync();
             }
         }
