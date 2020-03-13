@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -13,11 +12,9 @@ using BlockBase.Network.IO;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Network.Rounting;
 using BlockBase.Runtime.Network;
-using BlockBase.Utils.Crypto;
 using BlockBase.Utils.Threading;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using static BlockBase.Network.PeerConnection;
 
@@ -32,6 +29,7 @@ namespace BlockBase.Runtime.Sidechain
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NetworkConfigurations _networkConfigurations;
         private int WAIT_FOR_RESPONSE_TIME_IN_SECONDs = 120;
+        private int TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS = 2000;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
 
         public TransactionSender(ILogger logger, NodeConfigurations nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, NetworkConfigurations networkConfigurations)
@@ -81,7 +79,7 @@ namespace BlockBase.Runtime.Sidechain
                                 await SendTransactionToProducer(transactionSendingTrackPoco.Transaction, peerConnection);
 
                             transactionSendingTrackPoco.NextTimeToSendTransaction = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (WAIT_FOR_RESPONSE_TIME_IN_SECONDs * 1000);
-                            Thread.Sleep(500);                        
+                            Thread.Sleep(TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS);                        
                         }
                     }
                 }
