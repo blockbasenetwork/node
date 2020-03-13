@@ -149,7 +149,7 @@ namespace Open.P2P.IO
             }
             catch (Exception)
             {
-                DisconnectPeer(peer);
+                //DisconnectPeer(peer);
                 return 0;
             }
         }
