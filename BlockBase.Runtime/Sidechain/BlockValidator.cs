@@ -172,7 +172,7 @@ namespace BlockBase.Runtime.Sidechain
             catch (Exception e)
             {
                 _logger.LogCritical($"Failed to process received block with error: {e.Message}");
-            }            
+            }
         }
 
         private async Task TryApproveTransaction(string proposer, TransactionProposal proposal)
@@ -192,9 +192,21 @@ namespace BlockBase.Runtime.Sidechain
             ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(sidechain.ClientAccountName))?.SequenceNumber ?? 0;
             foreach (var transaction in block.Transactions)
             {
-                if (transaction.SequenceNumber != ++lastSequenceNumber) return false;
-                if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash)) return false;
-                if (!SignatureHelper.VerifySignature(sidechain.ClientPublicKey, transaction.Signature, transactionHash)) return false;
+                if (transaction.SequenceNumber != ++lastSequenceNumber)
+                {
+                    _logger.LogDebug($"Block #{block.BlockHeader.SequenceNumber} Transaction #{transaction.SequenceNumber} doesn't follow order from last sequence number #{lastSequenceNumber}");
+                    return false;
+                }
+                if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
+                {
+                    _logger.LogDebug($"Transaction #{transaction.SequenceNumber} hash not valid");
+                    return false;
+                }
+                if (!SignatureHelper.VerifySignature(sidechain.ClientPublicKey, transaction.Signature, transactionHash))
+                {
+                    _logger.LogDebug($"Transaction #{transaction.SequenceNumber} signature not valid");
+                    return false;
+                }
             }
             return true;
         }

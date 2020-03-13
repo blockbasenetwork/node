@@ -11,18 +11,21 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
 using MongoDB.Bson;
+using Microsoft.Extensions.Logging;
 
 namespace BlockBase.DataPersistence.ProducerData
 {
     public class MongoDbProducerService : IMongoDbProducerService
     {
         public IMongoClient MongoClient { get; set; }
+        private ILogger _logger;
         private string _dbPrefix;
 
-        public MongoDbProducerService(IOptions<NodeConfigurations> nodeConfigurations)
+        public MongoDbProducerService(IOptions<NodeConfigurations> nodeConfigurations, ILogger<MongoDbProducerService> logger)
         {
             MongoClient = new MongoClient(nodeConfigurations.Value.MongoDbConnectionString);
 
+            _logger = logger;
             _dbPrefix = nodeConfigurations.Value.MongoDbPrefix;
         }
 
@@ -92,12 +95,14 @@ namespace BlockBase.DataPersistence.ProducerData
                     if (transactionDB != null)
                     {
                         transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
+                        _logger.LogDebug($"::MongoDB:: Updating transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
                         await transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB);
                     }
                     else
                     {
                         transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
                         transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
+                        _logger.LogDebug($"::MongoDB:: Adding transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
                         await transactionCollection.InsertOneAsync(transactionDB);
                     }
                 }
