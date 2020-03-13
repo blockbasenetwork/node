@@ -43,6 +43,7 @@ namespace BlockBase.Runtime.Network
         private const int STARTING_RATING = 100;
         private const int RATING_LOST_FOR_DISCONECT = 10;
         private const int RATING_LOST_FOR_CONNECT_FAILURE = 10;
+        private bool _tryingConnection;
 
         public PeerConnectionsHandler(INetworkService networkService, SidechainKeeper sidechainKeeper, SystemConfig systemConfig, ILogger<PeerConnectionsHandler> logger, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations)
         {
@@ -134,6 +135,7 @@ namespace BlockBase.Runtime.Network
 
             if (producer.ProducerInfo.IPEndPoint != null)
             {
+                _tryingConnection = true;
                 producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                 var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
@@ -150,6 +152,7 @@ namespace BlockBase.Runtime.Network
                         CurrentPeerConnections.Remove(producer.PeerConnection);
                     }
                 }
+                _tryingConnection = false;
             }
             else
             {
@@ -181,6 +184,10 @@ namespace BlockBase.Runtime.Network
 
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
+            while (_tryingConnection)
+            {
+                continue;
+            }
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
 

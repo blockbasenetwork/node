@@ -192,11 +192,10 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error retrieving the block</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the payment in BBT per block of a given sidechain",
-            Description = "Gets the payment in BBT that a producer will receive when he produces one block of a given sidechain",
-            OperationId = "GetChainPayment"
+            Summary = "Gets the block of a given sidechain",
+            Description = "Gets the block object requested",
+            OperationId = "GetBlock"
         )]
-        //TODO Change name to something more intuitive.
         public async Task<ObjectResult> GetBlock(string chainName, ulong blockNumber)
         {
             try
@@ -207,6 +206,68 @@ namespace BlockBase.Node.Controllers
                 if (block == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
 
                 return Ok(new OperationResponse<Block>(block));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets specific transaction in sidechain
+        /// </summary>
+        /// <param name="chainName">Name of the Sidechain</param>
+        /// <param name="transactionNumber">Number of the transaction</param>
+        /// <returns>The requested Transaction</returns>
+        /// <response code="200">Transaction retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving the block</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the transaction of a given sidechain",
+            Description = "Gets the transaction object requested",
+            OperationId = "GetTransaction"
+        )]
+        public async Task<ObjectResult> GetTransaction(string chainName, ulong transactionNumber)
+        {
+            try
+            {
+                var transactionsResponse = await _mongoDbProducerService.GetTransactionBySequenceNumber(chainName, transactionNumber);
+                var transaction = transactionsResponse.FirstOrDefault();
+
+                if (transaction == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
+
+                return Ok(new OperationResponse<Transaction>(transaction));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets all saved loosed transactions
+        /// </summary>
+        /// <param name="chainName">Name of the Sidechain</param>
+        /// <returns>The loose transactions</returns>
+        /// <response code="200">Transactions retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving transactions</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the loose transactions a given sidechain",
+            Description = "Gets all the loose transactions saved to be included in the specified sidechain",
+            OperationId = "GetLooseTransactions"
+        )]
+        public async Task<ObjectResult> GetLooseTransactions(string chainName)
+        {
+            try
+            {
+                var looseTransactionsResponse = await _mongoDbProducerService.RetrieveLastLooseTransactions(chainName);
+
+                if (looseTransactionsResponse == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
+
+                return Ok(new OperationResponse<IEnumerable<Transaction>>(looseTransactionsResponse));
             }
             catch (Exception e)
             {

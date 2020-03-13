@@ -85,22 +85,22 @@ namespace BlockBase.Runtime
                     {
                         case ReadQuerySqlCommand readQuerySql:
                             sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
-                            _logger.LogDebug(sqlTextToExecute);
+                            //_logger.LogDebug(sqlTextToExecute);
                             resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
                             var queryResult = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultsList, _databaseName);
                             results.Add(queryResult);
 
-                            foreach (var title in queryResult.Columns) _logger.LogDebug(title + " ");
+                            //foreach (var title in queryResult.Columns) _logger.LogDebug(title + " ");
                             foreach (var row in queryResult.Data)
                             {
                                 Console.WriteLine();
-                                foreach (var value in row) _logger.LogDebug(value + " ");
+                                //foreach (var value in row) _logger.LogDebug(value + " ");
                             }
                             break;
 
                         case ChangeRecordSqlCommand changeRecordSqlCommand:
                             sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
-                            _logger.LogDebug(sqlTextToExecute);
+                            //_logger.LogDebug(sqlTextToExecute);
                             if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
                             {
                                 resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
@@ -110,7 +110,7 @@ namespace BlockBase.Runtime
 
                                 foreach (var changeRecordsToExecute in changesToExecute)
                                 {
-                                    _logger.LogDebug(changeRecordsToExecute);
+                                    //_logger.LogDebug(changeRecordsToExecute);
                                     await _connector.ExecuteCommand(changeRecordsToExecute, _databaseName);
                                     SendTransactionToProducers(changeRecordsToExecute, _databaseName);
                                 }
@@ -128,7 +128,7 @@ namespace BlockBase.Runtime
                             for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
                             {
                                 sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
-                                _logger.LogDebug(sqlTextToExecute);
+                                //_logger.LogDebug(sqlTextToExecute);
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
                                 SendTransactionToProducers(sqlTextToExecute, _databaseName);
                             }
@@ -156,7 +156,7 @@ namespace BlockBase.Runtime
                                 else
                                     await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
 
-                                _logger.LogDebug(sqlTextToExecute);
+                                //_logger.LogDebug(sqlTextToExecute);
                                 SendTransactionToProducers(sqlTextToExecute, _databaseName ?? "");
                             }
                             results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
@@ -165,8 +165,8 @@ namespace BlockBase.Runtime
                             if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
                             {
                                 var databasesList = _infoPostProcessing.GetDatabasesList();
-                                _logger.LogDebug("Databases:");
-                                foreach (var database in databasesList) _logger.LogDebug(database);
+                                //_logger.LogDebug("Databases:");
+                                //foreach (var database in databasesList) _logger.LogDebug(database);
                                 results.Add(new QueryResult(
                                     new List<IList<string>>(databasesList.Select(d => new List<string>() { d }).ToList()),
                                     new List<string>() { "databases" })

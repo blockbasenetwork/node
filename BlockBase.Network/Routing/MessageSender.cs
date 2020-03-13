@@ -33,7 +33,7 @@ namespace BlockBase.Network.Rounting
 
                     //Code to help debug
                     var payloadHash = HashHelper.ByteArrayToFormattedHexaString(HashHelper.Sha256Data(message.Payload));
-                    _logger.LogDebug($"MESSAGE SENT | Hash: {payloadHash} | Destination: {message.Destination} | Type: {message.NetworkMessageType}");
+                    //_logger.LogDebug($"MESSAGE SENT | Hash: {payloadHash} | Destination: {message.Destination} | Type: {message.NetworkMessageType}");
 
                     await TcpConnector.SendData(messagePacket, message.Destination);
                 }

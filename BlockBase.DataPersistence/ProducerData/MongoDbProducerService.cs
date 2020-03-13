@@ -11,19 +11,43 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
 using MongoDB.Bson;
+using Microsoft.Extensions.Logging;
 
 namespace BlockBase.DataPersistence.ProducerData
 {
     public class MongoDbProducerService : IMongoDbProducerService
     {
         public IMongoClient MongoClient { get; set; }
+        private ILogger _logger;
         private string _dbPrefix;
 
-        public MongoDbProducerService(IOptions<NodeConfigurations> nodeConfigurations)
+        public MongoDbProducerService(IOptions<NodeConfigurations> nodeConfigurations, ILogger<MongoDbProducerService> logger)
         {
             MongoClient = new MongoClient(nodeConfigurations.Value.MongoDbConnectionString);
 
+            _logger = logger;
             _dbPrefix = nodeConfigurations.Value.MongoDbPrefix;
+        }
+
+        public async Task CreateDatabasesAndIndexes(string databaseName)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var blockheaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+
+                var indexOptions = new CreateIndexOptions { Unique = true };
+
+                var blockHeaderKeys = Builders<BlockheaderDB>.IndexKeys.Ascending(a => a.SequenceNumber);
+                var blockHeadersModel = new CreateIndexModel<BlockheaderDB>(blockHeaderKeys, indexOptions);
+
+                var transactionsKeys = Builders<TransactionDB>.IndexKeys.Ascending(a => a.SequenceNumber);
+                var transactionsModel = new CreateIndexModel<TransactionDB>(transactionsKeys, indexOptions);
+
+                await blockheaderCollection.Indexes.CreateOneAsync(blockHeadersModel);
+                await transactionCollection.Indexes.CreateOneAsync(transactionsModel);
+            }
         }
 
         public async Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence)
@@ -71,12 +95,14 @@ namespace BlockBase.DataPersistence.ProducerData
                     if (transactionDB != null)
                     {
                         transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
+                        _logger.LogDebug($"::MongoDB:: Updating transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
                         await transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB);
                     }
                     else
                     {
                         transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
                         transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
+                        _logger.LogDebug($"::MongoDB:: Adding transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
                         await transactionCollection.InsertOneAsync(transactionDB);
                     }
                 }
@@ -169,21 +195,21 @@ namespace BlockBase.DataPersistence.ProducerData
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var missingSequenceNumbers = new List<ulong>();
-                
+
                 while (true)
                 {
                     upperEndToGet = lowerEndToGet + 99 > endSequenceNumber ? endSequenceNumber : lowerEndToGet + 99;
-                    
+
                     var blockHeadersResponse = await blockHeaderCollection.FindAsync(b => b.SequenceNumber >= lowerEndToGet && b.SequenceNumber <= upperEndToGet);
                     var blockHeaders = await blockHeadersResponse.ToListAsync();
                     var sequenceNumbers = blockHeaders.Select(b => b.SequenceNumber).OrderBy(s => s);
                     for (ulong i = lowerEndToGet; i <= upperEndToGet; i++)
                     {
-                        if(!sequenceNumbers.Contains(i)) missingSequenceNumbers.Add(i);
+                        if (!sequenceNumbers.Contains(i)) missingSequenceNumbers.Add(i);
                     }
 
                     if (upperEndToGet == endSequenceNumber) break;
-                    
+
                     lowerEndToGet = upperEndToGet + 1;
                 }
 
@@ -285,7 +311,24 @@ namespace BlockBase.DataPersistence.ProducerData
                 return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).ToList();
             }
         }
-        private async Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash)
+
+        public async Task<IList<Transaction>> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+
+                var transactionQuery = from t in transactionCollection.AsQueryable()
+                                       where t.SequenceNumber == transactionNumber
+                                       select t;
+
+                return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).ToList();
+            }
+        }
+
+        public async Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
