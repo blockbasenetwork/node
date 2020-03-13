@@ -14,6 +14,8 @@ using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
 using BlockBase.Runtime.Network;
 using BlockBase.Domain.Configurations;
+using BlockBase.Runtime.SidechainProducer;
+using BlockBase.Runtime.Sidechain;
 
 namespace BlockBase.Runtime
 {
@@ -26,13 +28,11 @@ namespace BlockBase.Runtime
         private IConnector _connector;
         private ILogger _logger;
         private ConcurrentVariables _concurrentVariables;
-        private PeerConnectionsHandler _peerConnectionsHandler;
-        private INetworkService _networkService;
-        private NetworkConfigurations _networkConfigurations;
+        private TransactionSender _transactionSender;
         private NodeConfigurations _nodeConfigurations;
 
 
-        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, NetworkConfigurations networkConfigurations, NodeConfigurations nodeConfigurations)
+        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, NodeConfigurations nodeConfigurations)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
@@ -41,10 +41,8 @@ namespace BlockBase.Runtime
             _connector = connector;
             _transformer = new Transformer(middleMan);
             _concurrentVariables = concurrentVariables;
-            _networkService = networkService;
-            _peerConnectionsHandler = peerConnectionsHandler;
             _logger = logger;
-            _networkConfigurations = networkConfigurations;
+            _transactionSender = transactionSender;
             _nodeConfigurations = nodeConfigurations;
         }
 
@@ -62,7 +60,7 @@ namespace BlockBase.Runtime
                 BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
                 var context = parser.sql_stmt_list();
                 var builder = (Builder)_visitor.Visit(context);
-                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _concurrentVariables, _networkService, _peerConnectionsHandler, _networkConfigurations, _nodeConfigurations);
+                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _concurrentVariables, _transactionSender, _nodeConfigurations);
                 results = await executioner.ExecuteBuilder(builder, CreateQueryResult);
             }
             catch (Exception e)

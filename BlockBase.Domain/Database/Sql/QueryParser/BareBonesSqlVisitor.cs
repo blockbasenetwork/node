@@ -335,15 +335,15 @@ namespace BlockBase.Domain.Database.QueryParser
             if (dataTypeContext.K_ENCRYPTED() != null)
             {
                 var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED };
-                if (dataTypeContext.bucket_size() != null)
+                if (dataTypeContext.bucket_number() != null)
                 {
-                    dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_size().NUMERIC_LITERAL().GetText());
+                    dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_number().NUMERIC_LITERAL().GetText());
                 }
 
                 if (dataTypeContext.K_RANGE() != null)
                 {
                     var bktSizeRange = (Tuple<int, int, int>)Visit(dataTypeContext.bucket_range());
-                    dataType.BucketInfo.RangeBucketSize = bktSizeRange.Item1;
+                    dataType.BucketInfo.RangeBucketNumber = bktSizeRange.Item1;
                     dataType.BucketInfo.BucketMinRange = bktSizeRange.Item2;
                     dataType.BucketInfo.BucketMaxRange = bktSizeRange.Item3;
                     if (dataType.BucketInfo.BucketMinRange >= dataType.BucketInfo.BucketMaxRange)

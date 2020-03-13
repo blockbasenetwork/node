@@ -95,7 +95,7 @@ namespace BlockBase.DataProxy.Encryption
                 localData.EncryptedEqualityColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "e", name)), keyManageBytes, ivBytes));
                 localData.EncryptedIVColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "i", name)), keyManageBytes, ivBytes));
             }
-            if (dataType.BucketInfo.RangeBucketSize.HasValue)
+            if (dataType.BucketInfo.RangeBucketNumber.HasValue)
             {
                 localData.EncryptedRangeColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "r", name)), keyManageBytes, ivBytes));
             }
@@ -209,7 +209,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
 
-            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketSize.Value,
+            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketNumber.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
                                                  value);
@@ -225,12 +225,12 @@ namespace BlockBase.DataProxy.Encryption
 
             var listBounds = new List<string>();
 
-            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketSize.Value,
+            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketNumber.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
                                                  valueToInsert);
 
-            var listIntBounds = CalculateBounds(columnDataType.BucketInfo.RangeBucketSize.Value,
+            var listIntBounds = CalculateBounds(columnDataType.BucketInfo.RangeBucketNumber.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
                                                  upperBound,

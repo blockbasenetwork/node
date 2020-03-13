@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
@@ -10,12 +9,11 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Pocos;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime;
-using BlockBase.Runtime.Network;
+using BlockBase.Runtime.Sidechain;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
-using Wiry.Base32;
 
 namespace BlockBase.Node.Controllers
 {
@@ -25,9 +23,9 @@ namespace BlockBase.Node.Controllers
     public class QueryController : ControllerBase
     {
         private SqlCommandManager _sqlCommandManager;
-        public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, ConcurrentVariables concurrentVariables, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> optionsNetwork, IOptions<NodeConfigurations> optionsNode)
+        public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, IOptions<NodeConfigurations> nodeConfigurations)
         {
-            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, networkService, peerConnectionsHandler, optionsNetwork.Value, optionsNode.Value);
+            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value);
         }
 
 

@@ -53,12 +53,13 @@ namespace BlockBase.Runtime.Sidechain
 
         private async void MessageForwarder_TransactionReceived(MessageForwarder.TransactionReceivedEventArgs args, IPEndPoint sender)
         {
-            _logger.LogDebug("TRANSACTION RECEIVED");
+            
             var transactionProto = SerializationHelper.DeserializeTransaction(args.TransactionBytes, _logger);
             if (transactionProto == null) return;
 
             var transaction = new Transaction().SetValuesFromProto(transactionProto);
-            _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
+            _logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
+            // _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
 
             var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == args.ClientAccountName);
 

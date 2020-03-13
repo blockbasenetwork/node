@@ -113,10 +113,10 @@ data_type: (
 		| K_DECIMAL
 		| K_DOUBLE
 		| K_TEXT
-		| K_ENCRYPTED bucket_size? (K_RANGE bucket_range)?
+		| K_ENCRYPTED bucket_number? (K_RANGE bucket_range)?
 	);
 
-bucket_size: NUMERIC_LITERAL;
+bucket_number: NUMERIC_LITERAL;
 
 bucket_range: '(' NUMERIC_LITERAL ',' NUMERIC_LITERAL ',' NUMERIC_LITERAL ')';
 

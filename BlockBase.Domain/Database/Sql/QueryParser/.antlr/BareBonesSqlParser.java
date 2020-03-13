@@ -38,7 +38,7 @@ public class BareBonesSqlParser extends Parser {
 		RULE_select_core = 17, RULE_ordering_term = 18, RULE_result_column = 19, 
 		RULE_table_or_subquery = 20, RULE_join_clause = 21, RULE_join_operator = 22, 
 		RULE_join_constraint = 23, RULE_column_def = 24, RULE_data_type = 25, 
-		RULE_bucket_size = 26, RULE_bucket_range = 27, RULE_column_constraint = 28, 
+		RULE_bucket_number = 26, RULE_bucket_range = 27, RULE_column_constraint = 28, 
 		RULE_expr = 29, RULE_foreign_key_clause = 30, RULE_signed_number = 31, 
 		RULE_literal_value = 32, RULE_keyword = 33, RULE_name = 34, RULE_table_name = 35, 
 		RULE_new_table_name = 36, RULE_column_name = 37, RULE_new_column_name = 38, 
@@ -50,7 +50,7 @@ public class BareBonesSqlParser extends Parser {
 		"create_table_stmt", "alter_table_stmt", "drop_table_stmt", "insert_stmt", 
 		"update_stmt", "delete_stmt", "simple_select_stmt", "select_core", "ordering_term", 
 		"result_column", "table_or_subquery", "join_clause", "join_operator", 
-		"join_constraint", "column_def", "data_type", "bucket_size", "bucket_range", 
+		"join_constraint", "column_def", "data_type", "bucket_number", "bucket_range", 
 		"column_constraint", "expr", "foreign_key_clause", "signed_number", "literal_value", 
 		"keyword", "name", "table_name", "new_table_name", "column_name", "new_column_name", 
 		"database_name", "foreign_table", "table_column_name", "any_name", "complex_name"
@@ -1893,8 +1893,8 @@ public class BareBonesSqlParser extends Parser {
 		public TerminalNode K_DOUBLE() { return getToken(BareBonesSqlParser.K_DOUBLE, 0); }
 		public TerminalNode K_TEXT() { return getToken(BareBonesSqlParser.K_TEXT, 0); }
 		public TerminalNode K_ENCRYPTED() { return getToken(BareBonesSqlParser.K_ENCRYPTED, 0); }
-		public Bucket_sizeContext bucket_size() {
-			return getRuleContext(Bucket_sizeContext.class,0);
+		public Bucket_numberContext bucket_number() {
+			return getRuleContext(Bucket_numberContext.class,0);
 		}
 		public TerminalNode K_RANGE() { return getToken(BareBonesSqlParser.K_RANGE, 0); }
 		public Bucket_rangeContext bucket_range() {
@@ -1968,7 +1968,7 @@ public class BareBonesSqlParser extends Parser {
 				if (_la==NUMERIC_LITERAL) {
 					{
 					setState(390);
-					bucket_size();
+					bucket_number();
 					}
 				}
 
@@ -2002,17 +2002,17 @@ public class BareBonesSqlParser extends Parser {
 		return _localctx;
 	}
 
-	public static class Bucket_sizeContext extends ParserRuleContext {
+	public static class Bucket_numberContext extends ParserRuleContext {
 		public TerminalNode NUMERIC_LITERAL() { return getToken(BareBonesSqlParser.NUMERIC_LITERAL, 0); }
-		public Bucket_sizeContext(ParserRuleContext parent, int invokingState) {
+		public Bucket_numberContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
-		@Override public int getRuleIndex() { return RULE_bucket_size; }
+		@Override public int getRuleIndex() { return RULE_bucket_number; }
 	}
 
-	public final Bucket_sizeContext bucket_size() throws RecognitionException {
-		Bucket_sizeContext _localctx = new Bucket_sizeContext(_ctx, getState());
-		enterRule(_localctx, 52, RULE_bucket_size);
+	public final Bucket_numberContext bucket_number() throws RecognitionException {
+		Bucket_numberContext _localctx = new Bucket_numberContext(_ctx, getState());
+		enterRule(_localctx, 52, RULE_bucket_number);
 		try {
 			enterOuterAlt(_localctx, 1);
 			{

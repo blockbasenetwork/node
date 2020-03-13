@@ -132,6 +132,7 @@ namespace BlockBase.Api
                 services.AddSingleton<IConnector, PSqlConnector>();
                 services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockSender>();
+                services.AddSingleton<TransactionSender>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<PeerConnectionsHandler>();
                 services.AddSingleton<SidechainKeeper>();

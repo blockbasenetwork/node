@@ -185,7 +185,7 @@ join_operator
 join_constraint
 column_def
 data_type
-bucket_size
+bucket_number
 bucket_range
 column_constraint
 expr
