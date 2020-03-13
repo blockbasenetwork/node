@@ -68,7 +68,7 @@ namespace BlockBase.Runtime.Sidechain
         {
             while (_transactionsToSend.Count() != 0)
             {
-                Thread.Sleep(1000);
+                await Task.Delay(1000);
                 foreach (var transactionSendingTrackPoco in _transactionsToSend)
                 {
                     if (transactionSendingTrackPoco.NextTimeToSendTransaction < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
@@ -79,7 +79,7 @@ namespace BlockBase.Runtime.Sidechain
                                 await SendTransactionToProducer(transactionSendingTrackPoco.Transaction, peerConnection);
 
                             transactionSendingTrackPoco.NextTimeToSendTransaction = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (WAIT_FOR_RESPONSE_TIME_IN_SECONDs * 1000);
-                            Thread.Sleep(TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS);                        
+                            await Task.Delay(TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS);                        
                         }
                     }
                 }
