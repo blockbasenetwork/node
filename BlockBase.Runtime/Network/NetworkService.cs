@@ -106,6 +106,11 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.PingReceived += eventHandler;
         }
 
+        public void SubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.TransactionConfirmationReceived += eventHandler;
+        }
+
         public async Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type)
         {
             bool messageValidator(NetworkMessage networkMessage)

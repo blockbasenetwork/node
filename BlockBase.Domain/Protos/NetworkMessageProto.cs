@@ -25,12 +25,12 @@ namespace BlockBase.Domain.Protos {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChlOZXR3b3JrTWVzc2FnZVByb3RvLnByb3RvEhdCbG9ja0Jhc2UuRG9tYWlu",
-            "LlByb3RvcyLkBgoTTmV0d29ya01lc3NhZ2VQcm90bxJfChJOZXR3b3JrTWVz",
+            "LlByb3RvcyKFBwoTTmV0d29ya01lc3NhZ2VQcm90bxJfChJOZXR3b3JrTWVz",
             "c2FnZVR5cGUYASABKA4yQy5CbG9ja0Jhc2UuRG9tYWluLlByb3Rvcy5OZXR3",
             "b3JrTWVzc2FnZVByb3RvLk5ldHdvcmtNZXNzYWdlVHlwZUVudW0SDwoHVmVy",
             "c2lvbhgCIAEoBRIPCgdQYXlsb2FkGAMgASgMEhEKCVB1YmxpY0tleRgEIAEo",
             "CRISCgpFb3NBY2NvdW50GAUgASgJEhEKCVNpZ25hdHVyZRgGIAEoCRITCgtN",
-            "ZXNzYWdlSGFzaBgHIAEoDBITCgtEZXN0aW5hdGlvbhgIIAEoCSLlBAoWTmV0",
+            "ZXNzYWdlSGFzaBgHIAEoDBITCgtEZXN0aW5hdGlvbhgIIAEoCSKGBQoWTmV0",
             "d29ya01lc3NhZ2VUeXBlRW51bRILCgdVbmtub3duEAASDwoLUmVxdWVzdElu",
             "Zm8QARIhCh1SZXF1ZXN0UHJvZHVjZXJJZGVudGlmaWNhdGlvbhACEhQKEFJl",
             "cXVlc3ROb2Rlc0luZm8QAxIRCg1SZXF1ZXN0QmxvY2tzEAQSFwoTUmVxdWVz",
@@ -43,8 +43,9 @@ namespace BlockBase.Domain.Protos {
             "b2NrEBASDgoKU2VuZEJsb2NrcxAREhQKEFNlbmRCbG9ja0hlYWRlcnMQEhIT",
             "Cg9TZW5kVHJhbnNhY3Rpb24QExIUChBTZW5kVHJhbnNhY3Rpb25zEBQSFQoR",
             "U2VuZEN1cnJlbnRIZWlnaHQQFRIbChdTZW5kQ3VycmVudE1heEJsb2NrU2l6",
-            "ZRAWEhYKElNlYXJjaFF1ZXJ5UmVxdWVzdBAXEhMKD1NlbmRRdWVyeVJlc3Vs",
-            "dBAYEggKBFBpbmcQGRIICgRQb25nEBpiBnByb3RvMw=="));
+            "ZRAWEh8KG0NvbmZpcm1UcmFuc2FjdGlvblJlY2VwdGlvbhAbEhYKElNlYXJj",
+            "aFF1ZXJ5UmVxdWVzdBAXEhMKD1NlbmRRdWVyeVJlc3VsdBAYEggKBFBpbmcQ",
+            "GRIICgRQb25nEBpiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -406,6 +407,7 @@ namespace BlockBase.Domain.Protos {
         [pbr::OriginalName("SendTransactions")] SendTransactions = 20,
         [pbr::OriginalName("SendCurrentHeight")] SendCurrentHeight = 21,
         [pbr::OriginalName("SendCurrentMaxBlockSize")] SendCurrentMaxBlockSize = 22,
+        [pbr::OriginalName("ConfirmTransactionReception")] ConfirmTransactionReception = 27,
         [pbr::OriginalName("SearchQueryRequest")] SearchQueryRequest = 23,
         [pbr::OriginalName("SendQueryResult")] SendQueryResult = 24,
         [pbr::OriginalName("Ping")] Ping = 25,

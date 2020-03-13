@@ -99,10 +99,12 @@ namespace BlockBase.Network.Rounting
 
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendBlock) RecoverBlockReceived?.Invoke(ParseMinedBlockMessage(message.Payload), message.Sender);
 
-                else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendProducerIdentification)IdentificationMessageReceived?.Invoke(new IdentificationMessageReceivedEventArgs {PublicKey = message.PublicKey, EosAccount = message.EosAccount, SenderIPEndPoint = message.Sender});
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendProducerIdentification) IdentificationMessageReceived?.Invoke(new IdentificationMessageReceivedEventArgs { PublicKey = message.PublicKey, EosAccount = message.EosAccount, SenderIPEndPoint = message.Sender });
 
-                else if(message.NetworkMessageType == NetworkMessageTypeEnum.RequestBlocks) BlocksRequestReceived?.Invoke(ParseRequestBlocksMessage(message.Payload, message.Sender));
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.RequestBlocks) BlocksRequestReceived?.Invoke(ParseRequestBlocksMessage(message.Payload, message.Sender));
 
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.ConfirmTransactionReception) TransactionConfirmationReceived?.Invoke(ParseTransactionConfirmationMessage(message), message.Sender);
+                
                 else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendTransaction) TransactionReceived?.Invoke(ParseTransactionMessage(message.Payload), message.Sender);
             }
         }
@@ -110,17 +112,22 @@ namespace BlockBase.Network.Rounting
         private BlockReceivedEventArgs ParseMinedBlockMessage(byte[] payload)
         {
             var clientAccountNameAndBlockBytes = ParseClienAccounttName(payload);
-            
-            
+
+
             return new BlockReceivedEventArgs { ClientAccountName = clientAccountNameAndBlockBytes.Item1, BlockBytes = clientAccountNameAndBlockBytes.Item2 };
 
         }
 
-         private TransactionReceivedEventArgs ParseTransactionMessage(byte[] payload)
+        private TransactionReceivedEventArgs ParseTransactionMessage(byte[] payload)
         {
             var clientAccountNameAndTransactionBytes = ParseClienAccounttName(payload);
-            
+
             return new TransactionReceivedEventArgs { ClientAccountName = clientAccountNameAndTransactionBytes.Item1, TransactionBytes = clientAccountNameAndTransactionBytes.Item2 };
+        }
+
+        private TransactionConfirmationReceivedEventArgs ParseTransactionConfirmationMessage(NetworkMessage message)
+        {
+            return new TransactionConfirmationReceivedEventArgs { SenderAccountName = message.EosAccount,  TransactionSequenceNumber = BitConverter.ToUInt64(message.Payload)};
         }
 
         private Tuple<string, byte[]> ParseClienAccounttName(byte[] payload)
@@ -132,7 +139,7 @@ namespace BlockBase.Network.Rounting
             // _logger.LogDebug($"Lenght Bytes: {HashHelper.ByteArrayToFormattedHexaString(lengthBytes)}");
 
             var length = BitConverter.ToInt16(lengthBytes);
-             // _logger.LogDebug($"Lenght: {length}");
+            // _logger.LogDebug($"Lenght: {length}");
 
             byte[] stringBytes = new byte[length];
             Array.Copy(payload, lengthBytes.Length, stringBytes, 0, length);
@@ -143,7 +150,7 @@ namespace BlockBase.Network.Rounting
             Array.Copy(payload, lengthBytes.Length + length, transactionBytes, 0, numberBlockBytes);
             // _logger.LogDebug($"Block Bytes: {HashHelper.ByteArrayToFormattedHexaString(blockBytes)}");
 
-            return new Tuple<string, byte[]> (Encoding.UTF8.GetString(stringBytes), transactionBytes);
+            return new Tuple<string, byte[]>(Encoding.UTF8.GetString(stringBytes), transactionBytes);
         }
 
 
@@ -158,7 +165,7 @@ namespace BlockBase.Network.Rounting
 
             int i;
 
-            for(i = 4; i < numberOfBlocks * 8 + 4; i += 8)
+            for (i = 4; i < numberOfBlocks * 8 + 4; i += 8)
             {
                 // _logger.LogDebug("Index: " + i);
                 var sequenceNumberBytes = new byte[8];
@@ -167,19 +174,19 @@ namespace BlockBase.Network.Rounting
                 sequenceNumbers.Add(sequenceNumber);
             }
 
-            
+
             int sidechainBytesLength = payload.Length - i;
             byte[] stringBytes = new byte[sidechainBytesLength];
             Array.Copy(payload, i, stringBytes, 0, sidechainBytesLength);
 
-            return new BlocksRequestReceivedEventArgs{ ClientAccountName = Encoding.UTF8.GetString(stringBytes), BlocksSequenceNumber = sequenceNumbers, Sender = sender};
+            return new BlocksRequestReceivedEventArgs { ClientAccountName = Encoding.UTF8.GetString(stringBytes), BlocksSequenceNumber = sequenceNumbers, Sender = sender };
         }
 
         private PingReceivedEventArgs ParsePingMessage(byte[] payload)
         {
             var nonce = BitConverter.ToInt32(payload);
 
-            return new PingReceivedEventArgs{ nonce = nonce };
+            return new PingReceivedEventArgs { nonce = nonce };
         }
 
         public event RecoverBlockReceivedEventHandler RecoverBlockReceived;
@@ -227,6 +234,15 @@ namespace BlockBase.Network.Rounting
         {
             public byte[] TransactionBytes { get; set; }
             public string ClientAccountName { get; set; }
+        }
+
+        public event TransactionConfirmationReceivedEventHandler TransactionConfirmationReceived;
+        public delegate void TransactionConfirmationReceivedEventHandler(TransactionConfirmationReceivedEventArgs args, IPEndPoint sender);
+
+        public class TransactionConfirmationReceivedEventArgs
+        {
+            public ulong TransactionSequenceNumber { get; set; }
+            public string SenderAccountName { get; set; }
         }
     }
 

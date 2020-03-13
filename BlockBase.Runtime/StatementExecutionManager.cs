@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy.Encryption;
+using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
@@ -15,7 +17,10 @@ using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
+using BlockBase.Utils.Crypto;
+using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace BlockBase.Runtime
 {
@@ -29,6 +34,8 @@ namespace BlockBase.Runtime
         private InfoPostProcessing _infoPostProcessing;
         private ConcurrentVariables _databaseAccess;
         private TransactionSender _transactionSender;
+        private PeerConnectionsHandler _peerConnectionsHandler;
+        private NodeConfigurations _nodeConfigurations;
 
         public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables databaseAccess, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, NetworkConfigurations networkConfigurations, NodeConfigurations nodeConfigurations)
         {
@@ -39,7 +46,8 @@ namespace BlockBase.Runtime
             _infoPostProcessing = infoPostProcessing;
             _databaseAccess = databaseAccess;
             _transactionSender = new TransactionSender(logger, nodeConfigurations, networkService, peerConnectionsHandler, networkConfigurations);
-
+            _peerConnectionsHandler = peerConnectionsHandler;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         public delegate QueryResult CreateQueryResultDelegate(bool success, string statementType, string exceptionMessage = null);
@@ -190,7 +198,35 @@ namespace BlockBase.Runtime
         private void SendTransactionToProducers(string queryToExecute, string databaseName)
         {
             var transactionNumber = Convert.ToUInt64(_databaseAccess.GetNextTransactionNumber());
-            _transactionSender.Start(queryToExecute, transactionNumber, databaseName);
+            var transaction = CreateTransaction(queryToExecute, transactionNumber, databaseName, _nodeConfigurations.ActivePrivateKey);
+            
+            foreach (var peerConnection in _peerConnectionsHandler.CurrentPeerConnections)
+                _transactionSender.AddWaitingTransactionToProducer(peerConnection, transaction);
+            
+            if(_transactionSender.TaskContainer == null || _transactionSender.TaskContainer.Task.IsCompleted)
+                _transactionSender.Start();
+        }
+
+        private Transaction CreateTransaction(string json, ulong sequenceNumber, string databaseName, string senderPrivateKey)
+        {
+            var transaction = new Transaction()
+            {
+                Json = json,
+                BlockHash = new byte[0],
+                SequenceNumber = sequenceNumber,
+                Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
+                TransactionHash = new byte[0],
+                Signature = "",
+                DatabaseName = databaseName
+            };
+
+            var serializedTransaction = JsonConvert.SerializeObject(transaction);
+            var transactionHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedTransaction));
+
+            transaction.TransactionHash = transactionHash;
+            transaction.Signature = SignatureHelper.SignHash(senderPrivateKey, transactionHash);
+            _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
+            return transaction;
         }
     }
 }

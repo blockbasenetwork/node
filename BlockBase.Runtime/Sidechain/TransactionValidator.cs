@@ -20,6 +20,9 @@ using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using BlockBase.Network.IO;
+using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
+using BlockBase.Network.IO.Enums;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -31,9 +34,10 @@ namespace BlockBase.Runtime.Sidechain
         private IMongoDbProducerService _mongoDbProducerService;
         private IMainchainService _mainChainService;
         private NodeConfigurations _nodeConfigurations;
+        private NetworkConfigurations _networkConfigurations;
         private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
 
-        public TransactionValidator(ILogger<TransactionValidator> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, SidechainKeeper sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
+        public TransactionValidator(ILogger<TransactionValidator> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
         {
             _logger = logger;
             _logger.LogDebug("Creating transaction validator.");
@@ -44,6 +48,7 @@ namespace BlockBase.Runtime.Sidechain
             _mainChainService = mainChainService;
             _nodeConfigurations = nodeConfigurations.Value;
             _validatorSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
+            _networkConfigurations = networkConfigurations.Value;
         }
 
         private async void MessageForwarder_TransactionReceived(MessageForwarder.TransactionReceivedEventArgs args, IPEndPoint sender)
@@ -58,7 +63,7 @@ namespace BlockBase.Runtime.Sidechain
             var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == args.ClientAccountName);
 
             var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
-            
+
             if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
             {
                 _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
@@ -71,6 +76,14 @@ namespace BlockBase.Runtime.Sidechain
 
             await sidechainSemaphore.WaitAsync();
 
+             var message = new NetworkMessage(
+                    NetworkMessageTypeEnum.ConfirmTransactionReception, 
+                    BitConverter.GetBytes(transaction.SequenceNumber),
+                    TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, 
+                    _nodeConfigurations.ActivePublicKey, 
+                    _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort, 
+                    _nodeConfigurations.AccountName, sender);
+
             try
             {
                 if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
@@ -82,9 +95,10 @@ namespace BlockBase.Runtime.Sidechain
                 if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
                 {
                     _logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
+                    await _networkService.SendMessageAsync(message);
                     return;
                 }
-               
+
                 if (!SignatureHelper.VerifySignature(sidechainPool.ClientPublicKey, transaction.Signature, transactionHash))
                 {
                     _logger.LogDebug($"Transaction signature not valid.");
@@ -92,7 +106,13 @@ namespace BlockBase.Runtime.Sidechain
                 }
 
                 _logger.LogDebug($"Saving transaction.");
+                
                 await _mongoDbProducerService.SaveTransaction(databaseName, transaction);
+
+               
+                
+                _logger.LogDebug("Sending confirmation transaction.");
+                await _networkService.SendMessageAsync(message);
             }
             catch (Exception e)
             {

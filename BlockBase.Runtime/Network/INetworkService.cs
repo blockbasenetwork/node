@@ -13,27 +13,19 @@ namespace BlockBase.Runtime.Network
     public interface INetworkService : IService
     {
         Task<Peer> ConnectAsync(IPEndPoint endpoint);
-
         Task SendMessageAsync(NetworkMessage message);
-
         Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type);
 
         void DisconnectPeer(Peer peer);
 
         void SubscribePeerConnectedEvent(PeerConnectedEventHandler eventHandler);
-
         void SubscribePeerDisconnectedEvent(PeerDisconnectedEventHandler eventHandler);
-
         void SubscribeMinedBlockReceivedEvent(MinedBlockReceivedEventHandler eventHandler);
-
         void SubscribeRecoverBlockReceivedEvent(RecoverBlockReceivedEventHandler eventHandler);
-
         void SubscribeIdentificationMessageReceivedEvent(IdentificationMessageReceivedEventHandler eventHandler);
-
         void SubscribeTransactionReceivedEvent(TransactionReceivedEventHandler eventHandler);
-
-        void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler);
-        
+        void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler);        
         void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler);
+        void SubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler);
     }
 }
