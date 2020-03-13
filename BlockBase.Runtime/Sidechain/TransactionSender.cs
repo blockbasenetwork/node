@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
@@ -31,6 +30,7 @@ namespace BlockBase.Runtime.Sidechain
         private int WAIT_FOR_RESPONSE_TIME_IN_SECONDs = 120;
         private int TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS = 2000;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
+        public ThreadSafeList<Transaction> TransactionWaitList;
 
         public TransactionSender(ILogger logger, NodeConfigurations nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, NetworkConfigurations networkConfigurations)
         {
@@ -41,6 +41,7 @@ namespace BlockBase.Runtime.Sidechain
             _networkConfigurations = networkConfigurations;
             _networkService.SubscribeTransactionConfirmationReceivedEvent(MessageForwarder_TransactionConfirmationReceived);
             _transactionsToSend = new ThreadSafeList<TransactionSendingTrackPoco>();
+            TransactionWaitList = new ThreadSafeList<Transaction>();
         }
 
         private void MessageForwarder_TransactionConfirmationReceived(MessageForwarder.TransactionConfirmationReceivedEventArgs args, IPEndPoint sender)
@@ -66,28 +67,45 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task Execute()
         {
-            while (_transactionsToSend.Count() != 0)
+            while (_transactionsToSend.Count() != 0 || TransactionWaitList.Count() != 0)
             {
                 await Task.Delay(1000);
-                foreach (var transactionSendingTrackPoco in _transactionsToSend)
-                {
-                    if (transactionSendingTrackPoco.NextTimeToSendTransaction < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-                    {
-                        foreach (var peerConnection in transactionSendingTrackPoco.ProducersToSend)
-                        {
-                            if (peerConnection.ConnectionState == ConnectionStateEnum.Connected)
-                                await SendTransactionToProducer(transactionSendingTrackPoco.Transaction, peerConnection);
+                TryToRemoveTransactionsFromWaitingList();
+                await TryToSendTransactionsAgain();
+            }
+        }
 
-                            transactionSendingTrackPoco.NextTimeToSendTransaction = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (WAIT_FOR_RESPONSE_TIME_IN_SECONDs * 1000);
-                            await Task.Delay(TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS);                        
-                        }
+        private async Task TryToSendTransactionsAgain()
+        {
+            foreach (var transactionSendingTrackPoco in _transactionsToSend)
+            {
+                if (transactionSendingTrackPoco.NextTimeToSendTransaction < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                {
+                    foreach (var peerConnection in transactionSendingTrackPoco.ProducersToSend)
+                    {
+                        if (peerConnection.ConnectionState == ConnectionStateEnum.Connected)
+                            await SendTransactionToProducer(transactionSendingTrackPoco.Transaction, peerConnection);
+
+                        transactionSendingTrackPoco.NextTimeToSendTransaction = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (WAIT_FOR_RESPONSE_TIME_IN_SECONDs * 1000);
+                        await Task.Delay(TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS);
                     }
                 }
             }
         }
-
-
-
+        private void TryToRemoveTransactionsFromWaitingList()
+        {
+            if(_peerConnectionsHandler.CurrentPeerConnections.Count() != 0)
+            {
+                foreach(var transaction in TransactionWaitList.GetEnumerable())
+                {
+                    foreach(var peerConnection in _peerConnectionsHandler.CurrentPeerConnections)
+                    {
+                        AddWaitingTransactionToProducer(peerConnection, transaction);
+                    }
+                    TransactionWaitList.Remove(transaction);
+                }
+            }  
+        }
         private byte[] TransactionProtoToMessageData(TransactionProto transactionProto, string sidechainName)
         {
             var transactionBytes = transactionProto.ToByteArray();

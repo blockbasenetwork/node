@@ -37,6 +37,7 @@ namespace BlockBase.Runtime
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
 
+
         public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables databaseAccess, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, NetworkConfigurations networkConfigurations, NodeConfigurations nodeConfigurations)
         {
             _transformer = transformer;
@@ -199,11 +200,15 @@ namespace BlockBase.Runtime
         {
             var transactionNumber = Convert.ToUInt64(_databaseAccess.GetNextTransactionNumber());
             var transaction = CreateTransaction(queryToExecute, transactionNumber, databaseName, _nodeConfigurations.ActivePrivateKey);
-            
-            foreach (var peerConnection in _peerConnectionsHandler.CurrentPeerConnections)
-                _transactionSender.AddWaitingTransactionToProducer(peerConnection, transaction);
-            
-            if(_transactionSender.TaskContainer == null || _transactionSender.TaskContainer.Task.IsCompleted)
+
+            if (_peerConnectionsHandler.CurrentPeerConnections.Count() == 0)
+                _transactionSender.TransactionWaitList.Add(transaction);
+                
+            else
+                foreach (var peerConnection in _peerConnectionsHandler.CurrentPeerConnections)
+                    _transactionSender.AddWaitingTransactionToProducer(peerConnection, transaction);
+
+            if (_transactionSender.TaskContainer == null || _transactionSender.TaskContainer.Task.IsCompleted)
                 _transactionSender.Start();
         }
 
