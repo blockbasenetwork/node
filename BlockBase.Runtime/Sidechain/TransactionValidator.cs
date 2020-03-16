@@ -42,7 +42,7 @@ namespace BlockBase.Runtime.Sidechain
             _logger = logger;
             _logger.LogDebug("Creating transaction validator.");
             _networkService = networkService;
-            _networkService.SubscribeTransactionReceivedEvent(MessageForwarder_TransactionReceived);
+            _networkService.SubscribeTransactionReceivedEvent(MessageForwarder_TransactionsReceived);
             _sidechainKeeper = sidechainKeeper;
             _mongoDbProducerService = mongoDbProducerService;
             _mainChainService = mainChainService;
@@ -51,23 +51,29 @@ namespace BlockBase.Runtime.Sidechain
             _networkConfigurations = networkConfigurations.Value;
         }
 
-        private async void MessageForwarder_TransactionReceived(MessageForwarder.TransactionReceivedEventArgs args, IPEndPoint sender)
-        {
+        private async void MessageForwarder_TransactionsReceived(MessageForwarder.TransactionsReceivedEventArgs args, IPEndPoint sender)
+        {            
+            var transactionsProto = SerializationHelper.DeserializeTransactions(args.TransactionsBytes, _logger);
             
-            var transactionProto = SerializationHelper.DeserializeTransaction(args.TransactionBytes, _logger);
-            if (transactionProto == null) return;
+            if (transactionsProto == null) return;
+            
+            foreach(var transactionProto in transactionsProto) 
+                await ValidateEachTransaction(transactionProto, args.ClientAccountName, sender);
+        }
 
+        private async Task ValidateEachTransaction(TransactionProto transactionProto, string clientAccountName, IPEndPoint sender)
+        {
             var transaction = new Transaction().SetValuesFromProto(transactionProto);
             _logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
             // _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
 
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == args.ClientAccountName);
+            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == clientAccountName);
 
             var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
 
             if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
             {
-                _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
+                _logger.LogDebug($"Transaction received but sidechain {clientAccountName} is unknown.");
                 return;
             }
 
@@ -92,7 +98,7 @@ namespace BlockBase.Runtime.Sidechain
                     _logger.LogDebug($"Transaction hash not valid.");
                     return;
                 }
-                var databaseName = args.ClientAccountName;
+                var databaseName = clientAccountName;
                 if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
                 {
                     _logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
@@ -123,6 +129,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 sidechainSemaphore.Release();
             }
+
         }
 
         //TODO:REFACTOR

@@ -6,7 +6,6 @@ namespace BlockBase.Runtime.Sidechain
 {
     public class TransactionSendingTrackPoco
     {
-        public long NextTimeToSendTransaction { get; set; }
         public ThreadSafeList<string> ProducersAlreadyReceived { get; set; }
         public Transaction Transaction { get; set; }
     }

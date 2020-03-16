@@ -36,6 +36,7 @@ namespace BlockBase.Runtime
         private ConcurrentVariables _databaseAccess;
         private TransactionSender _transactionSender;
         private NodeConfigurations _nodeConfigurations;
+        private IList<Transaction> _transactionsToSendToProducers;
 
         public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables databaseAccess, TransactionSender transactionSender, NodeConfigurations nodeConfigurations)
         {
@@ -47,6 +48,7 @@ namespace BlockBase.Runtime
             _databaseAccess = databaseAccess;
             _nodeConfigurations = nodeConfigurations;
             _transactionSender = transactionSender;
+            _transactionsToSendToProducers = new List<Transaction>();
         }
 
         public delegate QueryResult CreateQueryResultDelegate(bool success, string statementType, string exceptionMessage = null);
@@ -109,13 +111,13 @@ namespace BlockBase.Runtime
                                 {
                                     //_logger.LogDebug(changeRecordsToExecute);
                                     await _connector.ExecuteCommand(changeRecordsToExecute, _databaseName);
-                                    SendTransactionToProducers(changeRecordsToExecute, _databaseName);
+                                    AddTransactionToSend(changeRecordsToExecute, _databaseName);
                                 }
                             }
                             else
                             {
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                SendTransactionToProducers(sqlTextToExecute, _databaseName);
+                                AddTransactionToSend(sqlTextToExecute, _databaseName);
                             }
                             results.Add(createQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -127,7 +129,7 @@ namespace BlockBase.Runtime
                                 sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
                                 //_logger.LogDebug(sqlTextToExecute);
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                SendTransactionToProducers(sqlTextToExecute, _databaseName);
+                                AddTransactionToSend(sqlTextToExecute, _databaseName);
                             }
                             results.Add(createQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -154,7 +156,7 @@ namespace BlockBase.Runtime
                                     await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
 
                                 //_logger.LogDebug(sqlTextToExecute);
-                                SendTransactionToProducers(sqlTextToExecute, _databaseName ?? "");
+                                AddTransactionToSend(sqlTextToExecute, _databaseName ?? "");
                             }
                             results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
@@ -189,15 +191,21 @@ namespace BlockBase.Runtime
             }
             if (_databaseName != null)
                 databasesSemaphores[_databaseName].Release();
+
+            SendTransactionsToProducers();
+            _transactionsToSendToProducers = new List<Transaction>();
             return results;
         }
 
-        private void SendTransactionToProducers(string queryToExecute, string databaseName)
+        private void AddTransactionToSend(string queryToExecute, string databaseName)
         {
             var transactionNumber = Convert.ToUInt64(_databaseAccess.GetNextTransactionNumber());
             var transaction = CreateTransaction(queryToExecute, transactionNumber, databaseName, _nodeConfigurations.ActivePrivateKey);
-
-            _transactionSender.AddTransactionToSend(transaction);
+            _transactionsToSendToProducers.Add(transaction);
+        }
+        private void SendTransactionsToProducers()
+        {
+            foreach(var transactionToSend in _transactionsToSendToProducers) _transactionSender.AddScriptTransactionToSend(transactionToSend);
 
             if (_transactionSender.Task == null || _transactionSender.Task.Status.Equals(TaskStatus.RanToCompletion))
                 _transactionSender.Start();

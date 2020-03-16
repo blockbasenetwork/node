@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using BlockBase.Domain.Protos;
 using Microsoft.Extensions.Logging;
 
@@ -20,18 +22,31 @@ namespace BlockBase.Runtime.Sidechain.Helpers
             }
         }
 
-        internal static TransactionProto DeserializeTransaction(byte[] payload, ILogger logger)
+        internal static IList<TransactionProto> DeserializeTransactions(byte[] payload, ILogger logger)
         {
             try
             {
-                var transactionProto = TransactionProto.Parser.ParseFrom(payload);
-                return transactionProto;
+                var transactionProtos = new List<TransactionProto>();
+                for (int i = 0; i < payload.Length;)
+                {
+                    var countBytes = new byte[8];
+                    Array.Copy(payload, i, countBytes, 0, 4);
+                    var count = BitConverter.ToInt32(countBytes);
+                    i += 4;
+                    var transactionBytes = new byte[count];
+                    Array.Copy(payload, i, transactionBytes, 0, count);
+                    i += count;
+
+                    var transactionProto = TransactionProto.Parser.ParseFrom(transactionBytes);
+                    transactionProtos.Add(transactionProto);
+                }                
+                return transactionProtos;
             }
             catch (Exception e)
             {
                 logger.LogCritical($"Failed to deserialize transaction. \nException thrown:{e.Message}");
                 return null;
             }
-        } 
+        }
     }
 }

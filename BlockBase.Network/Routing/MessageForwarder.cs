@@ -105,7 +105,7 @@ namespace BlockBase.Network.Rounting
 
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.ConfirmTransactionReception) TransactionConfirmationReceived?.Invoke(ParseTransactionConfirmationMessage(message), message.Sender);
                 
-                else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendTransaction) TransactionReceived?.Invoke(ParseTransactionMessage(message.Payload), message.Sender);
+                else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendTransaction) TransactionReceived?.Invoke(ParseTransactionsMessage(message), message.Sender);
             }
         }
 
@@ -118,11 +118,9 @@ namespace BlockBase.Network.Rounting
 
         }
 
-        private TransactionReceivedEventArgs ParseTransactionMessage(byte[] payload)
+        private TransactionsReceivedEventArgs ParseTransactionsMessage(NetworkMessage message)
         {
-            var clientAccountNameAndTransactionBytes = ParseClienAccounttName(payload);
-
-            return new TransactionReceivedEventArgs { ClientAccountName = clientAccountNameAndTransactionBytes.Item1, TransactionBytes = clientAccountNameAndTransactionBytes.Item2 };
+            return new TransactionsReceivedEventArgs { TransactionsBytes = message.Payload, ClientAccountName = message.EosAccount};
         }
 
         private TransactionConfirmationReceivedEventArgs ParseTransactionConfirmationMessage(NetworkMessage message)
@@ -228,11 +226,11 @@ namespace BlockBase.Network.Rounting
         }
 
         public event TransactionReceivedEventHandler TransactionReceived;
-        public delegate void TransactionReceivedEventHandler(TransactionReceivedEventArgs args, IPEndPoint sender);
+        public delegate void TransactionReceivedEventHandler(TransactionsReceivedEventArgs args, IPEndPoint sender);
 
-        public class TransactionReceivedEventArgs
+        public class TransactionsReceivedEventArgs
         {
-            public byte[] TransactionBytes { get; set; }
+            public byte[] TransactionsBytes { get; set; }
             public string ClientAccountName { get; set; }
         }
 
