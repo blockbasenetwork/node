@@ -56,7 +56,7 @@ namespace BlockBase.Node.Controllers
             Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
             OperationId = "SendCandidatureToChain"
         )]
-        public async Task<ObjectResult> SendCandidatureToChain(string chainName, int workTime, bool forceDelete = false)
+        public async Task<ObjectResult> SendCandidatureToChain(string chainName, int workTime, int producerType, bool forceDelete = false)
         {
             if (string.IsNullOrEmpty(chainName) || workTime <= 0)
             {
@@ -76,7 +76,7 @@ namespace BlockBase.Node.Controllers
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 
                 var secretHash = HashHelper.Sha256Data(HashHelper.Sha256Data(Encoding.ASCII.GetBytes(NodeConfigurations.SecretPassword)));
-                var transaction = await _mainchainService.AddCandidature(chainName, NodeConfigurations.AccountName, workTime, NodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash));
+                var transaction = await _mainchainService.AddCandidature(chainName, NodeConfigurations.AccountName, workTime, NodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), producerType);
 
                 _logger.LogDebug("Sent producer application. Tx = " + transaction);
 
@@ -199,7 +199,8 @@ namespace BlockBase.Node.Controllers
             try
             {
                 var contractStates = await _mainchainService.RetrieveContractInformation(chainName);
-                return Ok(new OperationResponse<int>((int)contractStates.ProducersNumber));
+                var numberOfProducersRequired = contractStates.NumberOfValidatorProducersRequired + contractStates.NumberOfHistoryProducersRequired + contractStates.NumberOfFullProducersRequired;
+                return Ok(new OperationResponse<uint>(numberOfProducersRequired));
             }
             catch (Exception e)
             {

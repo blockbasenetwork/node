@@ -39,12 +39,12 @@ namespace BlockBase.Network.Mainchain
 
         #region Transactions
 
-        public async Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash) =>
+        public async Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType) =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_CANDIDATE,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountName,
-                CreateDataForAddCandidate(chain, accountName, worktimeInSeconds, publicKey, secretHash)),
+                CreateDataForAddCandidate(chain, accountName, worktimeInSeconds, publicKey, secretHash, producerType)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
@@ -403,7 +403,7 @@ namespace BlockBase.Network.Mainchain
 
         #region Data Helpers
 
-        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, int worktimeInSeconds, string publicKey, string secretHash)
+        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, int worktimeInSeconds, string publicKey, string secretHash, int producerType)
         {
             return new Dictionary<string, object>()
             {
@@ -411,7 +411,8 @@ namespace BlockBase.Network.Mainchain
                 {EosParameterNames.CANDIDATE, name},
                 {EosParameterNames.WORK_TIME_IN_SECONDS, worktimeInSeconds},
                 {EosParameterNames.PUBLIC_KEY, publicKey},
-                {EosParameterNames.SECRET_HASH, secretHash}
+                {EosParameterNames.SECRET_HASH, secretHash},
+                {EosParameterNames.PRODUCER_TYPE, producerType}
             };
         }
 
