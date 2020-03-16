@@ -16,6 +16,7 @@ using BlockBase.Network.Rounting;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.SidechainProducer;
+using BlockBase.Utils;
 using BlockBase.Utils.Threading;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
@@ -92,7 +93,9 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task TryToSendTransactions()
         {
-            foreach (var peerConnection in _peerConnectionsHandler.CurrentPeerConnections)
+            var listPeerConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().ToList();
+            ListHelper.Shuffle<PeerConnection>(listPeerConnections);
+            foreach (var peerConnection in listPeerConnections)
             {
                 if (peerConnection.ConnectionState == ConnectionStateEnum.Connected)
                 {
