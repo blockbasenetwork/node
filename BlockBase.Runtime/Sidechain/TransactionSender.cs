@@ -28,10 +28,10 @@ namespace BlockBase.Runtime.Sidechain
         private INetworkService _networkService;
         private ILogger _logger;
         private NodeConfigurations _nodeConfigurations;
-        public TaskContainer TaskContainer { get; private set; }
+        public Task Task { get; private set; }
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NetworkConfigurations _networkConfigurations;
-        private int WAIT_FOR_RESPONSE_TIME_IN_SECONDs = 60;
+        private int WAIT_FOR_RESPONSE_TIME_IN_SECONDs = 30;
         private int TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS = 2000;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
@@ -53,22 +53,25 @@ namespace BlockBase.Runtime.Sidechain
             _logger.LogDebug($"Received confirmation of transaction {args.TransactionSequenceNumber} from {args.SenderAccountName}.");
             var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == args.TransactionSequenceNumber).SingleOrDefault();
             if (transactionSendingTrackPoco != null)
-            {                
+            {
                 var currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
                 if (currentProducers.Where(p => p.Key == args.SenderAccountName).Count() != 0)
                 {
                     transactionSendingTrackPoco.ProducersAlreadyReceived.Add(args.SenderAccountName);
-                    if (transactionSendingTrackPoco.ProducersAlreadyReceived.Count() > Math.Floor((double) (currentProducers.Count() / 2)))
+                    if (transactionSendingTrackPoco.ProducersAlreadyReceived.Count() > Math.Floor((double)(currentProducers.Count() / 2)))
+                    {
                         _transactionsToSend.Remove(transactionSendingTrackPoco);
+                        _logger.LogDebug($"Removing {args.TransactionSequenceNumber}.");
+                    }
                 }
             }
         }
 
-        public TaskContainer Start()
+        public Task Start()
         {
-            TaskContainer = TaskContainer.Create(async () => await Execute());
-            TaskContainer.Start();
-            return TaskContainer;
+            _logger.LogDebug("Task starting.");
+            Task = Task.Run(async () => await Execute());
+            return Task;
         }
 
         private async Task Execute()
@@ -90,8 +93,10 @@ namespace BlockBase.Runtime.Sidechain
                     {
                         if (!transactionSendingTrackPoco.ProducersAlreadyReceived.GetEnumerable().Contains(peerConnection.ConnectionAccountName)
                         && peerConnection.ConnectionState == ConnectionStateEnum.Connected)
+                        {
+                            _logger.LogDebug($"Sending transaction {transactionSendingTrackPoco.Transaction.SequenceNumber} to {peerConnection.ConnectionAccountName}.");
                             await SendTransactionToProducer(transactionSendingTrackPoco.Transaction, peerConnection);
-
+                        }
                         await Task.Delay(TIME_BETWEEN_SENDING_TRANSACTIONS_IN_MILLISECONDS);
                     }
                     transactionSendingTrackPoco.NextTimeToSendTransaction = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + (WAIT_FOR_RESPONSE_TIME_IN_SECONDs * 1000);

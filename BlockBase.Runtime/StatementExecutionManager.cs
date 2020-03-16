@@ -60,8 +60,6 @@ namespace BlockBase.Runtime
                 {
                     _transformer.TransformCommand(sqlCommand);
                     builder.BuildSqlStatementsText(_generator, sqlCommand);
-
-                    Console.WriteLine();
                     string sqlTextToExecute = "";
                     if (sqlCommand is DatabaseSqlCommand)
                     {
@@ -90,11 +88,11 @@ namespace BlockBase.Runtime
                             results.Add(queryResult);
 
                             //foreach (var title in queryResult.Columns) _logger.LogDebug(title + " ");
-                            foreach (var row in queryResult.Data)
-                            {
-                                Console.WriteLine();
-                                //foreach (var value in row) _logger.LogDebug(value + " ");
-                            }
+                            // foreach (var row in queryResult.Data)
+                            // {
+                            //     Console.WriteLine();
+                            //     //foreach (var value in row) _logger.LogDebug(value + " ");
+                            // }
                             break;
 
                         case ChangeRecordSqlCommand changeRecordSqlCommand:
@@ -201,7 +199,7 @@ namespace BlockBase.Runtime
 
             _transactionSender.AddTransactionToSend(transaction);
 
-            if (_transactionSender.TaskContainer == null || _transactionSender.TaskContainer.Task.IsCompleted)
+            if (_transactionSender.Task == null || _transactionSender.Task.Status.Equals(TaskStatus.RanToCompletion))
                 _transactionSender.Start();
         }
 
