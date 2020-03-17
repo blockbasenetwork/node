@@ -53,6 +53,7 @@ namespace BlockBase.Runtime.Sidechain
             _mainchainService = mainchainService;
             _mongoDbProducerService = mongoDbProducerService;
             _networkService.SubscribeTransactionConfirmationReceivedEvent(MessageForwarder_TransactionConfirmationReceived);
+            LoadTransactionsFromDatabase().Wait();
         }
 
         private void MessageForwarder_TransactionConfirmationReceived(MessageForwarder.TransactionConfirmationReceivedEventArgs args, IPEndPoint sender)
@@ -73,7 +74,7 @@ namespace BlockBase.Runtime.Sidechain
                     }
                 }
             }
-            _mongoDbProducerService.RemoveAlreadySentTransactionsDBAsync( 
+            _mongoDbProducerService.RemoveAlreadySentTransactionsDBAsync(
                 _nodeConfigurations.AccountName,
                 _transactionsToSend.GetEnumerable().Select(t => t.Transaction.SequenceNumber)
                 );
@@ -138,6 +139,13 @@ namespace BlockBase.Runtime.Sidechain
             }
             var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
             await _networkService.SendMessageAsync(message);
+        }
+
+        private async Task LoadTransactionsFromDatabase()
+        {
+            var transactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(_nodeConfigurations.AccountName);
+            foreach (var transaction in transactions)
+                AddScriptTransactionToSend(transaction);
         }
     }
 }
