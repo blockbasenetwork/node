@@ -659,7 +659,7 @@ namespace BlockBase.DataProxy.Encryption
                 }
                 else
                 {
-                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnDataType.DataTypeName == DataTypeEnum.TEXT));
+                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME));
                 }
             }
             return valuesPerColumn;
