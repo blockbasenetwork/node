@@ -122,7 +122,9 @@ namespace BlockBase.Domain.Eos
         public const string STAKE = "stake";
         public const string WORK_DURATION_IN_SECONDS = "work_duration_in_seconds";
         public const string PRODUCER_TYPE = "producer_type";
-        public const string PAYMENT_PER_BLOCK = "payment_per_block";
+        public const string PAYMENT_PER_BLOCK_VALIDATOR_PRODUCERS = "payment_per_block_validator_producers";
+        public const string PAYMENT_PER_BLOCK_HISTORY_PRODUCERS = "payment_per_block_history_producers";
+        public const string PAYMENT_PER_BLOCK_FULL_PRODUCERS = "payment_per_block_full_producers";
         public const string MIN_CANDIDATURE_STAKE = "min_candidature_stake";
         public const string NUMBER_OF_VALIDATOR_PRODUCERS_REQUIRED = "number_of_validator_producers_required";
         public const string NUMBER_OF_HISTORY_PRODUCERS_REQUIRED = "number_of_history_producers_required";

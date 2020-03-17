@@ -8,8 +8,14 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
 
-        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK)]
-        public uint Payment { get; set; }
+        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK_VALIDATOR_PRODUCERS)]
+        public uint PaymentPerBlockValidatorProducers { get; set; }
+
+        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK_HISTORY_PRODUCERS)]
+        public uint PaymentPerBlockHistoryProducers { get; set; }
+
+        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK_FULL_PRODUCERS)]
+        public uint PaymentPerBlockFullProducers { get; set; }
 
         [JsonProperty(EosAtributeNames.MIN_CANDIDATURE_STAKE)]
         public uint Stake { get; set; }
