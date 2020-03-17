@@ -209,35 +209,6 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the total amount of BBT that needs to be paid to the producers at a given moment since the last settlement
-        /// </summary>
-        /// <param name="chainName">Name of the sidechain</param>
-        /// <returns>The current total amount of BBT in debt to the producers since the last settlement</returns>
-        /// <response code="200">Chain payment retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the payments information</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the total amount of BBT that needs to be paid to the producers at a given moment since the last settlement",
-            Description = "The producer ",
-            OperationId = "GetTotalProducerPayment"
-        )]
-        //TODO Change name to something more intuitive.
-        public async Task<ObjectResult> GetTotalProducerPayment(string chainName)
-        {
-            try
-            {
-                var blockcount = await _mainchainService.RetrieveBlockCount(chainName);
-                var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
-                return Ok(new OperationResponse<double>((blockcount.Count * contractInfo.Payment)));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<double>(e));
-            }
-        }
-
-        /// <summary>
         /// Gets the total number of current candidates for a given sidechain
         /// </summary>
         /// <param name="chainName">Name of the sidechain</param>
@@ -261,35 +232,6 @@ namespace BlockBase.Node.Controllers
             catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
-            }
-
-        }
-
-        /// <summary>
-        /// Gets the payment in BBT per block of a given sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the Sidechain</param>
-        /// <returns>The payment in BBT for one block</returns>
-        /// <response code="200">Chain payment retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the payment information</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the payment in BBT per block of a given sidechain",
-            Description = "Gets the payment in BBT that a producer will receive when he produces one block of a given sidechain",
-            OperationId = "GetChainPayment"
-        )]
-        //TODO Change name to something more intuitive.
-        public async Task<ObjectResult> GetChainPayment(string chainName)
-        {
-            try
-            {
-                var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
-                return Ok(new OperationResponse<string>(contractInfo.Payment.ToString()));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
             }
         }
     }
