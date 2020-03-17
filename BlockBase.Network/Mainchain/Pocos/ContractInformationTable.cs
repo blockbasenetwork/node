@@ -14,8 +14,14 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty(EosAtributeNames.MIN_CANDIDATURE_STAKE)]
         public uint Stake { get; set; }
 
-        [JsonProperty(EosAtributeNames.NUMBER_OF_PRODUCERS_REQUIRED)]
-        public uint ProducersNumber { get; set; }
+        [JsonProperty(EosAtributeNames.NUMBER_OF_VALIDATOR_PRODUCERS_REQUIRED)]
+        public uint NumberOfValidatorProducersRequired { get; set; }
+
+        [JsonProperty(EosAtributeNames.NUMBER_OF_HISTORY_PRODUCERS_REQUIRED)]
+        public uint NumberOfHistoryProducersRequired { get; set; }
+
+        [JsonProperty(EosAtributeNames.NUMBER_OF_FULL_PRODUCERS_REQUIRED)]
+        public uint NumberOfFullProducersRequired { get; set; }
 
         [JsonProperty(EosAtributeNames.CANDIDATURE_PHASE_END_DATE_IN_SECONDS)]
         public long CandidatureEndDate { get; set; }

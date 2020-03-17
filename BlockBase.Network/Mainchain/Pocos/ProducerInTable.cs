@@ -23,5 +23,7 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty(EosAtributeNames.SIDECHAIN_START_DATE_IN_SECONDS)]
         public uint StartInSidechainDate { get; set; }
 
+        [JsonProperty(EosAtributeNames.PRODUCER_TYPE)]
+        public uint ProducerType { get; set; }
     }
 }

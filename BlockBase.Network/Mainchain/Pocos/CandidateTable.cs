@@ -16,5 +16,8 @@ namespace BlockBase.Network.Mainchain.Pocos
 
         [JsonProperty(EosAtributeNames.WORK_DURATION_IN_SECONDS)]
         public uint WorkTimeInSeconds { get; set; }
+
+        [JsonProperty(EosAtributeNames.PRODUCER_TYPE)]
+        public uint ProducerType { get; set; }
     }    
 }
