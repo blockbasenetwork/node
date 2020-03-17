@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using BlockBase.DataPersistence.ProducerData;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
 using BlockBase.DataProxy.Encryption;
@@ -23,9 +24,9 @@ namespace BlockBase.Node.Controllers
     public class QueryController : ControllerBase
     {
         private SqlCommandManager _sqlCommandManager;
-        public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, IOptions<NodeConfigurations> nodeConfigurations)
+        public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, IOptions<NodeConfigurations> nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
-            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value);
+            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbProducerService);
         }
 
 

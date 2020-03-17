@@ -10,8 +10,8 @@ namespace BlockBase.DataPersistence.ProducerData
     {
         Task CreateDatabasesAndIndexes(string databaseName);
         Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence);
-        Task AddTransactionToSidechainDatabaseAsync(string databaseName, TransactionDB transaction);
-
+        Task AddTransactionsToSidechainDatabaseAsync(string databaseName, TransactionDB transaction);
+        Task AddTransactionsToSidechainDatabaseAsync(string databaseName, IEnumerable<TransactionDB> transactions);
         Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName);
         Task<Block> GetLastValidSidechainBlockAsync(string databaseName);
         Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
@@ -29,7 +29,8 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash);
         Task<IList<Transaction>> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
         Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash);
-
+        Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName);
+        Task RemoveAlreadySentTransactionsDBAsync(string databaseName, IEnumerable<ulong> sequenceNumbers);
         Task AddProducingSidechainToDatabaseAsync(string sidechain);
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
