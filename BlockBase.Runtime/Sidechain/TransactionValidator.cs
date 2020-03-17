@@ -11,12 +11,10 @@ using BlockBase.Domain.Protos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
 using BlockBase.Network.Sidechain;
-using BlockBase.DataPersistence;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain.Helpers;
 using BlockBase.Runtime.SidechainProducer;
-using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -36,6 +34,7 @@ namespace BlockBase.Runtime.Sidechain
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
+        private IList<ulong> _receivedValidTransactions;
 
         public TransactionValidator(ILogger<TransactionValidator> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
         {
@@ -49,6 +48,7 @@ namespace BlockBase.Runtime.Sidechain
             _nodeConfigurations = nodeConfigurations.Value;
             _validatorSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
             _networkConfigurations = networkConfigurations.Value;
+            _receivedValidTransactions = new List<ulong>();
         }
 
         private async void MessageForwarder_TransactionsReceived(MessageForwarder.TransactionsReceivedEventArgs args, IPEndPoint sender)
@@ -59,13 +59,32 @@ namespace BlockBase.Runtime.Sidechain
             
             foreach(var transactionProto in transactionsProto) 
                 await ValidateEachTransaction(transactionProto, args.ClientAccountName, sender);
+
+            var data = new List<byte>();
+            foreach(var transactionSequenceNumber in _receivedValidTransactions)
+                data.AddRange(BitConverter.GetBytes(transactionSequenceNumber));
+
+            if(data.Count() == 0) 
+                return;
+
+            _receivedValidTransactions = new List<ulong>();
+
+            var message = new NetworkMessage(
+                    NetworkMessageTypeEnum.ConfirmTransactionReception, 
+                    data.ToArray(),
+                    TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, 
+                    _nodeConfigurations.ActivePublicKey, 
+                    _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort, 
+                    _nodeConfigurations.AccountName, sender);
+
+            _logger.LogDebug("Sending confirmation transaction.");
+            await _networkService.SendMessageAsync(message);
         }
 
         private async Task ValidateEachTransaction(TransactionProto transactionProto, string clientAccountName, IPEndPoint sender)
         {
             var transaction = new Transaction().SetValuesFromProto(transactionProto);
             _logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
-            // _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
 
             var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == clientAccountName);
 
@@ -83,14 +102,6 @@ namespace BlockBase.Runtime.Sidechain
 
             await sidechainSemaphore.WaitAsync();
 
-             var message = new NetworkMessage(
-                    NetworkMessageTypeEnum.ConfirmTransactionReception, 
-                    BitConverter.GetBytes(transaction.SequenceNumber),
-                    TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, 
-                    _nodeConfigurations.ActivePublicKey, 
-                    _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort, 
-                    _nodeConfigurations.AccountName, sender);
-
             try
             {
                 if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
@@ -102,7 +113,7 @@ namespace BlockBase.Runtime.Sidechain
                 if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
                 {
                     _logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
-                    await _networkService.SendMessageAsync(message);
+                    _receivedValidTransactions.Add(transaction.SequenceNumber);
                     return;
                 }
 
@@ -116,10 +127,8 @@ namespace BlockBase.Runtime.Sidechain
                 
                 await _mongoDbProducerService.SaveTransaction(databaseName, transaction);
 
-               
+                _receivedValidTransactions.Add(transaction.SequenceNumber);
                 
-                _logger.LogDebug("Sending confirmation transaction.");
-                await _networkService.SendMessageAsync(message);
             }
             catch (Exception e)
             {

@@ -53,18 +53,20 @@ namespace BlockBase.Runtime.Sidechain
         }
 
         private void MessageForwarder_TransactionConfirmationReceived(MessageForwarder.TransactionConfirmationReceivedEventArgs args, IPEndPoint sender)
-        {
-            _logger.LogDebug($"Received confirmation of transaction {args.TransactionSequenceNumber} from {args.SenderAccountName}.");
-            var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == args.TransactionSequenceNumber).SingleOrDefault();
-            if (transactionSendingTrackPoco != null)
+        {  
+            foreach (var sequenceNumber in args.TransactionSequenceNumbers)
             {
-                if (_currentProducers.Where(p => p.Key == args.SenderAccountName).Count() != 0)
+                // _logger.LogDebug($"Received confirmation of transaction {sequenceNumber} from {args.SenderAccountName}.");
+                var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == sequenceNumber).SingleOrDefault();
+                if (transactionSendingTrackPoco != null)
                 {
-                    transactionSendingTrackPoco.ProducersAlreadyReceived.Add(args.SenderAccountName);
-                    if (transactionSendingTrackPoco.ProducersAlreadyReceived.Count() > Math.Floor((double)(_currentProducers.Count() / 2)))
+                    if (_currentProducers.Where(p => p.Key == args.SenderAccountName).Count() != 0)
                     {
-                        _transactionsToSend.Remove(transactionSendingTrackPoco);
-                        _logger.LogDebug($"Removing {args.TransactionSequenceNumber}.");
+                        transactionSendingTrackPoco.ProducersAlreadyReceived.Add(args.SenderAccountName);
+                        if (transactionSendingTrackPoco.ProducersAlreadyReceived.Count() > Math.Floor((double)(_currentProducers.Count() / 2)))
+                        {
+                            _transactionsToSend.Remove(transactionSendingTrackPoco);
+                        }
                     }
                 }
             }

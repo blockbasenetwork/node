@@ -43,7 +43,6 @@ namespace BlockBase.Network.Rounting
         public async Task<OpResult<NetworkMessage>> RegisterMessageEvent(NetworkMessageTypeEnum messageType, Func<NetworkMessage, bool> messageValidator, Func<NetworkMessage, bool> exceptionCases = null, DateTime? timeout = null)
         {
             var messageEvent = new MessageEvent(timeout);
-            //_logger.LogDebug($"RegisterMessageEvent. {messageType}");
             messageEvent.MessageType = messageType;
             messageEvent.MessageValidator = messageValidator;
             messageEvent.ExceptionCases = exceptionCases;
@@ -125,7 +124,14 @@ namespace BlockBase.Network.Rounting
 
         private TransactionConfirmationReceivedEventArgs ParseTransactionConfirmationMessage(NetworkMessage message)
         {
-            return new TransactionConfirmationReceivedEventArgs { SenderAccountName = message.EosAccount,  TransactionSequenceNumber = BitConverter.ToUInt64(message.Payload)};
+            var sequenceNumbers = new List<ulong>();
+            for(int i = 0; i < message.Payload.Length; i+=8)
+            {
+                byte[] sequenceNumberBytes = new byte[8];
+                Array.Copy(message.Payload, i, sequenceNumberBytes, 0, 8);
+                sequenceNumbers.Add(BitConverter.ToUInt64(sequenceNumberBytes));
+            }
+            return new TransactionConfirmationReceivedEventArgs { SenderAccountName = message.EosAccount,  TransactionSequenceNumbers = sequenceNumbers};
         }
 
         private Tuple<string, byte[]> ParseClienAccounttName(byte[] payload)
@@ -239,7 +245,7 @@ namespace BlockBase.Network.Rounting
 
         public class TransactionConfirmationReceivedEventArgs
         {
-            public ulong TransactionSequenceNumber { get; set; }
+            public IList<ulong> TransactionSequenceNumbers { get; set; }
             public string SenderAccountName { get; set; }
         }
     }
