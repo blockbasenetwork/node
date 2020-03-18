@@ -260,12 +260,15 @@ namespace BlockBase.Runtime.Mainchain
         private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
         {
             var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             var producerEncryptedIPAdresses = ipAddressesTables.Select(t => t.EncryptedIPs[t.EncryptedIPs.Count - 1]).ToList();
 
             var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
             for (int i = 0; i < ipAddressesTables.Count; i++)
             {
                 var producer = ipAddressesTables[i].Key;
+                var producerInTable = producersInTable.Where(p => p.Key == producer).FirstOrDefault();
+                if (producerInTable.ProducerType == 1) continue;
                 var producerPublicKey = ipAddressesTables[i].PublicKey;
                 decryptedProducerIPs.Add(producer,
                  IPEncryption.DecryptIP(producerEncryptedIPAdresses[i], _nodeConfigurations.ActivePrivateKey, producerPublicKey));
