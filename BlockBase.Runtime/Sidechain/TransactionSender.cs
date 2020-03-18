@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Protos;
@@ -39,21 +40,24 @@ namespace BlockBase.Runtime.Sidechain
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
         private IList<ProducerInTable> _currentProducers;
+        private IMongoDbProducerService _mongoDbProducerService;
 
-        public TransactionSender(ILogger<TransactionSender> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService)
+        public TransactionSender(ILogger<TransactionSender> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _networkService = networkService;
             _logger = logger;
             _nodeConfigurations = nodeConfigurations.Value;
             _peerConnectionsHandler = peerConnectionsHandler;
             _networkConfigurations = networkConfigurations.Value;
-            _networkService.SubscribeTransactionConfirmationReceivedEvent(MessageForwarder_TransactionConfirmationReceived);
             _transactionsToSend = new ThreadSafeList<TransactionSendingTrackPoco>();
             _mainchainService = mainchainService;
+            _mongoDbProducerService = mongoDbProducerService;
+            _networkService.SubscribeTransactionConfirmationReceivedEvent(MessageForwarder_TransactionConfirmationReceived);
+            LoadTransactionsFromDatabase().Wait();
         }
 
         private void MessageForwarder_TransactionConfirmationReceived(MessageForwarder.TransactionConfirmationReceivedEventArgs args, IPEndPoint sender)
-        {  
+        {
             foreach (var sequenceNumber in args.TransactionSequenceNumbers)
             {
                 // _logger.LogDebug($"Received confirmation of transaction {sequenceNumber} from {args.SenderAccountName}.");
@@ -70,6 +74,10 @@ namespace BlockBase.Runtime.Sidechain
                     }
                 }
             }
+            _mongoDbProducerService.RemoveAlreadySentTransactionsDBAsync(
+                _nodeConfigurations.AccountName,
+                _transactionsToSend.GetEnumerable().Select(t => t.Transaction.SequenceNumber)
+                );
         }
 
         public Task Start()
@@ -131,6 +139,13 @@ namespace BlockBase.Runtime.Sidechain
             }
             var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
             await _networkService.SendMessageAsync(message);
+        }
+
+        private async Task LoadTransactionsFromDatabase()
+        {
+            var transactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(_nodeConfigurations.AccountName);
+            foreach (var transaction in transactions)
+                AddScriptTransactionToSend(transaction);
         }
     }
 }

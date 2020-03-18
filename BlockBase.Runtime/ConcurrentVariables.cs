@@ -1,42 +1,40 @@
-using System;
 using System.Collections.Concurrent;
 using System.Threading;
-using BlockBase.Utils;
+using System.Threading.Tasks;
+using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Domain.Configurations;
+using Microsoft.Extensions.Options;
 
 namespace BlockBase.Runtime
 {
     public class ConcurrentVariables
     {
         public ConcurrentDictionary<string, SemaphoreSlim> DatabasesSemaphores;
-        private const string _transactionNumberFileName = "transactionNumber.txt";
-        private int _transactionNumber;
+        private ulong _transactionNumber;
         private readonly object locker = new object();
+        private IMongoDbProducerService _mongoDbProducerService;
+        private NodeConfigurations _nodeConfigurations;
 
-        public ConcurrentVariables()
+        public ConcurrentVariables(IMongoDbProducerService mongoDbProducerService, IOptions<NodeConfigurations> nodeConfigurations)
         {
             DatabasesSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
-            _transactionNumber = LoadTransactionNumberFromFile();
+            _mongoDbProducerService = mongoDbProducerService;
+            _nodeConfigurations = nodeConfigurations.Value;
+            LoadTransactionNumberFromFile().Wait();
         }
 
-        public int GetNextTransactionNumber()
+        public ulong GetNextTransactionNumber()
         {
             lock (locker)
             {
                 _transactionNumber++;
-                FileWriterReader.Write(_transactionNumberFileName
-                 , _transactionNumber + "", System.IO.FileMode.OpenOrCreate);
                 return _transactionNumber;
             }
         }
 
-        private int LoadTransactionNumberFromFile()
+        private async Task LoadTransactionNumberFromFile()
         {
-            lock (locker)
-            {
-                var lines = FileWriterReader.Read(_transactionNumberFileName);
-                if (lines.Count == 0) return 0;
-                return Int32.Parse(lines[0]);
-            }
+            _transactionNumber = await _mongoDbProducerService.GetLastTransactionSequenceNumberDBAsync(_nodeConfigurations.AccountName);
         }
     }
 }

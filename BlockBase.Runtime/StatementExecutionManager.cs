@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Blockchain;
@@ -33,21 +35,23 @@ namespace BlockBase.Runtime
         private string _databaseName;
         private IConnector _connector;
         private InfoPostProcessing _infoPostProcessing;
-        private ConcurrentVariables _databaseAccess;
+        private ConcurrentVariables _concurrentVariables;
         private TransactionSender _transactionSender;
         private NodeConfigurations _nodeConfigurations;
         private IList<Transaction> _transactionsToSendToProducers;
-
-        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables databaseAccess, TransactionSender transactionSender, NodeConfigurations nodeConfigurations)
+        private IMongoDbProducerService _mongoDbProducerService;
+        
+        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _transformer = transformer;
             _generator = generator;
             _logger = logger;
             _connector = connector;
             _infoPostProcessing = infoPostProcessing;
-            _databaseAccess = databaseAccess;
+            _concurrentVariables = concurrentVariables;
             _nodeConfigurations = nodeConfigurations;
             _transactionSender = transactionSender;
+            _mongoDbProducerService = mongoDbProducerService;
             _transactionsToSendToProducers = new List<Transaction>();
         }
 
@@ -55,7 +59,7 @@ namespace BlockBase.Runtime
         public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate createQueryResult)
         {
             var results = new List<QueryResult>();
-            var databasesSemaphores = _databaseAccess.DatabasesSemaphores;
+            var databasesSemaphores = _concurrentVariables.DatabasesSemaphores;
             foreach (var sqlCommand in builder.SqlCommands)
             {
                 try
@@ -199,13 +203,17 @@ namespace BlockBase.Runtime
 
         private void AddTransactionToSend(string queryToExecute, string databaseName)
         {
-            var transactionNumber = Convert.ToUInt64(_databaseAccess.GetNextTransactionNumber());
+            var transactionNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());
             var transaction = CreateTransaction(queryToExecute, transactionNumber, databaseName, _nodeConfigurations.ActivePrivateKey);
             _transactionsToSendToProducers.Add(transaction);
         }
         private void SendTransactionsToProducers()
         {
-            foreach(var transactionToSend in _transactionsToSendToProducers) _transactionSender.AddScriptTransactionToSend(transactionToSend);
+            _mongoDbProducerService.AddTransactionsToSidechainDatabaseAsync(_nodeConfigurations.AccountName, 
+            _transactionsToSendToProducers.Select(t => new TransactionDB().TransactionDBFromTransaction(t)));
+
+            foreach(var transactionToSend in _transactionsToSendToProducers) 
+                _transactionSender.AddScriptTransactionToSend(transactionToSend);
 
             if (_transactionSender.Task == null || _transactionSender.Task.Status.Equals(TaskStatus.RanToCompletion))
                 _transactionSender.Start();
