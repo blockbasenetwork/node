@@ -21,8 +21,6 @@ namespace BlockBase.Runtime.Network
     {
         private readonly ILogger _logger;
 
-        private IList<TaskContainer> TaskList { get; set; }
-
         internal MessageSender MessageSender { get; set; }
         internal MessageReceiver MessageReceiver { get; set; }
         internal MessageForwarder MessageForwarder { get; set; }
@@ -36,7 +34,6 @@ namespace BlockBase.Runtime.Network
         {
             _logger = serviceProvider.GetService<Logger<INetworkService>>();
 
-            TaskList = new List<TaskContainer>();
             TcpConnector = serviceProvider.GetService<TcpConnector>();
             UdpConnector = serviceProvider.GetService<UdpConnector>();
             MessageSender = serviceProvider.GetService<MessageSender>();
@@ -123,7 +120,7 @@ namespace BlockBase.Runtime.Network
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            TcpConnector.DisconnectAllPeers();
         }
     }
 }

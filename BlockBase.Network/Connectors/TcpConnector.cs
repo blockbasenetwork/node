@@ -50,6 +50,11 @@ namespace BlockBase.Network.Connectors
             _connectionsManager.DisconnectPeer(peer);
         }
 
+        public void DisconnectAllPeers()
+        {
+            _connectionsManager.DisconnectAllPeers();
+        }
+
         public bool IsConnectedTo(IPEndPoint endpoint)
         {
             return _connectionsManager.IsConnectedTo(endpoint);
