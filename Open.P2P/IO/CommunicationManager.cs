@@ -203,5 +203,15 @@ namespace Open.P2P.IO
             Console.WriteLine("Communication Manager:: removing peer.");
             _peers.TryRemove(peer.EndPoint, out peer);
         }
+
+        public void DisconnectAllPeers()
+        {
+            foreach(var registeredPeer in _peers)
+            {
+                var peer = registeredPeer.Value;
+                peer.Disconnect();
+                _peers.TryRemove(peer.EndPoint, out peer);
+            }
+        }
     }
 }
