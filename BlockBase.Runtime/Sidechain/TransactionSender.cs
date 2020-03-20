@@ -105,7 +105,7 @@ namespace BlockBase.Runtime.Sidechain
                 }
                 else
                 {
-                    while (_nextTimeToTry > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() || _numberOfConfirmationsAwaiting > Math.Floor((double)(_numberOfConfirmationsToWait / 2)))
+                    while (_nextTimeToTry > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() && _numberOfConfirmationsAwaiting > Math.Floor((double)(_numberOfConfirmationsToWait / 2)))
                     {
                         await Task.Delay(50);
                     }
