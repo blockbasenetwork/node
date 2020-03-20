@@ -41,6 +41,8 @@ namespace BlockBase.Runtime.Sidechain
         private IMainchainService _mainchainService;
         private IList<ProducerInTable> _currentProducers;
         private IMongoDbProducerService _mongoDbProducerService;
+        private int _numberOfConfirmationsAwaiting;
+        private long _nextTimeToTry;
 
         public TransactionSender(ILogger<TransactionSender> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
@@ -74,6 +76,7 @@ namespace BlockBase.Runtime.Sidechain
                     }
                 }
             }
+            _numberOfConfirmationsAwaiting--;
             _mongoDbProducerService.RemoveAlreadySentTransactionsDBAsync(
                 _nodeConfigurations.AccountName,
                 _transactionsToSend.GetEnumerable().Select(t => t.Transaction.SequenceNumber)
@@ -91,13 +94,21 @@ namespace BlockBase.Runtime.Sidechain
         {
             while (true)
             {
+                _numberOfConfirmationsAwaiting = 0;
                 _currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
                 await TryToSendTransactions();
 
                 if (_transactionsToSend.Count() == 0)
+                {
                     return;
+                }
                 else
-                    await Task.Delay(1000);
+                {
+                    while (_nextTimeToTry > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() || _numberOfConfirmationsAwaiting > 0)
+                    {
+                        await Task.Delay(50);
+                    }
+                }
             }
         }
 
@@ -112,9 +123,10 @@ namespace BlockBase.Runtime.Sidechain
                     var transactionsToSendToProducer = _transactionsToSend.GetEnumerable().Where(p => !p.ProducersAlreadyReceived.GetEnumerable().Contains(peerConnection.ConnectionAccountName)).Select(p => p.Transaction);
                     // _logger.LogDebug($"Sending transaction from {transactionsPerScriptSendingTrackPoco.Transactions.First().SequenceNumber} to {transactionsPerScriptSendingTrackPoco.Transactions.Last().SequenceNumber} to {peerConnection.ConnectionAccountName}.");
                     await SendScriptTransactionsToProducer(transactionsToSendToProducer, peerConnection);
+                    _numberOfConfirmationsAwaiting++;
                 }
-                await Task.Delay(TIME_BETWEEN_PRODUCERS_IN_MILLISECONDS);
             }
+            _nextTimeToTry = DateTimeOffset.UtcNow.AddSeconds(3).ToUnixTimeMilliseconds();
         }
         public void AddScriptTransactionToSend(Transaction transaction)
         {
@@ -127,6 +139,7 @@ namespace BlockBase.Runtime.Sidechain
             };
             _transactionsToSend.Add(transactionSendingTrack);
         }
+
         private async Task SendScriptTransactionsToProducer(IEnumerable<Transaction> transactions, PeerConnection peerConnection)
         {
             var data = new List<byte>();
