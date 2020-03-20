@@ -76,11 +76,11 @@ namespace BlockBase.Runtime.Sidechain
                     }
                 }
             }
-            _numberOfConfirmationsAwaiting--;
             _mongoDbProducerService.RemoveAlreadySentTransactionsDBAsync(
                 _nodeConfigurations.AccountName,
                 _transactionsToSend.GetEnumerable().Select(t => t.Transaction.SequenceNumber)
                 );
+            _numberOfConfirmationsAwaiting--;
         }
 
         public Task Start()
