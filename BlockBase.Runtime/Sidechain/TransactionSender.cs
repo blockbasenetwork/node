@@ -35,13 +35,13 @@ namespace BlockBase.Runtime.Sidechain
         public Task Task { get; private set; }
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NetworkConfigurations _networkConfigurations;
-        private int TIME_BETWEEN_PRODUCERS_IN_MILLISECONDS = 2000;
         private readonly int MAX_TRANSACTIONS_PER_MESSAGE = 50;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
         private IList<ProducerInTable> _currentProducers;
         private IMongoDbProducerService _mongoDbProducerService;
         private int _numberOfConfirmationsAwaiting;
+        private int _numberOfConfirmationsToWait;
         private long _nextTimeToTry;
 
         public TransactionSender(ILogger<TransactionSender> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
@@ -95,6 +95,7 @@ namespace BlockBase.Runtime.Sidechain
             while (true)
             {
                 _numberOfConfirmationsAwaiting = 0;
+                _numberOfConfirmationsToWait = 0;
                 _currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
                 await TryToSendTransactions();
 
@@ -104,7 +105,7 @@ namespace BlockBase.Runtime.Sidechain
                 }
                 else
                 {
-                    while (_nextTimeToTry > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() || _numberOfConfirmationsAwaiting > 0)
+                    while (_nextTimeToTry > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() || _numberOfConfirmationsAwaiting > Math.Floor((double)(_numberOfConfirmationsToWait / 2)))
                     {
                         await Task.Delay(50);
                     }
@@ -126,7 +127,8 @@ namespace BlockBase.Runtime.Sidechain
                     _numberOfConfirmationsAwaiting++;
                 }
             }
-            _nextTimeToTry = DateTimeOffset.UtcNow.AddSeconds(3).ToUnixTimeMilliseconds();
+            _numberOfConfirmationsToWait = _numberOfConfirmationsAwaiting;
+            _nextTimeToTry = DateTimeOffset.UtcNow.AddSeconds(10).ToUnixTimeMilliseconds();
         }
         public void AddScriptTransactionToSend(Transaction transaction)
         {
