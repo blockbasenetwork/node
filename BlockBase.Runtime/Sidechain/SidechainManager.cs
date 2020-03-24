@@ -96,6 +96,7 @@ namespace BlockBase.Runtime.Sidechain
                                     {
                                         await CheckPeerConnections();
                                         await CheckContractAndUpdatePool();
+                                        await CheckSidechainValidation();
                                         await CheckAndGetReward();
                                     };
                                 }
@@ -537,6 +538,20 @@ namespace BlockBase.Runtime.Sidechain
             if (rewardTable.Any(r => r.Reward > 0 && r.Key == Sidechain.ClientAccountName))
             {
                 await _mainchainService.ClaimReward(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
+            }
+        }
+       
+        private async Task CheckSidechainValidation()
+        {
+            var sidechainValidation = await _mainchainService.RetrieveHistoryValidationTable(_nodeConfigurations.AccountName);
+            if (sidechainValidation.Key == _nodeConfigurations.AccountName)
+            {                
+                await HistoryValidationHelper.ProposeHistoryValidation(
+                _mainchainService, 
+                _mongoDbProducerService,
+                _nodeConfigurations.AccountName, 
+                sidechainValidation.BlockHash, 
+                Sidechain);
             }
         }
 

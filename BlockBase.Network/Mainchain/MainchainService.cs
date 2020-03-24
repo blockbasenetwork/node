@@ -290,6 +290,36 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
+        public async Task<string> RequestHistoryValidation(string owner, string producerName, string blockHash, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.REQUEST_HISTORY_VALIDATION,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForRequestHistoryValidation(owner, producerName, blockHash),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+        );
+        public async Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.VALIDATE_HISTORY,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                producerName,
+                CreateDataForAddBlockByte(owner, producerName, byteInHexadecimal),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+        );
+        public async Task<string> ProposeHistoryValidation(string owner, string accountName, List<string> requestedApprovals, string proposalName) =>
+            await TryAgain(async () => await EosStub.ProposeTransaction(
+                EosMethodNames.VALIDATE_HISTORY,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                accountName,
+                CreateDataForValidateHistory(owner, accountName),
+                requestedApprovals,
+                proposalName,
+                EosMsigConstants.VERIFY_HISTORY_PERMISSION),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
         #endregion
 
         #region Table Retrievers
@@ -308,15 +338,20 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<List<IPAddressTable>> RetrieveIPAddresses(string chain) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<IPAddressTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.IP_ADDRESS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
-
-        public async Task<List<TransactionProposalApprovalsTable>> RetrieveApprovals(string proposerAccount) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalApprovalsTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_APPROVALS_TABLE_NAME, proposerAccount), MAX_NUMBER_OF_TRIES);
-
+       
         public async Task<List<BlockCountTable>> RetrieveBlockCount(string proposerAccount) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockCountTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKCOUNT_TABLE_NAME, proposerAccount), MAX_NUMBER_OF_TRIES);
 
         public async Task<List<RewardTable>> RetrieveRewardTable(string account) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<RewardTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PENDING_REWARD_TABLE, account), MAX_NUMBER_OF_TRIES);
+
+        public async Task<TransactionProposalApprovalsTable> RetrieveApprovals(string proposerAccount, string proposalName)
+        {
+            var list = await TryAgain(async () => (await EosStub.GetRowsFromSmartContractTable<TransactionProposalApprovalsTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_APPROVALS_TABLE_NAME, proposerAccount)), MAX_NUMBER_OF_TRIES);
+            TransactionProposalApprovalsTable transactionProposalApprovalsTable = list.Where(t => t.ProposalName == proposalName).SingleOrDefault();
+
+            return transactionProposalApprovalsTable;
+        }
 
         public async Task<ContractInformationTable> RetrieveContractInformation(string chain)
         {
@@ -325,7 +360,7 @@ namespace BlockBase.Network.Mainchain
 
             return contractInfo;
         }
-
+       
         public async Task<ContractStateTable> RetrieveContractState(string chain)
         {
             var listContractState = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractStateTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CONTRACT_STATE_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
@@ -363,7 +398,7 @@ namespace BlockBase.Network.Mainchain
 
             return lastValidSubmittedBlock;
         }
-        
+
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)
         {
             var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, proposerName), MAX_NUMBER_OF_TRIES);
@@ -380,6 +415,15 @@ namespace BlockBase.Network.Mainchain
 
             return null;
         }
+
+        public async Task<HistoryValidationTable> RetrieveHistoryValidationTable(string chain)
+        {
+            var listValidationTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<HistoryValidationTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.HISTORY_VALIDATION_TABLE, chain), MAX_NUMBER_OF_TRIES);
+            HistoryValidationTable historyValidationTable = listValidationTable.SingleOrDefault();
+
+            return historyValidationTable;
+        }
+
 
         //TOKEN TABLES
 
@@ -583,6 +627,35 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.CODE, NetworkConfigurations.BlockBaseOperationsContract },
                 { EosParameterNames.TYPE, action },
                 { EosParameterNames.REQUIREMENT, EosMsigConstants.VERIFY_BLOCK_PERMISSION },
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForRequestHistoryValidation(string owner, string producerName, string blockHash)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.PRODUCER, producerName },
+                { EosParameterNames.BLOCK_HASH, blockHash }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForValidateHistory(string owner, string producerName)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.PRODUCER, producerName }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForAddBlockByte(string owner, string producerName, string byteInHexadecimal)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.PRODUCER, producerName },
+                { EosParameterNames.BYTE_IN_HEXADECIMAL, byteInHexadecimal }
             };
         }
 

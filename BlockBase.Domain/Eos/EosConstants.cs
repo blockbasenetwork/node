@@ -18,6 +18,7 @@ namespace BlockBase.Domain.Eos
         public const string TOKEN_TABLE_NAME = "accounts";
         public const string PENDING_REWARD_TABLE = "rewards";
         public const string BLACKLIST_TABLE = "blacklist";
+        public const string HISTORY_VALIDATION_TABLE = "histval";
     }
 
     public class EosTableValues
@@ -37,6 +38,7 @@ namespace BlockBase.Domain.Eos
         public const string EOSIO_MSIG_PROPOSAL_TABLE_NAME = "proposal";
         public const string ADD_BLOCK_PROPOSAL_NAME = "bbaddblock";
         public const string VERIFY_BLOCK_PERMISSION = "verifyblock";
+        public const string VERIFY_HISTORY_PERMISSION = "verifyhistory";
     }
 
     public class EosMethodNames
@@ -63,6 +65,9 @@ namespace BlockBase.Domain.Eos
         public const string UPDATEAUTH = "updateauth";
         public const string PUNISH_PRODUCERS = "prodpunish";
         public const string BLACKLIST_PRODUCERS = "blacklistprod";
+        public const string REQUEST_HISTORY_VALIDATION = "reqhistval";
+        public const string VALIDATE_HISTORY = "histvalidate";
+        public const string ADD_BLOCK_BYTE = "addblckbyte";
     }
 
     public class EosParameterNames
@@ -99,7 +104,8 @@ namespace BlockBase.Domain.Eos
         public const string TYPE = "type";
         public const string REQUIREMENT = "requirement";
         public const string SIDECHAIN = "sidechain";
-
+        public const string BYTE_INDEX = "byteIndex";
+        public const string BYTE_IN_HEXADECIMAL = "byteInHex";   
     }
 
     public class EosAtributeNames
@@ -163,6 +169,7 @@ namespace BlockBase.Domain.Eos
         public const string PACKED_TRANSACTION = "packed_transaction";
         public const string TIME = "time";
         public const string LEVEL = "level";
+        public const string BLOCK_BYTE_IN_HEXADECIMAL = "block_byte_in_hex";
 
     }
 }

@@ -80,6 +80,7 @@ namespace BlockBase.Runtime.Sidechain
                         if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
                         {
+                            await CheckHistoryValidation();
                             var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName)).SingleOrDefault();
 
                             if (currentProducerTable != null)
@@ -165,7 +166,7 @@ namespace BlockBase.Runtime.Sidechain
                         previousBlockhash = new byte[32];
                     }
 
-                    
+
 
                     var blockHeader = new BlockHeader()
                     {
@@ -212,7 +213,7 @@ namespace BlockBase.Runtime.Sidechain
             var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(transactionsDatabaseName);
             ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
-            uint sizeInBytes = 0 ;
+            uint sizeInBytes = 0;
 
             foreach (var looseTransaction in allLooseTransactions)
             {
@@ -220,7 +221,7 @@ namespace BlockBase.Runtime.Sidechain
                 var transactionSize = looseTransaction.ConvertToProto().ToByteArray().Count();
                 _logger.LogDebug("transaction size in bytes " + _sidechainPool.BlockSizeInBytes);
                 if ((sizeInBytes + blockHeaderSizeInBytes + transactionSize) > _sidechainPool.BlockSizeInBytes) break;
-                sizeInBytes += (uint) (transactionSize);
+                sizeInBytes += (uint)(transactionSize);
                 lastSequenceNumber = looseTransaction.SequenceNumber;
                 transactions.Add(looseTransaction);
                 _logger.LogDebug($"Including transaction {lastSequenceNumber}");
@@ -292,7 +293,7 @@ namespace BlockBase.Runtime.Sidechain
                 try
                 {
                     var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
-                    var approvals = (await _mainchainService.RetrieveApprovals(proposer)).FirstOrDefault();
+                    var approvals = await _mainchainService.RetrieveApprovals(proposer, _sidechainPool.ClientAccountName);
 
                     if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
                     {
@@ -355,6 +356,14 @@ namespace BlockBase.Runtime.Sidechain
             }).ToList();
 
             _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
+        }
+
+        private async Task CheckHistoryValidation()
+        {
+            var historyValidation = await _mainchainService.RetrieveHistoryValidationTable(_sidechainPool.ClientAccountName);
+
+            var proposal = await _mainchainService.RetrieveProposal(historyValidation.Key, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+
         }
     }
 }

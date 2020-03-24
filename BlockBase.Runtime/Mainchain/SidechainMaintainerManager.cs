@@ -16,6 +16,7 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Domain;
 using System.Net.Http;
 using static BlockBase.Network.PeerConnection;
+using BlockBase.Runtime.Sidechain;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -275,6 +276,7 @@ namespace BlockBase.Runtime.Mainchain
         private async Task ExecuteSettlementActions()
         {
             _logger.LogDebug("Settlement starting...");
+            await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             await UpdateAuthorization();

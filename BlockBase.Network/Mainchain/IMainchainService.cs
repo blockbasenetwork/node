@@ -29,6 +29,9 @@ namespace BlockBase.Network.Mainchain
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string permission = "active", string accountPermission = "active");
         Task<string> LinkAuthorization(string actionName ,string accountname, string permission = "active");
         Task<string> ClaimReward(string chain, string producerName, string permission = "active");
+        Task<string> RequestHistoryValidation(string owner, string producerName, string blockHash, string permission = "active");
+        Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active");
+        Task<string> ProposeHistoryValidation(string chain, string accountName, List<string> requestedApprovals, string proposalName);
 
         Task<ClientTable> RetrieveClientTable(string chain);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);
@@ -36,11 +39,12 @@ namespace BlockBase.Network.Mainchain
         Task<List<CandidateTable>> RetrieveCandidates(string chain);
         Task<List<BlockheaderTable>> RetrieveBlockheaderList(string chain, int numberOfBlocks);
         Task<List<IPAddressTable>> RetrieveIPAddresses(string chain);
-        Task<List<TransactionProposalApprovalsTable>> RetrieveApprovals(string proposerAccount);
+        Task<TransactionProposalApprovalsTable> RetrieveApprovals(string proposerAccount, string proposalName);
         Task<List<RewardTable>> RetrieveRewardTable(string account);
         Task<ContractInformationTable> RetrieveContractInformation(string chain);
         Task<ContractStateTable> RetrieveContractState(string chain);
         Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string chain, int numberOfBlocks);
+        Task<HistoryValidationTable> RetrieveHistoryValidationTable(string chain);
         Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks);
         Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks);
         Task<List<BlockCountTable>> RetrieveBlockCount(string chain);
