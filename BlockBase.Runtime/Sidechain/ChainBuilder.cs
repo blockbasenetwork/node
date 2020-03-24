@@ -55,7 +55,7 @@ namespace BlockBase.Runtime.Sidechain
         private ProducerInPool _currentSendingProducer;
 
         private static readonly int MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS = 10;
-        private static readonly int SLICE_SIZE = 20;
+        private static readonly int SLICE_SIZE = 40;
         private object locker = new object();
 
         public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
@@ -179,16 +179,19 @@ namespace BlockBase.Runtime.Sidechain
 
             _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
+            var lastBlockProto = blockProtos.LastOrDefault();
+            var blockAfter = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, lastBlockProto.BlockHeader.SequenceNumber + 1, lastBlockProto.BlockHeader.SequenceNumber + 1)).SingleOrDefault();
             foreach(var blockProto in blockProtos)
             {
-                await HandleReceivedBlock(blockProto, blockHeaderSC);
+                var blockReceived = new Block().SetValuesFromProto(blockProto);
+                await HandleReceivedBlock(blockReceived, blockHeaderSC, blockAfter);
+                blockAfter = blockReceived;
             }
         }
 
 
-        public async Task HandleReceivedBlock(BlockProto blockProtoReceived, BlockHeader blockHeaderFromSC)
+        public async Task HandleReceivedBlock(Block blockReceived, BlockHeader blockHeaderFromSC, Block blockAfter)
         {
-            var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
             if (!_currentlyGettingBlocks.Contains(blockReceived.BlockHeader.SequenceNumber))
             {
                 _logger.LogDebug("Block received was not requested.");
@@ -201,7 +204,7 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
-            if ((await _mongoDbProducerService.GetSidechainBlockAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash))) != null)
+            if ((await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash))))
             {
                 _logger.LogDebug("Block already saved in database.");
                 return;
@@ -216,8 +219,6 @@ namespace BlockBase.Runtime.Sidechain
             }
             else
             {
-                var blockAfter = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, blockReceived.BlockHeader.SequenceNumber + 1, blockReceived.BlockHeader.SequenceNumber + 1)).SingleOrDefault();
-
                 if (blockAfter == null)
                     blockAfter = _blocksApproved.Where(b => b.BlockHeader.PreviousBlockHash.SequenceEqual(blockReceived.BlockHeader.BlockHash)).SingleOrDefault();
 
@@ -232,7 +233,6 @@ namespace BlockBase.Runtime.Sidechain
                 await UpdateDatabase();
                 _receiving = false;
             }
-
         }
 
         private void AddApprovedBlock(Block block)

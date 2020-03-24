@@ -142,6 +142,7 @@ namespace BlockBase.DataPersistence.ProducerData
                 await session.CommitTransactionAsync();
             }
         }
+
         public async Task<Block> GetSidechainBlockAsync(string databaseName, string blockhash)
         {
             var blockheader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockhash);
@@ -151,6 +152,12 @@ namespace BlockBase.DataPersistence.ProducerData
             var transactionList = await GetBlockTransactionsAsync(databaseName, blockhash);
 
             return new Block(blockheader.BlockHeaderFromBlockHeaderDB(), transactionList);
+        }
+
+        public async Task<bool> IsBlockInDatabase(string databaseName, string blockhash)
+        {
+            var blockheader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockhash);
+            return blockheader != null;
         }
 
         public async Task<Block> GetLastValidSidechainBlockAsync(string databaseName)
@@ -340,7 +347,7 @@ namespace BlockBase.DataPersistence.ProducerData
             }
         }
 
-         public async Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber)
+        public async Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
