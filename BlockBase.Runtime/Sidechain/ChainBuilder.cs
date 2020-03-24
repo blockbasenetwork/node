@@ -179,8 +179,8 @@ namespace BlockBase.Runtime.Sidechain
 
             _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
-            var lastBlockProto = blockProtos.LastOrDefault();
-            var blockAfter = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, lastBlockProto.BlockHeader.SequenceNumber + 1, lastBlockProto.BlockHeader.SequenceNumber + 1)).SingleOrDefault();
+            var firstBlockProto = blockProtos.FirstOrDefault();
+            var blockAfter = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, firstBlockProto.BlockHeader.SequenceNumber + 1, firstBlockProto.BlockHeader.SequenceNumber + 1)).SingleOrDefault();
             foreach(var blockProto in blockProtos)
             {
                 var blockReceived = new Block().SetValuesFromProto(blockProto);
