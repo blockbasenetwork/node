@@ -60,9 +60,15 @@ namespace BlockBase.Runtime.Sidechain
                     blocksToSend.Add(block);
                 }
 
+                var sidechainNameBytes = Encoding.UTF8.GetBytes(args.ClientAccountName);
+                short sidechainNamelenght = (short)sidechainNameBytes.Length;
+                var sidechainNameLengthBytes = BitConverter.GetBytes(sidechainNamelenght);
+                data.AddRange(sidechainNameLengthBytes);
+                data.AddRange(sidechainNameBytes);
+
                 foreach (Block block in blocksToSend)
                 {
-                    var blockBytes = BlockProtoToMessageData(block.ConvertToProto(), args.ClientAccountName);
+                    var blockBytes = block.ConvertToProto().ToByteArray();;
                     data.AddRange(BitConverter.GetBytes(blockBytes.Count()));
                     data.AddRange(blockBytes);
                 }
