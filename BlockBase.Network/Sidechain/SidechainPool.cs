@@ -12,6 +12,7 @@ namespace BlockBase.Network.Sidechain
 
         public ThreadSafeList<ProducerInPool> ProducersInPool { get; set; }
         public SidechainPoolStateEnum State { get; set; }
+        public ProducerTypeEnum ProducerType { get; set; }
         public bool ProducingBlocks { get; set; }
         public bool CandidatureOnStandby { get; set; }
 
@@ -27,11 +28,12 @@ namespace BlockBase.Network.Sidechain
         {
         }
 
-        public SidechainPool(string clientAccountName)
+        public SidechainPool(string clientAccountName, ProducerTypeEnum producerType = 0)
         {
             ClientAccountName = clientAccountName;
             State = SidechainPoolStateEnum.RecoverInfo;
             ProducersInPool = new ThreadSafeList<ProducerInPool>();
+            ProducerType = producerType;
         }
 
         public override int GetHashCode()

@@ -231,6 +231,7 @@ namespace BlockBase.Runtime.Mainchain
                 {
                     AccountName = m.Key,
                     PublicKey = m.PublicKey,
+                    ProducerType = (ProducerTypeEnum)m.ProducerType,
                     NewlyJoined = true
                 }
             }).ToList();
@@ -303,6 +304,7 @@ namespace BlockBase.Runtime.Mainchain
                 {
                     AccountName = m.Key,
                     PublicKey = m.PublicKey,
+                    ProducerType = (ProducerTypeEnum)m.ProducerType,
                     NewlyJoined = false,
                     IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
                 },

@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Domain;
 using Google.Protobuf;
+using BlockBase.Domain.Enums;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -350,6 +351,7 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     AccountName = m.Key,
                     PublicKey = m.PublicKey,
+                    ProducerType = (ProducerTypeEnum)m.ProducerType,
                     NewlyJoined = true
                 },
                 PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()

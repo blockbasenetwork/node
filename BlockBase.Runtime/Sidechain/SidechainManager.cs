@@ -179,12 +179,16 @@ namespace BlockBase.Runtime.Sidechain
 
             if (IsProducerInTable(producersInTable))
             {
+                var self = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+                Sidechain.ProducerType = (ProducerTypeEnum)self.ProducerType;
+                
                 var producersInPool = producersInTable.Select(m => new ProducerInPool
                 {
                     ProducerInfo = new ProducerInfo
                     {
                         AccountName = m.Key,
                         PublicKey = m.PublicKey,
+                        ProducerType = (ProducerTypeEnum)m.ProducerType,
                         NewlyJoined = true
                     }
                 }).ToList();
@@ -195,6 +199,9 @@ namespace BlockBase.Runtime.Sidechain
             }
             else
             {
+                var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
+                var self = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+                Sidechain.ProducerType = (ProducerTypeEnum)self.ProducerType;
                 Sidechain.CandidatureOnStandby = true;
             }
 
@@ -253,6 +260,7 @@ namespace BlockBase.Runtime.Sidechain
                         {
                             AccountName = m.Key,
                             PublicKey = m.PublicKey,
+                            ProducerType = (ProducerTypeEnum)m.ProducerType,
                             NewlyJoined = true
                         }
                     }).ToList();
@@ -371,6 +379,7 @@ namespace BlockBase.Runtime.Sidechain
                             AccountName = producersInTable[i].Key,
                             IPEndPoint = null,
                             PublicKey = producersInTable[i].PublicKey,
+                            ProducerType = (ProducerTypeEnum)producersInTable[i].ProducerType,
                             NewlyJoined = true
                         }
                     });
@@ -507,6 +516,7 @@ namespace BlockBase.Runtime.Sidechain
                     AccountName = m.Key,
                     PublicKey = m.PublicKey,
                     NewlyJoined = false,
+                    ProducerType = (ProducerTypeEnum)m.ProducerType,
                     IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
                 },
                 PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()

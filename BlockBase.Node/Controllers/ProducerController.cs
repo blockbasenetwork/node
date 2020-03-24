@@ -15,6 +15,7 @@ using BlockBase.Utils.Crypto;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain.Pocos;
 using Swashbuckle.AspNetCore.Annotations;
+using BlockBase.Domain.Enums;
 
 namespace BlockBase.Node.Controllers
 {
@@ -45,6 +46,7 @@ namespace BlockBase.Node.Controllers
         /// </summary>
         /// <param name="chainName">Account name of the sidechain</param>
         /// <param name="workTime">How much time in seconds the producer will produce the sidechain</param>
+        /// <param name="producerType">The type of producer the node is going to be for this sidechain</param>
         /// <param name="forceDelete">This parameter is here only to simplify testing purposes. It makes it more easy to restart the whole system and delete previous existing databases</param>
         /// <returns>The success of the task</returns>
         /// <response code="200">Candidature sent with success</response>
@@ -80,7 +82,7 @@ namespace BlockBase.Node.Controllers
 
                 _logger.LogDebug("Sent producer application. Tx = " + transaction);
 
-                var sidechainPool = new SidechainPool(chainName);
+                var sidechainPool = new SidechainPool(chainName, (ProducerTypeEnum)producerType);
 
                 _sidechainProducerService.AddSidechainToProducer(sidechainPool);
 

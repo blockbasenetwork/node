@@ -76,17 +76,22 @@ namespace BlockBase.Runtime.Network
                 {
                     var peerConnection = AddIfNotExistsPeerConnection(producerIP.Value, producerIP.Key);
                     if (peerConnection.ConnectionState == ConnectionStateEnum.Connected) continue;
-                    await ConnectAsync(producerIP.Value);
-                    peerConnection.ConnectionState = ConnectionStateEnum.Connected;
-                    await SendIdentificationMessage(producerIP.Value);
+                    var peer = await ConnectAsync(producerIP.Value);
+                    if (peer != null)
+                    {
+                        peerConnection.ConnectionState = ConnectionStateEnum.Connected;
+                        await SendIdentificationMessage(producerIP.Value);
+                    }
+                    else
+                    {
+                        CurrentPeerConnections.Remove(peerConnection);
+                    }
                 }
                 catch (Exception e)
                 {
                     _logger.LogError("Couldn't connect to producer.", e);
-
                 }
             }
-
         }
 
         public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
