@@ -37,7 +37,7 @@ namespace BlockBase.Runtime.Sidechain.Helpers
                     Array.Copy(payload, i, blockBytes, 0, count);
                     i += count;
 
-                    var blockProto = BlockProto.Parser.ParseFrom(payload);
+                    var blockProto = BlockProto.Parser.ParseFrom(blockBytes);
                     blockProtos.Add(blockProto);
                 }
                 return blockProtos;
