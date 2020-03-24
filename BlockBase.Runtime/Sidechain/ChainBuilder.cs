@@ -176,14 +176,17 @@ namespace BlockBase.Runtime.Sidechain
 
             var blockProtos = SerializationHelper.DeserializeBlocks(args.BlockBytes, _logger);
             if (!blockProtos.Any() || blockProtos == null) return;
+
+            _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+            var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
             foreach(var blockProto in blockProtos)
             {
-                await HandleReceivedBlock(blockProto);
+                await HandleReceivedBlock(blockProto, blockHeaderSC);
             }
         }
 
 
-        public async Task HandleReceivedBlock(BlockProto blockProtoReceived)
+        public async Task HandleReceivedBlock(BlockProto blockProtoReceived, BlockHeader blockHeaderFromSC)
         {
             var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
             if (!_currentlyGettingBlocks.Contains(blockReceived.BlockHeader.SequenceNumber))
@@ -204,11 +207,9 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
-            _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-            var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
-            if (blockReceived.BlockHeader.SequenceNumber == blockHeaderSC.SequenceNumber)
+            if (blockReceived.BlockHeader.SequenceNumber == blockHeaderFromSC.SequenceNumber)
             {
-                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, _sidechainPool, blockHeaderSC, _logger, out byte[] blockHash))
+                if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, _sidechainPool, blockHeaderFromSC, _logger, out byte[] blockHash))
                     AddApprovedBlock(blockReceived);
                 else
                     _logger.LogDebug("Block is not according to sc block.");
