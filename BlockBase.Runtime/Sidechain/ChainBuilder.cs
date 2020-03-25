@@ -46,7 +46,7 @@ namespace BlockBase.Runtime.Sidechain
         private string _endPoint;
         private IList<Block> _blocksApproved;
         private IList<Block> _orphanBlocks;
-        private IEnumerable<ulong> _missingBlocksSequenceNumber;
+        private IList<ulong> _missingBlocksSequenceNumber;
         private IList<ulong> _currentlyGettingBlocks;
         private BlockheaderTable _lastSidechainBlockheader;
         private ISidechainDatabasesManager _sidechainDatabaseManager;
@@ -92,7 +92,7 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
-            _missingBlocksSequenceNumber = await GetSequenceNumberOfMissingBlocks();
+            _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks()).ToList();
 
             while (true)
             {
@@ -280,7 +280,7 @@ namespace BlockBase.Runtime.Sidechain
                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                     var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
                     await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
-                    _missingBlocksSequenceNumber = _missingBlocksSequenceNumber.Where(s => s != block.BlockHeader.SequenceNumber);
+                    _missingBlocksSequenceNumber = _missingBlocksSequenceNumber.Where(s => s != block.BlockHeader.SequenceNumber).ToList();
                 }
                 catch (Exception)
                 {
