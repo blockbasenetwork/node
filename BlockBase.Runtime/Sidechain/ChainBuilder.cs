@@ -198,18 +198,23 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
+            _logger.LogDebug($"Starting block validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (!ValidationHelper.IsBlockHashValid(blockReceived.BlockHeader, out byte[] trueBlockHash))
             {
                 _logger.LogDebug("Blockhash not valid.");
                 return;
             }
+            _logger.LogDebug($"Starting block validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
+            _logger.LogDebug($"Starting block database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if ((await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash))))
             {
                 _logger.LogDebug("Block already saved in database.");
                 return;
             }
+            _logger.LogDebug($"Ending block database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
+            _logger.LogDebug($"Starting add block | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (blockReceived.BlockHeader.SequenceNumber == blockHeaderFromSC.SequenceNumber)
             {
                 if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, _sidechainPool, blockHeaderFromSC, _logger, out byte[] blockHash))
@@ -227,6 +232,7 @@ namespace BlockBase.Runtime.Sidechain
                 else
                     AddApprovedBlock(blockReceived);
             }
+            _logger.LogDebug($"Ending add block | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
             if (_blocksApproved.Count() == _currentlyGettingBlocks.Count())
             {
