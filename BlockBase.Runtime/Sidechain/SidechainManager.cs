@@ -553,13 +553,11 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task CheckSidechainValidation()
         {
-            _logger.LogDebug(" CheckSidechainValidation ");
             var sidechainValidation = await _mainchainService.RetrieveHistoryValidationTable(Sidechain.ClientAccountName);
             if (sidechainValidation == null) return;
 
             if (sidechainValidation.Key == _nodeConfigurations.AccountName)
             {
-                _logger.LogDebug("Proposing validation.");
                 await HistoryValidationHelper.ProposeHistoryValidationAndTryToExecute(
                 _mainchainService,
                 _mongoDbProducerService,

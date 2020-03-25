@@ -5,6 +5,7 @@ using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Utils.Crypto;
+using EosSharp.Core.Exceptions;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 
@@ -29,9 +30,9 @@ namespace BlockBase.Runtime.Sidechain
                     await mainChainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
                     logger.LogDebug("Updated history validation table.");
                 }
-                catch (Exception e)
+                catch (ApiErrorException apiException)
                 {
-                    logger.LogWarning("Couldn't update history validation table", e);
+                    logger.LogWarning($"Unable to request history validation with error: {apiException?.error?.name}");
                 }
             }
         }
@@ -49,18 +50,23 @@ namespace BlockBase.Runtime.Sidechain
             {
                 var validationAnswer = await GetValidationAnswer(mongoDbProducerService, blockhash, sidechainPool.ClientAccountName, logger);
                 // logger.LogDebug($"Owner: {owner}, Producer {accountName}, ValidationAnswer: {validationAnswer}");
+                try
+                {
+                    await mainChainService.AddBlockByte(owner, accountName, validationAnswer);
+                    await mainChainService.ProposeHistoryValidation(
+                        sidechainPool.ClientAccountName,
+                        accountName,
+                        sidechainPool.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.AccountName).ToList(),
+                        proposalName
+                        );
+                    logger.LogDebug($"Added block byte and proposed history validation.");
+                }
+                catch (ApiErrorException apiException)
+                {
+                    logger.LogCritical($"Unable to add block byte or propose history validation with error: {apiException?.error?.name}");
+                }
 
-                await mainChainService.AddBlockByte(owner, accountName, validationAnswer);
-                logger.LogDebug($"added block byte.");
-                await mainChainService.ProposeHistoryValidation(
-                    sidechainPool.ClientAccountName,
-                    accountName,
-                    sidechainPool.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.AccountName).ToList(),
-                    proposalName
-                    );
-                    logger.LogDebug($"added proposal.");
             }
-
             await CheckAndApproveHistoryValidation(mainChainService, mongoDbProducerService, accountName, sidechainPool.ClientAccountName, logger);
         }
 
@@ -72,7 +78,7 @@ namespace BlockBase.Runtime.Sidechain
                 var firstHalf = owner.Substring(0, owner.Length >= 5 ? 5 : owner.Length);
                 var secondHalf = owner.Substring(owner.Length - 5 > 0 ? owner.Length - 5 : 0, owner.Length >= 5 ? 5 : owner.Length);
                 var proposalName = firstHalf + "hi" + secondHalf;
-                logger.LogDebug($"Proposal name: {proposalName}.");
+                // logger.LogDebug($"Proposal name: {proposalName}.");
 
                 var proposal = await mainChainService.RetrieveProposal(historyTable.Key, proposalName);
                 var approvals = await mainChainService.RetrieveApprovals(historyTable.Key, proposalName);
@@ -80,19 +86,31 @@ namespace BlockBase.Runtime.Sidechain
                 if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == accountName).FirstOrDefault() == null)
                 {
                     var validationAnswer = await GetValidationAnswer(mongoDbProducerService, historyTable.BlockHash, owner, logger);
-                    logger.LogDebug($"Proposed answer/calculated answer {historyTable.BlockByteInHexadecimal}/{validationAnswer}");
+                    // logger.LogDebug($"Proposed answer/calculated answer {historyTable.BlockByteInHexadecimal}/{validationAnswer}");
 
                     if (validationAnswer == historyTable.BlockByteInHexadecimal)
                     {
-                        await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, accountName, proposal.TransactionHash);
-                        logger.LogDebug($"Approved history validation transaction.");
+                        try
+                        {
+                            await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, accountName, proposal.TransactionHash);
+                        }
+                        catch (ApiErrorException apiException)
+                        {
+                            logger.LogCritical($"Unable to approve history validation transaction with error: {apiException?.error?.name}");
+                        }
                     }
                 }
                 else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
                 {
-
-                    await mainChainService.ExecuteTransaction(historyTable.Key, proposal.ProposalName, accountName);
-                    logger.LogDebug($"Executed history transaction.");
+                    try
+                    {
+                        await mainChainService.ExecuteTransaction(historyTable.Key, proposal.ProposalName, accountName);
+                        logger.LogDebug($"Executed history validation.");
+                    }
+                    catch (ApiErrorException apiException)
+                    {
+                        logger.LogCritical($"Unable to execute history validation transaction with error: {apiException?.error?.name}");
+                    }
                 }
             }
         }
@@ -108,10 +126,10 @@ namespace BlockBase.Runtime.Sidechain
             }
 
             var blockHashNumber = BitConverter.ToUInt64(HashHelper.FormattedHexaStringToByteArray(blockhash));
-            logger.LogWarning("Blockhash converted to number: " + blockHashNumber);
+            // logger.LogWarning("Blockhash converted to number: " + blockHashNumber);
 
             var chosenBlockSequenceNumber = (blockHashNumber % block.BlockHeader.SequenceNumber) + 1;
-            logger.LogWarning($"Current block sequence number {block.BlockHeader.SequenceNumber}, chosen block sequence number {chosenBlockSequenceNumber}");
+            // logger.LogWarning($"Current block sequence number {block.BlockHeader.SequenceNumber}, chosen block sequence number {chosenBlockSequenceNumber}");
 
             var chosenBlock = (await mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(clientAccountName, chosenBlockSequenceNumber, chosenBlockSequenceNumber)).SingleOrDefault();
             if (chosenBlock == null)
@@ -121,8 +139,8 @@ namespace BlockBase.Runtime.Sidechain
             }
 
             var blockBytes = chosenBlock.ConvertToProto().ToByteArray();
-            var byteIndex =(int) (blockHashNumber % (ulong) blockBytes.Count());
-            logger.LogWarning($"Number of block bytes {blockBytes.Count()}, chosen byte{byteIndex}");
+            var byteIndex = (int)(blockHashNumber % (ulong)blockBytes.Count());
+            // logger.LogWarning($"Number of block bytes {blockBytes.Count()}, chosen byte{byteIndex}");
 
             return HashHelper.ByteArrayToFormattedHexaString(new byte[] { blockBytes[byteIndex] });
         }
