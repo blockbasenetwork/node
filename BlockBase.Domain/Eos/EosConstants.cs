@@ -37,6 +37,7 @@ namespace BlockBase.Domain.Eos
         public const string EOSIO_MSIG_PROPOSAL_TABLE_NAME = "proposal";
         public const string ADD_BLOCK_PROPOSAL_NAME = "bbaddblock";
         public const string VERIFY_BLOCK_PERMISSION = "verifyblock";
+        public const string VERIFY_HISTORY_PERMISSION = "verifyhistory";
     }
 
     public class EosMethodNames
@@ -63,6 +64,7 @@ namespace BlockBase.Domain.Eos
         public const string UPDATEAUTH = "updateauth";
         public const string PUNISH_PRODUCERS = "prodpunish";
         public const string BLACKLIST_PRODUCERS = "blacklistprod";
+        public const string HISTORY_VALIDATE = "histvalidate";
     }
 
     public class EosParameterNames
