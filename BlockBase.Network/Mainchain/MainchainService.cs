@@ -252,7 +252,7 @@ namespace BlockBase.Network.Mainchain
             return (int)(timeAfterSend - timeBeforeSend);
         }
 
-        public async Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string permission = "active", string accountPermission = "active")
+        public async Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string authorizationToAssign, string permission = "active", string accountPermission = "active")
         {
             List<AuthorityAccount> accList = new List<AuthorityAccount>();
 
@@ -274,18 +274,18 @@ namespace BlockBase.Network.Mainchain
                 EosMethodNames.UPDATEAUTH,
                 EosAtributeNames.EOSIO,
                 accountname,
-                CreateDataForUpdateAuthorization(accountname, EosMsigConstants.VERIFY_BLOCK_PERMISSION, permission, newAutorization),
+                CreateDataForUpdateAuthorization(accountname, authorizationToAssign, permission, newAutorization),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
         }
 
-        public async Task<string> LinkAuthorization(string actionName, string accountname, string permission = "active") =>
+        public async Task<string> LinkAuthorization(string actionName, string accountname, string authorization, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.LINKAUTH,
                 EosAtributeNames.EOSIO,
                 accountname,
-                CreateDataForLinkAuthorization(accountname, actionName),
+                CreateDataForLinkAuthorization(accountname, actionName, authorization),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -575,14 +575,14 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForLinkAuthorization(string owner, string action)
+        private Dictionary<string, object> CreateDataForLinkAuthorization(string owner, string action, string requirement)
         {
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.ACCOUNT, owner },
                 { EosParameterNames.CODE, NetworkConfigurations.BlockBaseOperationsContract },
                 { EosParameterNames.TYPE, action },
-                { EosParameterNames.REQUIREMENT, EosMsigConstants.VERIFY_BLOCK_PERMISSION },
+                { EosParameterNames.REQUIREMENT, requirement },
             };
         }
 
