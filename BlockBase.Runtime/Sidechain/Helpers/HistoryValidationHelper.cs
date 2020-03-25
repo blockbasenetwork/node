@@ -49,7 +49,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 var validationAnswer = await GetValidationAnswer(mongoDbProducerService, blockhash, sidechainPool.ClientAccountName, logger);
                 // logger.LogDebug($"Owner: {owner}, Producer {accountName}, ValidationAnswer: {validationAnswer}");
-                
+
                 await mainChainService.AddBlockByte(owner, accountName, validationAnswer);
                 logger.LogDebug($"added block byte.");
                 await mainChainService.ProposeHistoryValidation(
@@ -84,7 +84,7 @@ namespace BlockBase.Runtime.Sidechain
 
                     if (validationAnswer == historyTable.BlockByteInHexadecimal)
                     {
-                        await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, historyTable.Key, proposal.TransactionHash);
+                        await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, accountName, proposal.TransactionHash);
                         logger.LogDebug($"Approved history validation transaction.");
                     }
                 }

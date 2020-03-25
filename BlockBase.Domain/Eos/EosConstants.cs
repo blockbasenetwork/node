@@ -66,7 +66,7 @@ namespace BlockBase.Domain.Eos
         public const string PUNISH_PRODUCERS = "prodpunish";
         public const string BLACKLIST_PRODUCERS = "blacklistprod";
         public const string REQUEST_HISTORY_VALIDATION = "reqhistval";
-        public const string VALIDATE_HISTORY = "histvalidate";
+        public const string HISTORY_VALIDATE = "histvalidate";
         public const string ADD_BLOCK_BYTE = "addblckbyte";
     }
 

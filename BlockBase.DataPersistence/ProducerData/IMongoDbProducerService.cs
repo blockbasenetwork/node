@@ -23,6 +23,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<bool> IsBlockConfirmed(string databaseName, string blockHash);
         Task ConfirmBlock(string databaseName, string blockHash);
         Task<bool> IsTransactionInDB(string databaseName, Transaction transaction);
+        Task<bool> IsBlockInDatabase(string databaseName, string blockhash);
         Task SaveTransaction(string databaseName, Transaction transaction);
         Task<IList<Transaction>> RetrieveLastLooseTransactions(string databaseName);
         Task<Transaction> LastIncludedTransaction(string databaseName);

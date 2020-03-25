@@ -112,9 +112,7 @@ namespace BlockBase.Network.Rounting
         {
             var clientAccountNameAndBlockBytes = ParseClienAccounttName(payload);
 
-
             return new BlockReceivedEventArgs { ClientAccountName = clientAccountNameAndBlockBytes.Item1, BlockBytes = clientAccountNameAndBlockBytes.Item2 };
-
         }
 
         private TransactionsReceivedEventArgs ParseTransactionsMessage(NetworkMessage message)

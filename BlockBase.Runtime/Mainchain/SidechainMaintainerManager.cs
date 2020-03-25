@@ -122,7 +122,7 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.CandidatureTime &&
                     contractInfo.CandidatureEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorization();
+                    await UpdateAuthorizations();
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.SecretTime &&
@@ -133,13 +133,14 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.IPSendTime &&
                     contractInfo.SendEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorization();
+                    await UpdateAuthorizations();
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
                 }
                 if (stateTable.IPReceiveTime &&
                     contractInfo.ReceiveEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName);
+                    await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                    await LinkAuthorizarion(EosMethodNames.HISTORY_VALIDATE, _sidechain.ClientAccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
                     await ConnectToProducers();
                 }
@@ -216,7 +217,7 @@ namespace BlockBase.Runtime.Mainchain
             }
         }
 
-        private async Task UpdateAuthorization()
+        private async Task UpdateAuthorizations()
         {
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             var sidechainAccountInfo = await _mainchainService.GetAccount(_sidechain.ClientAccountName);
@@ -237,14 +238,15 @@ namespace BlockBase.Runtime.Mainchain
             }).ToList();
 
             _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
-            await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, producerList);
+            await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, producerList, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+            await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).ToList(), EosMsigConstants.VERIFY_HISTORY_PERMISSION);
         }
 
-        private async Task LinkAuthorizarion(string actionsName, string owner)
+        private async Task LinkAuthorizarion(string actionsName, string owner, string authorization)
         {
             try
             {
-                await _mainchainService.LinkAuthorization(actionsName, owner);
+                await _mainchainService.LinkAuthorization(actionsName, owner, authorization);
             }
             catch (ApiErrorException)
             {
@@ -280,7 +282,7 @@ namespace BlockBase.Runtime.Mainchain
             await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName, _logger);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
-            await UpdateAuthorization();
+            await UpdateAuthorizations();
 
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
