@@ -47,6 +47,8 @@ namespace BlockBase.Runtime.Sidechain
             {
                 _logger.LogDebug("Block request received.");
                 var blocksToSend = new List<Block>();
+                var data = new List<byte>();
+
                 foreach (var sequenceNumber in args.BlocksSequenceNumber)
                 {
                     var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, sequenceNumber, sequenceNumber)).SingleOrDefault();
@@ -58,13 +60,21 @@ namespace BlockBase.Runtime.Sidechain
                     blocksToSend.Add(block);
                 }
 
+                var sidechainNameBytes = Encoding.UTF8.GetBytes(args.ClientAccountName);
+                short sidechainNamelenght = (short)sidechainNameBytes.Length;
+                var sidechainNameLengthBytes = BitConverter.GetBytes(sidechainNamelenght);
+                data.AddRange(sidechainNameLengthBytes);
+                data.AddRange(sidechainNameBytes);
+
                 foreach (Block block in blocksToSend)
                 {
-                    _logger.LogDebug("Going to send block: " + block.BlockHeader.SequenceNumber);
-                    var data = BlockProtoToMessageData(block.ConvertToProto(), args.ClientAccountName);
-                    var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlock, data, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _localEndPoint, _nodeConfigurations.AccountName, args.Sender);
-                    await _networkService.SendMessageAsync(message);
+                    var blockBytes = block.ConvertToProto().ToByteArray();;
+                    data.AddRange(BitConverter.GetBytes(blockBytes.Count()));
+                    data.AddRange(blockBytes);
                 }
+
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendBlock, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _localEndPoint, _nodeConfigurations.AccountName, args.Sender);
+                await _networkService.SendMessageAsync(message);
             }
             catch (Exception e)
             {
