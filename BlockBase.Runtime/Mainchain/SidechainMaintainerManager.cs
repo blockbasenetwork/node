@@ -277,7 +277,7 @@ namespace BlockBase.Runtime.Mainchain
         private async Task ExecuteSettlementActions()
         {
             _logger.LogDebug("Settlement starting...");
-            await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName);
+            await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName, _logger);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             await UpdateAuthorization();

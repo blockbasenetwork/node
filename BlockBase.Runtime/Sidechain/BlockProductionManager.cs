@@ -80,8 +80,7 @@ namespace BlockBase.Runtime.Sidechain
                     {
                         if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
-                        {
-                            await CheckHistoryValidation();
+                        {                        
                             var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName)).SingleOrDefault();
 
                             if (currentProducerTable != null)
@@ -360,12 +359,5 @@ namespace BlockBase.Runtime.Sidechain
             _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
         }
 
-        private async Task CheckHistoryValidation()
-        {
-            var historyValidation = await _mainchainService.RetrieveHistoryValidationTable(_sidechainPool.ClientAccountName);
-
-            var proposal = await _mainchainService.RetrieveProposal(historyValidation.Key, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
-
-        }
     }
 }

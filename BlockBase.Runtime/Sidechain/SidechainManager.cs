@@ -71,7 +71,7 @@ namespace BlockBase.Runtime.Sidechain
             //TODO - it should receive an IConnector passed through dependency injection
             IConnector connector = null; // new MySqlConnector(_nodeConfigurations.MySqlServer, _nodeConfigurations.MySqlUser, _nodeConfigurations.MySqlPort, _nodeConfigurations.MySqlPassword, logger);
             _blockProductionManager = new BlockProductionManager(Sidechain, _nodeConfigurations, _logger, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, EndPoint, _blockSender, new SidechainDatabasesManager(connector));
-        
+
             _mongoDbProducerService.CreateDatabasesAndIndexes(sidechain.ClientAccountName);
         }
 
@@ -96,8 +96,8 @@ namespace BlockBase.Runtime.Sidechain
                                     {
                                         await CheckPeerConnections();
                                         await CheckContractAndUpdatePool();
-                                        await CheckSidechainValidation();
                                         await CheckAndGetReward();
+                                        await CheckSidechainValidation();
                                     };
                                 }
                                 else await Task.Delay((int)_timeDiff);
@@ -181,7 +181,7 @@ namespace BlockBase.Runtime.Sidechain
             {
                 var self = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
                 Sidechain.ProducerType = (ProducerTypeEnum)self.ProducerType;
-                
+
                 var producersInPool = producersInTable.Select(m => new ProducerInPool
                 {
                     ProducerInfo = new ProducerInfo
@@ -550,18 +550,27 @@ namespace BlockBase.Runtime.Sidechain
                 await _mainchainService.ClaimReward(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
             }
         }
-       
+
         private async Task CheckSidechainValidation()
         {
-            var sidechainValidation = await _mainchainService.RetrieveHistoryValidationTable(_nodeConfigurations.AccountName);
+            _logger.LogDebug(" CheckSidechainValidation ");
+            var sidechainValidation = await _mainchainService.RetrieveHistoryValidationTable(Sidechain.ClientAccountName);
+            if (sidechainValidation == null) return;
+
             if (sidechainValidation.Key == _nodeConfigurations.AccountName)
-            {                
-                await HistoryValidationHelper.ProposeHistoryValidation(
-                _mainchainService, 
+            {
+                _logger.LogDebug("Proposing validation.");
+                await HistoryValidationHelper.ProposeHistoryValidationAndTryToExecute(
+                _mainchainService,
                 _mongoDbProducerService,
-                _nodeConfigurations.AccountName, 
-                sidechainValidation.BlockHash, 
-                Sidechain);
+                _nodeConfigurations.AccountName,
+                sidechainValidation.BlockHash,
+                Sidechain,
+                _logger);
+            }
+            else
+            {
+                await HistoryValidationHelper.CheckAndApproveHistoryValidation(_mainchainService, _mongoDbProducerService, _nodeConfigurations.AccountName, Sidechain.ClientAccountName, _logger);
             }
         }
 

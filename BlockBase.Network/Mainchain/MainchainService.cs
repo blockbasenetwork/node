@@ -106,7 +106,7 @@ namespace BlockBase.Network.Mainchain
                 CreateDataForVerifyBlock(chain, accountName, blockHash),
                 requestedApprovals,
                 chain,
-                EosMsigConstants.VERIFY_BLOCK_PERMISSION),
+                EosMsigConstants.VERIFY_HISTORY_PERMISSION),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
@@ -300,14 +300,15 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
         );
         public async Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active") =>
-            await TryAgain(async () => await EosStub.SendTransaction(
-                EosMethodNames.VALIDATE_HISTORY,
+         await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_BLOCK_BYTE,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 producerName,
                 CreateDataForAddBlockByte(owner, producerName, byteInHexadecimal),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
-        );
+        );   
+
         public async Task<string> ProposeHistoryValidation(string owner, string accountName, List<string> requestedApprovals, string proposalName) =>
             await TryAgain(async () => await EosStub.ProposeTransaction(
                 EosMethodNames.VALIDATE_HISTORY,
@@ -317,7 +318,7 @@ namespace BlockBase.Network.Mainchain
                 CreateDataForValidateHistory(owner, accountName),
                 requestedApprovals,
                 proposalName,
-                EosMsigConstants.VERIFY_HISTORY_PERMISSION),
+                EosMsigConstants.VERIFY_BLOCK_PERMISSION),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
         #endregion

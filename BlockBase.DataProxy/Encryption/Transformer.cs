@@ -518,7 +518,6 @@ namespace BlockBase.DataProxy.Encryption
                         HasParenthesis = logicalExpression.HasParenthesis
                     };
                     return newLogicalExpression;
-
             }
             return null;
         }

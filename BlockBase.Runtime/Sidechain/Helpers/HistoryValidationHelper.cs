@@ -6,6 +6,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Utils.Crypto;
 using Google.Protobuf;
+using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -13,56 +14,115 @@ namespace BlockBase.Runtime.Sidechain
     {
         private static Random _rnd = new Random();
 
-        public static async Task SendRequestHistoryValidation(IMainchainService mainChainService, string clientAccountName)
+        public static async Task SendRequestHistoryValidation(IMainchainService mainChainService, string clientAccountName, ILogger logger)
         {
             var sidechainConfig = await mainChainService.RetrieveContractInformation(clientAccountName);
-            var lastValidBlockheader = (await mainChainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)sidechainConfig.BlocksBetweenSettlement)).ConvertToBlockHeader();
-            var producers = await mainChainService.RetrieveProducersFromTable(clientAccountName);
-            int r = _rnd.Next(producers.Count);
-            var chosenProducerAccountName = producers[r].Key;
-
-            await mainChainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
+            var lastValidBlockheaderTable = await mainChainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)sidechainConfig.BlocksBetweenSettlement);
+            if (lastValidBlockheaderTable != null)
+            {
+                var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
+                var producers = await mainChainService.RetrieveProducersFromTable(clientAccountName);
+                int r = _rnd.Next(producers.Count);
+                var chosenProducerAccountName = producers[r].Key;
+                try
+                {
+                    await mainChainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
+                    logger.LogDebug("Updated history validation table.");
+                }
+                catch (Exception e)
+                {
+                    logger.LogWarning("Couldn't update history validation table", e);
+                }
+            }
         }
 
-        public static async Task ProposeHistoryValidation(IMainchainService mainChainService, IMongoDbProducerService mongoDbProducerService, string producerName, string blockhash, SidechainPool sidechainPool)
+        public static async Task ProposeHistoryValidationAndTryToExecute(IMainchainService mainChainService, IMongoDbProducerService mongoDbProducerService, string accountName, string blockhash, SidechainPool sidechainPool, ILogger logger)
         {
-            var validationAnswer = await GetValidationAnswer(mongoDbProducerService, producerName, blockhash, sidechainPool.ClientAccountName);
-
-            await mainChainService.AddBlockByte(sidechainPool.ClientAccountName, producerName, validationAnswer);
             var owner = sidechainPool.ClientAccountName;
-            var proposalName = owner.Substring(0, owner.Length >= 5 ? 5 : owner.Length - 1) + "hi" + owner.Substring(owner.Length - 5 >= 0 ? owner.Length - 5 : 0, owner.Length - 1);
+            var firstHalf = owner.Substring(0, owner.Length >= 5 ? 5 : owner.Length);
+            var secondHalf = owner.Substring(owner.Length - 5 > 0 ? owner.Length - 5 : 0, owner.Length >= 5 ? 5 : owner.Length);
+            var proposalName = firstHalf + "hi" + secondHalf;
 
-            await mainChainService.ProposeHistoryValidation(
-                sidechainPool.ClientAccountName,
-                producerName,
-                sidechainPool.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.AccountName).ToList(),
-                proposalName
-                );
+            var proposal = await mainChainService.RetrieveProposal(accountName, proposalName);
 
-
-            var proposal = await mainChainService.RetrieveProposal(producerName, proposalName);
-            var approvals = await mainChainService.RetrieveApprovals(producerName, proposalName); 
-
-            if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == producerName).FirstOrDefault() == null)
+            if (proposal == null)
             {
-                await mainChainService.ApproveTransaction(producerName, proposal.ProposalName, producerName, proposal.TransactionHash);;
+                var validationAnswer = await GetValidationAnswer(mongoDbProducerService, blockhash, sidechainPool.ClientAccountName, logger);
+                // logger.LogDebug($"Owner: {owner}, Producer {accountName}, ValidationAnswer: {validationAnswer}");
+                
+                await mainChainService.AddBlockByte(owner, accountName, validationAnswer);
+                logger.LogDebug($"added block byte.");
+                await mainChainService.ProposeHistoryValidation(
+                    sidechainPool.ClientAccountName,
+                    accountName,
+                    sidechainPool.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.AccountName).ToList(),
+                    proposalName
+                    );
+                    logger.LogDebug($"added proposal.");
             }
-            else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
+
+            await CheckAndApproveHistoryValidation(mainChainService, mongoDbProducerService, accountName, sidechainPool.ClientAccountName, logger);
+        }
+
+        public static async Task CheckAndApproveHistoryValidation(IMainchainService mainChainService, IMongoDbProducerService mongoDbProducerService, string accountName, string owner, ILogger logger)
+        {
+            var historyTable = await mainChainService.RetrieveHistoryValidationTable(owner);
+            if (historyTable != null)
             {
-                await mainChainService.ExecuteTransaction(producerName, proposal.ProposalName, producerName);
-                return;
+                var firstHalf = owner.Substring(0, owner.Length >= 5 ? 5 : owner.Length);
+                var secondHalf = owner.Substring(owner.Length - 5 > 0 ? owner.Length - 5 : 0, owner.Length >= 5 ? 5 : owner.Length);
+                var proposalName = firstHalf + "hi" + secondHalf;
+                logger.LogDebug($"Proposal name: {proposalName}.");
+
+                var proposal = await mainChainService.RetrieveProposal(historyTable.Key, proposalName);
+                var approvals = await mainChainService.RetrieveApprovals(historyTable.Key, proposalName);
+
+                if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == accountName).FirstOrDefault() == null)
+                {
+                    var validationAnswer = await GetValidationAnswer(mongoDbProducerService, historyTable.BlockHash, owner, logger);
+                    logger.LogDebug($"Proposed answer/calculated answer {historyTable.BlockByteInHexadecimal}/{validationAnswer}");
+
+                    if (validationAnswer == historyTable.BlockByteInHexadecimal)
+                    {
+                        await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, historyTable.Key, proposal.TransactionHash);
+                        logger.LogDebug($"Approved history validation transaction.");
+                    }
+                }
+                else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
+                {
+
+                    await mainChainService.ExecuteTransaction(historyTable.Key, proposal.ProposalName, accountName);
+                    logger.LogDebug($"Executed history transaction.");
+                }
             }
         }
 
-        private static async Task<string> GetValidationAnswer(IMongoDbProducerService mongoDbProducerService, string producerName, string blockhash, string clientAccountName)
+        private static async Task<string> GetValidationAnswer(IMongoDbProducerService mongoDbProducerService, string blockhash, string clientAccountName, ILogger logger)
         {
             var block = await mongoDbProducerService.GetSidechainBlockAsync(clientAccountName, blockhash);
-            var blockHashNumber = BitConverter.ToInt32(HashHelper.FormattedHexaStringToByteArray(blockhash));
-            var chosenBlockSequenceNumber = ((ulong)blockHashNumber % block.BlockHeader.SequenceNumber) + 1;
+
+            if (block == null)
+            {
+                logger.LogWarning("Producer does not have most current block for history validation.");
+                return null;
+            }
+
+            var blockHashNumber = BitConverter.ToUInt64(HashHelper.FormattedHexaStringToByteArray(blockhash));
+            logger.LogWarning("Blockhash converted to number: " + blockHashNumber);
+
+            var chosenBlockSequenceNumber = (blockHashNumber % block.BlockHeader.SequenceNumber) + 1;
+            logger.LogWarning($"Current block sequence number {block.BlockHeader.SequenceNumber}, chosen block sequence number {chosenBlockSequenceNumber}");
 
             var chosenBlock = (await mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(clientAccountName, chosenBlockSequenceNumber, chosenBlockSequenceNumber)).SingleOrDefault();
+            if (chosenBlock == null)
+            {
+                logger.LogWarning("Producer does not have randomly chosen block for history validation.");
+                return null;
+            }
+
             var blockBytes = chosenBlock.ConvertToProto().ToByteArray();
-            var byteIndex = blockHashNumber % blockBytes.Count();
+            var byteIndex =(int) (blockHashNumber % (ulong) blockBytes.Count());
+            logger.LogWarning($"Number of block bytes {blockBytes.Count()}, chosen byte{byteIndex}");
 
             return HashHelper.ByteArrayToFormattedHexaString(new byte[] { blockBytes[byteIndex] });
         }
