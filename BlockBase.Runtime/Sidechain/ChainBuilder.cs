@@ -44,10 +44,10 @@ namespace BlockBase.Runtime.Sidechain
         private INetworkService _networkService;
         private IMainchainService _mainchainService;
         private string _endPoint;
-        private List<Block> _blocksApproved;
-        private List<Block> _orphanBlocks;
+        private IList<Block> _blocksApproved;
+        private IList<Block> _orphanBlocks;
         private IEnumerable<ulong> _missingBlocksSequenceNumber;
-        private IEnumerable<ulong> _currentlyGettingBlocks;
+        private IList<ulong> _currentlyGettingBlocks;
         private BlockheaderTable _lastSidechainBlockheader;
         private ISidechainDatabasesManager _sidechainDatabaseManager;
         private bool _receiving;
@@ -113,7 +113,7 @@ namespace BlockBase.Runtime.Sidechain
                     return;
                 }
 
-                _currentlyGettingBlocks = _missingBlocksSequenceNumber.Take(SLICE_SIZE);
+                _currentlyGettingBlocks = _missingBlocksSequenceNumber.Take(SLICE_SIZE).ToList();
 
                 await _mongoDbProducerService.RemoveUnconfirmedBlocks(_sidechainPool.ClientAccountName);
 
@@ -181,7 +181,7 @@ namespace BlockBase.Runtime.Sidechain
             var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
             var firstBlockProto = blockProtos.FirstOrDefault();
             var blockAfter = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, firstBlockProto.BlockHeader.SequenceNumber + 1, firstBlockProto.BlockHeader.SequenceNumber + 1)).SingleOrDefault();
-            foreach(var blockProto in blockProtos)
+            foreach (var blockProto in blockProtos)
             {
                 var blockReceived = new Block().SetValuesFromProto(blockProto);
                 await HandleReceivedBlock(blockReceived, blockHeaderSC, blockAfter);
@@ -192,13 +192,11 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task HandleReceivedBlock(Block blockReceived, BlockHeader blockHeaderFromSC, Block blockAfter)
         {
-            _logger.LogDebug($"Starting requested validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (!_currentlyGettingBlocks.Contains(blockReceived.BlockHeader.SequenceNumber))
             {
                 _logger.LogDebug("Block received was not requested.");
                 return;
             }
-            _logger.LogDebug($"Ending requested validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
             if (!ValidationHelper.IsBlockHashValid(blockReceived.BlockHeader, out byte[] trueBlockHash))
             {
@@ -206,13 +204,11 @@ namespace BlockBase.Runtime.Sidechain
                 return;
             }
 
-            _logger.LogDebug($"Starting block database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if ((await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash))))
             {
                 _logger.LogDebug("Block already saved in database.");
                 return;
             }
-            _logger.LogDebug($"Ending block database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
             if (blockReceived.BlockHeader.SequenceNumber == blockHeaderFromSC.SequenceNumber)
             {
@@ -232,13 +228,11 @@ namespace BlockBase.Runtime.Sidechain
                     AddApprovedBlock(blockReceived);
             }
 
-            _logger.LogDebug($"Starting add to database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (_blocksApproved.Count() == _currentlyGettingBlocks.Count())
             {
                 await UpdateDatabase();
                 _receiving = false;
             }
-            _logger.LogDebug($"Ending add to database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
         }
 
         private void AddApprovedBlock(Block block)
