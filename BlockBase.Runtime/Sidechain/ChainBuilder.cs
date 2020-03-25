@@ -192,19 +192,19 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task HandleReceivedBlock(Block blockReceived, BlockHeader blockHeaderFromSC, Block blockAfter)
         {
+            _logger.LogDebug($"Starting requested validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (!_currentlyGettingBlocks.Contains(blockReceived.BlockHeader.SequenceNumber))
             {
                 _logger.LogDebug("Block received was not requested.");
                 return;
             }
+            _logger.LogDebug($"Ending requested validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
-            _logger.LogDebug($"Starting block validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (!ValidationHelper.IsBlockHashValid(blockReceived.BlockHeader, out byte[] trueBlockHash))
             {
                 _logger.LogDebug("Blockhash not valid.");
                 return;
             }
-            _logger.LogDebug($"Starting block validation | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
             _logger.LogDebug($"Starting block database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if ((await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash))))
@@ -214,7 +214,6 @@ namespace BlockBase.Runtime.Sidechain
             }
             _logger.LogDebug($"Ending block database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
-            _logger.LogDebug($"Starting add block | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (blockReceived.BlockHeader.SequenceNumber == blockHeaderFromSC.SequenceNumber)
             {
                 if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, _sidechainPool, blockHeaderFromSC, _logger, out byte[] blockHash))
@@ -232,13 +231,14 @@ namespace BlockBase.Runtime.Sidechain
                 else
                     AddApprovedBlock(blockReceived);
             }
-            _logger.LogDebug($"Ending add block | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
+            _logger.LogDebug($"Starting add to database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             if (_blocksApproved.Count() == _currentlyGettingBlocks.Count())
             {
                 await UpdateDatabase();
                 _receiving = false;
             }
+            _logger.LogDebug($"Ending add to database check | {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
         }
 
         private void AddApprovedBlock(Block block)
