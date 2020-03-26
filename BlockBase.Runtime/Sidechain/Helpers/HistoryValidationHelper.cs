@@ -144,5 +144,25 @@ namespace BlockBase.Runtime.Sidechain
 
             return HashHelper.ByteArrayToFormattedHexaString(new byte[] { blockBytes[byteIndex] });
         }
+
+        //TODO: refactor, code repeated
+        public static async Task<ulong?> GetChosenBlockSequenceNumber(IMongoDbProducerService mongoDbProducerService, string blockhash, string clientAccountName, ILogger logger)
+        {
+            var block = await mongoDbProducerService.GetSidechainBlockAsync(clientAccountName, blockhash);
+
+            if (block == null)
+            {
+                logger.LogWarning("Producer does not have most current block for history validation.");
+                return null;
+            }
+
+            var blockHashNumber = BitConverter.ToUInt64(HashHelper.FormattedHexaStringToByteArray(blockhash));
+            // logger.LogWarning("Blockhash converted to number: " + blockHashNumber);
+
+            var chosenBlockSequenceNumber = (blockHashNumber % block.BlockHeader.SequenceNumber) + 1;
+            // logger.LogWarning($"Current block sequence number {block.BlockHeader.SequenceNumber}, chosen block sequence number {chosenBlockSequenceNumber}");
+            return chosenBlockSequenceNumber;
+        }
+
     }
 }
