@@ -19,6 +19,7 @@ using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using static BlockBase.Network.PeerConnection;
 using static BlockBase.Network.Rounting.MessageForwarder;
 using System.Collections.Generic;
+using BlockBase.Network.Mainchain;
 
 namespace BlockBase.Runtime.Sidechain
 {
@@ -29,13 +30,15 @@ namespace BlockBase.Runtime.Sidechain
         private IMongoDbProducerService _mongoDbProducerService;
         private NodeConfigurations _nodeConfigurations;
         private string _localEndPoint;
+        private IMainchainService _mainchainService;
 
-        public BlockSender(ILogger<BlockSender> logger, IOptions<NodeConfigurations> nodeConfigurations, SystemConfig systemConfig, INetworkService networkService, IMongoDbProducerService mongoDbProducerService)
+        public BlockSender(ILogger<BlockSender> logger, IOptions<NodeConfigurations> nodeConfigurations, SystemConfig systemConfig, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService)
         {
             _networkService = networkService;
             _logger = logger;
             _networkService.SubscribeBlocksRequestReceivedEvent(MessageForwarder_BlockRequest);
             _mongoDbProducerService = mongoDbProducerService;
+            _mainchainService = mainchainService;
 
             _nodeConfigurations = nodeConfigurations?.Value;
             _localEndPoint = systemConfig.IPAddress + ":" + systemConfig.TcpPort;
@@ -48,6 +51,15 @@ namespace BlockBase.Runtime.Sidechain
                 _logger.LogDebug("Block request received.");
                 var blocksToSend = new List<Block>();
                 var data = new List<byte>();
+
+                var historyTable = await _mainchainService.RetrieveHistoryValidationTable(args.ClientAccountName);
+                if (historyTable != null)
+                {
+                    var blockToValidateSequenceNumber = await HistoryValidationHelper.GetChosenBlockSequenceNumber(_mongoDbProducerService, historyTable.BlockHash, args.ClientAccountName, _logger);
+                    if (blockToValidateSequenceNumber.HasValue && args.BlocksSequenceNumber.Contains(blockToValidateSequenceNumber.Value))
+                        args.BlocksSequenceNumber.Remove(blockToValidateSequenceNumber.Value);
+                }
+
 
                 foreach (var sequenceNumber in args.BlocksSequenceNumber)
                 {
@@ -68,7 +80,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 foreach (Block block in blocksToSend)
                 {
-                    var blockBytes = block.ConvertToProto().ToByteArray();;
+                    var blockBytes = block.ConvertToProto().ToByteArray(); ;
                     data.AddRange(BitConverter.GetBytes(blockBytes.Count()));
                     data.AddRange(blockBytes);
                 }
