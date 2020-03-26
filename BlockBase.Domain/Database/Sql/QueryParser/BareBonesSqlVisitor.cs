@@ -21,8 +21,8 @@ namespace BlockBase.Domain.Database.QueryParser
         private estring _databaseName { get; set; }
         public override object VisitSql_stmt_list([NotNull] Sql.QueryParser.BareBonesSqlParser.Sql_stmt_listContext context)
         {
-            if(context.exception != null) throw new Exception("Error parsing script.");
-            
+            if (context.exception != null) throw new Exception("Error parsing script.");
+
             var builder = new Builder();
             var stms = context.sql_stmt();
 
@@ -262,8 +262,10 @@ namespace BlockBase.Domain.Database.QueryParser
                 ColumnConstraints = columnDefContext.column_constraint().Select(c => (ColumnConstraint)Visit(c)).ToList()
             };
 
-            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED && columnDef.DataType.BucketInfo.EqualityBucketSize == null
-                && columnDef.ColumnConstraints.Count(c => c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey ||
+            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED 
+            && columnDef.DataType.BucketInfo.EqualityBucketSize == null
+            && columnDef.DataType.BucketInfo.RangeBucketNumber == null
+            && columnDef.ColumnConstraints.Count(c => c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey ||
                 c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.Unique) == 0)
             {
                 throw new FormatException("If the column is not unique or primary key you need to specify the number of equality buckets you desire.");

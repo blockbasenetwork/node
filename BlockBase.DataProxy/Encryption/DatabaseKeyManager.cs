@@ -244,6 +244,24 @@ namespace BlockBase.DataProxy.Encryption
 
             return listBounds;
         }
+        public string GetEqualRangeBktValue(double valueToInsert, InfoRecord columnInfoRecord, DataType columnDataType)
+        {
+            var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
+
+            var listBounds = new List<string>();
+
+            var bound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketNumber.Value,
+                                                 columnDataType.BucketInfo.BucketMinRange.Value,
+                                                 columnDataType.BucketInfo.BucketMaxRange.Value,
+                                                 valueToInsert);
+
+            var boundBytes = BitConverter.GetBytes(bound);
+            var bucket = Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(boundBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)));
+
+            return Base32Encoding.ZBase32.GetString(bucket);
+        }
+
+
         private int CalculateUpperBound(int N, int min, int max, double value)
         {
             if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");

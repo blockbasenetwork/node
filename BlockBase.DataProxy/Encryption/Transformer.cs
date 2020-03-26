@@ -416,7 +416,7 @@ namespace BlockBase.DataProxy.Encryption
             }
 
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
-            if(_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
+            if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
             if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
             {
@@ -441,7 +441,7 @@ namespace BlockBase.DataProxy.Encryption
             transformedDeleteRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(deleteRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
-            if(_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
+            if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
             transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
             sqlStatements.Add(transformedDeleteRecordStatement);
@@ -561,7 +561,7 @@ namespace BlockBase.DataProxy.Encryption
             if (leftColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
             {
                 var isColumnUnique = leftColumnInfoRecord.LData.EncryptedIVColumnName == null;
-                if (!isColumnUnique) 
+                if (!isColumnUnique)
                 {
                     transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.LData.EncryptedIVColumnName)));
                     _isSelectStatementNeeded = true;
@@ -572,10 +572,22 @@ namespace BlockBase.DataProxy.Encryption
                 {
                     if (!isColumnUnique)
                     {
-                        transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedEqualityColumnName);
-                        transformedComparisonExpression.Value = new Value(_encryptor.CreateEqualityBktValue(comparisonExpression.Value.ValueToInsert, leftColumnInfoRecord, leftColumnDataType), true);
+                        if (leftColumnInfoRecord.LData.EncryptedEqualityColumnName != null)
+                        {
+                            transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedEqualityColumnName);
+                            transformedComparisonExpression.Value = new Value(_encryptor.CreateEqualityBktValue(comparisonExpression.Value.ValueToInsert, leftColumnInfoRecord, leftColumnDataType), true);
+                        }
+                        else
+                        {
+                            if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))
+                            {
+                                transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedRangeColumnName);
+                                transformedComparisonExpression.Value = new Value(_encryptor.GetEqualRangeBktValue(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType), true);
+                            }
+                        }
                     }
-                    else transformedComparisonExpression.Value = new Value(_encryptor.EncryptUniqueValue(comparisonExpression.Value.ValueToInsert, leftColumnInfoRecord), true);
+                    else
+                        transformedComparisonExpression.Value = new Value(_encryptor.EncryptUniqueValue(comparisonExpression.Value.ValueToInsert, leftColumnInfoRecord), true);
                 }
                 else
                 {
@@ -799,7 +811,7 @@ namespace BlockBase.DataProxy.Encryption
         private InfoRecord GetInfoRecordThrowErrorIfNotExists(estring name, string parentIV)
         {
             var infoRecord = _encryptor.FindInfoRecord(name, parentIV);
-            if(infoRecord == null) throw new Exception("Relation '" + name.Value + "' does not exist.");
+            if (infoRecord == null) throw new Exception("Relation '" + name.Value + "' does not exist.");
             return infoRecord;
         }
 
