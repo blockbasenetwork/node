@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.Utils.Crypto;
 using EosSharp.Core.Exceptions;
@@ -15,16 +18,16 @@ namespace BlockBase.Runtime.Sidechain
     {
         private static Random _rnd = new Random();
 
-        public static async Task SendRequestHistoryValidation(IMainchainService mainChainService, string clientAccountName, ILogger logger)
+        public static async Task SendRequestHistoryValidation(IMainchainService mainChainService, string clientAccountName, ILogger logger, List<ProducerInTable> producers)
         {
             var sidechainConfig = await mainChainService.RetrieveContractInformation(clientAccountName);
             var lastValidBlockheaderTable = await mainChainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)sidechainConfig.BlocksBetweenSettlement);
             if (lastValidBlockheaderTable != null)
             {
+                var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH).ToList();
                 var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
-                var producers = await mainChainService.RetrieveProducersFromTable(clientAccountName);
-                int r = _rnd.Next(producers.Count);
-                var chosenProducerAccountName = producers[r].Key;
+                int r = _rnd.Next(validProducers.Count);
+                var chosenProducerAccountName = validProducers[r].Key;
                 try
                 {
                     await mainChainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
@@ -112,6 +115,26 @@ namespace BlockBase.Runtime.Sidechain
                         logger.LogCritical($"Unable to execute history validation transaction with error: {apiException?.error?.name}");
                     }
                 }
+            }
+        }
+
+        public static async Task CheckSidechainValidationProposal(IMainchainService mainChainService, string accountName, string owner, ILogger logger)
+        {
+            try
+            {
+                var firstHalf = owner.Substring(0, owner.Length >= 5 ? 5 : owner.Length);
+                var secondHalf = owner.Substring(owner.Length - 5 > 0 ? owner.Length - 5 : 0, owner.Length >= 5 ? 5 : owner.Length);
+                var proposalName = firstHalf + "hi" + secondHalf;
+                // logger.LogDebug($"Proposal name: {proposalName}.");
+
+                var proposal = await mainChainService.RetrieveProposal(accountName, proposalName);
+                if (proposal == null) return;
+
+                await mainChainService.CancelTransaction(accountName, proposal.ProposalName);
+            }
+            catch (ApiErrorException apiException)
+            {
+                logger.LogCritical($"Unable to cancel existing history validation proposal with error: {apiException?.error?.name}");
             }
         }
 

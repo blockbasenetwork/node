@@ -157,6 +157,10 @@ namespace BlockBase.Runtime.Network
                         CurrentPeerConnections.Remove(producer.PeerConnection);
                     }
                 }
+                else
+                {
+                    Disconnect(producer.PeerConnection);
+                }
                 _tryingConnection = false;
             }
             else

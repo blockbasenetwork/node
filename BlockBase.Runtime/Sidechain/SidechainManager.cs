@@ -547,6 +547,7 @@ namespace BlockBase.Runtime.Sidechain
             var rewardTable = await _mainchainService.RetrieveRewardTable(_nodeConfigurations.AccountName);
             if (rewardTable.Any(r => r.Reward > 0 && r.Key == Sidechain.ClientAccountName))
             {
+                await HistoryValidationHelper.CheckSidechainValidationProposal(_mainchainService, _nodeConfigurations.AccountName, Sidechain.ClientAccountName, _logger);
                 await _mainchainService.ClaimReward(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
             }
         }
