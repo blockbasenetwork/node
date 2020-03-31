@@ -63,7 +63,7 @@ namespace BlockBase.Runtime.Mainchain
                 var blocksCount = await _mainchainService.RetrieveBlockCount(_sidechain.ClientAccountName);
                 var numberOfRoundsAlreadyPassed = blocksCount.Sum(b => b.blocksproduced) + blocksCount.Sum(b => b.blocksfailed);
 
-                _sidechain.BlockSizeInBytes = contractInfo.SizeOfBlockInBytes;                
+                _sidechain.BlockSizeInBytes = contractInfo.SizeOfBlockInBytes;
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
                 _roundsUntilSettlement = Convert.ToInt32(contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
@@ -223,7 +223,7 @@ namespace BlockBase.Runtime.Mainchain
             var sidechainAccountInfo = await _mainchainService.GetAccount(_sidechain.ClientAccountName);
             var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
             if (!producerList.Any()) return;
-            if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) && 
+            if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) &&
                 producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return;
 
             var producersInPool = producerList.Select(m => new ProducerInPool
@@ -279,21 +279,23 @@ namespace BlockBase.Runtime.Mainchain
         private async Task ExecuteSettlementActions()
         {
             _logger.LogDebug("Settlement starting...");
-            await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName, _logger);
+
+            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            if (producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any())
+            {
+                _logger.LogDebug("Blacklisting producers...");
+                foreach (var producer in producers)
+                {
+                    if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.ClientAccountName, producer.Key);
+                }
+
+                await _mainchainService.PunishProd(_sidechain.ClientAccountName);
+            }
+
+            await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName, _logger, producers);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             await UpdateAuthorizations();
-
-            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
-            if (!producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any()) return;
-
-            _logger.LogDebug("Blacklisting producers...");
-            foreach (var producer in producers)
-            {
-                if (producer.Warning == EosTableValues.WARNING_PUNISH) await _mainchainService.BlacklistProducer(_sidechain.ClientAccountName, producer.Key);
-            }
-
-            await _mainchainService.PunishProd(_sidechain.ClientAccountName);
         }
 
         private async Task CheckPeerConnections()
