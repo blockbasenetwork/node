@@ -40,7 +40,7 @@ namespace BlockBase.Runtime
         private NodeConfigurations _nodeConfigurations;
         private IList<Transaction> _transactionsToSendToProducers;
         private IMongoDbProducerService _mongoDbProducerService;
-        
+
         public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _transformer = transformer;
@@ -86,19 +86,27 @@ namespace BlockBase.Runtime
 
                     switch (sqlCommand)
                     {
-                        case ReadQuerySqlCommand readQuerySql:
-                            sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
+                        case ReadQuerySqlCommand readQuerySql:   
+                            var extraParsingNotNeeded = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]).Offset.HasValue;
                             //_logger.LogDebug(sqlTextToExecute);
-                            resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                            var queryResult = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultsList, _databaseName);
-                            results.Add(queryResult);
+                            int missingNumberOfRows;
+                            List<IList<string>> resultRows = new List<IList<string>>();
+                            IList<string> columnNames;
+                            while (true)
+                            {
+                                sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
+                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                                missingNumberOfRows = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultsList, _databaseName, resultRows, out columnNames, extraParsingNotNeeded);
+                
+                                if (resultsList.Count() == 0 || missingNumberOfRows == 0)
+                                    break;
 
-                            //foreach (var title in queryResult.Columns) _logger.LogDebug(title + " ");
-                            // foreach (var row in queryResult.Data)
-                            // {
-                            //     Console.WriteLine();
-                            //     //foreach (var value in row) _logger.LogDebug(value + " ");
-                            // }
+                                ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]).Limit = missingNumberOfRows;
+                                ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]).Offset = resultsList.Count();
+                                builder.BuildSqlStatementsText(_generator, readQuerySql);
+                            }
+
+                            results.Add(new QueryResult(resultRows, columnNames));
                             break;
 
                         case ChangeRecordSqlCommand changeRecordSqlCommand:
@@ -209,10 +217,10 @@ namespace BlockBase.Runtime
         }
         private void SendTransactionsToProducers()
         {
-            _mongoDbProducerService.AddTransactionsToSidechainDatabaseAsync(_nodeConfigurations.AccountName, 
+            _mongoDbProducerService.AddTransactionsToSidechainDatabaseAsync(_nodeConfigurations.AccountName,
             _transactionsToSendToProducers.Select(t => new TransactionDB().TransactionDBFromTransaction(t)));
 
-            foreach(var transactionToSend in _transactionsToSendToProducers) 
+            foreach (var transactionToSend in _transactionsToSendToProducers)
                 _transactionSender.AddScriptTransactionToSend(transactionToSend);
 
             if (_transactionSender.Task == null || _transactionSender.Task.Status.Equals(TaskStatus.RanToCompletion))

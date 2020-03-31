@@ -263,15 +263,15 @@ namespace BlockBase.Domain.Database.QueryParser
             };
 
             if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED 
-            && columnDef.DataType.BucketInfo.EqualityBucketSize == null
-            && columnDef.DataType.BucketInfo.RangeBucketNumber == null
+            && columnDef.DataType.BucketInfo.EqualityNumberOfBuckets == null
+            && columnDef.DataType.BucketInfo.RangeNumberOfBuckets == null
             && columnDef.ColumnConstraints.Count(c => c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey ||
                 c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.Unique) == 0)
             {
                 throw new FormatException("If the column is not unique or primary key you need to specify the number of equality buckets you desire.");
             }
 
-            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED && columnDef.DataType.BucketInfo.EqualityBucketSize != null
+            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED && columnDef.DataType.BucketInfo.EqualityNumberOfBuckets != null
                 && columnDef.ColumnConstraints.Count(c => c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey ||
                 c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.Unique) != 0)
             {
@@ -339,13 +339,13 @@ namespace BlockBase.Domain.Database.QueryParser
                 var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED };
                 if (dataTypeContext.bucket_number() != null)
                 {
-                    dataType.BucketInfo.EqualityBucketSize = Int32.Parse(dataTypeContext.bucket_number().NUMERIC_LITERAL().GetText());
+                    dataType.BucketInfo.EqualityNumberOfBuckets = Int32.Parse(dataTypeContext.bucket_number().NUMERIC_LITERAL().GetText());
                 }
 
                 if (dataTypeContext.K_RANGE() != null)
                 {
                     var bktSizeRange = (Tuple<int, int, int>)Visit(dataTypeContext.bucket_range());
-                    dataType.BucketInfo.RangeBucketNumber = bktSizeRange.Item1;
+                    dataType.BucketInfo.RangeNumberOfBuckets = bktSizeRange.Item1;
                     dataType.BucketInfo.BucketMinRange = bktSizeRange.Item2;
                     dataType.BucketInfo.BucketMaxRange = bktSizeRange.Item3;
                     if (dataType.BucketInfo.BucketMinRange >= dataType.BucketInfo.BucketMaxRange)

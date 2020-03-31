@@ -90,14 +90,15 @@ namespace BlockBase.DataProxy.Encryption
             var localData = new InfoRecord.LocalData();
             DataType dataType = JsonConvert.DeserializeObject<DataType>(data);
             string template = "{0}{1}";
-            if (dataType.BucketInfo.EqualityBucketSize.HasValue)
+            if (dataType.BucketInfo.EqualityNumberOfBuckets.HasValue)
             {
                 localData.EncryptedEqualityColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "e", name)), keyManageBytes, ivBytes));
                 localData.EncryptedIVColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "i", name)), keyManageBytes, ivBytes));
             }
-            if (dataType.BucketInfo.RangeBucketNumber.HasValue)
+            if (dataType.BucketInfo.RangeNumberOfBuckets.HasValue)
             {
                 localData.EncryptedRangeColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "r", name)), keyManageBytes, ivBytes));
+                localData.EncryptedIVColumnName = "_" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(Encoding.Unicode.GetBytes(string.Format(template, "i", name)), keyManageBytes, ivBytes));
             }
 
             return localData;
@@ -201,7 +202,7 @@ namespace BlockBase.DataProxy.Encryption
             var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
 
             var valueBytes = Encoding.ASCII.GetBytes(value);
-            var bucket = new BigInteger(Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(valueBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)))) % columnDataType.BucketInfo.EqualityBucketSize.Value;
+            var bucket = new BigInteger(Utils.Crypto.Utils.SHA256(AES256.EncryptWithCBC(valueBytes, columnManageKey, Base32Encoding.ZBase32.ToBytes(columnInfoRecord.IV)))) % columnDataType.BucketInfo.EqualityNumberOfBuckets.Value;
 
             return Base32Encoding.ZBase32.GetString(bucket.ToByteArray());
         }
@@ -209,7 +210,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             var columnManageKey = GetKeyManageFromInfoRecord(columnInfoRecord);
 
-            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketNumber.Value,
+            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeNumberOfBuckets.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
                                                  value);
@@ -225,12 +226,12 @@ namespace BlockBase.DataProxy.Encryption
 
             var listBounds = new List<string>();
 
-            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketNumber.Value,
+            var upperBound = CalculateUpperBound(columnDataType.BucketInfo.RangeNumberOfBuckets.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
                                                  valueToInsert);
 
-            var listIntBounds = CalculateBounds(columnDataType.BucketInfo.RangeBucketNumber.Value,
+            var listIntBounds = CalculateBounds(columnDataType.BucketInfo.RangeNumberOfBuckets.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
                                                  upperBound,
@@ -250,7 +251,7 @@ namespace BlockBase.DataProxy.Encryption
 
             var listBounds = new List<string>();
 
-            var bound = CalculateUpperBound(columnDataType.BucketInfo.RangeBucketNumber.Value,
+            var bound = CalculateUpperBound(columnDataType.BucketInfo.RangeNumberOfBuckets.Value,
                                                  columnDataType.BucketInfo.BucketMinRange.Value,
                                                  columnDataType.BucketInfo.BucketMaxRange.Value,
                                                  valueToInsert);

@@ -20,7 +20,7 @@ namespace BlockBase.Runtime
             DatabasesSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
             _mongoDbProducerService = mongoDbProducerService;
             _nodeConfigurations = nodeConfigurations.Value;
-            LoadTransactionNumberFromFile().Wait();
+            LoadTransactionNumberFromDB().Wait();
         }
 
         public ulong GetNextTransactionNumber()
@@ -32,7 +32,7 @@ namespace BlockBase.Runtime
             }
         }
 
-        private async Task LoadTransactionNumberFromFile()
+        private async Task LoadTransactionNumberFromDB()
         {
             _transactionNumber = await _mongoDbProducerService.GetLastTransactionSequenceNumberDBAsync(_nodeConfigurations.AccountName);
         }

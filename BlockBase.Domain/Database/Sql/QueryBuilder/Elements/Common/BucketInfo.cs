@@ -6,8 +6,8 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
 {
     public class BucketInfo
     {
-        public int? EqualityBucketSize { get; set; }
-        public int? RangeBucketNumber { get; set; }
+        public int? EqualityNumberOfBuckets { get; set; }
+        public int? RangeNumberOfBuckets { get; set; }
         public int? BucketMinRange { get; set; }
         public int? BucketMaxRange { get; set; }
 
@@ -15,8 +15,8 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common
         {
             return new BucketInfo()
             {
-                EqualityBucketSize = EqualityBucketSize,
-                RangeBucketNumber = RangeBucketNumber,
+                EqualityNumberOfBuckets = EqualityNumberOfBuckets,
+                RangeNumberOfBuckets = RangeNumberOfBuckets,
                 BucketMinRange = BucketMinRange,
                 BucketMaxRange = BucketMaxRange
             };

@@ -281,7 +281,6 @@ namespace BlockBase.DataProxy.Encryption
         {
             var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(insertRecordStatement.TableName, databaseIV);
 
-
             var transformedInsertRecordStatement = new InsertRecordStatement(new estring(tableInfoRecord.Name));
 
             foreach (var valuesPerColumn in insertRecordStatement.ValuesPerColumn)
@@ -295,10 +294,19 @@ namespace BlockBase.DataProxy.Encryption
 
         private ISqlStatement GetTransformedSimpleSelectStatement(SimpleSelectStatement simpleSelectStatement, string databaseIV)
         {
+            _isSelectStatementNeeded = false;
             var transformedSimpleSelectStatement = new SimpleSelectStatement();
-            transformedSimpleSelectStatement.Limit = simpleSelectStatement.Limit;
-            transformedSimpleSelectStatement.Offset = simpleSelectStatement.Offset;
             transformedSimpleSelectStatement.SelectCoreStatement = (SelectCoreStatement)GetTransformedSelectCoreStatement(simpleSelectStatement.SelectCoreStatement, databaseIV);
+            if (simpleSelectStatement.Limit != null)
+            {
+                if (_isSelectStatementNeeded)
+                    transformedSimpleSelectStatement.Limit = simpleSelectStatement.Limit + simpleSelectStatement.Offset ?? 0;
+                else
+                {
+                    transformedSimpleSelectStatement.Limit = simpleSelectStatement.Limit;
+                    transformedSimpleSelectStatement.Offset = simpleSelectStatement.Offset;
+                }
+            }
             return transformedSimpleSelectStatement;
         }
         private ISqlStatement GetTransformedSelectCoreStatement(SelectCoreStatement selectCoreStatement, string databaseIV)
@@ -634,12 +642,10 @@ namespace BlockBase.DataProxy.Encryption
             bool isNotUnique = ivColumnName != null;
 
             valuesPerColumn[new estring(columnInfoRecord.Name)] = new List<Value>();
-            if (isEncrypted && isNotUnique)
-            {
-                valuesPerColumn[equalityBktColumnName] = new List<Value>();
-                valuesPerColumn[ivColumnName] = new List<Value>();
-            }
+
+            if (isNotUnique) valuesPerColumn[ivColumnName] = new List<Value>();
             if (rangeBktColumnName != null) valuesPerColumn[rangeBktColumnName] = new List<Value>();
+            if (equalityBktColumnName != null) valuesPerColumn[equalityBktColumnName] = new List<Value>();
 
 
             for (int i = 0; i < columnValues.Value.Count; i++)
@@ -654,12 +660,13 @@ namespace BlockBase.DataProxy.Encryption
                         var newRangeColumnValue = new Value(_encryptor.CreateRangeBktValue(doubleValue, columnInfoRecord, columnDataType), true);
                         valuesPerColumn[rangeBktColumnName].Add(newRangeColumnValue);
                     }
-
-                    if (isNotUnique)
+                    if (equalityBktColumnName != null)
                     {
                         var equalityBktValue = new Value(_encryptor.CreateEqualityBktValue(columnValues.Value[i].ValueToInsert, columnInfoRecord, columnDataType), true);
                         valuesPerColumn[equalityBktColumnName].Add(equalityBktValue);
-
+                    }
+                    if (isNotUnique)
+                    {
                         valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(_encryptor.EncryptNormalValue(columnValues.Value[i].ValueToInsert, columnInfoRecord, out string generatedIV), true));
                         valuesPerColumn[ivColumnName].Add(new Value(generatedIV, true));
                     }
