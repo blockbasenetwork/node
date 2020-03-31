@@ -128,6 +128,7 @@ namespace BlockBase.Runtime.Sidechain
                 // logger.LogDebug($"Proposal name: {proposalName}.");
 
                 var proposal = await mainChainService.RetrieveProposal(accountName, proposalName);
+                if (proposal == null) return;
 
                 await mainChainService.CancelTransaction(accountName, proposal.ProposalName);
             }
