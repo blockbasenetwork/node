@@ -380,6 +380,7 @@ namespace BlockBase.Runtime.Network
 
         private void Disconnect(PeerConnection peerConnection)
         {
+            if (peerConnection.Peer == null) return;
             _logger.LogInformation("Disconnect from peer " + peerConnection.Peer.EndPoint.Address + ":" + peerConnection.Peer.EndPoint.Port + ".");
             _networkService.DisconnectPeer(peerConnection.Peer);
             CurrentPeerConnections.Remove(peerConnection);
