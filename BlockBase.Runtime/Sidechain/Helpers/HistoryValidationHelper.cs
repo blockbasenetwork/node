@@ -24,7 +24,7 @@ namespace BlockBase.Runtime.Sidechain
             var lastValidBlockheaderTable = await mainChainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)sidechainConfig.BlocksBetweenSettlement);
             if (lastValidBlockheaderTable != null)
             {
-                var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH).ToList();
+                var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
                 var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
                 int r = _rnd.Next(validProducers.Count);
                 var chosenProducerAccountName = validProducers[r].Key;
