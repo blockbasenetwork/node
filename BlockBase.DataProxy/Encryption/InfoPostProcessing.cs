@@ -23,18 +23,38 @@ namespace BlockBase.DataProxy.Encryption
         }
 
 
-        public QueryResult TranslateSelectResults(ReadQuerySqlCommand readQuerySqlCommand, IList<IList<string>> allResults, string databaseName)
+        public int TranslateSelectResults(ReadQuerySqlCommand readQuerySqlCommand, IList<IList<string>> allResults, string databaseName, List<IList<string>> alreadyReceivedRows, out IList<string> finalColumnNames, bool extraParsingNotNeeded)
         {
+            var originalSqlStatement = (SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement;
             if (!((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.Encrypted)
             {
                 var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out IList<TableAndColumnName> columnNames);
-                var filteredResults = FilterExpression(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
-                var removedExtraColumns = FilterSelectColumns(((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName, out IList<string> columnsToMantain);
+                var filteredResults = FilterExpression(originalSqlStatement.SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
+                var removedExtraColumns = FilterSelectColumns(originalSqlStatement.SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName, out IList<string> columnsToMantain);
 
-                return new QueryResult(removedExtraColumns, columnsToMantain);
+                alreadyReceivedRows.AddRange(removedExtraColumns);
+                finalColumnNames = columnsToMantain;
+
+                if ( extraParsingNotNeeded ||
+                    (!originalSqlStatement.Offset.HasValue &&
+                    (!originalSqlStatement.Limit.HasValue || originalSqlStatement.Limit == alreadyReceivedRows.Count())))
+                    return 0;
+                
+
+                else if (originalSqlStatement.Offset.HasValue && 
+                        (originalSqlStatement.Offset + originalSqlStatement.Limit == alreadyReceivedRows.Count() ||
+                        allResults.Count() == 0))
+                {
+                    alreadyReceivedRows.RemoveRange(0, originalSqlStatement.Offset.Value <= alreadyReceivedRows.Count() ? originalSqlStatement.Offset.Value : alreadyReceivedRows.Count());
+                    return 0;
+                }
+                else
+                    return originalSqlStatement.Limit ?? 0 + originalSqlStatement.Offset ?? 0 - alreadyReceivedRows.Count();
             }
             var encryptedColumnNames = ((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0]).SelectCoreStatement.ResultColumns.Select(r => r.TableName.Value + "." + r.ColumnName.Value).ToList();
-            return new QueryResult(allResults, encryptedColumnNames);
+            finalColumnNames = encryptedColumnNames;
+            alreadyReceivedRows.ToList().AddRange(allResults);
+            return 0;
         }
 
         public IList<IChangeRecordStatement> UpdateChangeRecordStatement(ChangeRecordSqlCommand changeRecordSqlCommand, IList<IList<string>> allResults, string databaseName)
@@ -50,7 +70,7 @@ namespace BlockBase.DataProxy.Encryption
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
             var tableInfoRecord = _encryptor.FindInfoRecord(originalChangeRecordStatement.TableName, databaseInfoRecord.IV);
 
-            if(changeRecordSqlCommand.OriginalSqlStatement is UpdateRecordStatement originalUpdateRecordStatement)
+            if (changeRecordSqlCommand.OriginalSqlStatement is UpdateRecordStatement originalUpdateRecordStatement)
             {
                 var additionalUpdateRecordStatements = GetAdditionalUpdateRecordStatements(originalUpdateRecordStatement, columnNames, tableInfoRecord, filteredResults);
                 changeRecordStatements.AddRange(additionalUpdateRecordStatements);
@@ -142,7 +162,7 @@ namespace BlockBase.DataProxy.Encryption
             for (int i = 0; i < selectCoreStatement.ResultColumns.Count; i++)
             {
                 var resultColumn = selectCoreStatement.ResultColumns[i];
-                
+
                 var tableInfoRecord = _encryptor.FindInfoRecord(resultColumn.TableName, databaseInfoRecord.IV);
 
                 var decryptedTableName = tableInfoRecord.KeyName != null ? new estring(_encryptor.DecryptName(tableInfoRecord), true) : new estring(tableInfoRecord.Name, false);
