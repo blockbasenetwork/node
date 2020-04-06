@@ -20,7 +20,13 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
     "ActivePublicKey": "", // The public key for the active permission key
     "SecretPassword": "secret", // The secret passphrase that will be used when choosing candidates to produce a sidechain
     "MongoDbConnectionString": "mongodb://localhost", // MongoDB connection string
-    "MongoDbPrefix": "blockbase" // A prefix that will be used in all created MongoDB databases
+    "MongoDbPrefix": "blockbase", // A prefix that will be used in all created MongoDB databases
+    "PostgresHost": "localhost", // The postgresql host address
+    "PostgresUser": "postgres", // The postgres user name to use for the connection
+    "PostgresPort": 5432, // The port to use in the postgres connection
+    "PostgresPassword": "blockbase", // The password for the user used
+    "EncryptionMasterKey": "f3e7frm53rmyb6bn9jbyeopkgyz3jcwotexdfgnexbcjyz8sswwo",
+    "EncryptionPassword": "qwerty123"
   },
   "NetworkConfigurations": {
     "LocalIpAddress": "127.0.0.1", // The IP address that other producers will connect to
@@ -59,20 +65,24 @@ With the following body:
 ```js
 {
 	"key": "blockbasedb1", // The name of the chain
-	"paymentperblock": 400, // The payment for each block, in the lowest decimal value of BBT (ie: 400 means that each block will cost 0.0400 BBT)
-	"minimumcandidatestake": 100, // The minimum stake each producer needs to have in sidechain in the lowest decimal value of BBT
-	"requirednumberofproducers":3, // The desired number of producers for the sidechain
-	"candidaturetime":90, // The candidature phase time in seconds
-	"sendsecrettime":20, // The send secret phase time in seconds
-	"ipsendtime":20, // The send IP phase time in seconds
-	"ipreceivetime":20, // The retrieve IP phase time in seconds
-	"candidatureenddate":0, // No need to change
-	"secretenddate":0, // No need to change
-	"ipsendenddate":0, // No need to change
-	"ipreceiveenddate":0, // No need to change
-	"blocktimeduration": 180, // Time between each block in seconds
-	"blocksbetweensettlement": 20, // The number of blocks between each settlement phase
-	"sizeofblockinbytes":1000 // The maximum size of each block in bytes
+  "payment_per_block_validator_producers": 1, // The payment for each block for validator producers, in the lowest decimal value of BBT (ie: 400 means that each block will cost 0.0400 BBT)
+	"payment_per_block_history_producers": 1, // The payment for each block for history producers
+	"payment_per_block_full_producers": 1, // The payment for each block for full producers
+	"min_candidature_stake": 100, // The minimum stake each producer needs to have in sidechain in the lowest decimal value of BBT
+  "number_of_validator_producers_required":1, // The desired number of validator producers for the sidechain
+	"number_of_history_producers_required":1, // The desired number of history producers for the sidechain
+	"number_of_full_producers_required":1, // The desired number of full producers for the sidechain
+	"candidature_phase_duration_in_seconds":90, // The candidature phase time in seconds
+	"secret_sending_phase_duration_in_seconds":20, // The send secret phase time in seconds
+	"ip_sending_phase_duration_in_seconds":20, // The send IP phase time in seconds
+	"ip_retrieval_phase_duration_in_seconds":20, // The retrieve IP phase time in seconds
+	"candidature_phase_end_date_in_seconds":0, // No need to change
+	"secret_sending_phase_end_date_in_seconds":0, // No need to change
+	"ip_sending_phase_end_date_in_seconds":0, // No need to change
+	"ip_retrieval_phase_end_date_in_seconds":0, // No need to change
+	"block_time_in_seconds": 180, // Time between each block in seconds
+	"num_blocks_between_settlements": 20, // The number of blocks between each settlement phase
+	"block_size_in_bytes":1000 // The maximum size of each block in bytes
 }
 ```
 
@@ -86,8 +96,9 @@ Finally, a request is needed to the following action in order to get the chain r
 ### Sending a candidature for a sidechain
 if you intent on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
 
-`https://`_`apiendpoint`_`/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_
+`https://`_`apiendpoint`_`/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_`&producerType=`_`producerType`_
 
+Where workTime is the ammount of time in seconds the producers will work on the chain, and producerType is the type of producer it intends to be.
 
 
 ## Staking BBT
