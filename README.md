@@ -65,11 +65,11 @@ With the following body:
 ```js
 {
 	"key": "blockbasedb1", // The name of the chain
-  "payment_per_block_validator_producers": 1, // The payment for each block for validator producers, in the lowest decimal value of BBT (ie: 400 means that each block will cost 0.0400 BBT)
+	"payment_per_block_validator_producers": 1, // The payment for each block for validator producers, in the lowest decimal value of BBT (ie: 400 means that each block will cost 0.0400 BBT)
 	"payment_per_block_history_producers": 1, // The payment for each block for history producers
 	"payment_per_block_full_producers": 1, // The payment for each block for full producers
 	"min_candidature_stake": 100, // The minimum stake each producer needs to have in sidechain in the lowest decimal value of BBT
-  "number_of_validator_producers_required":1, // The desired number of validator producers for the sidechain
+	"number_of_validator_producers_required":1, // The desired number of validator producers for the sidechain
 	"number_of_history_producers_required":1, // The desired number of history producers for the sidechain
 	"number_of_full_producers_required":1, // The desired number of full producers for the sidechain
 	"candidature_phase_duration_in_seconds":90, // The candidature phase time in seconds
