@@ -124,9 +124,11 @@ Next, you need to have some BBT in order do add stake to your new chain. To get 
 Adding stake is done through the addstake action in the BlockBase token contract, which can be used with cleos like the following examples:
 
 Staking as a requester:
+
 `cleos -u `_`network_endpoint`_` push action blockbasetkn addstake '[`_`sidechainaccount`_`,`_`sidechainaccount`_`,"X.XXXX BBT", ""]'`
 
 Staking as a provider:
+
 `cleos -u `_`network_endpoint`_` push action blockbasetkn addstake '[`_`provideraccount`_`,`_`sidechainaccount`_`,"X.XXXX BBT", ""]'`
 
 The ammount to stake should be higher than what you plan to set as a minimum stake as a requester. The providers can add the stake after the node is running and the sidechain has been configured.
