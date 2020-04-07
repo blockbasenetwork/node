@@ -106,6 +106,37 @@ In order to stake BBT as a service requester, run the 'addstake' action in the b
 
 In case you want to stake as a service provider, run the 'addstake' action with 'owner' as your producer accout name and 'sidechain' as the sidechain you want to candidate as a producer.
 
-## Smart Contracts running on Jungle
+## Smart Contracts
 **blockbaseopr** - Operations Contract
 **blockbasetkn** - Token Contract
+
+
+
+## Example: Running a chain with 3 producers
+**Note: Public networks where the BlockBase contracts are currently deployed are the Jungle and Kylin test networks.**
+
+You’ll need to run four different instances of the BlockBase node (either in different machines or in the same machine for testing purposes, as long as they’re listening on different ports).
+
+You also need four different EOS accounts in the EOSIO network where you’re going to run the nodes, these need to be configured in the appsettings.json file inside the BlockBase.Node folder, alongisde the ports they’re using for the peer to peer connectinos. For the moment, you’ll need to use the key of the active permission of this account in order to run the node, we suggest creating accounts for the sole purpose of running BlockBase nodes. We also plan to add support for custom permissions in future updates.
+
+Next, you need to have some BBT in order do add stake to your new chain. To get BBT on the mainnet you can participate in our Airgrabs, in order to get BBT in Jungle or Kylin just drop a message in our Telegram channel.
+
+Adding stake is done through the addstake action in the BlockBase token contract, which can be used with cleos like the following examples:
+
+Staking as a requester:
+`cleos -u `_`network_endpoint`_` push action blockbasetkn addstake '[`_`sidechainaccount`_`,`_`sidechainaccount`_`,"X.XXXX BBT", ""]'`
+
+Staking as a provider:
+`cleos -u `_`network_endpoint`_` push action blockbasetkn addstake '[`_`provideraccount`_`,`_`sidechainaccount`_`,"X.XXXX BBT", ""]'`
+
+The ammount to stake should be higher than what you plan to set as a minimum stake as a requester. The providers can add the stake after the node is running and the sidechain has been configured.
+
+After configuring each node, run the four nodes:
+
+`dotnet run --project `_`BlockBase.Node_Folder`_` --urls=`_`Api_Endpoint`_
+
+Next you’ll need to start and configure the chain, using the requests to the api endpoint explained in the “Creating a new sidechain” section above.
+
+For the providers, you’ll need to follow the “Sending a candidature for a sidechain” section above for each one.
+
+If everything was configured correctly, the BlockBase sidechain should start after the candidature period is over.
