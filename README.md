@@ -300,4 +300,4 @@ SELECT patients.* FROM  patients ENCRYPTED;
 SELECT visitors.* FROM visitors;
 ```
 
-For more examples visit : blockbase.network/SandBox
+For more examples visit : https://www.blockbase.network/SandBox
