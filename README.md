@@ -142,3 +142,156 @@ Next you’ll need to start and configure the chain, using the requests to the a
 For the providers, you’ll need to follow the “Sending a candidature for a sidechain” section above for each one.
 
 If everything was configured correctly, the BlockBase sidechain should start after the candidature period is over.
+
+
+
+## Querying BlockBase sidechains
+
+To query a BlockBase sidechain, you need to send the query to the following node endpoint of the service requester:
+
+`https://`_`apiendpoint`_`/Query/ExecuteQuery/`
+
+With the query string inside the body of the POST request.
+
+### Query Examples
+
+#### Database
+
+To create, drop or use a database, the commands used are the same as you would see in the SQL Language:
+
+`CREATE DATABASE { Name of Database } – Used to create the database with a custom name`
+**Note: After creating a database, it's always required to have the USE statement preceding any other query to the database,**
+`– DROP DATABASE { Name of Database } - Used to drop a previously created database.`
+`– USE { Name of Database } - Use to specify the database you want to query.`
+
+#### Table
+
+##### Create Table
+
+To create a table in BBSQL, the commands used once more follow the SQL sintax, with the addition of some options added by using the reserved word “ENCRYPTED”, which allows adding the number of buckets and/or the RANGE to use in the encryption of the informations:
+
+`CREATE TABLE {Table name} ( {Column_Definition} )`
+
+Example:
+`CREATE TABLE invoice ( invoice_id int PRIMARY KEY, customer_id ENCRYPTED 5 RANGE(1, 1000) )`
+
+
+Column Definition:
+`{Column_Name} {Type} [{constraint}*]`
+
+Examples:
+`invoice_id int PRIMARY KEY`
+`customer_id ENCRYPTED 5 RANGE(1, 1000)`
+
+The value after the reserved word ENCRYPTED is the 'number of buckets' for that column. If the number of buckets is 5, this means all records will fall into 5 buckets and record retrieval will be done by bucket and not by record value. So, the larger the number the quicker it is to retrieve records, but more information regarding the frequency of values is leaked.
+
+**An exclamation mark '!' before a table name means the name of the column is unencrypted. If you want to encrypt the table name remove the ! Character**
+
+`[!] {Name}`
+
+Examples:
+
+Here's an example of a simple table creation with some of the records encrypted. This means they are fully encrypted on the client-side:
+
+`CREATE TABLE staff(!id int PRIMARY KEY , !name ENCRYPTED 4 NOT NULL, !email TEXT, !position TEXT, yearOfBirth ENCRYPTED 4 RANGE(10,1905, 2999) NOT NULL, !address ENCRYPTED 4 NOT NULL, socialSecurity ENCRYPTED 4 NOT NULL, salary ENCRYPTED 5 RANGE(500,1000, 20000));`
+
+**IMPORTANT:**
+- An exclamation mark '!' before a table name means the name of the column is unencrypted.
+- Notice the name column, it has the word 'ENCRYPTED' right after it and then the number 4. This means that the data of this column will be encrypted. Furthermore, it also means that encrypted records will be associated to 4 buckets. The more buckets you have the faster you can query data but the more you reveal their frequency.
+- With this configuration you can query records with equality queries '=' and '!=', and bbsql will query records by their buckets instead of the record values themselves.
+- Notice the yearOfBirth column, besides the word 'ENCRYPTED' and the bucket number, it also has 'RANGE(10, 1905, 2999)'. With this configuration you can also make range queries using '<', '<=', '>' and '>=', and it states the range 1905 to 2999 will be devided into 10 consecutive buckets.
+
+
+##### Alter Table
+
+Syntax:
+
+```
+ALTER TABLE {Table Name} RENAME TO {New Table Name};
+ALTER TABLE {Table Name} RENAME COLUMN {Column Name} TO {New Column Name};
+ALTER TABLE {Table Name} DROP COLUMN {Column Name}; 
+ALTER TABLE {Table Name} ADD COLUMN {Column Name};
+```
+
+Examples:
+
+```
+ALTER TABLE invoiice RENAME TO invoice
+ALTER TABLE invoice RENAME COLUMN id TO !id
+ALTER TABLE product ADD COLUMN name TEXT
+ALTER TABLE product DROP COLUMN name
+```
+
+##### Drop Table
+
+Syntax:
+
+`DROP TABLE { Table_Name }`
+
+
+#### Records
+
+##### Insert Record
+
+Syntax: 
+
+`INSERT INTO {Table_Name} VALUES ( {Column_Name}* ) VALUES ( {Literal_Value}* )`
+
+Examples:
+
+`INSERT INTO product (id, name, price) VALUES (1, ‘sponge’, 5.00)`
+`INSERT INTO clients(id, name, email, deliveryAddress, billingAddress, zipCode) VALUES (0, 'Mary','mary@bb.com','123 Mary Street','123 Mary Street','85035')`
+
+##### Delete Record
+
+Syntax:
+
+`DELETE FROM {Table_Name} [WHERE {expression}]`
+
+Example:
+
+`DELETE FROM product WHERE name = ‘sponge’`
+
+##### Update Record
+
+Syntax:
+
+`UPDATE {Table_Name} SET ( {Column_Name} = {Literal_Value} )* [WHERE {Expression}]`
+
+Example:
+
+`UPDATE product SET price = 6.00 WHERE Name = ‘sponge’`
+
+
+##### Select Record
+
+The select command is used to retrieve data from the database ranging from simple commands to complex ones. This command is similiar to the SELECT in the SQL Language, being able to filter the information as you please. This command follows this formula:
+
+`SELECT ( {Table_Name}.{Column_Name} )* FROM {table_name}* [ JOIN {table_name} ON {Expression} ]* [ WHERE {expression} ] [ ENCRYPTED ]`
+
+Examples:
+
+`SELECT product.* FROM product WHERE price < 10.00`
+
+```
+– An example of a inner join between patients table and visitors table, to find all
+SELECT patients.name, patients.dateOfAdmission, visitors.name, visitors.dateOfVisit FROM patients JOIN visitors ON patients.id = visitors.patientVisited WHERE patients.id = 2;
+```
+
+```
+– here's an example on how you get data all staff with salary equal or lower tha n 10000 
+SELECT staff.* FROM staff where staff.salary {= 10000;
+```
+
+```
+– here you can see the difference between getting data encrypted or decrypted
+SELECT patients.* FROM patients;
+SELECT patients.* FROM  patients ENCRYPTED;
+```
+
+```
+– this is a simple statment to get all the data, without encryption
+SELECT visitors.* FROM visitors;
+```
+
+For more examples visit : blockbase.network/SandBox
