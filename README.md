@@ -159,10 +159,13 @@ With the query string inside the body of the POST request.
 
 To create, drop or use a database, the commands used are the same as you would see in the SQL Language:
 
-`CREATE DATABASE { Name of Database } – Used to create the database with a custom name`
+```
+CREATE DATABASE { Name of Database } – Used to create the database with a custom name
+DROP DATABASE { Name of Database } - Used to drop a previously created database.
+USE { Name of Database } - Use to specify the database you want to query.
+```
+
 **Note: After creating a database, it's always required to have the USE statement preceding any other query to the database,**
-`– DROP DATABASE { Name of Database } - Used to drop a previously created database.`
-`– USE { Name of Database } - Use to specify the database you want to query.`
 
 #### Table
 
@@ -173,13 +176,16 @@ To create a table in BBSQL, the commands used once more follow the SQL sintax, w
 `CREATE TABLE {Table name} ( {Column_Definition} )`
 
 Example:
+
 `CREATE TABLE invoice ( invoice_id int PRIMARY KEY, customer_id ENCRYPTED 5 RANGE(1, 1000) )`
 
 
 Column Definition:
+
 `{Column_Name} {Type} [{constraint}*]`
 
 Examples:
+
 `invoice_id int PRIMARY KEY`
 `customer_id ENCRYPTED 5 RANGE(1, 1000)`
 
