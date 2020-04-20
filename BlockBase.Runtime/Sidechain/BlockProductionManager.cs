@@ -119,6 +119,12 @@ namespace BlockBase.Runtime.Sidechain
                                 {
                                     _logger.LogDebug("Producing block.");
                                     var block = await ProduceBlock();
+                                    var checkIfBlockInDb = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(databaseName, block.BlockHeader.SequenceNumber, block.BlockHeader.SequenceNumber)).FirstOrDefault();
+                                    if (checkIfBlockInDb != null) 
+                                    {
+                                        var blockInDbHash = HashHelper.ByteArrayToFormattedHexaString(checkIfBlockInDb.BlockHeader.BlockHash);
+                                        await _mongoDbProducerService.RemoveBlockFromDatabaseAsync(databaseName, blockInDbHash);
+                                    }
                                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                                     await ProposeBlock(block);
                                 }

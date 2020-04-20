@@ -438,6 +438,7 @@ namespace BlockBase.Runtime.Sidechain
             if (numberOfIpsToUpdate == 0) return;
 
             var producersInPoolList = Sidechain.ProducersInPool.GetEnumerable().ToList();
+            if (!producersInPoolList.Any(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)) return;
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToUpdate).ToList();
 
             foreach (var producer in orderedProducersInPool)
