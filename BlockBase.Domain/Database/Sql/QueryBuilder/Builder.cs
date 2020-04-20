@@ -49,6 +49,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                 case CurrentDatabaseStatement currentDatabaseStatement:
                     sqlCommand = new ListOrDiscoverCurrentDatabaseCommand(currentDatabaseStatement);
                     break;
+                case IfStatement ifStatement:
+                    sqlCommand = new IfSqlCommand(ifStatement);
+                    break;
+
                 default:
                     sqlCommand = new GenericSqlCommand(statement);
                     break;
@@ -111,12 +115,19 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                     case UseDatabaseStatement useDatabaseStatement:
                         statementText = generator.BuildString(useDatabaseStatement);
                         break;
+                    case IfStatement ifStatement:
+                        statementText = generator.BuildString(ifStatement.SimpleSelectStatement);
+                        break;
                 }
                 transformedStatementsText.Add(statementText + ";");
 
 
             }
             command.TransformedSqlStatementText = transformedStatementsText;
+        }
+        public string BuildSimpleSelectStatementString(SimpleSelectStatement simpleSelectStatement, IGenerator generator)
+        {
+            return generator.BuildString(simpleSelectStatement);
         }
     }
 }

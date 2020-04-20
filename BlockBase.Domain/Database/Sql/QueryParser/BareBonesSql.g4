@@ -7,7 +7,7 @@ error:
      throw new System.Exception("UNEXPECTED_CHAR=" + $UNEXPECTED_CHAR.text); 
    };
 
-sql_stmt_list: ';'* sql_stmt ( ';'+ sql_stmt)* ';'*;
+sql_stmt_list: sql_stmt ';' ( sql_stmt ';' )* ;
 
 sql_stmt: (
 		create_database_stmt
@@ -22,6 +22,7 @@ sql_stmt: (
 		| use_database_stmt
 		| current_database_stmt
 		| list_databases_stmt
+		| if_stmt
 	);
 
 use_database_stmt: K_USE database_name;
@@ -66,6 +67,16 @@ update_stmt:
 	)* (K_WHERE expr)?;
 
 delete_stmt: K_DELETE K_FROM table_name ( K_WHERE expr)?;
+
+operator:
+( '<' 
+| '<=' 
+| '>' 
+| '>=' 
+| '=' 
+| '!=' );
+
+if_stmt: K_IF simple_select_stmt K_EXECUTE '{' sql_stmt  ';' ( sql_stmt ';')* '}';
 
 simple_select_stmt:
 	select_core (K_ORDER K_BY ordering_term ( ',' ordering_term)*)? (
@@ -120,9 +131,6 @@ bucket_number: NUMERIC_LITERAL;
 
 bucket_range: '(' NUMERIC_LITERAL ',' NUMERIC_LITERAL ',' NUMERIC_LITERAL ')';
 
-//type_name
-// : name+ ( '(' signed_number ')' | '(' signed_number ',' signed_number ')' )? ;
-
 column_constraint: (K_CONSTRAINT name)? (
 		K_PRIMARY K_KEY
 		| K_NOT? K_NULL
@@ -131,10 +139,11 @@ column_constraint: (K_CONSTRAINT name)? (
 	);
 
 expr:  
-	table_name '.' column_name ( '<' | '<=' | '>' | '>=' | '=' | '!=' ) literal_value
-	| table_column_name ( '<' | '<=' | '>' | '>=' | '=' | '!=' ) table_column_name
+	table_name '.' column_name operator literal_value
+	| table_column_name operator table_column_name
 	| expr (K_AND | K_OR) expr
 	| '(' expr ')';
+
 
 
 foreign_key_clause:
@@ -176,7 +185,9 @@ keyword:
 	| K_DESC
 	| K_DISTINCT
 	| K_DROP
+	| K_EXECUTE
 	| K_FROM
+	| K_IF
 	| K_INNER
 	| K_INSERT
 	| K_INTO
@@ -266,6 +277,8 @@ K_CURRENT_DATABASE: C U R R E N T '_' D A T A B A S E;
 K_LIST_DATABASES: L I S T;
 K_GET_STRUCTURE: G E T '_' S T R U C T U R E;
 K_NOT_TO_ENCRYPT: '!';
+K_IF: I F;
+K_EXECUTE: E X E C U T E;
 
 K_BOOL: B O O L;
 K_DATETIME: D A T E T I M E;

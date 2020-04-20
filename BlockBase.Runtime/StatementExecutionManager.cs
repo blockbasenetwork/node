@@ -12,16 +12,14 @@ using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Results;
-using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
-using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils.Crypto;
-using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -56,7 +54,7 @@ namespace BlockBase.Runtime
         }
 
         public delegate QueryResult CreateQueryResultDelegate(bool success, string statementType, string exceptionMessage = null);
-        public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate createQueryResult)
+        public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate CreateQueryResult)
         {
             var results = new List<QueryResult>();
             var databasesSemaphores = _concurrentVariables.DatabasesSemaphores;
@@ -86,27 +84,15 @@ namespace BlockBase.Runtime
 
                     switch (sqlCommand)
                     {
-                        case ReadQuerySqlCommand readQuerySql:   
-                            var extraParsingNotNeeded = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]).Offset.HasValue;
-                            //_logger.LogDebug(sqlTextToExecute);
-                            int missingNumberOfRows;
-                            List<IList<string>> resultRows = new List<IList<string>>();
-                            IList<string> columnNames;
-                            while (true)
-                            {
-                                sqlTextToExecute = readQuerySql.TransformedSqlStatementText[0];
-                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                missingNumberOfRows = _infoPostProcessing.TranslateSelectResults(readQuerySql, resultsList, _databaseName, resultRows, out columnNames, extraParsingNotNeeded);
-                
-                                if (resultsList.Count() == 0 || missingNumberOfRows == 0)
-                                    break;
+                        case ReadQuerySqlCommand readQuerySql:
+                            var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
+                            var namesAndResults = await ExecuteSelectStatement(
+                                builder, 
+                                (SimpleSelectStatement) readQuerySql.OriginalSqlStatement, 
+                                transformedSelectStatement,
+                                readQuerySql.TransformedSqlStatementText[0]);
 
-                                ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]).Limit = missingNumberOfRows;
-                                ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]).Offset = resultsList.Count();
-                                builder.BuildSqlStatementsText(_generator, readQuerySql);
-                            }
-
-                            results.Add(new QueryResult(resultRows, columnNames));
+                            results.Add(new QueryResult(namesAndResults.ResultRows, namesAndResults.ColumnNames));
                             break;
 
                         case ChangeRecordSqlCommand changeRecordSqlCommand:
@@ -131,7 +117,7 @@ namespace BlockBase.Runtime
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
                                 AddTransactionToSend(sqlTextToExecute, _databaseName);
                             }
-                            results.Add(createQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            results.Add(CreateQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
 
 
@@ -143,13 +129,13 @@ namespace BlockBase.Runtime
                                 await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
                                 AddTransactionToSend(sqlTextToExecute, _databaseName);
                             }
-                            results.Add(createQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            results.Add(CreateQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
 
                         case DatabaseSqlCommand databaseSqlCommand:
                             if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement)
                             {
-                                results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
+                                results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                                 continue;
                             }
 
@@ -170,7 +156,7 @@ namespace BlockBase.Runtime
                                 //_logger.LogDebug(sqlTextToExecute);
                                 AddTransactionToSend(sqlTextToExecute, _databaseName ?? "");
                             }
-                            results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
                         case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
                             if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
@@ -193,20 +179,54 @@ namespace BlockBase.Runtime
                                 );
                             }
                             break;
+
+                        case IfSqlCommand ifSqlCommand:
+                            var originalSimpleSelectStatement = ((IfStatement)ifSqlCommand.OriginalSqlStatement).SimpleSelectStatement;
+                            var transformedSimpleSelectStatement = ((SimpleSelectStatement)(ifSqlCommand.TransformedSqlStatement[0]));
+                            sqlTextToExecute = ifSqlCommand.TransformedSqlStatementText[0];
+                            if ((await ExecuteSelectStatement(builder, originalSimpleSelectStatement, transformedSimpleSelectStatement, sqlTextToExecute)).ResultRows.Count != 0)
+                            {
+                                results.AddRange(await ExecuteBuilder(((IfStatement)ifSqlCommand.OriginalSqlStatement).Builder, CreateQueryResult));
+                            }
+                            _logger.LogDebug("if statement");
+                            break;
                     }
                 }
                 catch (Exception e)
                 {
                     _logger.LogError($"Error executing sql command.{e}");
-                    results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
+                    results.Add(CreateQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
                 }
             }
             if (_databaseName != null)
                 databasesSemaphores[_databaseName].Release();
 
-            SendTransactionsToProducers();
+            //SendTransactionsToProducers();
             _transactionsToSendToProducers = new List<Transaction>();
             return results;
+        }
+
+        private async Task<ResultsAndColumnNamesPoco> ExecuteSelectStatement(Builder builder, SimpleSelectStatement originalSimpleSelectStatement, SimpleSelectStatement transformedSimpleSelectStatement, string sqlTextToExecute)
+        {
+            var extraParsingNotNeeded = transformedSimpleSelectStatement.Offset.HasValue;
+            //_logger.LogDebug(sqlTextToExecute);
+            int missingNumberOfRows;
+            List<IList<string>> resultRows = new List<IList<string>>();
+            IList<string> columnNames;
+            while (true)
+            {
+                var resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                missingNumberOfRows = _infoPostProcessing.TranslateSelectResults(originalSimpleSelectStatement, transformedSimpleSelectStatement, resultsList, _databaseName, resultRows, out columnNames, extraParsingNotNeeded);
+
+                if (resultsList.Count() == 0 || missingNumberOfRows == 0)
+                    break;
+
+                transformedSimpleSelectStatement.Limit = missingNumberOfRows;
+                transformedSimpleSelectStatement.Offset = resultsList.Count();
+                sqlTextToExecute = builder.BuildSimpleSelectStatementString(transformedSimpleSelectStatement, _generator);
+            }
+            return new ResultsAndColumnNamesPoco(columnNames, resultRows);
+
         }
 
         private void AddTransactionToSend(string queryToExecute, string databaseName)
@@ -248,5 +268,6 @@ namespace BlockBase.Runtime
             // _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
             return transaction;
         }
+
     }
 }
