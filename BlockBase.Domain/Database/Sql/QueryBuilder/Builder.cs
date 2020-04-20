@@ -115,9 +115,6 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                     case UseDatabaseStatement useDatabaseStatement:
                         statementText = generator.BuildString(useDatabaseStatement);
                         break;
-                    case IfStatement ifStatement:
-                        statementText = generator.BuildString(ifStatement.SimpleSelectStatement);
-                        break;
                 }
                 transformedStatementsText.Add(statementText + ";");
 

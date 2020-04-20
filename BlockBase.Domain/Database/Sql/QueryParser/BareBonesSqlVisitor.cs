@@ -63,6 +63,7 @@ namespace BlockBase.Domain.Database.QueryParser
                 throw new Exception("Error parsing command:'" + context.GetText() + "'.");
             }
         }
+        
         public override object VisitUse_database_stmt(Use_database_stmtContext context)
         {
             ThrowIfParserHasException(context);

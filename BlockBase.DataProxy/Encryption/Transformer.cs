@@ -40,7 +40,6 @@ namespace BlockBase.DataProxy.Encryption
             switch (statement)
             {
                 case IfStatement ifStatement:
-                    
                     command.TransformedSqlStatement = new List<ISqlStatement>() {GetTransformedIfStatment(ifStatement, _databaseInfoRecord.IV)};      
                     break;
                 case CreateDatabaseStatement createDatabaseStatement:

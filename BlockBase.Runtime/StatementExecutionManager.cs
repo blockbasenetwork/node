@@ -188,6 +188,10 @@ namespace BlockBase.Runtime
                             {
                                 results.AddRange(await ExecuteBuilder(((IfStatement)ifSqlCommand.OriginalSqlStatement).Builder, CreateQueryResult));
                             }
+                            else
+                            {
+                                results.Add(CreateQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), "Condition not fulfilled."));
+                            }
                             _logger.LogDebug("if statement");
                             break;
                     }
