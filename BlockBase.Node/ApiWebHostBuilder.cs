@@ -8,6 +8,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
 using BlockBase.Node;
 using BlockBase.Runtime;
+using BlockBase.Runtime.Mainchain;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
@@ -134,6 +135,7 @@ namespace BlockBase.Api
                 services.AddSingleton<BlockSender>();
                 services.AddSingleton<TransactionSender>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
+                services.AddSingleton<SidechainMaintainerManager>();
                 services.AddSingleton<PeerConnectionsHandler>();
                 services.AddSingleton<SidechainKeeper>();
                 services.AddSingleton<BlockValidator>();

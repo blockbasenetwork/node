@@ -13,10 +13,12 @@ namespace BlockBase.DataProxy.Encryption
         private Dictionary<string, byte[]> _secretStoreDict = new Dictionary<string, byte[]>();
         private static readonly string keysFileName = "keys.txt";
         private ILogger _logger;
+        private string _filePassword;
 
-        public SecretStore(ILogger logger)
+        public SecretStore(ILogger logger, string filePassword)
         {
             _logger = logger;
+            _filePassword = filePassword;
             LoadSecrets();
         }
 
@@ -46,15 +48,5 @@ namespace BlockBase.DataProxy.Encryption
             if (_secretStoreDict.ContainsKey(secretId)) return _secretStoreDict[secretId];
             return null;
         }
-
-        // public void RemoveSecret(string secretId)
-        // {
-        //     if (_secretStoreDict.ContainsKey(secretId))
-        //     {
-        //         _secretStoreDict.Remove(secretId);
-
-        //         FileWriterReader.RemoveLines(keysFileName, secretId);
-        //     }
-        // }
     }
 }

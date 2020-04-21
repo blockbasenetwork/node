@@ -423,7 +423,7 @@ namespace BlockBase.Runtime.Sidechain
             foreach (string receiverPublicKey in keysToUse)
             {
                 _logger.LogDebug("Key to use: " + receiverPublicKey);
-                listEncryptedIps.Add(IPEncryption.EncryptIP(EndPoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
+                listEncryptedIps.Add(AssymetricEncryption.EncryptText(EndPoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
             }
 
             await _mainchainService.AddEncryptedIps(SidechainName, _nodeConfigurations.AccountName, listEncryptedIps);
@@ -449,7 +449,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
                 var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
-                producer.ProducerInfo.IPEndPoint = IPEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
+                producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
             }
         }
 
