@@ -153,8 +153,8 @@ namespace BlockBase.Node.Controllers
 
                 if (!contractSt.CandidatureTime && !contractSt.ProductionTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
 
-                if (_sidechainMaintainerManager.Task == null || _sidechainMaintainerManager.Task.Status.Equals(TaskStatus.RanToCompletion))
-                    await _sidechainMaintainerManager.Start();
+                if (_sidechainMaintainerManager.TaskContainer == null)
+                    _sidechainMaintainerManager.Start();
 
                 var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
 

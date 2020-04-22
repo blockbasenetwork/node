@@ -24,7 +24,6 @@ namespace BlockBase.Runtime.Mainchain
     public class SidechainMaintainerManager
     {
         public SidechainPool _sidechain { get; set; }
-        public TaskContainer TaskContainer { get; private set; }
         private IMainchainService _mainchainService;
         private long _timeDiff;
         private bool _forceTryAgain;
@@ -36,15 +35,14 @@ namespace BlockBase.Runtime.Mainchain
         private NodeConfigurations _nodeConfigurations;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private const float DELAY_IN_SECONDS = 0.5f;
-        public Task Task { get; private set; }
+        public TaskContainer TaskContainer { get; private set; }
 
-        public Task Start()
+        public TaskContainer Start()
         {
-            _logger.LogDebug("Task starting.");
-            Task = Task.Run(async () => await SuperMethod());
-            return Task;
+            TaskContainer = TaskContainer.Create(async () => await SuperMethod());
+            TaskContainer.Start();
+            return TaskContainer;
         }
-
         public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
