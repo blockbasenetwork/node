@@ -176,7 +176,8 @@ namespace BlockBase.Runtime.Sidechain
             Sidechain.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;
             Sidechain.BlockSizeInBytes = contractInformation.SizeOfBlockInBytes;
 
-            while (true)
+            var recoverRetry = 0;
+            while (recoverRetry < MAX_NUMBER_OF_TRIES)
             {
                 var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
                 var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
@@ -210,6 +211,7 @@ namespace BlockBase.Runtime.Sidechain
                     break;
                 }
 
+                recoverRetry++;
                 await Task.Delay(50);
             }
 
