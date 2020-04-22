@@ -1,19 +1,19 @@
-﻿using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using System.Collections.Generic;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 
 namespace BlockBase.Domain.Database.Sql.SqlCommand
 {
-    public class ChangeRecordSqlCommand : ISqlCommand
+    public class IfSqlCommand : ISqlCommand
     {
         public IList<string> TransformedSqlStatementText { get; set; }
 
         public ISqlStatement OriginalSqlStatement { get; set; }
         public IList<ISqlStatement> TransformedSqlStatement { get; set; }
 
-        public ChangeRecordSqlCommand(IChangeRecordStatement changeRecordStatement)
+        public IfSqlCommand(IfStatement ifStatement)
         {
-            OriginalSqlStatement = changeRecordStatement;
+            OriginalSqlStatement = ifStatement;
         }
 
     }

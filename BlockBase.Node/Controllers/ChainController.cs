@@ -17,6 +17,7 @@ using BlockBase.Runtime.Network;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain.Blockchain;
 using System.Linq;
+using BlockBase.DataProxy.Encryption;
 
 namespace BlockBase.Node.Controllers
 {
@@ -32,8 +33,10 @@ namespace BlockBase.Node.Controllers
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
         private PeerConnectionsHandler _peerConnectionsHandler;
+        private SidechainMaintainerManager _sidechainMaintainerManager;
+        private DatabaseKeyManager _databaseKeyManager;
 
-        public ChainController(ILogger<ChainController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler)
+        public ChainController(ILogger<ChainController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
@@ -43,6 +46,8 @@ namespace BlockBase.Node.Controllers
             _mainchainService = mainchainService;
             _mongoDbProducerService = mongoDbProducerService;
             _peerConnectionsHandler = peerConnectionsHandler;
+            _sidechainMaintainerManager = sidechainMaintainerManager;
+            _databaseKeyManager = databaseKeyManager;
         }
 
         /// <summary>
@@ -65,12 +70,12 @@ namespace BlockBase.Node.Controllers
 
                 return Ok(new OperationResponse<bool>(true, $"Chain successfully created. Tx: {tx}"));
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }
         }
-        
+
         /// <summary>
         /// Sends a transaction to Blockbase Operations Contract with the configuration requested for the sidechain
         /// </summary>
@@ -94,7 +99,7 @@ namespace BlockBase.Node.Controllers
 
                 return Ok(new OperationResponse<bool>(true, $"Chain configuration successfully sent. Tx: {tx}"));
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }
@@ -120,10 +125,10 @@ namespace BlockBase.Node.Controllers
 
                 return Ok(new OperationResponse<bool>(true, $"Ended chain. Tx: {tx}"));
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }   
+            }
         }
 
         /// <summary>
@@ -138,28 +143,24 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to start the maintenance of the sidechain",
             OperationId = "StartChainMaintenance"
         )]
-        public async Task<ObjectResult> StartChainMaintenance()
+        public async Task<ObjectResult> StartChainMaintenance([FromBody]IDictionary<string, string> secrets)
         {
             try
             {
+                _databaseKeyManager.SetInitialSecrets(secrets["EncryptionMasterKey"], secrets["EncryptionPassword"], secrets["FilePassword"]);
                 string tx = null;
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-                
+
                 if (!contractSt.CandidatureTime && !contractSt.ProductionTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
 
-                var sidechainMaintainer = new SidechainMaintainerManager(
-                    new SidechainPool(NodeConfigurations.AccountName),
-                    _logger, 
-                    _mainchainService,
-                    NodeConfigurations, _peerConnectionsHandler);
-                
-                sidechainMaintainer.Start();
+                if (_sidechainMaintainerManager.Task == null || _sidechainMaintainerManager.Task.Status.Equals(TaskStatus.RanToCompletion))
+                    await _sidechainMaintainerManager.Start();
 
                 var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
 
                 return Ok(new OperationResponse<bool>(true, okMessage));
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }

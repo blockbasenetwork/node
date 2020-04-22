@@ -39,12 +39,31 @@ namespace BlockBase.Domain.Database.QueryParser
                     throw new Exception("Error parsing command:'" + stm.GetText() + "'.");
                 }
             }
-
             return builder;
         }
 
         #region Visit Statements
 
+        public override object VisitIf_stmt(If_stmtContext context)
+        {
+            try
+            {
+                var ifBuilder = new Builder();
+                var simpleSelectStatement = (SimpleSelectStatement)Visit(context.simple_select_stmt());
+                foreach (var stm in context.sql_stmt())
+                {
+                    var sqlStatement = (ISqlStatement)Visit(stm);
+                    if (sqlStatement == null) throw new Exception("The sql command:'" + stm.GetText() + "' was not recognized.");
+                    ifBuilder.AddStatement(sqlStatement);
+                }
+                return new IfStatement(ifBuilder, simpleSelectStatement);
+            }
+            catch (Antlr4.Runtime.InputMismatchException)
+            {
+                throw new Exception("Error parsing command:'" + context.GetText() + "'.");
+            }
+        }
+        
         public override object VisitUse_database_stmt(Use_database_stmtContext context)
         {
             ThrowIfParserHasException(context);
@@ -262,7 +281,7 @@ namespace BlockBase.Domain.Database.QueryParser
                 ColumnConstraints = columnDefContext.column_constraint().Select(c => (ColumnConstraint)Visit(c)).ToList()
             };
 
-            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED 
+            if (columnDef.DataType.DataTypeName == DataTypeEnum.ENCRYPTED
             && columnDef.DataType.BucketInfo.EqualityNumberOfBuckets == null
             && columnDef.DataType.BucketInfo.RangeNumberOfBuckets == null
             && columnDef.ColumnConstraints.Count(c => c.ColumnConstraintType == ColumnConstraint.ColumnConstraintTypeEnum.PrimaryKey ||
@@ -401,8 +420,8 @@ namespace BlockBase.Domain.Database.QueryParser
                     new TableAndColumnName(
                         (estring)Visit(expr.table_name().complex_name()),
                         (estring)Visit(expr.column_name().complex_name())),
-                    new Value(expr.literal_value().GetText().Trim('\'')),
-                    GetLogicalOperatorFromString(exprString));
+                    new Value(expr.literal_value().GetText().Trim('\''), expr.literal_value().GetText().Contains("'")),
+                    GetComparisonOperatorFromString(exprString));
 
                 return comparisonExpression;
 
@@ -421,7 +440,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     new TableAndColumnName(
                         (estring)Visit(expr.table_column_name()[1].table_name().complex_name()),
                         (estring)Visit(expr.table_column_name()[1].column_name().complex_name())),
-                    GetLogicalOperatorFromString(exprString));
+                    GetComparisonOperatorFromString(exprString));
 
                 return comparisonExpression;
             }
@@ -518,7 +537,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         #region Auxiliar Methods
 
-        private ComparisonExpression.ComparisonOperatorEnum GetLogicalOperatorFromString(string exprString)
+        private ComparisonExpression.ComparisonOperatorEnum GetComparisonOperatorFromString(string exprString)
         {
             if (exprString.Contains("<="))
                 return ComparisonExpression.ComparisonOperatorEnum.SmallerOrEqualThan;

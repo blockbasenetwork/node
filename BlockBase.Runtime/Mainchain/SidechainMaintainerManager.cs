@@ -17,10 +17,11 @@ using BlockBase.Domain;
 using System.Net.Http;
 using static BlockBase.Network.PeerConnection;
 using BlockBase.Runtime.Sidechain;
+using Microsoft.Extensions.Options;
 
 namespace BlockBase.Runtime.Mainchain
 {
-    public class SidechainMaintainerManager : IThreadableComponent
+    public class SidechainMaintainerManager
     {
         public SidechainPool _sidechain { get; set; }
         public TaskContainer TaskContainer { get; private set; }
@@ -35,23 +36,24 @@ namespace BlockBase.Runtime.Mainchain
         private NodeConfigurations _nodeConfigurations;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private const float DELAY_IN_SECONDS = 0.5f;
+        public Task Task { get; private set; }
 
-        public TaskContainer Start()
+        public Task Start()
         {
-            TaskContainer = TaskContainer.Create(async () => await SuperMethod());
-            TaskContainer.Start();
-            return TaskContainer;
+            _logger.LogDebug("Task starting.");
+            Task = Task.Run(async () => await SuperMethod());
+            return Task;
         }
 
-        public SidechainMaintainerManager(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler)
+        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
-            _sidechain = sidechain;
             _mainchainService = mainchainService;
             _roundsUntilSettlement = 0;
             _logger = logger;
             _latestTrxTimes = new List<int>();
-            _nodeConfigurations = nodeConfigurations;
+            _nodeConfigurations = nodeConfigurations.Value;
+            _sidechain = new SidechainPool(_nodeConfigurations.AccountName);
             _forceTryAgain = true;
         }
 
@@ -271,7 +273,7 @@ namespace BlockBase.Runtime.Mainchain
                 var producer = ipAddressesTables[i].Key;
                 var producerPublicKey = ipAddressesTables[i].PublicKey;
                 decryptedProducerIPs.Add(producer,
-                 IPEncryption.DecryptIP(producerEncryptedIPAdresses[i], _nodeConfigurations.ActivePrivateKey, producerPublicKey));
+                 AssymetricEncryption.DecryptIP(producerEncryptedIPAdresses[i], _nodeConfigurations.ActivePrivateKey, producerPublicKey));
 
             }
             return decryptedProducerIPs;

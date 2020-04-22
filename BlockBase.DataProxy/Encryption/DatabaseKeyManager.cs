@@ -22,18 +22,23 @@ namespace BlockBase.DataProxy.Encryption
         private readonly InfoRecordManager _infoRecordManager;
         private ILogger<DatabaseKeyManager> _logger;
         private IConnector _connector;
+        public bool DataSynced { get; private set; }
 
         public DatabaseKeyManager(IOptions<NodeConfigurations> nodeConfigurations, ILogger<DatabaseKeyManager> logger, IConnector connector)
         {
             _logger = logger;
-            SecretStore = new SecretStore(logger);
-            SecretStore.SetSecret("master_key", Base32Encoding.ZBase32.ToBytes(nodeConfigurations.Value.EncryptionMasterKey));
-            SecretStore.SetSecret("master_iv", KeyAndIVGenerator.CreateMasterIV(nodeConfigurations.Value.EncryptionPassword));
             _infoRecordManager = new InfoRecordManager();
             _connector = connector;
-            SyncData().Wait();
+            
         }
-
+        public void SetInitialSecrets(string encryptionMasterKey, string encryptionPassword, string filePassword)
+        {
+            SecretStore = new SecretStore(_logger, filePassword);
+            SecretStore.SetSecret("master_key", Base32Encoding.ZBase32.ToBytes(encryptionMasterKey));
+            SecretStore.SetSecret("master_iv", KeyAndIVGenerator.CreateMasterIV(encryptionPassword));
+            SyncData().Wait();    
+            DataSynced = true;    
+        }
         public async Task SyncData()
         {
             var infoRecords = await _connector.GetInfoRecords();
@@ -168,6 +173,7 @@ namespace BlockBase.DataProxy.Encryption
 
             return JsonConvert.DeserializeObject<DataType>(decryptedData);
         }
+        
         public InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName)
         {
             if (newName.ToEncrypt)

@@ -4,6 +4,9 @@ using Wiry.Base32;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using BlockBase.Utils;
+using System.Text;
+using System.Security.Cryptography;
+using BlockBase.Utils.Crypto;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -13,10 +16,13 @@ namespace BlockBase.DataProxy.Encryption
         private Dictionary<string, byte[]> _secretStoreDict = new Dictionary<string, byte[]>();
         private static readonly string keysFileName = "keys.txt";
         private ILogger _logger;
+        private byte[] _key;
+        private byte[] _iv;
 
-        public SecretStore(ILogger logger)
+        public SecretStore(ILogger logger, string filePassword)
         {
             _logger = logger;
+            GetHashKeys(filePassword);
             LoadSecrets();
         }
 
@@ -24,11 +30,11 @@ namespace BlockBase.DataProxy.Encryption
         {
             if (_secretStoreDict.ContainsKey(secretId) && _secretStoreDict[secretId].SequenceEqual(key)) return;
 
-            if (_secretStoreDict.ContainsKey(secretId))
-                throw new Exception("There's already a key to that IV.");
+            if (_secretStoreDict.ContainsKey(secretId)) throw new Exception("There's already a key to that IV.");
 
             _secretStoreDict.Add(secretId, key);
-            FileWriterReader.Write(keysFileName, secretId + ":" + Base32Encoding.ZBase32.GetString(key), System.IO.FileMode.Append);
+            var iv = secretId != "master_key" && secretId != "master_iv" ? Base32Encoding.ZBase32.ToBytes(secretId) : _iv;
+            FileWriterReader.Write(keysFileName, secretId + ":" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(key, _key, iv)), System.IO.FileMode.Append);
         }
 
         public void LoadSecrets()
@@ -37,7 +43,11 @@ namespace BlockBase.DataProxy.Encryption
             foreach (var line in fileLines)
             {
                 var idKey = line.Split(":");
-                _secretStoreDict.Add(idKey[0], Base32Encoding.ZBase32.ToBytes(idKey[1]));
+                var iv = idKey[0] != "master_key" && idKey[0] != "master_iv" ? Base32Encoding.ZBase32.ToBytes(idKey[0]) : _iv;
+                var encryptedData = Base32Encoding.ZBase32.ToBytes(idKey[1]);
+                var decryptedKey = AES256.DecryptWithCBC(encryptedData, _key, iv);
+
+                _secretStoreDict.Add(idKey[0], decryptedKey);
             }
         }
 
@@ -47,14 +57,21 @@ namespace BlockBase.DataProxy.Encryption
             return null;
         }
 
-        // public void RemoveSecret(string secretId)
-        // {
-        //     if (_secretStoreDict.ContainsKey(secretId))
-        //     {
-        //         _secretStoreDict.Remove(secretId);
+        private void GetHashKeys(string password)
+        {
+            byte[][] result = new byte[2][];
+            Encoding enc = Encoding.UTF8;
 
-        //         FileWriterReader.RemoveLines(keysFileName, secretId);
-        //     }
-        // }
+            SHA256 sha2 = new SHA256CryptoServiceProvider();
+
+            byte[] rawPass = enc.GetBytes(password);
+
+            _key = sha2.ComputeHash(rawPass);
+            byte[] hashIV = sha2.ComputeHash(rawPass);
+ 
+            Array.Resize( ref hashIV, 16 );
+
+            _iv = hashIV;
+        }
     }
 }

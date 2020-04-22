@@ -24,8 +24,10 @@ namespace BlockBase.Node.Controllers
     public class QueryController : ControllerBase
     {
         private SqlCommandManager _sqlCommandManager;
+        private DatabaseKeyManager _databaseKeyManager;
         public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, IOptions<NodeConfigurations> nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
+            _databaseKeyManager = databaseKeyManager;
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbProducerService);
         }
 
@@ -48,6 +50,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                CheckIfSecretIsSet();
                 var queryResults = await _sqlCommandManager.Execute(queryScript);
 
                 return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
@@ -58,7 +61,7 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-         /// <summary>
+        /// <summary>
         /// Sends a query to get all the values from a certain table in a certain database
         /// </summary>
         /// <returns> Success or list of results </returns>
@@ -75,8 +78,9 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                CheckIfSecretIsSet();
                 var query = $"USE {sidebarQueryInfo.DatabaseName}; SELECT {sidebarQueryInfo.TableName}.* FROM {sidebarQueryInfo.TableName}";
-                if(sidebarQueryInfo.Encrypted) query += " ENCRYPTED";
+                if (sidebarQueryInfo.Encrypted) query += " ENCRYPTED";
                 query += ";";
 
                 var queryResults = await _sqlCommandManager.Execute(query);
@@ -106,6 +110,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                CheckIfSecretIsSet();
                 var structure = _sqlCommandManager.GetStructure();
                 return Ok(new OperationResponse<IList<DatabasePoco>>(structure));
             }
@@ -114,11 +119,18 @@ namespace BlockBase.Node.Controllers
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<DatabasePoco>>(e));
             }
         }
+
+        private void CheckIfSecretIsSet()
+        {
+            if (!_databaseKeyManager.DataSynced)
+                throw new Exception("Passwords and main key not set.");
+
+        }
         public class SidebarQueryInfo
-    {
-        public bool Encrypted {get; set;}
-        public string DatabaseName {get; set;}
-        public string TableName {get; set;}
-    }
+        {
+            public bool Encrypted { get; set; }
+            public string DatabaseName { get; set; }
+            public string TableName { get; set; }
+        }
     }
 }

@@ -39,10 +39,14 @@ namespace BlockBase.DataProxy.Encryption
             var statement = command.OriginalSqlStatement;
             switch (statement)
             {
+                case IfStatement ifStatement:
+                    command.TransformedSqlStatement = new List<ISqlStatement>() {GetTransformedIfStatment(ifStatement, _databaseInfoRecord.IV)};      
+                    break;
                 case CreateDatabaseStatement createDatabaseStatement:
                     command.TransformedSqlStatement = GetTransformedCreateDatabaseStatement(createDatabaseStatement, out _databaseInfoRecord);
                     var createDatabaseCommand = (DatabaseSqlCommand)command;
                     createDatabaseCommand.DatabaseName = ((CreateDatabaseStatement)command.TransformedSqlStatement[0]).DatabaseName.Value;
+                    Console.WriteLine(_databaseInfoRecord.IV);
                     break;
 
                 case DropDatabaseStatement dropDatabaseStatement:
@@ -86,6 +90,11 @@ namespace BlockBase.DataProxy.Encryption
             }
         }
         #region Transform SqlStatements
+        
+        private ISqlStatement GetTransformedIfStatment(IfStatement ifStatement, string databaseIV)
+        {
+            return GetTransformedSimpleSelectStatement(ifStatement.SimpleSelectStatement, databaseIV);
+        }
         private List<ISqlStatement> GetTransformedCreateDatabaseStatement(CreateDatabaseStatement createDatabaseStatement, out InfoRecord databaseInfoRecord)
         {
             databaseInfoRecord = _encryptor.CreateInfoRecord(createDatabaseStatement.DatabaseName, null);

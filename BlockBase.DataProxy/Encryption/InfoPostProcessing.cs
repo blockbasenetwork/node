@@ -6,11 +6,10 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Pocos;
-using BlockBase.Domain.Results;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -23,12 +22,11 @@ namespace BlockBase.DataProxy.Encryption
         }
 
 
-        public int TranslateSelectResults(ReadQuerySqlCommand readQuerySqlCommand, IList<IList<string>> allResults, string databaseName, List<IList<string>> alreadyReceivedRows, out IList<string> finalColumnNames, bool extraParsingNotNeeded)
+        public int TranslateSelectResults(SimpleSelectStatement originalSqlStatement, SimpleSelectStatement transformedSimpleSelectStatement, IList<IList<string>> allResults, string databaseName, List<IList<string>> alreadyReceivedRows, out IList<string> finalColumnNames, bool extraParsingNotNeeded)
         {
-            var originalSqlStatement = (SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement;
-            if (!((SimpleSelectStatement)readQuerySqlCommand.OriginalSqlStatement).SelectCoreStatement.Encrypted)
+            if (!originalSqlStatement.SelectCoreStatement.Encrypted)
             {
-                var decryptedResults = DecryptRows((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0], allResults, databaseName, out IList<TableAndColumnName> columnNames);
+                var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
                 var filteredResults = FilterExpression(originalSqlStatement.SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
                 var removedExtraColumns = FilterSelectColumns(originalSqlStatement.SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName, out IList<string> columnsToMantain);
 
@@ -51,7 +49,7 @@ namespace BlockBase.DataProxy.Encryption
                 else
                     return originalSqlStatement.Limit ?? 0 + originalSqlStatement.Offset ?? 0 - alreadyReceivedRows.Count();
             }
-            var encryptedColumnNames = ((SimpleSelectStatement)readQuerySqlCommand.TransformedSqlStatement[0]).SelectCoreStatement.ResultColumns.Select(r => r.TableName.Value + "." + r.ColumnName.Value).ToList();
+            var encryptedColumnNames = transformedSimpleSelectStatement.SelectCoreStatement.ResultColumns.Select(r => r.TableName.Value + "." + r.ColumnName.Value).ToList();
             finalColumnNames = encryptedColumnNames;
             alreadyReceivedRows.ToList().AddRange(allResults);
             return 0;

@@ -12,7 +12,5 @@ namespace BlockBase.Domain.Configurations
         public string PostgresUser { get; set; }
         public int PostgresPort { get; set; }
         public string PostgresPassword { get; set; }
-        public string EncryptionMasterKey { get; set; }
-        public string EncryptionPassword { get; set; }
     }
 }
