@@ -77,6 +77,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task SuperMethod()
         {
+            await Task.Delay(1000);
             try
             {
                 while (true)
@@ -175,34 +176,43 @@ namespace BlockBase.Runtime.Sidechain
             Sidechain.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;
             Sidechain.BlockSizeInBytes = contractInformation.SizeOfBlockInBytes;
 
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-
-            if (IsProducerInTable(producersInTable))
+            var recoverRetry = 0;
+            while (recoverRetry < MAX_NUMBER_OF_TRIES)
             {
-                var self = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
-                Sidechain.ProducerType = (ProducerTypeEnum)self.ProducerType;
-
-                var producersInPool = producersInTable.Select(m => new ProducerInPool
-                {
-                    ProducerInfo = new ProducerInfo
-                    {
-                        AccountName = m.Key,
-                        PublicKey = m.PublicKey,
-                        ProducerType = (ProducerTypeEnum)m.ProducerType,
-                        NewlyJoined = true
-                    }
-                }).ToList();
-
-                Sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
-
-                if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
-            }
-            else
-            {
+                var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
                 var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
-                var self = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
-                Sidechain.ProducerType = (ProducerTypeEnum)self.ProducerType;
-                Sidechain.CandidatureOnStandby = true;
+                var selfCandidate = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+
+                if (IsProducerInTable(producersInTable))
+                {
+                    var self = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+                    Sidechain.ProducerType = (ProducerTypeEnum)self.ProducerType;
+
+                    var producersInPool = producersInTable.Select(m => new ProducerInPool
+                    {
+                        ProducerInfo = new ProducerInfo
+                        {
+                            AccountName = m.Key,
+                            PublicKey = m.PublicKey,
+                            ProducerType = (ProducerTypeEnum)m.ProducerType,
+                            NewlyJoined = true
+                        }
+                    }).ToList();
+
+                    Sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
+
+                    if (Sidechain.ProducingBlocks) await InitProducerReceiveIPs();
+                    break;
+                }
+                else if (selfCandidate != null)
+                {
+                    Sidechain.ProducerType = (ProducerTypeEnum)selfCandidate.ProducerType;
+                    Sidechain.CandidatureOnStandby = true;
+                    break;
+                }
+
+                recoverRetry++;
+                await Task.Delay(50);
             }
 
             _logger.LogDebug("State " + Sidechain.State);
