@@ -77,6 +77,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task SuperMethod()
         {
+            await Task.Delay(1000);
             try
             {
                 while (true)
