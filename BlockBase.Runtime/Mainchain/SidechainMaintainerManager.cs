@@ -84,6 +84,7 @@ namespace BlockBase.Runtime.Mainchain
                         UpdateAverageTrxTime();
                         await CheckContractAndUpdateStates();
                         await CheckContractAndUpdateWaitTimes();
+                        await Task.Delay(500);
                     }
                     else await Task.Delay((int)_timeDiff);
 
