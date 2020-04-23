@@ -143,11 +143,11 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to start the maintenance of the sidechain",
             OperationId = "StartChainMaintenance"
         )]
-        public async Task<ObjectResult> StartChainMaintenance([FromBody]IDictionary<string, string> secrets)
+        public async Task<ObjectResult> StartChainMaintenance([FromBody]IDictionary<string, string> data)
         {
             try
             {
-                _databaseKeyManager.SetInitialSecrets(secrets["EncryptionMasterKey"], secrets["EncryptionPassword"], secrets["FilePassword"]);
+                _databaseKeyManager.SetInitialSecrets(data);
                 string tx = null;
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 

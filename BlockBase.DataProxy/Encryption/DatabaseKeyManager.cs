@@ -23,21 +23,50 @@ namespace BlockBase.DataProxy.Encryption
         private ILogger<DatabaseKeyManager> _logger;
         private IConnector _connector;
         public bool DataSynced { get; private set; }
+        private NodeConfigurations _nodeConfigurations;
 
         public DatabaseKeyManager(IOptions<NodeConfigurations> nodeConfigurations, ILogger<DatabaseKeyManager> logger, IConnector connector)
         {
             _logger = logger;
             _infoRecordManager = new InfoRecordManager();
             _connector = connector;
-            
+            _nodeConfigurations = nodeConfigurations.Value;
         }
-        public void SetInitialSecrets(string encryptionMasterKey, string encryptionPassword, string filePassword)
+        public void SetInitialSecrets(IDictionary<string, string> data)
         {
+            var filePassword = "";
+            var encryptionMasterKey = "";
+            var encryptionPassword = "";
+
+            
+
+            if (data[EncryptionConstants.IS_ENCRYPTED] == EncryptionConstants.FALSE)
+            {
+                filePassword = data[EncryptionConstants.FILE_PASSWORD];
+                encryptionMasterKey = data[EncryptionConstants.ENCRYPTION_MASTER_KEY];
+                encryptionPassword = data[EncryptionConstants.ENCRYPTION_PASSWORD];
+                
+                //Encrypting data:
+                //var encryptedData =  Base32Encoding.ZBase32.GetString(AssymetricEncryptionHelper.EncryptData(_nodeConfigurations.ActivePublicKey, 
+                //private_key, 
+                //Encoding.UTF8.GetBytes(filePassword + ":" + encryptionMasterKey + ":" + encryptionPassword)));
+           
+            }
+            else
+            {
+                var senderPublicKey = data[EncryptionConstants.PUBLIC_KEY];
+                var encryptedData = data[EncryptionConstants.ENCRYPTED_DATA];
+                var decryptedData = AssymetricEncryptionHelper.DecryptData(senderPublicKey, _nodeConfigurations.ActivePrivateKey, Base32Encoding.ZBase32.ToBytes(encryptedData));
+                var secrets = Encoding.UTF8.GetString(decryptedData).Split(":");
+                filePassword = secrets[0];
+                encryptionMasterKey = secrets[1];
+                encryptionPassword = secrets[2];
+            }
             SecretStore = new SecretStore(_logger, filePassword);
-            SecretStore.SetSecret("master_key", Base32Encoding.ZBase32.ToBytes(encryptionMasterKey));
-            SecretStore.SetSecret("master_iv", KeyAndIVGenerator.CreateMasterIV(encryptionPassword));
-            SyncData().Wait();    
-            DataSynced = true;    
+            SecretStore.SetSecret(EncryptionConstants.MASTER_KEY, Base32Encoding.ZBase32.ToBytes(encryptionMasterKey));
+            SecretStore.SetSecret(EncryptionConstants.MASTER_IV, KeyAndIVGenerator.CreateMasterIV(encryptionPassword));
+            SyncData().Wait();
+            DataSynced = true;
         }
         public async Task SyncData()
         {
@@ -173,7 +202,7 @@ namespace BlockBase.DataProxy.Encryption
 
             return JsonConvert.DeserializeObject<DataType>(decryptedData);
         }
-        
+
         public InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName)
         {
             if (newName.ToEncrypt)

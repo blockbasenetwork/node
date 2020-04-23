@@ -25,7 +25,7 @@ namespace BlockBase.DataProxy
                 var parentManageKey = _databaseKeyManager.GetKeyManageFromInfoRecord(parentInfoRecord);
                 return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.TableRecord, parentManageKey, Base32Encoding.ZBase32.ToBytes(parentIV));
             }
-            return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, _databaseKeyManager.SecretStore.GetSecret("master_key"), _databaseKeyManager.SecretStore.GetSecret("master_iv"));
+            return _databaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, _databaseKeyManager.SecretStore.GetSecret(EncryptionConstants.MASTER_KEY), _databaseKeyManager.SecretStore.GetSecret(EncryptionConstants.MASTER_IV));
         }
         public InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data)
         {
