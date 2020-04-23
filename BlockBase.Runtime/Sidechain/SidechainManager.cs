@@ -497,6 +497,8 @@ namespace BlockBase.Runtime.Sidechain
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
             if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
                 Sidechain.NextStateWaitEndTime = nextBlockTime;
+            if (Sidechain.NextStateWaitEndTime > DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds())
+                Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds();
         }
 
         private async Task CheckContractEndState()
