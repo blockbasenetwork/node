@@ -15,12 +15,12 @@
     <PackageReference Include="MongoDB.Bson" Version="2.9.2"/>
     <PackageReference Include="MongoDB.Driver" Version="2.9.2"/>
     <PackageReference Include="MongoDB.Driver.Core" Version="2.9.2"/>
-    <PackageReference Include="eos-sharp" Version="2.2.0"/>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BlockBase.Domain\BlockBase.Domain.csproj"/>
     <ProjectReference Include="..\BlockBase.Utils\BlockBase.Utils.csproj"/>
     <ProjectReference Include="..\Open.P2P\Open.P2P.csproj"/>
+    <ProjectReference Include="..\EosSharp\EosSharp\EosSharp.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Extensions.Logging.Abstractions"/>
