@@ -152,6 +152,9 @@ namespace BlockBase.Runtime.Mainchain
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
                     if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                }
+                if (stateTable.ProductionTime && currentProducerTable.Any())
+                {
                     await CheckPeerConnections();
                 }
             }
@@ -200,6 +203,8 @@ namespace BlockBase.Runtime.Mainchain
             var nextBlockTime = currentProducer != null ? currentProducer.StartProductionTime + _sidechain.BlockTimeDuration : _sidechain.NextStateWaitEndTime;
             if (nextBlockTime < _sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= _sidechain.NextStateWaitEndTime)
                 _sidechain.NextStateWaitEndTime = nextBlockTime;
+            if (_sidechain.NextStateWaitEndTime > DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds())
+                _sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds();
         }
 
         private async Task CheckContractAndUpdateStates()
