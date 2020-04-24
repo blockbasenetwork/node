@@ -27,7 +27,6 @@ namespace BlockBase.Network.IO.Analysis
                 networkMessage = NetworkMessage.BuildFromPacket(rawNetworkMessage.IPEndPoint, NetworkMessageProto.Parser.ParseFrom(rawNetworkMessage.Bytes));
                 
                 if(networkMessage == null) Console.WriteLine("Network message is null.");
-                Console.WriteLine("Received " + networkMessage.NetworkMessageType + " from " + networkMessage.Sender);
                 ValidateNetworkMessage(networkMessage);
             }
             catch (Exception ex)

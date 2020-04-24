@@ -205,7 +205,7 @@ namespace BlockBase.Runtime
             if (_databaseName != null)
                 databasesSemaphores[_databaseName].Release();
 
-            //SendTransactionsToProducers();
+            SendTransactionsToProducers();
             _transactionsToSendToProducers = new List<Transaction>();
             return results;
         }

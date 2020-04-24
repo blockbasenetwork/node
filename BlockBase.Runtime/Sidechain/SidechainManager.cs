@@ -497,6 +497,8 @@ namespace BlockBase.Runtime.Sidechain
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
             if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
                 Sidechain.NextStateWaitEndTime = nextBlockTime;
+            if (Sidechain.NextStateWaitEndTime > DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds())
+                Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds();
         }
 
         private async Task CheckContractEndState()
@@ -558,8 +560,8 @@ namespace BlockBase.Runtime.Sidechain
             var rewardTable = await _mainchainService.RetrieveRewardTable(_nodeConfigurations.AccountName);
             if (rewardTable.Any(r => r.Reward > 0 && r.Key == Sidechain.ClientAccountName))
             {
-                await HistoryValidationHelper.CheckSidechainValidationProposal(_mainchainService, _nodeConfigurations.AccountName, Sidechain.ClientAccountName, _logger);
                 await _mainchainService.ClaimReward(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
+                await HistoryValidationHelper.CheckSidechainValidationProposal(_mainchainService, _nodeConfigurations.AccountName, Sidechain.ClientAccountName, _logger);
             }
         }
 

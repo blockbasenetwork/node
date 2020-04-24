@@ -7,7 +7,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dapper" Version="1.50.5"/>
-    <PackageReference Include="eos-sharp" Version="2.2.0"/>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.1.1"/>
     <PackageReference Include="Serilog.AspNetCore" Version="2.1.1"/>
     <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0"/>
@@ -20,5 +19,6 @@
     <ProjectReference Include="..\BlockBase.DataPersistence\BlockBase.DataPersistence.csproj"/>
     <ProjectReference Include="..\BlockBase.DataProxy\BlockBase.DataProxy.csproj"/>
     <ProjectReference Include="..\BlockBase.Utils\BlockBase.Utils.csproj"/>
+    <ProjectReference Include="..\EosSharp\EosSharp\EosSharp.csproj" />
   </ItemGroup>
 </Project>
