@@ -25,6 +25,7 @@ namespace BlockBase.Runtime.Sidechain
             if (lastValidBlockheaderTable != null)
             {
                 var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
+                if  (!validProducers.Any()) return;
                 var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
                 int r = _rnd.Next(validProducers.Count);
                 var chosenProducerAccountName = validProducers[r].Key;
