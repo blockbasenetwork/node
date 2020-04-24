@@ -161,7 +161,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 var lastValidBlockheaderSmartContract = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPoolValuePair.Value.ClientAccountName, (int)sidechainPoolValuePair.Value.BlocksBetweenSettlement);
 
-                if (lastValidBlockheaderSmartContract != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.ClientAccountName, lastValidBlockheaderSmartContract.BlockHash))
+                if (sidechainPoolValuePair.Value.ProducerType != ProducerTypeEnum.Validator && lastValidBlockheaderSmartContract != null && !await _mongoDbProducerService.IsBlockConfirmed(sidechainPoolValuePair.Value.ClientAccountName, lastValidBlockheaderSmartContract.BlockHash))
                 {
                     _logger.LogDebug($"Mined block received but producer is not up to date.");
                     return;
