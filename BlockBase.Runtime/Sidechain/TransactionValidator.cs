@@ -57,6 +57,7 @@ namespace BlockBase.Runtime.Sidechain
             if (transactionsProto == null) return;
 
             var receivedValidTransactions = new List<ulong>();
+            _logger.LogDebug($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber}");
 
             foreach (var transactionProto in transactionsProto)
             {
@@ -94,7 +95,7 @@ namespace BlockBase.Runtime.Sidechain
             var confirmedSequenceNumbers = new List<ulong>();
 
             var transaction = new Transaction().SetValuesFromProto(transactionProto);
-            _logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
+            //_logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
 
             var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == clientAccountName);
 
@@ -116,13 +117,13 @@ namespace BlockBase.Runtime.Sidechain
             {
                 if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
                 {
-                    _logger.LogDebug($"Transaction hash not valid.");
+                    _logger.LogDebug($"Transaction #{transaction.SequenceNumber} hash not valid.");
                     return confirmedSequenceNumbers;
                 }
                 var databaseName = clientAccountName;
                 if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
                 {
-                    _logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
+                    //_logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
                     var afterTransactions = await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_nodeConfigurations.AccountName, transaction.SequenceNumber);
                     confirmedSequenceNumbers.Add(transaction.SequenceNumber);
                     confirmedSequenceNumbers.AddRange(afterTransactions.Select(t => t.SequenceNumber));
@@ -135,7 +136,7 @@ namespace BlockBase.Runtime.Sidechain
                     return confirmedSequenceNumbers;
                 }
 
-                _logger.LogDebug($"Saving transaction.");
+                //_logger.LogDebug($"Saving transaction.");
 
                 await _mongoDbProducerService.SaveTransaction(databaseName, transaction);
 
