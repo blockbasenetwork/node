@@ -269,7 +269,7 @@ namespace BlockBase.Runtime.Mainchain
         private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
         {
             var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
-            var producerEncryptedIPAdresses = ipAddressesTables.Select(t => t.EncryptedIPs[t.EncryptedIPs.Count - 1]).ToList();
+            var producerEncryptedIPAdresses = ipAddressesTables.Where(i => i.EncryptedIPs.Count > 0).Select(t => t.EncryptedIPs[t.EncryptedIPs.Count - 1]).ToList();
 
             var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
             for (int i = 0; i < ipAddressesTables.Count; i++)
