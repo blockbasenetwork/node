@@ -25,8 +25,6 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
     "PostgresUser": "postgres", // The postgres user name to use for the connection
     "PostgresPort": 5432, // The port to use in the postgres connection
     "PostgresPassword": "blockbase", // The password for the user used
-    "EncryptionMasterKey": "f3e7frm53rmyb6bn9jbyeopkgyz3jcwotexdfgnexbcjyz8sswwo",
-    "EncryptionPassword": "qwerty123"
   },
   "NetworkConfigurations": {
     "LocalIpAddress": "127.0.0.1", // The IP address that other producers will connect to
