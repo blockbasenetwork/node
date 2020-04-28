@@ -272,7 +272,7 @@ namespace BlockBase.Runtime.Mainchain
             var producerEncryptedIPAdresses = ipAddressesTables.Where(i => i.EncryptedIPs.Count > 0).Select(t => t.EncryptedIPs[t.EncryptedIPs.Count - 1]).ToList();
 
             var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
-            for (int i = 0; i < ipAddressesTables.Count; i++)
+            for (int i = 0; i < producerEncryptedIPAdresses.Count; i++)
             {
                 var producer = ipAddressesTables[i].Key;
                 var producerPublicKey = ipAddressesTables[i].PublicKey;
