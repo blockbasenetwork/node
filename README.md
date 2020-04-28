@@ -113,7 +113,7 @@ In case you want to stake as a service provider, run the 'addstake' action with 
 
 
 ## Example: Running a chain with 3 producers
-**Note: Public networks where the BlockBase contracts are currently deployed are the Jungle and Kylin test networks.**
+**Note: Public networks where the BlockBase contracts are currently deployed are the EOS Mainnet, as well as Jungle and Kylin test networks.**
 
 You’ll need to run four different instances of the BlockBase node (either in different machines or in the same machine for testing purposes, as long as they’re listening on different ports).
 
