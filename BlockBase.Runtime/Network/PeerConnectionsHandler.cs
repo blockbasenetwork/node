@@ -168,7 +168,7 @@ namespace BlockBase.Runtime.Network
                 if (!producer.ProducerInfo.NewlyJoined)
                 {
                     _logger.LogDebug("     Asking for IP.");
-                    var connectedProducers = sidechain.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection.ConnectionState == ConnectionStateEnum.Connected);
+                    var connectedProducers = sidechain.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected);
                     foreach (ProducerInPool m in connectedProducers)
                     {
                         await AskForKnownPeer(producer.ProducerInfo, m.PeerConnection.IPEndPoint.Address, m.PeerConnection.IPEndPoint.Port);
