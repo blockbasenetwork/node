@@ -2,7 +2,7 @@
 BlockBase is the power of Blockchain applied to Databases. It uses sidechains for database storage, and those sidechains are connected to the EOS platform through EOS smart contracts.
 
 ## Development State
-The node software currently has working consensus tested on private and public test networks. The database functionality is still in active development and not currently ready to be used.
+The node software is in beta and in active testing on the EOS network. The software is usable, but will probably still have bugs. Use with care and avoid large sums of BBT.
 
 ## Prerequisites
 - .NET Core SDK 2.1
@@ -15,16 +15,16 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
 ```js
 {
   "NodeConfigurations": {
-    "AccountName": "blockbase", // The node's EOS account name
+    "AccountName": "", // The node's EOS account name
     "ActivePrivateKey": "", // The private key for the active permission key of the node account
     "ActivePublicKey": "", // The public key for the active permission key
-    "SecretPassword": "secret", // The secret passphrase that will be used when choosing candidates to produce a sidechain
+    "SecretPassword": "", // The secret passphrase that will be used when choosing candidates to produce a sidechain
     "MongoDbConnectionString": "mongodb://localhost", // MongoDB connection string
     "MongoDbPrefix": "blockbase", // A prefix that will be used in all created MongoDB databases
     "PostgresHost": "localhost", // The postgresql host address
     "PostgresUser": "postgres", // The postgres user name to use for the connection
     "PostgresPort": 5432, // The port to use in the postgres connection
-    "PostgresPassword": "blockbase", // The password for the user used
+    "PostgresPassword": "yourpassword", // The password for the user used
   },
   "NetworkConfigurations": {
     "LocalIpAddress": "127.0.0.1", // The IP address that other producers will connect to
@@ -92,11 +92,11 @@ Finally, a request is needed to the following action in order to get the chain r
 
 ## Running as a service provider
 ### Sending a candidature for a sidechain
-if you intent on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
+if you intend on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
 
 `https://`_`apiendpoint`_`/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_`&producerType=`_`producerType`_
 
-Where workTime is the ammount of time in seconds the producers will work on the chain, and producerType is the type of producer it intends to be.
+Where workTime is the amount of time in seconds the producers will work on the chain, and producerType is the type of producer it intends to be. ProducerType may assume one of three numbers: 1, 2 and 3. This will determine the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also produces the sidechain, and 3 is a node that produces the sidechain and executes the operations on a local database.
 
 
 ## Staking BBT
