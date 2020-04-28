@@ -269,15 +269,15 @@ namespace BlockBase.Runtime.Mainchain
         private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
         {
             var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
-            var producerEncryptedIPAdresses = ipAddressesTables.Where(i => i.EncryptedIPs.Count > 0).Select(t => t.EncryptedIPs[t.EncryptedIPs.Count - 1]).ToList();
 
             var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
-            for (int i = 0; i < producerEncryptedIPAdresses.Count; i++)
+            foreach (var table in ipAddressesTables)
             {
-                var producer = ipAddressesTables[i].Key;
-                var producerPublicKey = ipAddressesTables[i].PublicKey;
-                decryptedProducerIPs.Add(producer,
-                 AssymetricEncryption.DecryptIP(producerEncryptedIPAdresses[i], _nodeConfigurations.ActivePrivateKey, producerPublicKey));
+                var producer = table.Key;
+                var producerPublicKey = table.PublicKey;
+                var encryptedIp = table.EncryptedIPs?.LastOrDefault();
+                if (encryptedIp == null) continue;
+                decryptedProducerIPs.Add(producer, AssymetricEncryption.DecryptIP(encryptedIp, _nodeConfigurations.ActivePrivateKey, producerPublicKey));
 
             }
             return decryptedProducerIPs;
