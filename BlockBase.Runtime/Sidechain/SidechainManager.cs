@@ -42,6 +42,7 @@ namespace BlockBase.Runtime.Sidechain
         private ILogger _logger;
         private readonly IMongoDbProducerService _mongoDbProducerService;
         private readonly BlockSender _blockSender;
+        private TaskContainer _checkHistoryTask;
 
         private const uint MINIMUM_NUMBER_OF_CONNECTIONS = 1;
         private const uint CONNECTION_EXPIRATION_TIME_IN_SECONDS_MAINCHAIN = 60;
@@ -567,18 +568,22 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task CheckSidechainValidation()
         {
+            if (_checkHistoryTask != null && !_checkHistoryTask.Task.IsCompleted) return;
+
             var sidechainValidation = await _mainchainService.RetrieveHistoryValidationTable(Sidechain.ClientAccountName);
             if (sidechainValidation == null) return;
 
             if (sidechainValidation.Key == _nodeConfigurations.AccountName)
             {
-                await HistoryValidationHelper.ProposeHistoryValidationAndTryToExecute(
+                _checkHistoryTask = TaskContainer.Create(async () => await HistoryValidationHelper.ProposeHistoryValidationAndTryToExecute(
                 _mainchainService,
                 _mongoDbProducerService,
                 _nodeConfigurations.AccountName,
                 sidechainValidation.BlockHash,
                 Sidechain,
-                _logger);
+                _logger));
+
+                _checkHistoryTask.Start();
             }
             else
             {

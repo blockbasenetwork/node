@@ -25,7 +25,7 @@ namespace BlockBase.Runtime.Sidechain
             if (lastValidBlockheaderTable != null)
             {
                 var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
-                if  (!validProducers.Any()) return;
+                if (!validProducers.Any()) return;
                 var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
                 int r = _rnd.Next(validProducers.Count);
                 var chosenProducerAccountName = validProducers[r].Key;
@@ -43,35 +43,85 @@ namespace BlockBase.Runtime.Sidechain
 
         public static async Task ProposeHistoryValidationAndTryToExecute(IMainchainService mainChainService, IMongoDbProducerService mongoDbProducerService, string accountName, string blockhash, SidechainPool sidechainPool, ILogger logger)
         {
+            var historyTable = await mainChainService.RetrieveHistoryValidationTable(sidechainPool.ClientAccountName);
             var owner = sidechainPool.ClientAccountName;
             var firstHalf = owner.Substring(0, owner.Length >= 5 ? 5 : owner.Length);
             var secondHalf = owner.Substring(owner.Length - 5 > 0 ? owner.Length - 5 : 0, owner.Length >= 5 ? 5 : owner.Length);
             var proposalName = firstHalf + "hi" + secondHalf;
 
-            var proposal = await mainChainService.RetrieveProposal(accountName, proposalName);
-
-            if (proposal == null)
+            while (historyTable != null && historyTable.Key == accountName && historyTable.BlockHash == blockhash)
             {
-                var validationAnswer = await GetValidationAnswer(mongoDbProducerService, blockhash, sidechainPool.ClientAccountName, logger);
-                // logger.LogDebug($"Owner: {owner}, Producer {accountName}, ValidationAnswer: {validationAnswer}");
+                var proposal = await mainChainService.RetrieveProposal(accountName, proposalName);
+
+                if (proposal == null)
+                {
+                    var validationAnswer = await GetValidationAnswer(mongoDbProducerService, blockhash, owner, logger);
+
+                    try
+                    {
+                        await mainChainService.AddBlockByte(owner, accountName, validationAnswer);
+                        await mainChainService.ProposeHistoryValidation(
+                            owner,
+                            accountName,
+                            sidechainPool.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.AccountName).ToList(),
+                            proposalName
+                            );
+                        logger.LogDebug($"Added block byte and proposed history validation.");
+                    }
+                    catch (ApiErrorException apiException)
+                    {
+                        logger.LogCritical($"Unable to add block byte or propose history validation with error: {apiException?.error?.name}");
+                    }
+
+                    await TryApproveAndExecuteHistoryValidation(mainChainService, mongoDbProducerService, accountName, owner, logger, blockhash);
+                    return;
+                }
+                else
+                {
+                    await mainChainService.CancelTransaction(accountName, proposal.ProposalName);
+                }
+
+                await Task.Delay(100);
+                historyTable = await mainChainService.RetrieveHistoryValidationTable(owner);
+            }
+
+            await CheckSidechainValidationProposal(mainChainService, accountName, owner, logger);
+        }
+
+        public static async Task TryApproveAndExecuteHistoryValidation(IMainchainService mainChainService, IMongoDbProducerService mongoDbProducerService, string accountName, string owner, ILogger logger, string blockHashToCheck)
+        {
+            var historyTable = await mainChainService.RetrieveHistoryValidationTable(owner);
+            while (historyTable != null && historyTable.Key == accountName && historyTable.BlockHash == blockHashToCheck)
+            {
+                var firstHalf = owner.Substring(0, owner.Length >= 5 ? 5 : owner.Length);
+                var secondHalf = owner.Substring(owner.Length - 5 > 0 ? owner.Length - 5 : 0, owner.Length >= 5 ? 5 : owner.Length);
+                var proposalName = firstHalf + "hi" + secondHalf;
+
+                var proposal = await mainChainService.RetrieveProposal(historyTable.Key, proposalName);
+                var approvals = await mainChainService.RetrieveApprovals(historyTable.Key, proposalName);
+
                 try
                 {
-                    await mainChainService.AddBlockByte(owner, accountName, validationAnswer);
-                    await mainChainService.ProposeHistoryValidation(
-                        sidechainPool.ClientAccountName,
-                        accountName,
-                        sidechainPool.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.AccountName).ToList(),
-                        proposalName
-                        );
-                    logger.LogDebug($"Added block byte and proposed history validation.");
+                    if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == accountName).FirstOrDefault() == null)
+                    {
+                        await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, accountName, proposal.TransactionHash);
+
+                    }
+                    else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
+                    {
+                        await mainChainService.ExecuteTransaction(historyTable.Key, proposal.ProposalName, accountName);
+                        logger.LogDebug($"Executed history validation.");
+                        return;
+                    }
                 }
                 catch (ApiErrorException apiException)
                 {
-                    logger.LogCritical($"Unable to add block byte or propose history validation with error: {apiException?.error?.name}");
+                    logger.LogCritical($"Unable to approve or execute proposed history validation: {apiException?.error?.name}");
                 }
 
+                await Task.Delay(100);
+                historyTable = await mainChainService.RetrieveHistoryValidationTable(owner);
             }
-            await CheckAndApproveHistoryValidation(mainChainService, mongoDbProducerService, accountName, sidechainPool.ClientAccountName, logger);
         }
 
         public static async Task CheckAndApproveHistoryValidation(IMainchainService mainChainService, IMongoDbProducerService mongoDbProducerService, string accountName, string owner, ILogger logger)
@@ -102,18 +152,6 @@ namespace BlockBase.Runtime.Sidechain
                         {
                             logger.LogCritical($"Unable to approve history validation transaction with error: {apiException?.error?.name}");
                         }
-                    }
-                }
-                else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
-                {
-                    try
-                    {
-                        await mainChainService.ExecuteTransaction(historyTable.Key, proposal.ProposalName, accountName);
-                        logger.LogDebug($"Executed history validation.");
-                    }
-                    catch (ApiErrorException apiException)
-                    {
-                        logger.LogCritical($"Unable to execute history validation transaction with error: {apiException?.error?.name}");
                     }
                 }
             }
