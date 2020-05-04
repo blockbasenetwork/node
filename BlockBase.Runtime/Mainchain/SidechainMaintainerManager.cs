@@ -36,6 +36,7 @@ namespace BlockBase.Runtime.Mainchain
         private PeerConnectionsHandler _peerConnectionsHandler;
         private const float DELAY_IN_SECONDS = 0.5f;
         public TaskContainer TaskContainer { get; private set; }
+        private TransactionSender _transactionSender;
 
         public TaskContainer Start()
         {
@@ -43,7 +44,7 @@ namespace BlockBase.Runtime.Mainchain
             TaskContainer.Start();
             return TaskContainer;
         }
-        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler)
+        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
             _mainchainService = mainchainService;
@@ -53,6 +54,7 @@ namespace BlockBase.Runtime.Mainchain
             _nodeConfigurations = nodeConfigurations.Value;
             _sidechain = new SidechainPool(_nodeConfigurations.AccountName);
             _forceTryAgain = true;
+            _transactionSender = transactionSender;
         }
 
         public async Task SuperMethod()
@@ -148,6 +150,8 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.ProductionTime && currentProducerTable.Any() &&
                    (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
+                    var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int) _sidechain.BlocksBetweenSettlement);
+                    await _transactionSender.RemoveIncludedTransactions(lastBlockHeader.TransactionCount, lastBlockHeader.BlockHash);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
