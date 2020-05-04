@@ -386,28 +386,65 @@ namespace BlockBase.DataPersistence.ProducerData
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
 
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+                var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
 
-                var transactionQuery = from t in transactionCollection.AsQueryable()
-                                       orderby t.SequenceNumber descending
-                                       select t.SequenceNumber;
+                var transactionQuery = from t in transactionInfoCollection.AsQueryable()
+                                       select t.LastIncludedSequenceNumber;
 
-                return await transactionQuery.FirstOrDefaultAsync();
+                return await transactionQuery.SingleOrDefaultAsync();
             }
         }
 
-
-        public async Task RemoveAlreadySentTransactionsDBAsync(string databaseName, IEnumerable<ulong> sequenceNumbers)
+        public async Task CreateTransactionInfoIfNotExists(string databaseName)
         {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+
+
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+
+                var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
+
+                var info = await (await transactionInfoCollection.FindAsync(t => true)).SingleOrDefaultAsync();
+
+                if (info == null)
+                {
+                    await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB { BlockHash = "none", LastIncludedSequenceNumber = 0 });
+                }
+
+
+            }
+        }
+        public async Task<IList<ulong>> RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, uint numberOfIncludedTransactions, string lastValidBlockHash)
+        {
+
             var lastTransactionSequenceNumber = await GetLastTransactionSequenceNumberDBAsync(databaseName);
+            var lastIncludedSequenceNumber = lastTransactionSequenceNumber + (ulong)numberOfIncludedTransactions;
+            IList<ulong> sequenceNumbers = new List<ulong>();
+            for (ulong i = lastTransactionSequenceNumber+1; i <= lastIncludedSequenceNumber; i++)
+                sequenceNumbers.Add(i);
+
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
 
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+                var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
+                var info = await (await transactionInfoCollection.FindAsync(t => true)).SingleOrDefaultAsync();
+                if(info.BlockHash == lastValidBlockHash) return sequenceNumbers;
 
-                await transactionCollection.DeleteManyAsync(s => s.SequenceNumber != lastTransactionSequenceNumber && !sequenceNumbers.Contains(s.SequenceNumber));
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+    
+                session.StartTransaction();
+                await transactionCollection.DeleteManyAsync(s => sequenceNumbers.Contains(s.SequenceNumber));
+
+
+                await transactionInfoCollection.DeleteManyAsync(t => true);
+                await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB() { BlockHash = lastValidBlockHash, LastIncludedSequenceNumber =  lastIncludedSequenceNumber});
+
+                await session.CommitTransactionAsync();
             }
+
+            return sequenceNumbers;
         }
 
         public async Task<bool> IsTransactionInDB(string databaseName, Transaction transaction)

@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Logging;
 using BlockBase.Network.Mainchain;
-using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain.Pocos;
