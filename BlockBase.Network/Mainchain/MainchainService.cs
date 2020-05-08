@@ -11,6 +11,8 @@ using Microsoft.Extensions.Options;
 using System;
 using Microsoft.Extensions.Logging;
 using EosSharp.Core.Exceptions;
+using EosSharp.Core;
+using EosSharp.Core.Helpers;
 
 namespace BlockBase.Network.Mainchain
 {
@@ -299,6 +301,7 @@ namespace BlockBase.Network.Mainchain
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
         );
+
         public async Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active") =>
          await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_BLOCK_BYTE,
@@ -307,7 +310,7 @@ namespace BlockBase.Network.Mainchain
                 CreateDataForAddBlockByte(owner, producerName, byteInHexadecimal),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
-        );   
+        );
 
         public async Task<string> ProposeHistoryValidation(string owner, string accountName, List<string> requestedApprovals, string proposalName) =>
             await TryAgain(async () => await EosStub.ProposeTransaction(
@@ -321,6 +324,60 @@ namespace BlockBase.Network.Mainchain
                 EosMsigConstants.VERIFY_HISTORY_PERMISSION),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
+
+        public async Task<string> CreateVerifyBlockTransactionAndAddToContract(string owner, string accountName, string blockHash, string permission = "acctive")
+        {
+            var transaction = new Transaction()
+            {
+                expiration = DateTime.UtcNow.AddDays(1),
+                actions = new List<EosSharp.Core.Api.v1.Action>()
+                {
+                    new EosSharp.Core.Api.v1.Action()
+                    {
+                        account = NetworkConfigurations.BlockBaseOperationsContract,
+                        authorization = new List<PermissionLevel>()
+                        {
+                            new PermissionLevel() {actor = owner, permission = EosMsigConstants.VERIFY_BLOCK_PERMISSION }
+                        },
+                        name = EosMethodNames.VERIFY_BLOCK,
+                        data = CreateDataForVerifyBlock(owner, accountName, blockHash)
+                    }
+                }
+            };
+
+            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+
+            return await AddVerifyTransactionAndSignature(owner, accountName, blockHash, signedTransaction.Signatures.FirstOrDefault(), signedTransaction.PackedTransaction);
+        }
+
+        public async Task<string> SignVerifyTransactionAndAddToContract(string owner, string account, string blockHash, Transaction transaction, string permission = "active")
+        {
+            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+
+            return await AddVerifyTransactionAndSignature(owner, account, blockHash, signedTransaction.Signatures.FirstOrDefault());
+        }
+
+        public async Task<string> BroadcastTransactionWithSignatures(byte[] packedTransaction, List<string> signatures)
+        {
+            var signedTransaction = new SignedTransaction()
+            {
+                PackedTransaction = packedTransaction,
+                Signatures = signatures.Distinct()
+            };
+
+            return await EosStub.BroadcastTransaction(signedTransaction);
+        }
+
+        public async Task<string> AddVerifyTransactionAndSignature(string owner, string accountName, string blockHash, string verifySignature, byte[] verifyBlockTransaction = null, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_VERIFY_SIGNATURE,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                accountName,
+                CreateDataForAddVerifyTransactionAndSignature(owner, accountName, blockHash, verifySignature, verifyBlockTransaction),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+
         #endregion
 
         #region Table Retrievers
@@ -339,12 +396,13 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<List<IPAddressTable>> RetrieveIPAddresses(string chain) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<IPAddressTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.IP_ADDRESS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
-       
+
         public async Task<List<BlockCountTable>> RetrieveBlockCount(string proposerAccount) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockCountTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKCOUNT_TABLE_NAME, proposerAccount), MAX_NUMBER_OF_TRIES);
 
         public async Task<List<RewardTable>> RetrieveRewardTable(string account) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<RewardTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PENDING_REWARD_TABLE, account), MAX_NUMBER_OF_TRIES);
+
 
         public async Task<TransactionProposalApprovalsTable> RetrieveApprovals(string proposerAccount, string proposalName)
         {
@@ -361,7 +419,7 @@ namespace BlockBase.Network.Mainchain
 
             return contractInfo;
         }
-       
+
         public async Task<ContractStateTable> RetrieveContractState(string chain)
         {
             var listContractState = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractStateTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CONTRACT_STATE_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
@@ -417,6 +475,28 @@ namespace BlockBase.Network.Mainchain
             return null;
         }
 
+        public async Task<List<VerifySignature>> RetrieveVerifySignatures(string account)
+        {
+            var verifySignaturesList = new List<VerifySignature>();
+            var verifySignaturesTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VerifySignatureTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PENDING_REWARD_TABLE, account), MAX_NUMBER_OF_TRIES);
+
+            foreach(var verifySignature in verifySignaturesTable)
+            {
+                var mappedVerifySignature = new VerifySignature()
+                {
+                    Account = verifySignature.Key,
+                    BlockHash = verifySignature.BlockHash,
+                    Signature = verifySignature.VerifySignature,
+                    PackedTransaction = SerializationHelper.HexStringToByteArray(verifySignature.PackedTransaction),
+                    Transaction = string.IsNullOrEmpty(verifySignature.PackedTransaction) ? null : await EosStub.UnpackTransaction(verifySignature.PackedTransaction)
+                };
+
+                verifySignaturesList.Add(mappedVerifySignature);
+            }
+
+            return verifySignaturesList;
+        }
+            
         public async Task<HistoryValidationTable> RetrieveHistoryValidationTable(string chain)
         {
             var listValidationTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<HistoryValidationTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.HISTORY_VALIDATION_TABLE, chain), MAX_NUMBER_OF_TRIES);
@@ -507,6 +587,18 @@ namespace BlockBase.Network.Mainchain
                 {EosParameterNames.OWNER, chain},
                 {EosParameterNames.PRODUCER, accountName},
                 {EosParameterNames.BLOCK_HASH, blockHash}
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForAddVerifyTransactionAndSignature(string chain, string accountName, string blockHash, string verifySignature, byte[] packedTransaction)
+        {
+            return new Dictionary<string, object>()
+            {
+                {EosParameterNames.OWNER, chain},
+                {EosParameterNames.ACCOUNT, accountName},
+                {EosParameterNames.BLOCK_HASH, blockHash},
+                {EosParameterNames.VERIFY_SIGNATURE, verifySignature},
+                {EosParameterNames.PACKED_TRANSACTION, packedTransaction}
             };
         }
 

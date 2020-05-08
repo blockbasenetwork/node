@@ -88,8 +88,13 @@ namespace BlockBase.Runtime.Sidechain
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
                             await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
 
-                            var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
-                            if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
+                            // var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
+                            // if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
+
+                            var verifySignatures = await _mainchainService.RetrieveVerifySignatures(sidechainPool.ClientAccountName);
+                            var producerVerifySignature = verifySignatures.FirstOrDefault(v => v.Account == blockReceived.BlockHeader.Producer);
+                            if (producerVerifySignature != null) await TryAddSignature(sidechainPool.ClientAccountName, blockReceived.BlockHeader.Producer, producerVerifySignature.BlockHash, producerVerifySignature.Transaction);
+
                             break;
                         }
                         i++;
@@ -184,6 +189,18 @@ namespace BlockBase.Runtime.Sidechain
             catch (ApiErrorException)
             {
                 _logger.LogInformation("Unable to approve transaction, proposed transaction might have already been executed");
+            }
+        }
+
+        private async Task TryAddSignature(string chain, string account, string blockHash, EosSharp.Core.Api.v1.Transaction transactionToSign)
+        {
+            try
+            {
+                await _mainchainService.SignVerifyTransactionAndAddToContract(chain, account, blockHash, transactionToSign);
+            }
+            catch (ApiErrorException)
+            {
+                _logger.LogInformation("Unable to add verify transaction signature");
             }
         }
 

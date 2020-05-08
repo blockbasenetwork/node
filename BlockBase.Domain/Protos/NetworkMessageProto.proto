@@ -29,7 +29,8 @@ message NetworkMessageProto {
     SendTransactions = 20;
     SendCurrentHeight = 21;
     SendCurrentMaxBlockSize = 22;
-    ConfirmTransactionReception = 27 ;
+    ConfirmTransactionReception = 27;
+    SignTransactionRequest = 28;
 
     SearchQueryRequest = 23;
     SendQueryResult = 24;

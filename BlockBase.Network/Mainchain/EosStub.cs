@@ -59,7 +59,7 @@ namespace BlockBase.Network.Mainchain
 
             if (rowsFromTable.Succeeded) rowsFromTable.Result?.LastOrDefault()?.TryGetValue(valueChangeToConfirm, out valueBeforeChangeToConfirm);
             if (valueBeforeChangeToConfirm == null) throw new ArgumentOutOfRangeException();
-            
+
             for (var i = 0; i < numberOfTries; i++)
             {
                 var opResult = await sendTransactionFunction.Invoke();
@@ -124,16 +124,26 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<OpResult<string>> ProposeTransaction(string actionName, string smartContractAccountName, string signerAccountName, string proposerAccountName, object data, List<string> requestedApprovals, string proposalName, string proposePermission = "active", string permission = "active") =>
             await SendTransaction(
-                EosMsigConstants.EOSIO_MSIG_PROPOSE_ACTION, 
-                EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, 
-                proposerAccountName, 
+                EosMsigConstants.EOSIO_MSIG_PROPOSE_ACTION,
+                EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME,
+                proposerAccountName,
                 CreateDataForProposeTransaction(
-                    proposerAccountName, 
-                    requestedApprovals, 
+                    proposerAccountName,
+                    requestedApprovals,
                     await CreateProposedTransaction(actionName, smartContractAccountName, signerAccountName, proposerAccountName, data, proposePermission),
                     proposalName),
                 permission
             );
+
+        public async Task<SignedTransaction> SignTransaction(Transaction trx, string keyToUse)
+        {
+            return await _eosConnection.SignTransaction(trx, new List<string>(){keyToUse});
+        }
+
+        public async Task<string> BroadcastTransaction(SignedTransaction trx)
+        {
+            return await _eosConnection.BroadcastTransaction(trx);
+        }
 
         #endregion
 
@@ -161,8 +171,8 @@ namespace BlockBase.Network.Mainchain
                         data = data
                     }
                 }
-            }; 
-            
+            };
+
             var abiResponses = await abiSerializer.GetTransactionAbis(transaction);
             int actionIndex = 0;
 
@@ -170,8 +180,16 @@ namespace BlockBase.Network.Mainchain
             {
                 action.data = abiSerializer.SerializeActionData(action, abiResponses[actionIndex++]);
             }
-            
+
             return transaction;
+        }
+
+        public async Task<byte[]> PackTransaction(Transaction transaction)
+        {
+            var eosApi = new EosApi(_eosConfig, new HttpHandler());
+            var abiSerializer = new AbiSerializationProvider(eosApi);
+
+            return await abiSerializer.SerializePackedTransaction(transaction);
         }
 
         public async Task<Transaction> UnpackTransaction(string packedTransaction)

@@ -80,7 +80,7 @@ namespace BlockBase.Runtime.Sidechain
                     {
                         if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
-                        {                        
+                        {
                             var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName)).SingleOrDefault();
 
                             if (currentProducerTable != null)
@@ -120,7 +120,7 @@ namespace BlockBase.Runtime.Sidechain
                                     _logger.LogDebug("Producing block.");
                                     var block = await ProduceBlock();
                                     var checkIfBlockInDb = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(databaseName, block.BlockHeader.SequenceNumber, block.BlockHeader.SequenceNumber)).FirstOrDefault();
-                                    if (checkIfBlockInDb != null) 
+                                    if (checkIfBlockInDb != null)
                                     {
                                         var blockInDbHash = HashHelper.ByteArrayToFormattedHexaString(checkIfBlockInDb.BlockHeader.BlockHash);
                                         await _mongoDbProducerService.RemoveBlockFromDatabaseAsync(databaseName, blockInDbHash);
@@ -265,12 +265,68 @@ namespace BlockBase.Runtime.Sidechain
         {
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
+            var blockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
 
             var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
 
-            await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
+            //await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
+            await TryAddVerifyTransaction(blockHash);
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
-            await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName);
+            await TryBroadcastVerifyTransaction(blockHash, requestedApprovals.Count);
+            //await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName);
+        }
+
+        private async Task TryAddVerifyTransaction(string blockHash)
+        {
+            var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
+            var ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
+
+            while (ownSignature?.BlockHash != blockHash && (_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            {
+                try
+                {
+                    await _mainchainService.CreateVerifyBlockTransactionAndAddToContract(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockHash);
+
+                    await Task.Delay(500);
+                    verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
+                    ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
+                }
+                catch (ApiErrorException)
+                {
+                    _logger.LogCritical("Unable to add verify transaction");
+                    await Task.Delay(100);
+                }
+            }
+        }
+
+        private async Task TryBroadcastVerifyTransaction(string blockHash, int numberOfProducers)
+        {
+            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            {
+                try
+                {
+                    var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
+                    var verifySignatures = verifySignatureTable?.Where(t => t.BlockHash == blockHash);
+
+                    if (verifySignatures?.Count() >= (numberOfProducers / 2) + 1)
+                    {
+                        var signatures = verifySignatures.Select(v => v.Signature).ToList();
+                        var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
+
+                        await _mainchainService.BroadcastTransactionWithSignatures(packedTransaction, signatures);
+                        _logger.LogInformation("Executed block verification");
+                        return;
+                    }
+
+                    await Task.Delay(100);
+                }
+                catch (ApiErrorException)
+                {
+                    _logger.LogCritical("Unable to broadcast verify transaction");
+                    await Task.Delay(100);
+                }
+            }
+            _logger.LogCritical("Unable to broadcast verify transaction during allowed time");
         }
 
         private async Task TryProposeTransaction(List<string> requestedApprovals, string blockHash)

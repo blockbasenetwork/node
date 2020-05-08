@@ -19,6 +19,7 @@ namespace BlockBase.Domain.Eos
         public const string PENDING_REWARD_TABLE = "rewards";
         public const string BLACKLIST_TABLE = "blacklist";
         public const string HISTORY_VALIDATION_TABLE = "histval";
+        public const string VERIFY_SIGNATURE_TABLE = "verifysig";
     }
 
     public class EosTableValues
@@ -68,6 +69,7 @@ namespace BlockBase.Domain.Eos
         public const string REQUEST_HISTORY_VALIDATION = "reqhistval";
         public const string HISTORY_VALIDATE = "histvalidate";
         public const string ADD_BLOCK_BYTE = "addblckbyte";
+        public const string ADD_VERIFY_SIGNATURE = "addversig";
     }
 
     public class EosParameterNames
@@ -105,7 +107,9 @@ namespace BlockBase.Domain.Eos
         public const string REQUIREMENT = "requirement";
         public const string SIDECHAIN = "sidechain";
         public const string BYTE_INDEX = "byteIndex";
-        public const string BYTE_IN_HEXADECIMAL = "byteInHex";   
+        public const string BYTE_IN_HEXADECIMAL = "byteInHex";
+        public const string PACKED_TRANSACTION = "packedTransaction";
+        public const string VERIFY_SIGNATURE = "verifySignature";
     }
 
     public class EosAtributeNames
@@ -170,6 +174,6 @@ namespace BlockBase.Domain.Eos
         public const string TIME = "time";
         public const string LEVEL = "level";
         public const string BLOCK_BYTE_IN_HEXADECIMAL = "block_byte_in_hex";
-
+        public const string VERIFY_SIGNATURE = "verify_signature";
     }
 }
