@@ -93,7 +93,7 @@ namespace BlockBase.Runtime.Sidechain
 
                             var verifySignatures = await _mainchainService.RetrieveVerifySignatures(sidechainPool.ClientAccountName);
                             var producerVerifySignature = verifySignatures.FirstOrDefault(v => v.Account == blockReceived.BlockHeader.Producer);
-                            if (producerVerifySignature != null) await TryAddSignature(sidechainPool.ClientAccountName, blockReceived.BlockHeader.Producer, producerVerifySignature.BlockHash, producerVerifySignature.Transaction);
+                            if (producerVerifySignature != null) await TryAddSignature(sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, producerVerifySignature.BlockHash, producerVerifySignature.Transaction);
 
                             break;
                         }
