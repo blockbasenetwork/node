@@ -354,7 +354,7 @@ namespace BlockBase.Network.Mainchain
         {
             var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
 
-            return await AddVerifyTransactionAndSignature(owner, account, blockHash, signedTransaction.Signatures.FirstOrDefault());
+            return await AddVerifyTransactionAndSignature(owner, account, blockHash, signedTransaction.Signatures.FirstOrDefault(), signedTransaction.PackedTransaction);
         }
 
         public async Task<string> BroadcastTransactionWithSignatures(byte[] packedTransaction, List<string> signatures)
@@ -368,7 +368,7 @@ namespace BlockBase.Network.Mainchain
             return await EosStub.BroadcastTransaction(signedTransaction);
         }
 
-        public async Task<string> AddVerifyTransactionAndSignature(string owner, string accountName, string blockHash, string verifySignature, byte[] verifyBlockTransaction = null, string permission = "active") =>
+        public async Task<string> AddVerifyTransactionAndSignature(string owner, string accountName, string blockHash, string verifySignature, byte[] verifyBlockTransaction, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_VERIFY_SIGNATURE,
                 NetworkConfigurations.BlockBaseOperationsContract,
@@ -598,7 +598,7 @@ namespace BlockBase.Network.Mainchain
                 {EosParameterNames.ACCOUNT, accountName},
                 {EosParameterNames.BLOCK_HASH, blockHash},
                 {EosParameterNames.VERIFY_SIGNATURE, verifySignature},
-                {EosParameterNames.PACKED_TRANSACTION, packedTransaction ?? new byte[1]}
+                {EosParameterNames.PACKED_TRANSACTION, packedTransaction}
             };
         }
 
