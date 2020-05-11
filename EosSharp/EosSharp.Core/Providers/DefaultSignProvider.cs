@@ -106,6 +106,8 @@ namespace EosSharp.Core.Providers
 
             var hash = Sha256Manager.GetHash(SerializationHelper.Combine(data));
 
+            Console.WriteLine($"chainId: {chainId} | hash: {Convert.ToBase64String(hash)}");
+
             return Task.FromResult(availableAndReqKeys.Select(key =>
             {
                 var sign = Secp256K1Manager.SignCompressedCompact(hash, Keys[key]);
