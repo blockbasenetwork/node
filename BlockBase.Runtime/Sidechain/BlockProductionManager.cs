@@ -286,16 +286,16 @@ namespace BlockBase.Runtime.Sidechain
                 try
                 {
                     await _mainchainService.CreateVerifyBlockTransactionAndAddToContract(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockHash);
-
                     await Task.Delay(500);
-                    verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
-                    ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
                 }
                 catch (ApiErrorException)
                 {
                     _logger.LogCritical("Unable to add verify transaction");
                     await Task.Delay(100);
                 }
+
+                verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
+                ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
             }
         }
 
