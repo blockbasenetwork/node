@@ -296,6 +296,7 @@ namespace BlockBase.Runtime.Sidechain
 
                 verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
                 ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
+                _logger.LogDebug($"table count: {verifySignatureTable.Count()} ownsig acc: {ownSignature?.Account} ownsig blockhash: {ownSignature?.BlockHash}");
             }
         }
 
