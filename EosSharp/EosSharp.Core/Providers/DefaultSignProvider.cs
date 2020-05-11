@@ -106,14 +106,14 @@ namespace EosSharp.Core.Providers
 
             var hash = Sha256Manager.GetHash(SerializationHelper.Combine(data));
 
-            Console.WriteLine($"chainId: {chainId} | hash: {Convert.ToBase64String(hash)}");
-
             return Task.FromResult(availableAndReqKeys.Select(key =>
             {
                 var sign = Secp256K1Manager.SignCompressedCompact(hash, Keys[key]);
                 var check = new List<byte[]>() { sign, KeyTypeBytes };
                 var checksum = Ripemd160Manager.GetHash(SerializationHelper.Combine(check)).Take(4).ToArray();
                 var signAndChecksum = new List<byte[]>() { sign, checksum };
+
+                Console.WriteLine($"chainId: {chainId} | hash: {Convert.ToBase64String(hash)} | checksum: {Convert.ToBase64String(checksum)} | key: {key} | sig: {Base58.Encode(SerializationHelper.Combine(signAndChecksum))}");
 
                 return "SIG_K1_" + Base58.Encode(SerializationHelper.Combine(signAndChecksum));
             }));
