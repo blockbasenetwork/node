@@ -598,7 +598,7 @@ namespace BlockBase.Network.Mainchain
                 {EosParameterNames.ACCOUNT, accountName},
                 {EosParameterNames.BLOCK_HASH, blockHash},
                 {EosParameterNames.VERIFY_SIGNATURE, verifySignature},
-                {EosParameterNames.PACKED_TRANSACTION, packedTransaction ?? default(byte[])}
+                {EosParameterNames.PACKED_TRANSACTION, packedTransaction ?? new byte[1]}
             };
         }
 
