@@ -478,7 +478,7 @@ namespace BlockBase.Network.Mainchain
         public async Task<List<VerifySignature>> RetrieveVerifySignatures(string account)
         {
             var verifySignaturesList = new List<VerifySignature>();
-            var verifySignaturesTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VerifySignatureTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PENDING_REWARD_TABLE, account), MAX_NUMBER_OF_TRIES);
+            var verifySignaturesTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VerifySignatureTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.VERIFY_SIGNATURE_TABLE, account), MAX_NUMBER_OF_TRIES);
 
             foreach(var verifySignature in verifySignaturesTable)
             {
