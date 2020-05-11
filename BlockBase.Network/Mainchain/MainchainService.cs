@@ -346,18 +346,12 @@ namespace BlockBase.Network.Mainchain
             };
 
             var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
-            _logger.LogDebug($"sign: {signedTransaction.Signatures.FirstOrDefault()}");
-            signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
-            _logger.LogDebug($"sign: {signedTransaction.Signatures.FirstOrDefault()}");
             return await AddVerifyTransactionAndSignature(owner, accountName, blockHash, signedTransaction.Signatures.FirstOrDefault(), signedTransaction.PackedTransaction);
         }
 
         public async Task<string> SignVerifyTransactionAndAddToContract(string owner, string account, string blockHash, Transaction transaction, string permission = "active")
         {
             var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
-            _logger.LogDebug($"sign: {signedTransaction.Signatures.FirstOrDefault()}");
-            signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
-            _logger.LogDebug($"sign: {signedTransaction.Signatures.FirstOrDefault()}");
             return await AddVerifyTransactionAndSignature(owner, account, blockHash, signedTransaction.Signatures.FirstOrDefault(), signedTransaction.PackedTransaction);
         }
 
