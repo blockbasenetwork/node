@@ -321,9 +321,9 @@ namespace BlockBase.Runtime.Sidechain
 
                     await Task.Delay(100);
                 }
-                catch (ApiErrorException)
+                catch (ApiErrorException ex)
                 {
-                    _logger.LogCritical("Unable to broadcast verify transaction");
+                    _logger.LogCritical($"Unable to broadcast verify transaction: {ex}");
                     await Task.Delay(100);
                 }
             }
