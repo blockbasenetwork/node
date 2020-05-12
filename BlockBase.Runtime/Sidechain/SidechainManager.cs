@@ -569,6 +569,7 @@ namespace BlockBase.Runtime.Sidechain
         private async Task CheckSidechainValidation()
         {
             if (_checkHistoryTask != null && _checkHistoryTask.Task.Status == TaskStatus.Running) return;
+            _logger.LogDebug($"histval task: {_checkHistoryTask != null} | status: {_checkHistoryTask?.Task?.Status}");
 
             var sidechainValidation = await _mainchainService.RetrieveHistoryValidationTable(Sidechain.ClientAccountName);
             if (sidechainValidation == null) return;

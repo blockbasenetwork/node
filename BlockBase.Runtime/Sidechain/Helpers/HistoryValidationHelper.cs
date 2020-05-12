@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Domain.Enums;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
@@ -63,7 +64,7 @@ namespace BlockBase.Runtime.Sidechain
                         await mainChainService.ProposeHistoryValidation(
                             owner,
                             accountName,
-                            sidechainPool.ProducersInPool.GetEnumerable().Select(p => p.ProducerInfo.AccountName).ToList(),
+                            sidechainPool.ProducersInPool.GetEnumerable().Where(p => p.ProducerInfo.ProducerType != ProducerTypeEnum.Validator).Select(p => p.ProducerInfo.AccountName).ToList(),
                             proposalName
                             );
                         logger.LogDebug($"Added block byte and proposed history validation.");
@@ -105,7 +106,7 @@ namespace BlockBase.Runtime.Sidechain
                     if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == accountName).FirstOrDefault() == null)
                     {
                         await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, accountName, proposal.TransactionHash);
-
+                        logger.LogDebug($"Approved history validation.");
                     }
                     else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
                     {
@@ -147,6 +148,7 @@ namespace BlockBase.Runtime.Sidechain
                         try
                         {
                             await mainChainService.ApproveTransaction(historyTable.Key, proposal.ProposalName, accountName, proposal.TransactionHash);
+                            logger.LogDebug($"Executed history validation.");
                         }
                         catch (ApiErrorException apiException)
                         {
