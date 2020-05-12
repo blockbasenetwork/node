@@ -296,8 +296,7 @@ namespace BlockBase.Runtime.Sidechain
                 }
 
                 verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
-                ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
-                _logger.LogDebug($"table count: {verifySignatureTable.Count()} ownsig acc: {ownSignature?.Account} ownsig blockhash: {ownSignature?.BlockHash}");
+                ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);                
             }
         }
 
@@ -314,6 +313,8 @@ namespace BlockBase.Runtime.Sidechain
                     {
                         var signatures = verifySignatures.Select(v => v.Signature).Take(requiredKeys.Count).ToList();
                         var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
+                        _logger.LogDebug($"Broadcasting transaction with {signatures.Count} signatures");
+                        foreach(var signature in signatures) Console.WriteLine($"Sig: {signature}");
 
                         await _mainchainService.BroadcastTransactionWithSignatures(packedTransaction, signatures);
                         _logger.LogInformation("Executed block verification");
@@ -324,7 +325,7 @@ namespace BlockBase.Runtime.Sidechain
                 }
                 catch (ApiErrorException ex)
                 {
-                    _logger.LogCritical($"Unable to broadcast verify transaction: {ex}");
+                    _logger.LogCritical($"Unable to broadcast verify transaction: {ex.error.name}");
                     await Task.Delay(100);
                 }
             }
