@@ -308,13 +308,14 @@ namespace BlockBase.Runtime.Sidechain
                 {
                     var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
                     var verifySignatures = verifySignatureTable?.Where(t => t.BlockHash == blockHash);
+                    var threshold = (numberOfProducers / 2) + 1;
+                    var requiredSignatures = threshold > requiredKeys.Count ? requiredKeys.Count : threshold;
 
-                    if (verifySignatures?.Count() >= (numberOfProducers / 2) + 1)
+                    if (verifySignatures?.Count() >= threshold)
                     {
-                        var signatures = verifySignatures.Select(v => v.Signature).Take(requiredKeys.Count).ToList();
+                        var signatures = verifySignatures.Select(v => v.Signature).Take(requiredSignatures).ToList();
                         var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
                         _logger.LogDebug($"Broadcasting transaction with {signatures.Count} signatures");
-                        foreach(var signature in signatures) Console.WriteLine($"Sig: {signature}");
 
                         await _mainchainService.BroadcastTransactionWithSignatures(packedTransaction, signatures);
                         _logger.LogInformation("Executed block verification");
