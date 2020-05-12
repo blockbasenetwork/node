@@ -95,7 +95,7 @@ namespace BlockBase.Runtime.Sidechain
                     }
 
                     await TryApproveAndExecuteHistoryValidation(accountName, owner, blockhash);
-                    return;
+                    break;
                 }
                 else
                 {
@@ -107,6 +107,7 @@ namespace BlockBase.Runtime.Sidechain
             }
 
             await CheckSidechainValidationProposal(accountName, owner);
+            TaskContainer = null;
         }
 
         public async Task TryApproveAndExecuteHistoryValidation(string accountName, string owner, string blockHashToCheck)
@@ -134,7 +135,7 @@ namespace BlockBase.Runtime.Sidechain
                         await _mainchainService.ExecuteTransaction(historyTable.Key, proposal.ProposalName, accountName);
                         _logger.LogDebug($"Executed history validation.");
                         await Task.Delay(500);
-                        return;
+                        break;
                     }
                 }
                 catch (ApiErrorException apiException)
