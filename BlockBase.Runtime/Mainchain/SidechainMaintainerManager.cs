@@ -18,6 +18,7 @@ using System.Net.Http;
 using static BlockBase.Network.PeerConnection;
 using BlockBase.Runtime.Sidechain;
 using Microsoft.Extensions.Options;
+using BlockBase.DataPersistence.ProducerData;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -37,6 +38,7 @@ namespace BlockBase.Runtime.Mainchain
         private const float DELAY_IN_SECONDS = 0.5f;
         public TaskContainer TaskContainer { get; private set; }
         private TransactionSender _transactionSender;
+        private HistoryValidation _historyValidation;
 
         public TaskContainer Start()
         {
@@ -44,7 +46,7 @@ namespace BlockBase.Runtime.Mainchain
             TaskContainer.Start();
             return TaskContainer;
         }
-        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender)
+        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbServices, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
             _mainchainService = mainchainService;
@@ -55,6 +57,7 @@ namespace BlockBase.Runtime.Mainchain
             _sidechain = new SidechainPool(_nodeConfigurations.AccountName);
             _forceTryAgain = true;
             _transactionSender = transactionSender;
+            _historyValidation = new HistoryValidation(_logger, mongoDbServices, _mainchainService);
         }
 
         public async Task SuperMethod()
@@ -302,7 +305,7 @@ namespace BlockBase.Runtime.Mainchain
                 await _mainchainService.PunishProd(_sidechain.ClientAccountName);
             }
 
-            await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName, _logger, producers);
+            await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, producers);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             await UpdateAuthorizations();

@@ -31,6 +31,7 @@ namespace BlockBase.Runtime.Sidechain
         private NodeConfigurations _nodeConfigurations;
         private string _localEndPoint;
         private IMainchainService _mainchainService;
+        private HistoryValidation _historyValidation;
 
         public BlockSender(ILogger<BlockSender> logger, IOptions<NodeConfigurations> nodeConfigurations, SystemConfig systemConfig, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService)
         {
@@ -42,6 +43,7 @@ namespace BlockBase.Runtime.Sidechain
 
             _nodeConfigurations = nodeConfigurations?.Value;
             _localEndPoint = systemConfig.IPAddress + ":" + systemConfig.TcpPort;
+            _historyValidation = new HistoryValidation(_logger, _mongoDbProducerService, _mainchainService);
         }
 
         private async void MessageForwarder_BlockRequest(BlocksRequestReceivedEventArgs args)
@@ -55,7 +57,7 @@ namespace BlockBase.Runtime.Sidechain
                 var historyTable = await _mainchainService.RetrieveHistoryValidationTable(args.ClientAccountName);
                 if (historyTable != null)
                 {
-                    var blockToValidateSequenceNumber = await HistoryValidationHelper.GetChosenBlockSequenceNumber(_mongoDbProducerService, historyTable.BlockHash, args.ClientAccountName, _logger);
+                    var blockToValidateSequenceNumber = await _historyValidation.GetChosenBlockSequenceNumber(historyTable.BlockHash, args.ClientAccountName);
                     if (blockToValidateSequenceNumber.HasValue && args.BlocksSequenceNumber.Contains(blockToValidateSequenceNumber.Value))
                         args.BlocksSequenceNumber.Remove(blockToValidateSequenceNumber.Value);
                 }

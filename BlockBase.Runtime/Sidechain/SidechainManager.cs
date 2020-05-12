@@ -42,7 +42,7 @@ namespace BlockBase.Runtime.Sidechain
         private ILogger _logger;
         private readonly IMongoDbProducerService _mongoDbProducerService;
         private readonly BlockSender _blockSender;
-        private TaskContainer _checkHistoryTask;
+        private HistoryValidation _historyValidation;
 
         private const uint MINIMUM_NUMBER_OF_CONNECTIONS = 1;
         private const uint CONNECTION_EXPIRATION_TIME_IN_SECONDS_MAINCHAIN = 60;
@@ -72,6 +72,7 @@ namespace BlockBase.Runtime.Sidechain
             //TODO - it should receive an IConnector passed through dependency injection
             IConnector connector = null; // new MySqlConnector(_nodeConfigurations.MySqlServer, _nodeConfigurations.MySqlUser, _nodeConfigurations.MySqlPort, _nodeConfigurations.MySqlPassword, logger);
             _blockProductionManager = new BlockProductionManager(Sidechain, _nodeConfigurations, _logger, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, EndPoint, _blockSender, new SidechainDatabasesManager(connector));
+            _historyValidation = new HistoryValidation(_logger, _mongoDbProducerService, _mainchainService);
 
             _mongoDbProducerService.CreateDatabasesAndIndexes(sidechain.ClientAccountName);
         }
@@ -562,33 +563,27 @@ namespace BlockBase.Runtime.Sidechain
             if (rewardTable.Any(r => r.Reward > 0 && r.Key == Sidechain.ClientAccountName))
             {
                 await _mainchainService.ClaimReward(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
-                await HistoryValidationHelper.CheckSidechainValidationProposal(_mainchainService, _nodeConfigurations.AccountName, Sidechain.ClientAccountName, _logger);
+                await _historyValidation.CheckSidechainValidationProposal(_nodeConfigurations.AccountName, Sidechain.ClientAccountName);
             }
         }
 
         private async Task CheckSidechainValidation()
         {
-            if (_checkHistoryTask != null && _checkHistoryTask.Task.Status == TaskStatus.Running) return;
-            _logger.LogDebug($"histval task: {_checkHistoryTask != null} | status: {_checkHistoryTask?.Task?.Status}");
+            if (_historyValidation.TaskContainer != null && _historyValidation.TaskContainer.Task.Status == TaskStatus.Running) return;
+            _logger.LogDebug($"histval task: {_historyValidation.TaskContainer != null} | status: {_historyValidation.TaskContainer?.Task?.Status}");
 
             var sidechainValidation = await _mainchainService.RetrieveHistoryValidationTable(Sidechain.ClientAccountName);
             if (sidechainValidation == null) return;
 
             if (sidechainValidation.Key == _nodeConfigurations.AccountName)
             {
-                _checkHistoryTask = TaskContainer.Create(async () => await HistoryValidationHelper.ProposeHistoryValidationAndTryToExecute(
-                _mainchainService,
-                _mongoDbProducerService,
-                _nodeConfigurations.AccountName,
-                sidechainValidation.BlockHash,
-                Sidechain,
-                _logger));
-
-                _checkHistoryTask.Start();
+                _historyValidation.StartHistoryValidationTask(_nodeConfigurations.AccountName,
+                    sidechainValidation.BlockHash,
+                    Sidechain);
             }
             else
             {
-                await HistoryValidationHelper.CheckAndApproveHistoryValidation(_mainchainService, _mongoDbProducerService, _nodeConfigurations.AccountName, Sidechain.ClientAccountName, _logger);
+                await _historyValidation.CheckAndApproveHistoryValidation(_nodeConfigurations.AccountName, Sidechain.ClientAccountName);
             }
         }
 
