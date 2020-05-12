@@ -264,6 +264,7 @@ namespace BlockBase.Runtime.Sidechain
         private async Task ProposeBlock(Block block)
         {
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
+            var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
             var blockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
 
@@ -272,7 +273,7 @@ namespace BlockBase.Runtime.Sidechain
             //await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             await TryAddVerifyTransaction(blockHash);
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
-            await TryBroadcastVerifyTransaction(blockHash, requestedApprovals.Count);
+            await TryBroadcastVerifyTransaction(blockHash, requestedApprovals.Count, requiredKeys);
             //await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName);
         }
 
@@ -300,7 +301,7 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private async Task TryBroadcastVerifyTransaction(string blockHash, int numberOfProducers)
+        private async Task TryBroadcastVerifyTransaction(string blockHash, int numberOfProducers, List<string> requiredKeys)
         {
             while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
             {
@@ -311,7 +312,7 @@ namespace BlockBase.Runtime.Sidechain
 
                     if (verifySignatures?.Count() >= (numberOfProducers / 2) + 1)
                     {
-                        var signatures = verifySignatures.Select(v => v.Signature).ToList();
+                        var signatures = verifySignatures.Select(v => v.Signature).Take(requiredKeys.Count).ToList();
                         var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
 
                         await _mainchainService.BroadcastTransactionWithSignatures(packedTransaction, signatures);
