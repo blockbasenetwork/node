@@ -2,20 +2,16 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Enums;
-using BlockBase.Domain.Eos;
 using BlockBase.Domain.Protos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
-using BlockBase.DataPersistence;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain.Helpers;
 using BlockBase.Runtime.SidechainProducer;
@@ -24,7 +20,7 @@ using BlockBase.Utils.Crypto;
 using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
+using Google.Protobuf;
 using static BlockBase.Network.Rounting.MessageForwarder;
 
 namespace BlockBase.Runtime.Sidechain
@@ -69,8 +65,11 @@ namespace BlockBase.Runtime.Sidechain
             await sidechainSemaphore.WaitAsync();
             try
             {
+                if(!ValidateBlockSize(blockProtoReceived))
+                    throw new Exception("Block size incorrect.");
+            
                 var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
-
+                
                 var blockHashString = HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash);
 
                 if (await AlreadyProcessedThisBlock(databaseName, blockHashString)) return;
@@ -113,6 +112,16 @@ namespace BlockBase.Runtime.Sidechain
                 sidechainSemaphore.Release();
             }
 
+        }
+
+        private bool ValidateBlockSize(BlockProto blockProtoReceived)
+        {
+            var declaredBlockSize =  blockProtoReceived.BlockHeader.BlockSizeInBytes;
+            blockProtoReceived.BlockHeader.BlockSizeInBytes = 0;
+            var blockSize = (ulong) blockProtoReceived.ToByteArray().Count();
+            blockProtoReceived.BlockHeader.BlockSizeInBytes = declaredBlockSize;
+
+            return declaredBlockSize == blockSize;
         }
 
         private async Task<bool> AlreadyProcessedThisBlock(string sidechain, string blockhash)

@@ -20,13 +20,14 @@ namespace BlockBase.Domain.Blockchain
         public uint TransactionCount { get; set; } 
         public string ProducerSignature { get; set; }
         public byte[] MerkleRoot { get; set; }
+        public ulong BlockSizeInBytes { get; set;}
 
         public BlockHeader()
         {
         }
 
         public BlockHeader(byte[] blockHash, byte[] previousBlockHash, string producer, string producerSignature, byte[] merkleRoot,
-            ulong sequenceNumber,uint transactionCount,  ulong? timestamp = null)
+            ulong sequenceNumber,uint transactionCount, ulong blockSizeInBytes,  ulong? timestamp = null)
         {
             BlockHash = blockHash;
             PreviousBlockHash = previousBlockHash;
@@ -36,10 +37,12 @@ namespace BlockBase.Domain.Blockchain
             Producer = producer;
             Timestamp = timestamp ?? (ulong) ((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds();
             TransactionCount = transactionCount;
+            BlockSizeInBytes = blockSizeInBytes;
         }
 
         public Dictionary<string, object> ConvertToEosObject()
         {
+            
             return new Dictionary<string, object>()
             {
                 { EosAtributeNames.PRODUCER, Producer },
@@ -51,7 +54,8 @@ namespace BlockBase.Domain.Blockchain
                 { EosAtributeNames.PRODUCER_SIGNATURE, ProducerSignature},
                 { EosAtributeNames.MERKLETREE_ROOT_HASH, HashHelper.ByteArrayToFormattedHexaString(MerkleRoot) },
                 { EosAtributeNames.IS_VERIFIED, false },
-                { EosAtributeNames.IS_LATEST_BLOCK, false }
+                { EosAtributeNames.IS_LATEST_BLOCK, false },
+                { EosAtributeNames.BLOCK_SIZE_IN_BYTES,  BlockSizeInBytes}
             };
         }
 
@@ -66,7 +70,8 @@ namespace BlockBase.Domain.Blockchain
                 Timestamp = Timestamp,
                 TransactionCount = TransactionCount,
                 ProducerSignature = ProducerSignature,
-                MerkleRoot = ByteString.CopyFrom(MerkleRoot)
+                MerkleRoot = ByteString.CopyFrom(MerkleRoot),
+                BlockSizeInBytes = BlockSizeInBytes
             };
 
             return blockHeaderProto;
@@ -82,6 +87,7 @@ namespace BlockBase.Domain.Blockchain
             TransactionCount = (uint) dic[EosAtributeNames.TRANSACTIONS_COUNT];
             ProducerSignature = (string) dic[EosAtributeNames.PRODUCER_SIGNATURE];
             MerkleRoot = HashHelper.FormattedHexaStringToByteArray((string) dic[EosAtributeNames.MERKLETREE_ROOT_HASH]);
+            BlockSizeInBytes = (uint) dic[EosAtributeNames.BLOCK_SIZE_IN_BYTES];
 
             return this;
         }
@@ -96,7 +102,7 @@ namespace BlockBase.Domain.Blockchain
             TransactionCount = blockHeaderProto.TransactionCount;
             ProducerSignature = blockHeaderProto.ProducerSignature;
             MerkleRoot = blockHeaderProto.MerkleRoot.ToByteArray();
-
+            BlockSizeInBytes = blockHeaderProto.BlockSizeInBytes;
             return this;
         }
 
@@ -113,13 +119,13 @@ namespace BlockBase.Domain.Blockchain
             if(!ProducerSignature.SequenceEqual(item.ProducerSignature)) return false;
             if(Producer != item.Producer) return false;
             if(Timestamp != item.Timestamp) return false;
-
+            if(BlockSizeInBytes != item.BlockSizeInBytes) return false;
             return true;
         }
 
         public object Clone()
         {
-           return new BlockHeader(BlockHash, PreviousBlockHash, Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp);
+           return new BlockHeader(BlockHash, PreviousBlockHash, Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, BlockSizeInBytes, Timestamp);
         }
     }
 }

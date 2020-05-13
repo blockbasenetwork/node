@@ -198,6 +198,9 @@ namespace BlockBase.Runtime.Sidechain
                     block.BlockHeader.BlockHash = blockHash;
                     block.BlockHeader.ProducerSignature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, blockHash);
 
+                    var blockSize = (ulong) block.ConvertToProto().ToByteArray().Count();
+                    block.BlockHeader.BlockSizeInBytes = blockSize;
+
                     _logger.LogInformation($"Produced Block -> sequence number: {currentSequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(blockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(previousBlockhash)}");
 
                     return block;
@@ -265,7 +268,6 @@ namespace BlockBase.Runtime.Sidechain
         {
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
-
             var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
 
             await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));

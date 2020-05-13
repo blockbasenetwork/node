@@ -45,6 +45,10 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         [BsonRequired()]
         public bool Confirmed { get; set; }
 
+        [BsonElement("BlockSizeInBytes")]
+        [BsonRequired()]
+        public ulong BlockSizeInBytes { get; set; }
+
         public BlockheaderDB BlockheaderDBFromBlockHeader(BlockHeader blockHeader)
         {
 
@@ -57,13 +61,14 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             ProducerSignature = blockHeader.ProducerSignature;
             Confirmed = false;
             TransactionCount = blockHeader.TransactionCount;
+            BlockSizeInBytes = blockHeader.BlockSizeInBytes;
             return this;
         }
 
         public BlockHeader BlockHeaderFromBlockHeaderDB()
         {
             return new BlockHeader(HashHelper.FormattedHexaStringToByteArray(BlockHash),
-            HashHelper.FormattedHexaStringToByteArray(PreviousBlockhash), Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp); 
+            HashHelper.FormattedHexaStringToByteArray(PreviousBlockhash), Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, BlockSizeInBytes, Timestamp); 
         }
     }
 }

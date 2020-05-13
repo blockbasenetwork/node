@@ -37,6 +37,9 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty(EosAtributeNames.IS_LATEST_BLOCK)]
         public bool IsLastBlock { get; set; }
 
+        [JsonProperty(EosAtributeNames.BLOCK_SIZE_IN_BYTES)]
+        public ulong BlockSizenInBytes { get; set; }
+
 
         public BlockHeader ConvertToBlockHeader()
         {
@@ -44,7 +47,7 @@ namespace BlockBase.Network.Mainchain.Pocos
                     HashHelper.FormattedHexaStringToByteArray(PreviousBlockHash), 
                     Producer, ProducerSignature, 
                     HashHelper.FormattedHexaStringToByteArray(MerkleTreeRootHash), 
-                    SequenceNumber, TransactionCount, Timestamp);
+                    SequenceNumber, TransactionCount, BlockSizenInBytes, Timestamp);
         }
     }
 }
