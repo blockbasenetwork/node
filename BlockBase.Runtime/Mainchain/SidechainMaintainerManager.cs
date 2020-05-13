@@ -151,7 +151,8 @@ namespace BlockBase.Runtime.Mainchain
                    (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int) _sidechain.BlocksBetweenSettlement);
-                    await _transactionSender.RemoveIncludedTransactions(lastBlockHeader.TransactionCount, lastBlockHeader.BlockHash);
+                    if(lastBlockHeader != null) 
+                        await _transactionSender.RemoveIncludedTransactions(lastBlockHeader.TransactionCount, lastBlockHeader.BlockHash);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
