@@ -6,6 +6,7 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         public static readonly string RECOVER_DATABASE_NAME = "recoverDb";
         public static readonly string BLOCKHEADERS_COLLECTION_NAME = "Blockheaders";
         public static readonly string TRANSACTIONS_COLLECTION_NAME = "Transactions";
+        public static readonly string TRANSACTIONS_INFO_COLLECTION_NAME = "TransactionsInfo";
         public static readonly string PRODUCING_SIDECHAINS_COLLECTION_NAME = "ProducingSidechains";
         public static readonly string MAINTAINED_SIDECHAINS_COLLECTION_NAME = "MaintainedSidechains";
         public const string CREATE_DATABASE = "CreateDatabase";

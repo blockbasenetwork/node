@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlockBase.Network.Mainchain.Pocos;
+using EosSharp.Core;
 using EosSharp.Core.Api.v1;
 
 namespace BlockBase.Network.Mainchain
@@ -32,6 +33,10 @@ namespace BlockBase.Network.Mainchain
         Task<string> RequestHistoryValidation(string owner, string producerName, string blockHash, string permission = "active");
         Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active");
         Task<string> ProposeHistoryValidation(string chain, string accountName, List<string> requestedApprovals, string proposalName);
+        Task<string> CreateVerifyBlockTransactionAndAddToContract(string owner, string accountName, string blockHash, string permission = "acctive");
+        Task<string> SignVerifyTransactionAndAddToContract(string owner, string account, string blockHash, Transaction transaction, string permission = "active");
+        Task<string> BroadcastTransactionWithSignatures(byte[] packedTransaction, List<string> signatures);
+        Task<string> AddVerifyTransactionAndSignature(string owner, string accountName, string blockHash, string verifySignature, byte[] verifyBlockTransaction, string permission = "active");
 
         Task<ClientTable> RetrieveClientTable(string chain);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);
@@ -49,6 +54,7 @@ namespace BlockBase.Network.Mainchain
         Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks);
         Task<List<BlockCountTable>> RetrieveBlockCount(string chain);
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
+        Task<List<VerifySignature>> RetrieveVerifySignatures(string account);
         Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string account);
         Task<TokenAccountTable> RetrieveTokenBalance(string account);
     }

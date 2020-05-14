@@ -18,6 +18,7 @@ using System.Net.Http;
 using static BlockBase.Network.PeerConnection;
 using BlockBase.Runtime.Sidechain;
 using Microsoft.Extensions.Options;
+using BlockBase.DataPersistence.ProducerData;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -36,6 +37,8 @@ namespace BlockBase.Runtime.Mainchain
         private PeerConnectionsHandler _peerConnectionsHandler;
         private const float DELAY_IN_SECONDS = 0.5f;
         public TaskContainer TaskContainer { get; private set; }
+        private TransactionSender _transactionSender;
+        private HistoryValidation _historyValidation;
 
         public TaskContainer Start()
         {
@@ -43,7 +46,7 @@ namespace BlockBase.Runtime.Mainchain
             TaskContainer.Start();
             return TaskContainer;
         }
-        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler)
+        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbServices, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
             _mainchainService = mainchainService;
@@ -53,6 +56,8 @@ namespace BlockBase.Runtime.Mainchain
             _nodeConfigurations = nodeConfigurations.Value;
             _sidechain = new SidechainPool(_nodeConfigurations.AccountName);
             _forceTryAgain = true;
+            _transactionSender = transactionSender;
+            _historyValidation = new HistoryValidation(_logger, mongoDbServices, _mainchainService);
         }
 
         public async Task SuperMethod()
@@ -148,6 +153,8 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.ProductionTime && currentProducerTable.Any() &&
                    (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
+                    var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int) _sidechain.BlocksBetweenSettlement);
+                    await _transactionSender.RemoveIncludedTransactions(lastBlockHeader.TransactionCount, lastBlockHeader.BlockHash);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
@@ -269,15 +276,15 @@ namespace BlockBase.Runtime.Mainchain
         private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
         {
             var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
-            var producerEncryptedIPAdresses = ipAddressesTables.Where(i => i.EncryptedIPs.Count > 0).Select(t => t.EncryptedIPs[t.EncryptedIPs.Count - 1]).ToList();
 
             var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
-            for (int i = 0; i < ipAddressesTables.Count; i++)
+            foreach (var table in ipAddressesTables)
             {
-                var producer = ipAddressesTables[i].Key;
-                var producerPublicKey = ipAddressesTables[i].PublicKey;
-                decryptedProducerIPs.Add(producer,
-                 AssymetricEncryption.DecryptIP(producerEncryptedIPAdresses[i], _nodeConfigurations.ActivePrivateKey, producerPublicKey));
+                var producer = table.Key;
+                var producerPublicKey = table.PublicKey;
+                var encryptedIp = table.EncryptedIPs?.LastOrDefault();
+                if (encryptedIp == null) continue;
+                decryptedProducerIPs.Add(producer, AssymetricEncryption.DecryptIP(encryptedIp, _nodeConfigurations.ActivePrivateKey, producerPublicKey));
 
             }
             return decryptedProducerIPs;
@@ -298,7 +305,7 @@ namespace BlockBase.Runtime.Mainchain
                 await _mainchainService.PunishProd(_sidechain.ClientAccountName);
             }
 
-            await HistoryValidationHelper.SendRequestHistoryValidation(_mainchainService, _nodeConfigurations.AccountName, _logger, producers);
+            await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, producers);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             await UpdateAuthorizations();

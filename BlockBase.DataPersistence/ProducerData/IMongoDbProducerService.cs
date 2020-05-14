@@ -9,6 +9,7 @@ namespace BlockBase.DataPersistence.ProducerData
     public interface IMongoDbProducerService
     {
         Task CreateDatabasesAndIndexes(string databaseName);
+        Task CreateTransactionInfoIfNotExists(string databaseName);
         Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence);
         Task AddTransactionsToSidechainDatabaseAsync(string databaseName, TransactionDB transaction);
         Task AddTransactionsToSidechainDatabaseAsync(string databaseName, IEnumerable<TransactionDB> transactions);
@@ -32,7 +33,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber);
         Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash);
         Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName);
-        Task RemoveAlreadySentTransactionsDBAsync(string databaseName, IEnumerable<ulong> sequenceNumbers);
+        Task<IList<ulong>> RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, uint numberOfIncludedTransactions, string lastValidBlockHash);
         Task AddProducingSidechainToDatabaseAsync(string sidechain);
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
