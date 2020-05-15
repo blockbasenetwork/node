@@ -80,14 +80,11 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task Execute()
         {
-            while (true)
+            while (_transactionsToSend.Count() != 0)
             {
                 _currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
                 await TryToSendTransactions();
-
-                if (_transactionsToSend.Count() == 0) return;
-
-                else await Task.Delay(WAIT_TIME_IN_SECONDS * 1000);
+                await Task.Delay(WAIT_TIME_IN_SECONDS * 1000);
             }
         }
 
@@ -109,7 +106,8 @@ namespace BlockBase.Runtime.Sidechain
                             transactionsSendingTrackPocos.Remove(transactionSendingTrack);
                         }
                     }
-                    await SendScriptTransactionsToProducer(transactionsSendingTrackPocos.Select(p => p.Transaction), peerConnection);
+                    if(transactionsSendingTrackPocos.Count != 0)
+                        await SendScriptTransactionsToProducer(transactionsSendingTrackPocos.Select(p => p.Transaction), peerConnection);
                 }
             }
         }
