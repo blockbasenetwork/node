@@ -41,7 +41,7 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
 ## Running the node
 Run the following command to get the node up and running:
 
-`dotnet run --project `_`BlockBase.Node_Folder`_` --urls=`_`Api_Endpoint`_
+`dotnet run --project `_`BlockBase.Node_Folder`_` --urls=`_`This_Node_Api_Endpoint`_
 
 **Note: If you wish to run the node as a sidechain requester and sidechain provider, you will need two different instances and two different EOS accounts.**
 
@@ -94,7 +94,7 @@ Finally, a request is needed to the following action in order to get the chain r
 ### Sending a candidature for a sidechain
 if you intend on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
 
-`https://`_`apiendpoint`_`/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_`&producerType=`_`producerType`_
+`https://`_`apiendpoint`_`/api/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_`&producerType=`_`producerType`_
 
 Where workTime is the amount of time in seconds the producers will work on the chain, and producerType is the type of producer it intends to be. ProducerType may assume one of three numbers: 1, 2 and 3. This will determine the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also produces the sidechain, and 3 is a node that produces the sidechain and executes the operations on a local database.
 
@@ -147,7 +147,7 @@ If everything was configured correctly, the BlockBase sidechain should start aft
 
 To query a BlockBase sidechain, you need to send the query to the following node endpoint of the service requester:
 
-`https://`_`apiendpoint`_`/Query/ExecuteQuery/`
+`https://`_`apiendpoint`_`/api/Query/ExecuteQuery/`
 
 With the query string inside the body of the POST request.
 
