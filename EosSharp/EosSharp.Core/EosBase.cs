@@ -438,7 +438,7 @@ namespace EosSharp.Core
                     {
                         block_num_or_id = taposBlockNum.ToString()
                     });
-                    trx.expiration = getBlockHeaderState.header.timestamp.AddSeconds(EosConfig.ExpireSeconds);
+                    trx.expiration = trx.expiration != DateTime.MinValue ? trx.expiration : getBlockResult.timestamp.AddSeconds(EosConfig.ExpireSeconds);
                     trx.ref_block_num = (UInt16)(getBlockHeaderState.block_num & 0xFFFF);
                     trx.ref_block_prefix = Convert.ToUInt32(SerializationHelper.ReverseHex(getBlockHeaderState.id.Substring(16, 8)), 16);
                 }
