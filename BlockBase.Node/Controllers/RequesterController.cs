@@ -262,25 +262,63 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Sends a transaction to BlockBase Token Contract to add sidechain stake
+        /// </summary>
+        /// <param name="stake">Stake value to add</param>
+        /// <returns>The success of the task</returns>
+        /// <response code="200">Stake added with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error adding stake</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends a transaction to BlockBase Token Contract to add sidechain stake",
+            Description = "The requester uses this service to add sidechain stake",
+            OperationId = "RequesterAddStake"
+        )]
+        public async Task<ObjectResult> AddStake(double stake)
+        {
+            if (stake <= 0)
+            {
+                return BadRequest(new OperationResponse<bool>(new ArgumentException()));
+            }
+            try
+            {
+                var stakeString = $"{stake.ToString("F4")} BBT";
+                var trx = await _mainchainService.AddStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName, stakeString);
 
+                return Ok(new OperationResponse<bool>(true, $"Stake successfully added. Tx = {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
 
-        // /// <summary>
-        // /// Terminates the sidechain maintenance
-        // /// </summary>
-        // /// <returns>The success of terminating the sidechain maintenance</returns>
-        // /// <response code="200">Chain maintenance terminated with success</response>
-        // /// <response code="500">Error terminating the chain maintenance</response>
-        // [HttpPost]
-        // [SwaggerOperation(
-        //     Summary = "Terminates the sidechain maintenance",
-        //     Description = "The requester uses this service to end the maintenance of the sidechain",
-        //     OperationId = "EndChainMaintenance"
-        // )]
-        // public async Task<ObjectResult> EndChainMaintenance()
-        // {
-        //     return NotFound(new NotImplementedException());
-        // }
+        /// <summary>
+        /// Sends a transaction to BlockBase Token Contract to claim back sidechain stake
+        /// </summary>
+        /// <returns>The success of the task</returns>
+        /// <response code="200">Stake claimed with success</response>
+        /// <response code="500">Error claiming stake</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends a transaction to BlockBase Token Contract to claim back sidechain stake",
+            Description = "The producer uses this service to claim back sidechain stake",
+            OperationId = "RequesterClaimStake"
+        )]
+        public async Task<ObjectResult> ClaimStake()
+        {
+            try
+            {
+                var trx = await _mainchainService.ClaimStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
 
-        
+                return Ok(new OperationResponse<bool>(true, $"Stake successfully claimed. Tx = {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
     }
 }
