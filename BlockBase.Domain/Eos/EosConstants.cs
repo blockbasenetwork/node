@@ -59,6 +59,7 @@ namespace BlockBase.Domain.Eos
         public const string ADD_BLOCK = "addblock";
         public const string VERIFY_BLOCK = "verifyblock";
         public const string ADD_STAKE = "addstake";
+        public const string CLAIM_STAKE = "claimstake";
         public const string I_AM_READY = "iamready";
         public const string CLAIM_REWARD = "claimreward";
         public const string EXIT_REQUEST = "exitrequest";

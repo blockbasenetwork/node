@@ -37,13 +37,13 @@ namespace BlockBase.Network.Mainchain
         }
 
         public async Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null)
-        => await TryAgain(async () => await EosStub.GetCurrencyBalance(smartContractName, accountName, symbol), NetworkConfigurations.MaxNumberOfConnectionRetries);
+            => await TryAgain(async () => await EosStub.GetCurrencyBalance(smartContractName, accountName, symbol), NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         public async Task<GetAccountResponse> GetAccount(string accountName)
             => await TryAgain(async () => await EosStub.GetAccount(accountName), NetworkConfigurations.MaxNumberOfConnectionRetries);
 
 
-        public async Task<string> GetAccountStake(string sidechain, string accountName) 
+        public async Task<string> GetAccountStake(string sidechain, string accountName)
         {
             //TODO
             throw new NotImplementedException();
@@ -52,19 +52,22 @@ namespace BlockBase.Network.Mainchain
         #region Transactions
 
         public async Task<string> AddStake(string sidechain, string accountName, string stake) =>
-        
-            await TryAgain( async () => await EosStub.SendTransaction(
-                EosMethodNames.ADD_STAKE,
-                NetworkConfigurations.BlockBaseTokenContract, 
-                accountName,
-                CreateDataForAddStake(sidechain, accountName, stake)),
+            await TryAgain(async () => await EosStub.SendTransaction(
+               EosMethodNames.ADD_STAKE,
+               NetworkConfigurations.BlockBaseTokenContract,
+               accountName,
+               CreateDataForAddStake(sidechain, accountName, stake)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
-        public async Task<string> RemoveStake(string sidechain, string accountName, string stake) 
-        {
-            //TODO
-            throw new NotImplementedException();
-        }
+
+        public async Task<string> ClaimStake(string sidechain, string accountName) =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+               EosMethodNames.CLAIM_STAKE,
+               NetworkConfigurations.BlockBaseTokenContract,
+               accountName,
+               CreateDataForClaimStake(sidechain, accountName)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
 
         public async Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType) =>
             await TryAgain(async () => await EosStub.SendTransaction(
@@ -503,7 +506,7 @@ namespace BlockBase.Network.Mainchain
             var verifySignaturesList = new List<VerifySignature>();
             var verifySignaturesTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VerifySignatureTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.VERIFY_SIGNATURE_TABLE, account), MAX_NUMBER_OF_TRIES);
 
-            foreach(var verifySignature in verifySignaturesTable)
+            foreach (var verifySignature in verifySignaturesTable)
             {
                 var mappedVerifySignature = new VerifySignature()
                 {
@@ -519,7 +522,7 @@ namespace BlockBase.Network.Mainchain
 
             return verifySignaturesList;
         }
-            
+
         public async Task<HistoryValidationTable> RetrieveHistoryValidationTable(string chain)
         {
             var listValidationTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<HistoryValidationTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.HISTORY_VALIDATION_TABLE, chain), MAX_NUMBER_OF_TRIES);
@@ -558,6 +561,15 @@ namespace BlockBase.Network.Mainchain
                 {EosParameterNames.OWNER, accountName},
                 {EosParameterNames.SIDECHAIN, sidechain},
                 {EosParameterNames.STAKE, stake}
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForClaimStake(string sidechain, string claimer)
+        {
+            return new Dictionary<string, object>()
+            {
+                {EosParameterNames.SIDECHAIN, sidechain},
+                {EosParameterNames.CLAIMER, claimer}
             };
         }
 

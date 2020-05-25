@@ -265,16 +265,35 @@ namespace BlockBase.Runtime.Sidechain
         {
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
-            var blockheaderEOS = block.BlockHeader.ConvertToEosObject();
             var blockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
 
-            var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
-
+            await TryAddBlock(block.BlockHeader);
             //await TryProposeTransaction(requestedApprovals, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
             await TryAddVerifyTransaction(blockHash);
             await _blockSender.SendBlockToSidechainMembers(_sidechainPool, block.ConvertToProto(), _endPoint);
             await TryBroadcastVerifyTransaction(blockHash, requestedApprovals.Count, requiredKeys);
             //await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName);
+        }
+
+        private async Task TryAddBlock(BlockHeader blockHeader)
+        {
+            var blockheaderEOS = blockHeader.ConvertToEosObject();
+            BlockheaderTable blockFromTable = new BlockheaderTable();
+            while (blockHeader.SequenceNumber != blockFromTable.SequenceNumber && (_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            {
+                try
+                {
+                    var addBlockTransaction = await _mainchainService.AddBlock(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockheaderEOS);
+                    await Task.Delay(500);
+                }
+                catch (ApiErrorException exception)
+                {
+                    _logger.LogCritical($"Unable to add block with error: {exception.error.name}");
+                    await Task.Delay(100);
+                }
+
+                blockFromTable = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+            }
         }
 
         private async Task TryAddVerifyTransaction(string blockHash)
@@ -296,7 +315,7 @@ namespace BlockBase.Runtime.Sidechain
                 }
 
                 verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
-                ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);                
+                ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
             }
         }
 

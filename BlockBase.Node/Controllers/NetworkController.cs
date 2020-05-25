@@ -1,11 +1,13 @@
 
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.DataPersistence.Utils;
+using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
@@ -25,12 +27,14 @@ namespace BlockBase.Node.Controllers
         private readonly ILogger _logger;
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
+        private IMongoDbProducerService _mongoDbProducerService;
         
-        public NetworkController(ILogger<NetworkController> logger, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService)
+        public NetworkController(ILogger<NetworkController> logger, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _logger = logger;
             _sidechainProducerService = sidechainProducerService;
             _mainchainService = mainchainService;
+            _mongoDbProducerService = mongoDbProducerService;
         }
 
         /// <summary>
