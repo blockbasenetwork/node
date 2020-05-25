@@ -79,6 +79,11 @@ namespace BlockBase.Network.Mainchain
             throw new Exception("Failed to send and confirm sent transaction.");
         }
 
+        public async Task<OpResult<List<string>>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null) 
+        {
+            return await Op.RunAsync(async () => await _eosConnection.GetCurrencyBalance(smartContractName, accountName, symbol));
+        }
+
         public async Task<OpResult<string>> SendTransaction(string actionName, string smartContractAccountName, string accountName, Dictionary<string, object> data, string permission = "active", byte cpuLimit = default(byte))
         {
             var opResult = await Op.RunAsync(async () => await _eosConnection.CreateTransaction(new Transaction()

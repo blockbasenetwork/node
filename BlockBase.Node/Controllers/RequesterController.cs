@@ -1,0 +1,286 @@
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using System.Net;
+using Microsoft.Extensions.Options;
+using BlockBase.Domain.Configurations;
+using Microsoft.Extensions.Logging;
+using BlockBase.Network.Mainchain;
+using BlockBase.Runtime.SidechainProducer;
+using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Runtime.Mainchain;
+using Newtonsoft.Json;
+using BlockBase.Runtime.Network;
+using Swashbuckle.AspNetCore.Annotations;
+using BlockBase.Domain.Blockchain;
+using System.Linq;
+using BlockBase.DataProxy.Encryption;
+using BlockBase.DataPersistence.Utils;
+using BlockBase.DataProxy.Pocos;
+
+namespace BlockBase.Node.Controllers
+{
+    [Route("api/[controller]/[action]")]
+    [ApiController]
+    [ApiExplorerSettings(GroupName = "requesterApi")]
+    public class RequesterController : ControllerBase
+    {
+        private NodeConfigurations NodeConfigurations;
+        private NetworkConfigurations NetworkConfigurations;
+        private readonly ILogger _logger;
+        private readonly ISidechainProducerService _sidechainProducerService;
+        private readonly IMainchainService _mainchainService;
+        private IMongoDbProducerService _mongoDbProducerService;
+        private PeerConnectionsHandler _peerConnectionsHandler;
+        private SidechainMaintainerManager _sidechainMaintainerManager;
+        private DatabaseKeyManager _databaseKeyManager;
+
+        private IConnectionsChecker _connectionsChecker;
+
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
+        {
+            NodeConfigurations = nodeConfigurations?.Value;
+            NetworkConfigurations = networkConfigurations?.Value;
+
+            _logger = logger;
+            _sidechainProducerService = sidechainProducerService;
+            _mainchainService = mainchainService;
+            _mongoDbProducerService = mongoDbProducerService;
+            _peerConnectionsHandler = peerConnectionsHandler;
+            _sidechainMaintainerManager = sidechainMaintainerManager;
+            _databaseKeyManager = databaseKeyManager;
+            _connectionsChecker = connectionsChecker;
+        }
+
+
+        /// <summary>
+        /// Checks if the BlockBase node is correctly configured to work as a requester
+        /// </summary>
+        /// <returns>Information about the node configurations and account state</returns>
+        /// <response code="200">Information about the current configuration</response>
+        /// <response code="500">Some internal error occurred</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Checks if the BlockBase node is correctly configured",
+            Description = "Before starting a node as a requester, the admin should check if everything is correctly configured",
+            OperationId = "CheckRequesterConfig"
+        )]
+        public async Task<ObjectResult> CheckRequesterConfig() {
+            try
+            {
+            var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
+            var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
+
+            var accountName = NodeConfigurations.AccountName;
+            var publicKey = NodeConfigurations.ActivePublicKey;
+
+
+            bool accountDataFetched = false;
+            List<string> currencyBalance = null;
+            long cpuUsed = 0;
+            long cpuLimit = 0;
+            long netUsed = 0;
+            long netLimit = 0;
+            ulong ramUsed = 0;
+            long ramLimit = 0;
+            string sidechainState = null;
+            
+
+            try
+            {
+                var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
+                currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
+                
+                accountDataFetched = true;
+                cpuUsed = accountInfo.cpu_limit.used;
+                cpuLimit = accountInfo.cpu_limit.max;
+                netUsed = accountInfo.net_limit.used;
+                netLimit = accountInfo.net_limit.max;
+                ramUsed = accountInfo.ram_usage;
+                ramLimit = accountInfo.ram_quota;
+
+                sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
+                
+            }
+            catch {}
+            
+            var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
+            var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
+
+            var postgresHost = NodeConfigurations.PostgresHost;
+            var postgresPort = NodeConfigurations.PostgresPort;
+            var postgresUser = NodeConfigurations.PostgresUser;
+
+            return Ok(new OperationResponse<dynamic>(
+                new 
+                {
+                    accountName,
+                    publicKey,
+                    sidechainState,
+                    accountDataFetched,
+                    currencyBalance,
+                    cpuUsed,
+                    cpuLimit,
+                    netUsed,
+                    netLimit,
+                    ramUsed,
+                    ramLimit,
+                    isMongoLive,
+                    isPostgresLive,
+                    mongoDbConnectionString,
+                    mongoDbPrefix,
+                    postgresHost,
+                    postgresPort,
+                    postgresUser
+                }
+                , $"Configuration and connection data retrieved."));
+
+            }
+            catch(Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));    
+            }
+        }
+
+        /// <summary>
+        /// Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration
+        /// </summary>
+        /// <returns>The success of the transaction</returns>
+        /// <response code="200">Chain started with success</response>
+        /// <response code="500">Error starting chain</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Step 1 - Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration",
+            Description = "The requester uses this service to request a new sidechain for storing his databases",
+            OperationId = "RequestNewSidechain"
+        )]
+        public async Task<ObjectResult> RequestNewSidechain()
+        {
+            try
+            {
+                var tx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
+
+                return Ok(new OperationResponse<bool>(true, $"Chain successfully created. Tx: {tx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Sends a transaction to Blockbase Operations Contract with the configuration requested for the sidechain
+        /// </summary>
+        /// <param name="configuration">The sidechain configuration</param>
+        /// <returns>The success of the configuration</returns>
+        /// <response code="200">Chain configured with success</response>
+        /// <response code="400">Configuration parameters invalid</response>
+        /// <response code="500">Error configurating the chain</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Step 2 - Sends a transaction to BlockBase Operations Contract with the configuration requested for the sidechain",
+            Description = "The requester uses this service to configure the requirements for the sidechain and for producers participation",
+            OperationId = "ConfigureSidechain"
+        )]
+        public async Task<ObjectResult> ConfigureSidechain([FromBody]ContractInformationTable configuration)
+        {
+            try
+            {
+                var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configuration));
+                mappedConfig.Add("key", NodeConfigurations.AccountName);
+                var tx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, mappedConfig);
+
+                return Ok(new OperationResponse<bool>(true, $"Chain configuration successfully sent. Tx: {tx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+
+        /// <summary>
+        /// Starts the maintenance of the sidechain
+        /// </summary>
+        /// <returns>The success of starting the sidechain maintenance</returns>
+        /// <response code="200">Chain maintenance started with success</response>
+        /// <response code="500">Error starting the maintenance of the chain</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Step 3 - Starts the maintenance of the sidechain",
+            Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
+            OperationId = "RunSidechainMaintenance"
+        )]
+        public async Task<ObjectResult> RunSidechainMaintenance([FromBody]DataEncryptionConfig config)
+        {
+            try
+            {
+                _databaseKeyManager.SetInitialSecrets(config);
+                string tx = null;
+                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+
+                if (!contractSt.CandidatureTime && !contractSt.ProductionTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
+
+                if (_sidechainMaintainerManager.TaskContainer == null)
+                    _sidechainMaintainerManager.Start();
+
+                var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
+
+                return Ok(new OperationResponse<bool>(true, okMessage));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Sends a transaction to the BlockBase Operations Contract to terminate the sidechain
+        /// </summary>
+        /// <returns>The success of the transaction</returns>
+        /// <response code="200">Chain terminated with success</response>
+        /// <response code="500">Error terminating the chain</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends a transaction to the BlockBase Operations Contract to terminate the sidechain",
+            Description = "The requester uses this service to terminate a given sidechain",
+            OperationId = "EndSidechain"
+        )]
+        public async Task<ObjectResult> EndSidechain()
+        {
+            try
+            {
+                var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
+
+                return Ok(new OperationResponse<bool>(true, $"Ended chain. Tx: {tx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+
+
+        // /// <summary>
+        // /// Terminates the sidechain maintenance
+        // /// </summary>
+        // /// <returns>The success of terminating the sidechain maintenance</returns>
+        // /// <response code="200">Chain maintenance terminated with success</response>
+        // /// <response code="500">Error terminating the chain maintenance</response>
+        // [HttpPost]
+        // [SwaggerOperation(
+        //     Summary = "Terminates the sidechain maintenance",
+        //     Description = "The requester uses this service to end the maintenance of the sidechain",
+        //     OperationId = "EndChainMaintenance"
+        // )]
+        // public async Task<ObjectResult> EndChainMaintenance()
+        // {
+        //     return NotFound(new NotImplementedException());
+        // }
+
+        
+    }
+}

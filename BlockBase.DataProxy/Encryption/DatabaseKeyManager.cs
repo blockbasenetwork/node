@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using System.Threading.Tasks;
 using System.Linq;
+using BlockBase.DataProxy.Pocos;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -32,7 +33,7 @@ namespace BlockBase.DataProxy.Encryption
             _connector = connector;
             _nodeConfigurations = nodeConfigurations.Value;
         }
-        public void SetInitialSecrets(IDictionary<string, string> data)
+        public void SetInitialSecrets(DataEncryptionConfig config)
         {
             var filePassword = "";
             var encryptionMasterKey = "";
@@ -40,11 +41,11 @@ namespace BlockBase.DataProxy.Encryption
 
             
 
-            if (data[EncryptionConstants.IS_ENCRYPTED] == EncryptionConstants.FALSE)
+            if (!config.IsEncrypted)
             {
-                filePassword = data[EncryptionConstants.FILE_PASSWORD];
-                encryptionMasterKey = data[EncryptionConstants.ENCRYPTION_MASTER_KEY];
-                encryptionPassword = data[EncryptionConstants.ENCRYPTION_PASSWORD];
+                filePassword = config.FilePassword;
+                encryptionMasterKey = config.EncryptionMasterKey;
+                encryptionPassword = config.EncryptionPassword;
                 
                 //Encrypting data:
                 //var encryptedData =  Base32Encoding.ZBase32.GetString(AssymetricEncryptionHelper.EncryptData(_nodeConfigurations.ActivePublicKey, 
@@ -54,8 +55,8 @@ namespace BlockBase.DataProxy.Encryption
             }
             else
             {
-                var senderPublicKey = data[EncryptionConstants.PUBLIC_KEY];
-                var encryptedData = data[EncryptionConstants.ENCRYPTED_DATA];
+                var senderPublicKey = config.PublicKey;
+                var encryptedData = config.EncryptedData;
                 var decryptedData = AssymetricEncryptionHelper.DecryptData(senderPublicKey, _nodeConfigurations.ActivePrivateKey, Base32Encoding.ZBase32.ToBytes(encryptedData));
                 var secrets = Encoding.UTF8.GetString(decryptedData).Split(":");
                 filePassword = secrets[0];

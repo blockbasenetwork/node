@@ -1,13 +1,12 @@
 ﻿using Newtonsoft.Json;
 using BlockBase.Domain.Eos;
+using System.ComponentModel;
 
 namespace BlockBase.Network.Mainchain.Pocos
 {
     public class ContractInformationTable
     {
-        [JsonProperty(EosAtributeNames.KEY)]
-        public string Key { get; set; }
-
+        [DefaultValue(10)]
         [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK_VALIDATOR_PRODUCERS)]
         public uint PaymentPerBlockValidatorProducers { get; set; }
 

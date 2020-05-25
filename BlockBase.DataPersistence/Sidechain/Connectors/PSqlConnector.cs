@@ -24,6 +24,8 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         private static readonly string INFO_TABLE_NAME = "info";
 
+        private bool _hasBeenSetup = false;
+
 
         public PSqlConnector(IOptions<NodeConfigurations> nodeConfigurations, ILogger<PSqlConnector> logger)
         {
@@ -33,7 +35,34 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             + ";Port=" + nodeConfigurationsValue.PostgresPort
             + ";Password=" + nodeConfigurationsValue.PostgresPassword;
             _logger = logger;
-            CreateDefaultDatabaseIfNotExists().Wait();
+            //commented this code and moved to Setup method so it isn't executed on construction of object
+            //CreateDefaultDatabaseIfNotExists().Wait();
+        }
+
+        public async Task<bool> TestConnection() 
+        {
+            using(NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
+            {
+                try
+                {
+                    await conn.OpenAsync(); 
+                    return conn.State == System.Data.ConnectionState.Open;
+                    
+                }
+                catch(Exception e)
+                {
+                    return false;
+                }
+            }
+        }
+
+        public async Task Setup()
+        {
+            if(_hasBeenSetup)
+            {
+                await CreateDefaultDatabaseIfNotExists();
+                _hasBeenSetup = true;
+            }
         }
 
         public async Task<IList<InfoRecord>> GetInfoRecords()
@@ -94,6 +123,8 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         private async Task CreateDefaultDatabaseIfNotExists()
         {
+            try
+            {
             bool dbExists = false;
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
@@ -120,6 +151,11 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
             }
             await CreateTableIfNotExists();
+            }
+            catch(Exception e)
+            {
+                //_logger.LogWarning(e.Message, "Unable to connect to postgres database");
+            }
         }
         private async Task CreateTableIfNotExists()
         {

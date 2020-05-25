@@ -8,7 +8,12 @@ namespace BlockBase.Network.Mainchain
 {
     public interface IMainchainService
     {
+        Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null);
         Task<GetAccountResponse> GetAccount(string accountName);
+
+        Task<string> GetAccountStake(string sidechain, string accountName);
+        Task<string> AddStake(string sidechain, string accountName, string stake);
+        Task<string> RemoveStake(string sidechain, string accountName, string stake);
         Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);

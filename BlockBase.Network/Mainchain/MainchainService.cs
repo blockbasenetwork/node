@@ -36,10 +36,35 @@ namespace BlockBase.Network.Mainchain
             EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
         }
 
+        public async Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null)
+        => await TryAgain(async () => await EosStub.GetCurrencyBalance(smartContractName, accountName, symbol), NetworkConfigurations.MaxNumberOfConnectionRetries);
+
         public async Task<GetAccountResponse> GetAccount(string accountName)
             => await TryAgain(async () => await EosStub.GetAccount(accountName), NetworkConfigurations.MaxNumberOfConnectionRetries);
 
+
+        public async Task<string> GetAccountStake(string sidechain, string accountName) 
+        {
+            //TODO
+            throw new NotImplementedException();
+        }
+
         #region Transactions
+
+        public async Task<string> AddStake(string sidechain, string accountName, string stake) =>
+        
+            await TryAgain( async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_STAKE,
+                NetworkConfigurations.BlockBaseTokenContract, 
+                accountName,
+                CreateDataForAddStake(sidechain, accountName, stake)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+        public async Task<string> RemoveStake(string sidechain, string accountName, string stake) 
+        {
+            //TODO
+            throw new NotImplementedException();
+        }
 
         public async Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType) =>
             await TryAgain(async () => await EosStub.SendTransaction(
@@ -525,6 +550,16 @@ namespace BlockBase.Network.Mainchain
         #endregion
 
         #region Data Helpers
+
+        private Dictionary<string, object> CreateDataForAddStake(string sidechain, string accountName, string stake)
+        {
+            return new Dictionary<string, object>()
+            {
+                {EosParameterNames.OWNER, accountName},
+                {EosParameterNames.SIDECHAIN, sidechain},
+                {EosParameterNames.STAKE, stake}
+            };
+        }
 
         private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, int worktimeInSeconds, string publicKey, string secretHash, int producerType)
         {

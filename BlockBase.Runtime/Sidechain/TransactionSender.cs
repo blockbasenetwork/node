@@ -40,6 +40,8 @@ namespace BlockBase.Runtime.Sidechain
         private IMongoDbProducerService _mongoDbProducerService;
         private int _numberOfConsecutiveEmptyBlocks;
 
+        private bool _hasBeenSetup = false;
+
         public TransactionSender(ILogger<TransactionSender> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _networkService = networkService;
@@ -51,9 +53,19 @@ namespace BlockBase.Runtime.Sidechain
             _mainchainService = mainchainService;
             _mongoDbProducerService = mongoDbProducerService;
             _networkService.SubscribeTransactionConfirmationReceivedEvent(MessageForwarder_TransactionConfirmationReceived);
-            LoadTransactionsFromDatabase().Wait();
+            //rpinto commented this code and instead it's called on the setup method
+            //LoadTransactionsFromDatabase().Wait();
             _numberOfConsecutiveEmptyBlocks = 0;
 
+        }
+
+        public async Task Setup()
+        {
+            if(_hasBeenSetup)
+            {
+                await LoadTransactionsFromDatabase();
+                _hasBeenSetup = true;
+            }
         }
 
         private void MessageForwarder_TransactionConfirmationReceived(MessageForwarder.TransactionConfirmationReceivedEventArgs args, IPEndPoint sender)
@@ -76,6 +88,32 @@ namespace BlockBase.Runtime.Sidechain
             _logger.LogDebug("Task starting.");
             Task = Task.Run(async () => await Execute());
             return Task;
+        }
+
+        public async Task RemoveIncludedTransactions(uint numberOfIncludedTransactions, string lastValidBlockHash)
+        {
+            if (numberOfIncludedTransactions == 0) _numberOfConsecutiveEmptyBlocks++;
+            else _numberOfConsecutiveEmptyBlocks = 0;
+
+            var transactionsRemovedSequenceNumbers = await _mongoDbProducerService.RemoveAlreadyIncludedTransactionsDBAsync(_nodeConfigurations.AccountName, numberOfIncludedTransactions, lastValidBlockHash);
+
+            foreach (var sequenceNumber in transactionsRemovedSequenceNumbers)
+            {
+                var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == sequenceNumber).SingleOrDefault();
+                _transactionsToSend.Remove(transactionSendingTrackPoco);
+            }
+
+        }
+        public void AddScriptTransactionToSend(Transaction transaction)
+        {
+            TransactionSendingTrackPoco transactionSendingTrack;
+
+            transactionSendingTrack = new TransactionSendingTrackPoco()
+            {
+                Transaction = transaction,
+                ProducersAlreadyReceived = new ThreadSafeList<string>()
+            };
+            _transactionsToSend.Add(transactionSendingTrack);
         }
 
         private async Task Execute()
@@ -112,32 +150,6 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        public async Task RemoveIncludedTransactions(uint numberOfIncludedTransactions, string lastValidBlockHash)
-        {
-            if (numberOfIncludedTransactions == 0) _numberOfConsecutiveEmptyBlocks++;
-            else _numberOfConsecutiveEmptyBlocks = 0;
-
-            var transactionsRemovedSequenceNumbers = await _mongoDbProducerService.RemoveAlreadyIncludedTransactionsDBAsync(_nodeConfigurations.AccountName, numberOfIncludedTransactions, lastValidBlockHash);
-
-            foreach (var sequenceNumber in transactionsRemovedSequenceNumbers)
-            {
-                var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == sequenceNumber).SingleOrDefault();
-                _transactionsToSend.Remove(transactionSendingTrackPoco);
-            }
-
-        }
-        public void AddScriptTransactionToSend(Transaction transaction)
-        {
-            TransactionSendingTrackPoco transactionSendingTrack;
-
-            transactionSendingTrack = new TransactionSendingTrackPoco()
-            {
-                Transaction = transaction,
-                ProducersAlreadyReceived = new ThreadSafeList<string>()
-            };
-            _transactionsToSend.Add(transactionSendingTrack);
-        }
-
         private async Task SendScriptTransactionsToProducer(IEnumerable<Transaction> transactions, PeerConnection peerConnection)
         {
             var data = new List<byte>();
@@ -154,10 +166,17 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task LoadTransactionsFromDatabase()
         {
+            try
+            {
             await _mongoDbProducerService.CreateTransactionInfoIfNotExists(_nodeConfigurations.AccountName);
             var transactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(_nodeConfigurations.AccountName);
             foreach (var transaction in transactions)
                 AddScriptTransactionToSend(transaction);  
+            }
+            catch(Exception e)
+            {
+                //_logger.LogWarning(e.Message, "Unable to connect to mongo db database");
+            }
         }
     }
 }

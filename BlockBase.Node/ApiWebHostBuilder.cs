@@ -1,5 +1,6 @@
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.DataPersistence.Sidechain.Connectors;
+using BlockBase.DataPersistence.Utils;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Connectors;
@@ -81,6 +82,7 @@ namespace BlockBase.Api
                 {
                     c.SwaggerDoc("providerApi", new OpenApiInfo { Title = "Service Provider API", Version = "v0.1" });
                     c.SwaggerDoc("requesterApi", new OpenApiInfo { Title = "Service Requester API", Version = "v0.1" });
+                    c.SwaggerDoc("networkApi", new OpenApiInfo { Title = "Network API", Version = "v0.1" });
                     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                     c.IncludeXmlComments(xmlPath);
@@ -142,6 +144,7 @@ namespace BlockBase.Api
                 services.AddSingleton<TransactionValidator>();
                 services.AddSingleton<DatabaseKeyManager>();                
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
+                services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
             });
 
             return this;
