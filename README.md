@@ -150,12 +150,12 @@ TODO
 ## Step #3 - Requesting the sidechain
 After you've configured your sidechain, you can request it to the network. This will make your sidechain configuration public to all the providers on the network. To do that, follow these steps:
 
-**Start the node**
+**Starting the node**
 1. Navigate to the folder node/BlockBase.Node
 
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
-**Request the sidechain**
+**Requesting the sidechain**
 1. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
 
 2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
@@ -175,10 +175,15 @@ Starting the maintenance of the sidechain is a fundamental step for your network
 3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out`. 
 
 4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. Otherwise, select and delete the whole json configuration in the body of the request.
+
 5. Press `Execute`.
 
 
 # Running as a service provider
+Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. To do this, you have to follow the steps below.
+
+TODO
+
 ## Sending a candidature for a sidechain
 if you intend on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
 
