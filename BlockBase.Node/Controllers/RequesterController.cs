@@ -14,8 +14,6 @@ using BlockBase.Runtime.Mainchain;
 using Newtonsoft.Json;
 using BlockBase.Runtime.Network;
 using Swashbuckle.AspNetCore.Annotations;
-using BlockBase.Domain.Blockchain;
-using System.Linq;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.DataPersistence.Utils;
 using BlockBase.DataProxy.Pocos;
@@ -67,80 +65,81 @@ namespace BlockBase.Node.Controllers
             Description = "Before starting a node as a requester, the admin should check if everything is correctly configured",
             OperationId = "CheckRequesterConfig"
         )]
-        public async Task<ObjectResult> CheckRequesterConfig() {
+        public async Task<ObjectResult> CheckRequesterConfig()
+        {
             try
             {
-            var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
-            var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
+                var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
+                var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
-            var accountName = NodeConfigurations.AccountName;
-            var publicKey = NodeConfigurations.ActivePublicKey;
+                var accountName = NodeConfigurations.AccountName;
+                var publicKey = NodeConfigurations.ActivePublicKey;
 
 
-            bool accountDataFetched = false;
-            List<string> currencyBalance = null;
-            long cpuUsed = 0;
-            long cpuLimit = 0;
-            long netUsed = 0;
-            long netLimit = 0;
-            ulong ramUsed = 0;
-            long ramLimit = 0;
-            string sidechainState = null;
-            
+                bool accountDataFetched = false;
+                List<string> currencyBalance = null;
+                long cpuUsed = 0;
+                long cpuLimit = 0;
+                long netUsed = 0;
+                long netLimit = 0;
+                ulong ramUsed = 0;
+                long ramLimit = 0;
+                string sidechainState = null;
 
-            try
-            {
-                var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
-                currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
-                
-                accountDataFetched = true;
-                cpuUsed = accountInfo.cpu_limit.used;
-                cpuLimit = accountInfo.cpu_limit.max;
-                netUsed = accountInfo.net_limit.used;
-                netLimit = accountInfo.net_limit.max;
-                ramUsed = accountInfo.ram_usage;
-                ramLimit = accountInfo.ram_quota;
 
-                sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
-                
-            }
-            catch {}
-            
-            var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
-            var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
-
-            var postgresHost = NodeConfigurations.PostgresHost;
-            var postgresPort = NodeConfigurations.PostgresPort;
-            var postgresUser = NodeConfigurations.PostgresUser;
-
-            return Ok(new OperationResponse<dynamic>(
-                new 
+                try
                 {
-                    accountName,
-                    publicKey,
-                    sidechainState,
-                    accountDataFetched,
-                    currencyBalance,
-                    cpuUsed,
-                    cpuLimit,
-                    netUsed,
-                    netLimit,
-                    ramUsed,
-                    ramLimit,
-                    isMongoLive,
-                    isPostgresLive,
-                    mongoDbConnectionString,
-                    mongoDbPrefix,
-                    postgresHost,
-                    postgresPort,
-                    postgresUser
+                    var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
+                    currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
+
+                    accountDataFetched = true;
+                    cpuUsed = accountInfo.cpu_limit.used;
+                    cpuLimit = accountInfo.cpu_limit.max;
+                    netUsed = accountInfo.net_limit.used;
+                    netLimit = accountInfo.net_limit.max;
+                    ramUsed = accountInfo.ram_usage;
+                    ramLimit = accountInfo.ram_quota;
+
+                    sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
+
                 }
-                , $"Configuration and connection data retrieved."));
+                catch { }
+
+                var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
+                var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
+
+                var postgresHost = NodeConfigurations.PostgresHost;
+                var postgresPort = NodeConfigurations.PostgresPort;
+                var postgresUser = NodeConfigurations.PostgresUser;
+
+                return Ok(new OperationResponse<dynamic>(
+                    new
+                    {
+                        accountName,
+                        publicKey,
+                        sidechainState,
+                        accountDataFetched,
+                        currencyBalance,
+                        cpuUsed,
+                        cpuLimit,
+                        netUsed,
+                        netLimit,
+                        ramUsed,
+                        ramLimit,
+                        isMongoLive,
+                        isPostgresLive,
+                        mongoDbConnectionString,
+                        mongoDbPrefix,
+                        postgresHost,
+                        postgresPort,
+                        postgresUser
+                    }
+                    , $"Configuration and connection data retrieved."));
 
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));    
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));
             }
         }
 
@@ -184,7 +183,7 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to configure the requirements for the sidechain and for producers participation",
             OperationId = "ConfigureSidechain"
         )]
-        public async Task<ObjectResult> ConfigureSidechain([FromBody]ContractInformationTable configuration)
+        public async Task<ObjectResult> ConfigureSidechain([FromBody] ContractInformationTable configuration)
         {
             try
             {
@@ -213,7 +212,7 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
             OperationId = "RunSidechainMaintenance"
         )]
-        public async Task<ObjectResult> RunSidechainMaintenance([FromBody]DataEncryptionConfig config)
+        public async Task<ObjectResult> RunSidechainMaintenance([FromBody] DataEncryptionConfig config)
         {
             try
             {
@@ -320,5 +319,33 @@ namespace BlockBase.Node.Controllers
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }
         }
+
+
+        /// <summary>
+        /// Generates a formatted base 32 string to be used as a master key
+        /// </summary>
+        /// <returns>Formatted base 32 string</returns>
+        /// <response code="200">Base 32 string generated with success</response>
+        /// <response code="500">Error generating base 32 string</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Returns a newly random generated Master Key",
+            Description = "The client can use this method to generate the master key used to encrypt the database data",
+            OperationId = "GenerateMasterKey"
+        )]
+        public ObjectResult GenerateMasterKey()
+        {
+            try
+            {
+                var key = KeyAndIVGenerator.CreateRandomKey();
+
+                return Ok(new OperationResponse<string>(key, $"Master key successfully created. Master Key = {key}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
     }
 }
