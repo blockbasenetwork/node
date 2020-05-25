@@ -1,13 +1,32 @@
-# BlockBase Node App
-BlockBase is the power of Blockchain applied to Databases. It uses sidechains for database storage, and those sidechains are connected to the EOS platform through EOS smart contracts.
+# Introduction
+
+## Main concepts
+The BlockBase node can be run for two different purposes:
+1. To run as a service requester (SR): running the node as a service requester allows you to tap into the network and to issue a sidechain to be stored by service providers. That sidechain will hold all your database data. You can use the node APIs to insert, update, delete, and query data. Running a node as a SR can be viewed as something similar to running a database server. SRs pay with BBT (the BlockBase token) for this service.
+
+2. To run as a service provider (SP): running the node as a service provider allows you to participate on the network to store sidechains from SRs. The SPs earn BBT for providing this service.
 
 ## Development State
 The node software is in beta and in active testing on the EOS network. The software is usable, but will probably still have bugs. Use with care and avoid large sums of BBT.
 
-## Prerequisites
-- .NET Core SDK 2.1
-- MondoDB Server 4.2.2
-- PostgreSQL 12
+# Installation Guide
+Here you can find all the steps to run a node as a service requester or as a service provider. This installation guide is tailored to a Linux installation, but it should work on Windows too.
+
+## EOS Accounts
+Each instance of the node has to have an EOS account associated to it. We recommend using a new EOS account just for that purpose. This account must have enough RAM, CPU, and NET to work properly. We recommend the following steps to prepare your EOS account:
+1. Create the EOS account: An EOS account can be easily created on bloks.io [here](https://bloks.io/wallet/create-account).
+
+2. Buy RAM: Buy 10k of RAM for your account.
+
+3. Get CPU and NET: A BlockBase node uses a lot of CPU and a good amount of NET. We recommend buying renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
+
+4. Ensure you have always enough CPU and NET: Buying REX rents you CPU and NET for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend them.
+
+## Software Prerequisites
+The BlockBase node software is built in C# on the .NET Core Platform, and uses MongoBD and Postgres to store its data. Before running the node, you should install:
+- .NET Core SDK 2.1 (BlockBase doesn't run on 3.1)
+- The latest version of MondoDB Server (It should work fine with previous versions too)
+- The latest version of PostgreSQL (It should work fine with previous versions too)
 
 ## Configuring the Node
 Inside BlockBase.Node/appsettings.json you'll find all the settings you need to configure in order to run the BlockBase node.
