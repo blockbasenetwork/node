@@ -149,7 +149,7 @@ namespace BlockBase.Node.Controllers
             Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
             OperationId = "RequestToProduceSidechain"
         )]
-        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int workTime, int producerType, bool forceDelete = false)
+        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int workTime, int producerType)
         {
             if (string.IsNullOrEmpty(chainName) || workTime <= 0)
             {
@@ -157,14 +157,12 @@ namespace BlockBase.Node.Controllers
             }
             try
             {
-                var sidechainExists = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
+                var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
                 var poolOfSidechains = _sidechainProducerService.GetSidechains();
-                var chainExists = poolOfSidechains.TryGetValue(chainName, out var existingChain);
+                var chainExistsInPool = poolOfSidechains.TryGetValue(chainName, out var existingChain);
 
-                if (chainExists && !forceDelete) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
-                if (chainExists && forceDelete) _sidechainProducerService.RemoveSidechainFromProducer(existingChain);
-                if (sidechainExists && !forceDelete) return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new ApplicationException(), "Sidechain not being produced but added in local database, please force delete in order to remove it."));
-                if (sidechainExists && forceDelete) await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
+                if (chainExistsInPool) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
+                if (chainExistsInDb) await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 
@@ -264,6 +262,63 @@ namespace BlockBase.Node.Controllers
                 var trx = await _mainchainService.ClaimStake(sidechainName, NodeConfigurations.AccountName);
 
                 return Ok(new OperationResponse<bool>(true, $"Stake successfully claimed. Tx = {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets information about all currently producing sidechains
+        /// </summary>
+        /// <returns>Json with information about sidechains currently being produced by node</returns>
+        /// <response code="200">Successful get</response>
+        /// <response code="500">Error getting information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets information about all currently producing sidechains",
+            Description = "The producer uses this request to get information about the sidechains this node is producing",
+            OperationId = "GetProducingSidechains"
+        )]
+        public async Task<ObjectResult> GetProducingSidechains()
+        {
+            try
+            {
+                var poolOfSidechains = _sidechainProducerService.GetSidechains();
+
+                return Ok(new OperationResponse<Dictionary<string, SidechainPool>>(poolOfSidechains, $"Get producing sidechains successful."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets information about all currently producing sidechains
+        /// </summary>
+        /// <returns>Json with information about sidechains currently being produced by node</returns>
+        /// <response code="200">Successful get</response>
+        /// <response code="500">Error getting information</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Gets information about all currently producing sidechains",
+            Description = "The producer uses this request to get information about the sidechains this node is producing",
+            OperationId = "GetProducingSidechains"
+        )]
+        public async Task<ObjectResult> DeleteSidechainFromDatabase(string chainName)
+        {
+            try
+            {
+                var poolOfSidechains = _sidechainProducerService.GetSidechains();
+                var chainBeingProduced = poolOfSidechains.TryGetValue(chainName, out var existingChain);
+
+                if (chainBeingProduced) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "This node is currently working on this sidechain and can't be deleted from the database."));
+                
+                await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
+
+                return Ok(new OperationResponse<bool>(true, $"Successfully deleted sidechain from database."));
             }
             catch (Exception e)
             {
