@@ -1,4 +1,5 @@
 # Introduction
+BlockBase is the Power of Blockchain applied to Databases. It’s a distributed network of nodes running the BlockBase Node code. This distributed network builds sidechains to the EOS network, which are used to store databases on them.
 
 ## Main concepts
 The BlockBase node can be run for two different purposes:
@@ -22,11 +23,17 @@ Each instance of the node has to have an EOS account associated to it. We recomm
 
 4. Ensure you have always enough CPU and NET: Buying REX rents you CPU and NET for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend them.
 
+5. Transfer BBT (The BlockBase token) to that account. You will need BBT as a SR or a SP. SRs use BBT to pay to SPs for running their sidechain. And SPs pledge BBT as collateral that they will lose if they fail to provide the service accordingly. In both cases BBT has to be staked.
+
+**Note: If you wish to run more than one instance of the node, you will need a different EOS account for every one of those instances.**
+
 ## Software Prerequisites
-The BlockBase node software is built in C# on the .NET Core Platform, and uses MongoBD and Postgres to store its data. Before running the node, you should install:
-- .NET Core SDK 2.1 (BlockBase doesn't run on 3.1)
-- The latest version of MondoDB Server (It should work fine with previous versions too)
-- The latest version of PostgreSQL (It should work fine with previous versions too)
+The BlockBase node software is built with C# and runs on the .NET Core Platform, and uses MongoBD and Postgres to store its data. Before running the node, you should install:
+1. .NET Core SDK 2.1 (BlockBase doesn't run on 3.1)
+
+2. The latest version of MondoDB Server (It should work fine with previous versions too)
+
+3. The latest version of PostgreSQL (It should work fine with previous versions too)
 
 ## Configuring the Node
 Inside BlockBase.Node/appsettings.json you'll find all the settings you need to configure in order to run the BlockBase node.
@@ -34,11 +41,10 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
 ```js
 {
   "NodeConfigurations": {
-    "AccountName": "", // The node's EOS account name
+    "AccountName": "", // The EOS account name you configured
     "ActivePrivateKey": "", // The private key for the active permission key of the node account
     "ActivePublicKey": "", // The public key for the active permission key
-    "SecretPassword": "", // The secret passphrase that will be used when choosing candidates to produce a sidechain
-    "MongoDbConnectionString": "mongodb://localhost", // MongoDB connection string
+    "MongoDbConnectionString": "mongodb://localhost", // The MongoDB connection string
     "MongoDbPrefix": "blockbase", // A prefix that will be used in all created MongoDB databases
     "PostgresHost": "localhost", // The postgresql host address
     "PostgresUser": "postgres", // The postgres user name to use for the connection
@@ -56,19 +62,29 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
   }
 }
 ```
+## Downloading the code and running the node
+To download the code and run the node follow the following steps:
+1. Create a folder where the code will be downloaded to
 
-## Running the node
-Run the following command to get the node up and running:
+2. Open a terminal on that folder and run `git clone https://github.com/blockbasenetwork/node.git`
 
-`dotnet run --project `_`BlockBase.Node_Folder`_` --urls=`_`This_Node_Api_Endpoint`_
+3. Navigate to the folder node/BlockBase.Node
 
-**Note: If you wish to run the node as a sidechain requester and sidechain provider, you will need two different instances and two different EOS accounts.**
+4. Run the code with the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
-**Note 2: You will need to have staked BBT on the sidechains in order get the services running, more details below**
+5. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
 
+## Checking if everything is correctly configured
+With the node running, the first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
+1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
-## Running as a service requester
-### Creating a new sidechain
+2. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
+
+3. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with you configuration.
+
+# Running a Node as a Service Requester
+
+## Creating a new sidechain
 In case you want to run the node as a service requester, make a request to the following action in order to start a new sidechain:
 
 `https://`_`apiendpoint`_`/api/Chain/StartChain`
@@ -109,8 +125,8 @@ Finally, a request is needed to the following action in order to get the chain r
 
 
 
-## Running as a service provider
-### Sending a candidature for a sidechain
+# Running as a service provider
+## Sending a candidature for a sidechain
 if you intend on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
 
 `https://`_`apiendpoint`_`/api/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_`&producerType=`_`producerType`_
@@ -118,18 +134,18 @@ if you intend on running the node as a service provider, you can use the followi
 Where workTime is the amount of time in seconds the producers will work on the chain, and producerType is the type of producer it intends to be. ProducerType may assume one of three numbers: 1, 2 and 3. This will determine the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also produces the sidechain, and 3 is a node that produces the sidechain and executes the operations on a local database.
 
 
-## Staking BBT
+# Staking BBT
 In order to stake BBT as a service requester, run the 'addstake' action in the blockbase token contract with both 'owner' and 'sidechain' with your sidechain account name.
 
 In case you want to stake as a service provider, run the 'addstake' action with 'owner' as your producer accout name and 'sidechain' as the sidechain you want to candidate as a producer.
 
-## Smart Contracts
+# Smart Contracts
 **blockbaseopr** - Operations Contract
 **blockbasetkn** - Token Contract
 
 
 
-## Example: Running a chain with 3 producers
+# Example: Running a chain with 3 producers
 **Note: Public networks where the BlockBase contracts are currently deployed are the EOS Mainnet, as well as Jungle and Kylin test networks.**
 
 You’ll need to run four different instances of the BlockBase node (either in different machines or in the same machine for testing purposes, as long as they’re listening on different ports).
