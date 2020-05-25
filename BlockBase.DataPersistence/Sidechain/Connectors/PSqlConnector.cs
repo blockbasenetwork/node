@@ -1,13 +1,7 @@
-﻿using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
-using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
-using Microsoft.Extensions.Logging;
-using BlockBase.Domain.Database.Sql.QueryBuilder;
+﻿using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using BlockBase.Domain.Database.Sql.Generators;
 using System.Threading.Tasks;
 using BlockBase.Domain.Database.Info;
 using Microsoft.Extensions.Options;
@@ -58,7 +52,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         public async Task Setup()
         {
-            if(_hasBeenSetup)
+            if(!_hasBeenSetup)
             {
                 await CreateDefaultDatabaseIfNotExists();
                 _hasBeenSetup = true;
