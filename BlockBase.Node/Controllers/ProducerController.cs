@@ -32,7 +32,7 @@ namespace BlockBase.Node.Controllers
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
         private IConnectionsChecker _connectionsChecker;
-        
+
         public ProducerController(ILogger<ProducerController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker)
         {
             NodeConfigurations = nodeConfigurations?.Value;
@@ -58,76 +58,77 @@ namespace BlockBase.Node.Controllers
             Description = "Before starting a node as a provider, the admin should check if everything is correctly configured",
             OperationId = "CheckProducerConfig"
         )]
-        public async Task<ObjectResult> CheckProducerConfig() {
+        public async Task<ObjectResult> CheckProducerConfig()
+        {
             try
             {
-            var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
-            var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
+                var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
+                var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
-            var accountName = NodeConfigurations.AccountName;
-            var publicKey = NodeConfigurations.ActivePublicKey;
+                var accountName = NodeConfigurations.AccountName;
+                var publicKey = NodeConfigurations.ActivePublicKey;
 
 
-            bool accountDataFetched = false;
-            List<string> currencyBalance = null;
-            long cpuUsed = 0;
-            long cpuLimit = 0;
-            long netUsed = 0;
-            long netLimit = 0;
-            ulong ramUsed = 0;
-            long ramLimit = 0;
-            
+                bool accountDataFetched = false;
+                List<string> currencyBalance = null;
+                long cpuUsed = 0;
+                long cpuLimit = 0;
+                long netUsed = 0;
+                long netLimit = 0;
+                ulong ramUsed = 0;
+                long ramLimit = 0;
 
-            try
-            {
-                var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
-                currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
-                
-                accountDataFetched = true;
-                cpuUsed = accountInfo.cpu_limit.used;
-                cpuLimit = accountInfo.cpu_limit.max;
-                netUsed = accountInfo.net_limit.used;
-                netLimit = accountInfo.net_limit.max;
-                ramUsed = accountInfo.ram_usage;
-                ramLimit = accountInfo.ram_quota;
-                
-            }
-            catch {}
-            
-            var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
-            var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
 
-            var postgresHost = NodeConfigurations.PostgresHost;
-            var postgresPort = NodeConfigurations.PostgresPort;
-            var postgresUser = NodeConfigurations.PostgresUser;
-
-            return Ok(new OperationResponse<dynamic>(
-                new 
+                try
                 {
-                    accountName,
-                    publicKey,
-                    accountDataFetched,
-                    currencyBalance,
-                    cpuUsed,
-                    cpuLimit,
-                    netUsed,
-                    netLimit,
-                    ramUsed,
-                    ramLimit,
-                    isMongoLive,
-                    isPostgresLive,
-                    mongoDbConnectionString,
-                    mongoDbPrefix,
-                    postgresHost,
-                    postgresPort,
-                    postgresUser
+                    var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
+                    currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
+
+                    accountDataFetched = true;
+                    cpuUsed = accountInfo.cpu_limit.used;
+                    cpuLimit = accountInfo.cpu_limit.max;
+                    netUsed = accountInfo.net_limit.used;
+                    netLimit = accountInfo.net_limit.max;
+                    ramUsed = accountInfo.ram_usage;
+                    ramLimit = accountInfo.ram_quota;
+
                 }
-                , $"Configuration and connection data retrieved."));
+                catch { }
+
+                var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
+                var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
+
+                var postgresHost = NodeConfigurations.PostgresHost;
+                var postgresPort = NodeConfigurations.PostgresPort;
+                var postgresUser = NodeConfigurations.PostgresUser;
+
+                return Ok(new OperationResponse<dynamic>(
+                    new
+                    {
+                        accountName,
+                        publicKey,
+                        accountDataFetched,
+                        currencyBalance,
+                        cpuUsed,
+                        cpuLimit,
+                        netUsed,
+                        netLimit,
+                        ramUsed,
+                        ramLimit,
+                        isMongoLive,
+                        isPostgresLive,
+                        mongoDbConnectionString,
+                        mongoDbPrefix,
+                        postgresHost,
+                        postgresPort,
+                        postgresUser
+                    }
+                    , $"Configuration and connection data retrieved."));
 
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));    
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));
             }
         }
 
@@ -148,7 +149,7 @@ namespace BlockBase.Node.Controllers
             Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
             OperationId = "RequestToProduceSidechain"
         )]
-        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int workTime, int producerType, bool forceDelete = false)
+        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int workTime, int producerType)
         {
             if (string.IsNullOrEmpty(chainName) || workTime <= 0)
             {
@@ -156,14 +157,12 @@ namespace BlockBase.Node.Controllers
             }
             try
             {
-                var sidechainExists = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
+                var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
                 var poolOfSidechains = _sidechainProducerService.GetSidechains();
-                var chainExists = poolOfSidechains.TryGetValue(chainName, out var existingChain);
-                
-                if (chainExists && !forceDelete) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
-                if (chainExists && forceDelete) _sidechainProducerService.RemoveSidechainFromProducer(existingChain);
-                if (sidechainExists && !forceDelete) return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new ApplicationException(), "Sidechain not being produced but added in local database, please force delete in order to remove it."));
-                if (sidechainExists && forceDelete) await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
+                var chainExistsInPool = poolOfSidechains.TryGetValue(chainName, out var existingChain);
+
+                if (chainExistsInPool) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
+                if (chainExistsInDb) await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 
@@ -202,6 +201,129 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> RequestToLeaveSidechainProduction(string sidechainName)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Sends a transaction to BlockBase Token Contract to add stake to a sidechain
+        /// </summary>
+        /// <param name="sidechainName">Account name of the sidechain</param>
+        /// <param name="stake">Stake value to add</param>
+        /// <returns>The success of the task</returns>
+        /// <response code="200">Stake added with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error adding stake</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends a transaction to BlockBase Token Contract to add stake to a sidechain",
+            Description = "The producer uses this service to add stake to a sidechain",
+            OperationId = "ProducerAddStake"
+        )]
+        public async Task<ObjectResult> AddStake(string sidechainName, double stake)
+        {
+            if (string.IsNullOrEmpty(sidechainName) || stake <= 0)
+            {
+                return BadRequest(new OperationResponse<bool>(new ArgumentException()));
+            }
+            try
+            {
+                var stakeString = $"{stake.ToString("F4")} BBT";
+                var trx = await _mainchainService.AddStake(sidechainName, NodeConfigurations.AccountName, stakeString);
+
+                return Ok(new OperationResponse<bool>(true, $"Stake successfully added. Tx = {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Sends a transaction to BlockBase Token Contract to claim back stake from a sidechain
+        /// </summary>
+        /// <param name="sidechainName">Account name of the sidechain</param>
+        /// <returns>The success of the task</returns>
+        /// <response code="200">Stake claimed with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error claiming stake</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends a transaction to BlockBase Token Contract to claim stake from a sidechain",
+            Description = "The producer uses this service to claim stake from a sidechain",
+            OperationId = "ProducerClaimStake"
+        )]
+        public async Task<ObjectResult> ClaimStake(string sidechainName)
+        {
+            if (string.IsNullOrEmpty(sidechainName))
+            {
+                return BadRequest(new OperationResponse<bool>(new ArgumentException()));
+            }
+            try
+            {
+                var trx = await _mainchainService.ClaimStake(sidechainName, NodeConfigurations.AccountName);
+
+                return Ok(new OperationResponse<bool>(true, $"Stake successfully claimed. Tx = {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets information about all currently producing sidechains
+        /// </summary>
+        /// <returns>Json with information about sidechains currently being produced by node</returns>
+        /// <response code="200">Successful get</response>
+        /// <response code="500">Error getting information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets information about all currently producing sidechains",
+            Description = "The producer uses this request to get information about the sidechains this node is producing",
+            OperationId = "GetProducingSidechains"
+        )]
+        public async Task<ObjectResult> GetProducingSidechains()
+        {
+            try
+            {
+                var poolOfSidechains = _sidechainProducerService.GetSidechains();
+
+                return Ok(new OperationResponse<Dictionary<string, SidechainPool>>(poolOfSidechains, $"Get producing sidechains successful."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets information about all currently producing sidechains
+        /// </summary>
+        /// <returns>Json with information about sidechains currently being produced by node</returns>
+        /// <response code="200">Successful get</response>
+        /// <response code="500">Error getting information</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Gets information about all currently producing sidechains",
+            Description = "The producer uses this request to get information about the sidechains this node is producing",
+            OperationId = "GetProducingSidechains"
+        )]
+        public async Task<ObjectResult> DeleteSidechainFromDatabase(string chainName)
+        {
+            try
+            {
+                var poolOfSidechains = _sidechainProducerService.GetSidechains();
+                var chainBeingProduced = poolOfSidechains.TryGetValue(chainName, out var existingChain);
+
+                if (chainBeingProduced) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "This node is currently working on this sidechain and can't be deleted from the database."));
+                
+                await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
+
+                return Ok(new OperationResponse<bool>(true, $"Successfully deleted sidechain from database."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
         }
     }
 }
