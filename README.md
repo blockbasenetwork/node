@@ -83,47 +83,36 @@ With the node running, the first thing you should check is if everything is corr
 3. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with you configuration.
 
 # Running a Node as a Service Requester
+Running a node as a SR allows you to store your data on the BlockBase Network. To do this, you have to follow the steps below.
 
-## Creating a new sidechain
-In case you want to run the node as a service requester, make a request to the following action in order to start a new sidechain:
-
-`https://`_`apiendpoint`_`/api/Chain/StartChain`
-
-To configure the chain, a POST request is needed to the following action:
-
-`https://`_`apiendpoint`_`/api/Chain/ConfigureChain`
-
-With the following body:
+## Step #1 - Configuring the sidechain
+Before you can request the network for a new sidechain, you have to configure the parameters of the sidechain. If your node is running, you have to stop it by pressing `Ctrl+c`. After you've stopped the node, navigate back to the appsettings file on BlockBase.Node/appsettings.json . There, you need to edit the following section:
 
 ```js
 {
-	"key": "blockbasedb1", // The name of the chain
-	"payment_per_block_validator_producers": 1, // The payment for each block for validator producers, in the lowest decimal value of BBT (ie: 400 means that each block will cost 0.0400 BBT)
-	"payment_per_block_history_producers": 1, // The payment for each block for history producers
-	"payment_per_block_full_producers": 1, // The payment for each block for full producers
-	"min_candidature_stake": 100, // The minimum stake each producer needs to have in sidechain in the lowest decimal value of BBT
-	"number_of_validator_producers_required":1, // The desired number of validator producers for the sidechain
-	"number_of_history_producers_required":1, // The desired number of history producers for the sidechain
-	"number_of_full_producers_required":1, // The desired number of full producers for the sidechain
-	"candidature_phase_duration_in_seconds":90, // The candidature phase time in seconds
-	"secret_sending_phase_duration_in_seconds":20, // The send secret phase time in seconds
-	"ip_sending_phase_duration_in_seconds":20, // The send IP phase time in seconds
-	"ip_retrieval_phase_duration_in_seconds":20, // The retrieve IP phase time in seconds
-	"candidature_phase_end_date_in_seconds":0, // No need to change
-	"secret_sending_phase_end_date_in_seconds":0, // No need to change
-	"ip_sending_phase_end_date_in_seconds":0, // No need to change
-	"ip_retrieval_phase_end_date_in_seconds":0, // No need to change
-	"block_time_in_seconds": 180, // Time between each block in seconds
-	"num_blocks_between_settlements": 20, // The number of blocks between each settlement phase
-	"block_size_in_bytes":1000 // The maximum size of each block in bytes
+    "RequesterConfigurations": {
+    "MaxPaymentPerBlockValidatorProducers": 10.0, // The payment in BBT each validator node will receive when he produces a block filled to the max with transactions
+    "MaxPaymentPerBlockHistoryProducers": 100.0, // The payment in BBT each history node will receive when he produces a block filled to the max with transactions
+    "MaxPaymentPerBlockFullProducers": 0, // The payment in BBT each full node will receive when he produces a block filled to the max with transactions
+    "MinimumPaymentPerBlockValidatorProducers": 1.0, // The payment in BBT each validator node will receive when he produces a block that has no transactions
+    "MinimumPaymentPerBlockHistoryProducers": 1.0, // The payment in BBT each history node will receive when he produces a block that has no transactions
+    "MinimumPaymentPerBlockFullProducers": 0, // The payment in BBT each full node will receive when he produces a block that has no transactions
+    "MinimumCandidatureStake": 100.0, // The minimum stake each node has to have staked as collateral on the sidechain
+    "NumberOfValidatorProducersRequired": 1, // The desired number of validator nodes
+    "NumberOfHistoryProducersRequired": 3, // The desired number of history nodes
+    "NumberOfFullProducersRequired": 0, // The desired number of full nodes
+    "BlockTimeInSeconds": 60, // The time in seconds between the production of each block
+    "NumberOfBlocksBetweenSettlements": 10, // The number of blocks between each settlement. Its during settlements that payments are made
+    "BlockSizeInBytes": 1000000, // The maximum size of a block in bytes
+    "ReservedProducerSeats": ["producer1eosaccount", "producer2eosaccount"]
+  }
 }
 ```
+### Understanding the costs
+The way you configure your sidechain request is very important. You need to understand the costs involved for you and for the service providers. If the sidechain you request demands too much from a SP and you pay too little, no SP you will want to participate in your sidechain. Inversely, if you pay too much to a SP and demand too little from him, you will be squandering resources. To get an idea of how much your sidechain will cost, [visit our sidechain costs calculator](https://blockbase.network/costs-calculator).
 
-Finally, a request is needed to the following action in order to get the chain running:
-
-`https://`_`apiendpoint`_`/api/Chain/StartChainMaintenance`
-
-
+### Choosing the right network
+The number of nodes you want for your sidechain depends on the security you need and how much you're willing to spend. As you can see in the configuration, there are three types of providers: Validator Nodes, History Nodes, and Full Nodes. Validator nodes **do not** need to store the whole sidechain on their side. They just help in block production. History Nodes **have to** store the whole sidechain on their side, and are checked on every settlement. Full nodes have to store the sidechain and the resulting databases from executing all operations on the sidechains. *Full nodes are not yet fully implemented*.
 
 # Running as a service provider
 ## Sending a candidature for a sidechain
