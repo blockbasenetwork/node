@@ -29,6 +29,8 @@ namespace BlockBase.Node.Controllers
     {
         private NodeConfigurations NodeConfigurations;
         private NetworkConfigurations NetworkConfigurations;
+        private RequesterConfigurations RequesterConfigurations;
+        private SidechainPhasesTimesConfigurations SidechainPhasesTimesConfigurations;
         private readonly ILogger _logger;
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
@@ -39,10 +41,12 @@ namespace BlockBase.Node.Controllers
 
         private IConnectionsChecker _connectionsChecker;
 
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
+            RequesterConfigurations = requesterConfigurations?.Value;
+            SidechainPhasesTimesConfigurations = sidechainPhasesTimesConfigurations?.Value;
 
             _logger = logger;
             _sidechainProducerService = sidechainProducerService;
@@ -67,80 +71,81 @@ namespace BlockBase.Node.Controllers
             Description = "Before starting a node as a requester, the admin should check if everything is correctly configured",
             OperationId = "CheckRequesterConfig"
         )]
-        public async Task<ObjectResult> CheckRequesterConfig() {
+        public async Task<ObjectResult> CheckRequesterConfig()
+        {
             try
             {
-            var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
-            var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
+                var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
+                var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
-            var accountName = NodeConfigurations.AccountName;
-            var publicKey = NodeConfigurations.ActivePublicKey;
+                var accountName = NodeConfigurations.AccountName;
+                var publicKey = NodeConfigurations.ActivePublicKey;
 
 
-            bool accountDataFetched = false;
-            List<string> currencyBalance = null;
-            long cpuUsed = 0;
-            long cpuLimit = 0;
-            long netUsed = 0;
-            long netLimit = 0;
-            ulong ramUsed = 0;
-            long ramLimit = 0;
-            string sidechainState = null;
-            
+                bool accountDataFetched = false;
+                List<string> currencyBalance = null;
+                long cpuUsed = 0;
+                long cpuLimit = 0;
+                long netUsed = 0;
+                long netLimit = 0;
+                ulong ramUsed = 0;
+                long ramLimit = 0;
+                string sidechainState = null;
 
-            try
-            {
-                var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
-                currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
-                
-                accountDataFetched = true;
-                cpuUsed = accountInfo.cpu_limit.used;
-                cpuLimit = accountInfo.cpu_limit.max;
-                netUsed = accountInfo.net_limit.used;
-                netLimit = accountInfo.net_limit.max;
-                ramUsed = accountInfo.ram_usage;
-                ramLimit = accountInfo.ram_quota;
 
-                sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
-                
-            }
-            catch {}
-            
-            var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
-            var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
-
-            var postgresHost = NodeConfigurations.PostgresHost;
-            var postgresPort = NodeConfigurations.PostgresPort;
-            var postgresUser = NodeConfigurations.PostgresUser;
-
-            return Ok(new OperationResponse<dynamic>(
-                new 
+                try
                 {
-                    accountName,
-                    publicKey,
-                    sidechainState,
-                    accountDataFetched,
-                    currencyBalance,
-                    cpuUsed,
-                    cpuLimit,
-                    netUsed,
-                    netLimit,
-                    ramUsed,
-                    ramLimit,
-                    isMongoLive,
-                    isPostgresLive,
-                    mongoDbConnectionString,
-                    mongoDbPrefix,
-                    postgresHost,
-                    postgresPort,
-                    postgresUser
+                    var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
+                    currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
+
+                    accountDataFetched = true;
+                    cpuUsed = accountInfo.cpu_limit.used;
+                    cpuLimit = accountInfo.cpu_limit.max;
+                    netUsed = accountInfo.net_limit.used;
+                    netLimit = accountInfo.net_limit.max;
+                    ramUsed = accountInfo.ram_usage;
+                    ramLimit = accountInfo.ram_quota;
+
+                    sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
+
                 }
-                , $"Configuration and connection data retrieved."));
+                catch { }
+
+                var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
+                var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
+
+                var postgresHost = NodeConfigurations.PostgresHost;
+                var postgresPort = NodeConfigurations.PostgresPort;
+                var postgresUser = NodeConfigurations.PostgresUser;
+
+                return Ok(new OperationResponse<dynamic>(
+                    new
+                    {
+                        accountName,
+                        publicKey,
+                        sidechainState,
+                        accountDataFetched,
+                        currencyBalance,
+                        cpuUsed,
+                        cpuLimit,
+                        netUsed,
+                        netLimit,
+                        ramUsed,
+                        ramLimit,
+                        isMongoLive,
+                        isPostgresLive,
+                        mongoDbConnectionString,
+                        mongoDbPrefix,
+                        postgresHost,
+                        postgresPort,
+                        postgresUser
+                    }
+                    , $"Configuration and connection data retrieved."));
 
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));    
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));
             }
         }
 
@@ -160,46 +165,18 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var tx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
+                var configuration = GetSidechainConfigurations();
 
-                return Ok(new OperationResponse<bool>(true, $"Chain successfully created. Tx: {tx}"));
+                var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
+                var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration);
+
+                return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
             }
             catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }
         }
-
-        /// <summary>
-        /// Sends a transaction to Blockbase Operations Contract with the configuration requested for the sidechain
-        /// </summary>
-        /// <param name="configuration">The sidechain configuration</param>
-        /// <returns>The success of the configuration</returns>
-        /// <response code="200">Chain configured with success</response>
-        /// <response code="400">Configuration parameters invalid</response>
-        /// <response code="500">Error configurating the chain</response>
-        [HttpPost]
-        [SwaggerOperation(
-            Summary = "Step 2 - Sends a transaction to BlockBase Operations Contract with the configuration requested for the sidechain",
-            Description = "The requester uses this service to configure the requirements for the sidechain and for producers participation",
-            OperationId = "ConfigureSidechain"
-        )]
-        public async Task<ObjectResult> ConfigureSidechain([FromBody]ContractInformationTable configuration)
-        {
-            try
-            {
-                var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configuration));
-                mappedConfig.Add("key", NodeConfigurations.AccountName);
-                var tx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, mappedConfig);
-
-                return Ok(new OperationResponse<bool>(true, $"Chain configuration successfully sent. Tx: {tx}"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
-        }
-
 
         /// <summary>
         /// Starts the maintenance of the sidechain
@@ -209,11 +186,11 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error starting the maintenance of the chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Step 3 - Starts the maintenance of the sidechain",
+            Summary = "Step 2 - Starts the maintenance of the sidechain",
             Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
             OperationId = "RunSidechainMaintenance"
         )]
-        public async Task<ObjectResult> RunSidechainMaintenance([FromBody]DataEncryptionConfig config)
+        public async Task<ObjectResult> RunSidechainMaintenance([FromBody] DataEncryptionConfig config)
         {
             try
             {
@@ -319,6 +296,36 @@ namespace BlockBase.Node.Controllers
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }
+        }
+
+        private Dictionary<string, object> GetSidechainConfigurations()
+        {
+            var configurations = new ContractInformationTable();
+
+            configurations.Key = NodeConfigurations.AccountName;
+
+            configurations.BlocksBetweenSettlement = RequesterConfigurations.NumberOfBlocksBetweenSettlements;
+            configurations.BlockTimeDuration = RequesterConfigurations.BlockTimeInSeconds;
+            configurations.SizeOfBlockInBytes = RequesterConfigurations.BlockSizeInBytes;
+            configurations.NumberOfFullProducersRequired = RequesterConfigurations.NumberOfFullProducersRequired;
+            configurations.NumberOfHistoryProducersRequired = RequesterConfigurations.NumberOfHistoryProducersRequired;
+            configurations.NumberOfValidatorProducersRequired = RequesterConfigurations.NumberOfValidatorProducersRequired;
+            configurations.MaxPaymentPerBlockFullProducers = RequesterConfigurations.MaxPaymentPerBlockFullProducers;
+            configurations.MaxPaymentPerBlockHistoryProducers = RequesterConfigurations.MaxPaymentPerBlockHistoryProducers;
+            configurations.MaxPaymentPerBlockValidatorProducers = RequesterConfigurations.MaxPaymentPerBlockValidatorProducers;
+            configurations.MinPaymentPerBlockFullProducers = RequesterConfigurations.MinimumPaymentPerBlockFullProducers;
+            configurations.MinPaymentPerBlockHistoryProducers = RequesterConfigurations.MinimumPaymentPerBlockHistoryProducers;
+            configurations.MinPaymentPerBlockValidatorProducers = RequesterConfigurations.MinimumPaymentPerBlockValidatorProducers;
+            configurations.Stake = RequesterConfigurations.MinimumCandidatureStake;
+
+            configurations.CandidatureTime = SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
+            configurations.SendSecretTime = SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;
+            configurations.SendTime = SidechainPhasesTimesConfigurations.IpSendingPhaseDurationInSeconds;
+            configurations.ReceiveTime = SidechainPhasesTimesConfigurations.IpRetrievalPhaseDurationInSeconds;
+
+            var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
+
+            return mappedConfig;
         }
     }
 }

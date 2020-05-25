@@ -6,18 +6,29 @@ namespace BlockBase.Network.Mainchain.Pocos
 {
     public class ContractInformationTable
     {
-        [DefaultValue(10)]
-        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK_VALIDATOR_PRODUCERS)]
-        public uint PaymentPerBlockValidatorProducers { get; set; }
+        [JsonProperty(EosAtributeNames.KEY)]
+        public string Key { get; set; }
 
-        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK_HISTORY_PRODUCERS)]
-        public uint PaymentPerBlockHistoryProducers { get; set; }
+        [JsonProperty(EosAtributeNames.MAX_PAYMENT_PER_BLOCK_VALIDATOR_PRODUCERS)]
+        public ulong MaxPaymentPerBlockValidatorProducers { get; set; }
 
-        [JsonProperty(EosAtributeNames.PAYMENT_PER_BLOCK_FULL_PRODUCERS)]
-        public uint PaymentPerBlockFullProducers { get; set; }
+        [JsonProperty(EosAtributeNames.MAX_PAYMENT_PER_BLOCK_HISTORY_PRODUCERS)]
+        public ulong MaxPaymentPerBlockHistoryProducers { get; set; }
+
+        [JsonProperty(EosAtributeNames.MAX_PAYMENT_PER_BLOCK_FULL_PRODUCERS)]
+        public ulong MaxPaymentPerBlockFullProducers { get; set; }
+
+        [JsonProperty(EosAtributeNames.MIN_PAYMENT_PER_BLOCK_VALIDATOR_PRODUCERS)]
+        public ulong MinPaymentPerBlockValidatorProducers { get; set; }
+
+        [JsonProperty(EosAtributeNames.MIN_PAYMENT_PER_BLOCK_HISTORY_PRODUCERS)]
+        public ulong MinPaymentPerBlockHistoryProducers { get; set; }
+
+        [JsonProperty(EosAtributeNames.MIN_PAYMENT_PER_BLOCK_FULL_PRODUCERS)]
+        public ulong MinPaymentPerBlockFullProducers { get; set; }
 
         [JsonProperty(EosAtributeNames.MIN_CANDIDATURE_STAKE)]
-        public uint Stake { get; set; }
+        public ulong Stake { get; set; }
 
         [JsonProperty(EosAtributeNames.NUMBER_OF_VALIDATOR_PRODUCERS_REQUIRED)]
         public uint NumberOfValidatorProducersRequired { get; set; }

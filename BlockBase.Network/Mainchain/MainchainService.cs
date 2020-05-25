@@ -21,16 +21,14 @@ namespace BlockBase.Network.Mainchain
         private EosStub EosStub;
         private NetworkConfigurations NetworkConfigurations;
         private NodeConfigurations NodeConfigurations;
-        private MongoDBConfigurations MongoDBConfigurations;
         private readonly ILogger _logger;
         private const int MAX_NUMBER_OF_TRIES = 5;
         private const int TRANSACTION_EXPIRATION = 20;
 
-        public MainchainService(IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, IOptions<MongoDBConfigurations> mongoDBConfigurations, ILogger<MainchainService> logger)
+        public MainchainService(IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, ILogger<MainchainService> logger)
         {
             NodeConfigurations = nodeConfigurations.Value;
             NetworkConfigurations = networkConfigurations.Value;
-            MongoDBConfigurations = mongoDBConfigurations.Value;
 
             _logger = logger;
             EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);

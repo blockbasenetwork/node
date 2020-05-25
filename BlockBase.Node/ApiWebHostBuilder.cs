@@ -66,7 +66,8 @@ namespace BlockBase.Api
 
                 services.Configure<NetworkConfigurations>(configuration.GetSection("NetworkConfigurations"));
                 services.Configure<NodeConfigurations>(configuration.GetSection("NodeConfigurations"));
-                services.Configure<MongoDBConfigurations>(configuration.GetSection("MongoDBConfigurations"));
+                services.Configure<RequesterConfigurations>(configuration.GetSection("RequesterConfigurations"));
+                services.Configure<SidechainPhasesTimesConfigurations>(configuration.GetSection("SidechainPhasesTimesConfigurations"));
                 services.AddOptions();
                 services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(
