@@ -106,6 +106,7 @@ namespace BlockBase.Domain.Eos
         public const string TYPE = "type";
         public const string REQUIREMENT = "requirement";
         public const string SIDECHAIN = "sidechain";
+        public const string STAKE = "stake";
         public const string BYTE_INDEX = "byteIndex";
         public const string BYTE_IN_HEXADECIMAL = "byteInHex";
         public const string PACKED_TRANSACTION = "packedTransaction";

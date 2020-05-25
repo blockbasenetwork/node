@@ -7,6 +7,9 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 {
     public interface IConnector
     {
+
+        Task<bool> TestConnection();
+        Task Setup();
         Task<IList<InfoRecord>> GetInfoRecords();
         Task ExecuteCommand(string sqlCommand, string databaseName);
         Task<IList<IList<string>>> ExecuteQuery(string sqlQuery, string databaseName);

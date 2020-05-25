@@ -28,6 +28,8 @@ namespace BlockBase.Node.Controllers
         public QueryController(ILogger<QueryController> logger, DatabaseKeyManager databaseKeyManager, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, IOptions<NodeConfigurations> nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _databaseKeyManager = databaseKeyManager;
+            psqlConnector.Setup().Wait();
+            //transactionSender.Setup().Wait();
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbProducerService);
         }
 

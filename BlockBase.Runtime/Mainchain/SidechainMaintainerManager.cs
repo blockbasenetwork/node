@@ -42,6 +42,7 @@ namespace BlockBase.Runtime.Mainchain
 
         public TaskContainer Start()
         {
+            _transactionSender.Setup().Wait();
             TaskContainer = TaskContainer.Create(async () => await SuperMethod());
             TaskContainer.Start();
             return TaskContainer;

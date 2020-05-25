@@ -16,6 +16,7 @@ using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain.Pocos;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain.Enums;
+using BlockBase.DataPersistence.Utils;
 
 namespace BlockBase.Node.Controllers
 {
@@ -25,20 +26,109 @@ namespace BlockBase.Node.Controllers
     public class ProducerController : ControllerBase
     {
         private NodeConfigurations NodeConfigurations;
+        private NetworkConfigurations NetworkConfigurations;
         private readonly ILogger _logger;
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
+        private IConnectionsChecker _connectionsChecker;
         
-        public ProducerController(ILogger<ProducerController> logger, IOptions<NodeConfigurations> nodeConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public ProducerController(ILogger<ProducerController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker)
         {
             NodeConfigurations = nodeConfigurations?.Value;
+            NetworkConfigurations = networkConfigurations?.Value;
 
             _logger = logger;
             _sidechainProducerService = sidechainProducerService;
             _mainchainService = mainchainService;
             _mongoDbProducerService = mongoDbProducerService;
+            _connectionsChecker = connectionsChecker;
 
+        }
+
+        /// <summary>
+        /// Checks if the BlockBase node is correctly configured to work as a provider
+        /// </summary>
+        /// <returns>Information about the node configurations and account state</returns>
+        /// <response code="200">Information about the current configuration</response>
+        /// <response code="500">Some internal error occurred</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Checks if the BlockBase node is correctly configured",
+            Description = "Before starting a node as a provider, the admin should check if everything is correctly configured",
+            OperationId = "CheckProducerConfig"
+        )]
+        public async Task<ObjectResult> CheckProducerConfig() {
+            try
+            {
+            var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
+            var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
+
+            var accountName = NodeConfigurations.AccountName;
+            var publicKey = NodeConfigurations.ActivePublicKey;
+
+
+            bool accountDataFetched = false;
+            List<string> currencyBalance = null;
+            long cpuUsed = 0;
+            long cpuLimit = 0;
+            long netUsed = 0;
+            long netLimit = 0;
+            ulong ramUsed = 0;
+            long ramLimit = 0;
+            
+
+            try
+            {
+                var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
+                currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
+                
+                accountDataFetched = true;
+                cpuUsed = accountInfo.cpu_limit.used;
+                cpuLimit = accountInfo.cpu_limit.max;
+                netUsed = accountInfo.net_limit.used;
+                netLimit = accountInfo.net_limit.max;
+                ramUsed = accountInfo.ram_usage;
+                ramLimit = accountInfo.ram_quota;
+                
+            }
+            catch {}
+            
+            var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
+            var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
+
+            var postgresHost = NodeConfigurations.PostgresHost;
+            var postgresPort = NodeConfigurations.PostgresPort;
+            var postgresUser = NodeConfigurations.PostgresUser;
+
+            return Ok(new OperationResponse<dynamic>(
+                new 
+                {
+                    accountName,
+                    publicKey,
+                    accountDataFetched,
+                    currencyBalance,
+                    cpuUsed,
+                    cpuLimit,
+                    netUsed,
+                    netLimit,
+                    ramUsed,
+                    ramLimit,
+                    isMongoLive,
+                    isPostgresLive,
+                    mongoDbConnectionString,
+                    mongoDbPrefix,
+                    postgresHost,
+                    postgresPort,
+                    postgresUser
+                }
+                , $"Configuration and connection data retrieved."));
+
+            }
+            catch(Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));    
+            }
         }
 
         /// <summary>
@@ -56,9 +146,9 @@ namespace BlockBase.Node.Controllers
         [SwaggerOperation(
             Summary = "Sends a transaction to BlockBase Operations Contract that contains the producer application information for producing the sidechain",
             Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
-            OperationId = "SendCandidatureToChain"
+            OperationId = "RequestToProduceSidechain"
         )]
-        public async Task<ObjectResult> SendCandidatureToChain(string chainName, int workTime, int producerType, bool forceDelete = false)
+        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int workTime, int producerType, bool forceDelete = false)
         {
             if (string.IsNullOrEmpty(chainName) || workTime <= 0)
             {
@@ -94,147 +184,24 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+
         /// <summary>
-        /// Gets the contract information of a sidechain that is started and configured
+        /// Sends a transaction to BlockBase Operations Contract stating that the producer wants to leave this sidechain
         /// </summary>
-        /// <param name="chainName">Name of the sidechain</param>
+        /// <param name="sidechainName">Account name of the sidechain</param>
         /// <returns>The success of the task</returns>
-        /// <response code="200">Contract information retrieved with success</response>
+        /// <response code="200">Request to leave sent with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the contract information</response>
-        [HttpGet]
+        /// <response code="500">Error sending request</response>
+        [HttpPost]
         [SwaggerOperation(
-            Summary = "Gets the contract information of a sidechain that is started and configured",
-            Description = "Retrieves relevant information about a sidechain, e.g. payment per block, mininum producer stake to participate, required number of producers, max block size in bytes, etc",
-            OperationId = "GetContractInfo"
+            Summary = "Sends a transaction to BlockBase Operations Contract stating that the producer wants to leave this sidechain",
+            Description = "The producer uses this service to state that he wants to stop producing for this sidechain",
+            OperationId = "RequestToLeaveSidechainProduction"
         )]
-        public async Task<ObjectResult> GetContractInfo(string chainName)
+        public async Task<ObjectResult> RequestToLeaveSidechainProduction(string sidechainName)
         {
-            try
-            {
-                var clientLedger = await _mainchainService.RetrieveClientTokenLedgerTable(chainName);
-                ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
-
-                return Ok(new OperationResponse<ContractInformationTable>(contractInfo));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<ContractInformationTable>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets information about the participation state of the producer on a sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the sidechain</param>
-        /// <param name="forceDelete">This parameter is here only to simplify testing purposes. It makes it more easy to restart the whole system and delete previous existing databases</param>
-        /// <returns> A boolean if the account is candidate in the sidechain</returns>
-        /// <response code="200">Information retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the information</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets information about the participation state of the producer on a sidechain",
-            Description = "Confirms if the producer has applied successfully to produce a given sidechain",
-            OperationId = "GetProducerCandidature"
-        )]
-        //TODO Change name to something more intuitive.
-        public async Task<ObjectResult> GetProducerCandidature(string chainName, bool forceDelete = false)
-        {
-            try
-            {
-                var contractStates = await _mainchainService.RetrieveContractState(chainName);
-                var candidatureTable = await _mainchainService.RetrieveCandidates(chainName);
-
-                if (!contractStates.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time!"));
-                return Ok(new OperationResponse<bool>(candidatureTable.Select(m => m.Key).Contains(NodeConfigurations.AccountName)));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets the current state of a given sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the sidechain</param>
-        /// <returns>The current state of the contract</returns>
-        /// <response code="200">Contract state retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving contract state</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the current state of a given sidechain",
-            Description = "Gets the current state of a given sidechain e.g. has chain started, is in configuration phase, is in candidature phase, is secret sharing phase, etc",
-            OperationId = "GetChainState"
-        )]
-        public async Task<ObjectResult> GetChainState(string chainName)
-        {
-            try
-            {
-                var contractStates = await _mainchainService.RetrieveContractState(chainName);
-                return Ok(new OperationResponse<ContractStateTable>(contractStates));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<ContractStateTable>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets the total producers requested for a given sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the sidechain</param>
-        /// <returns>The number of producers needed for a sidechain</returns>
-        /// <response code="200">Producers needed retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the number of producers requested</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the total producers requested for a given sidechain",
-            Description = "Gets the number of sidechain producers requested for a given sidechain",
-            OperationId = "GetTotalProducersNeeded"
-        )]
-        public async Task<ObjectResult> GetTotalProducersNeeded(string chainName)
-        {
-            try
-            {
-                var contractStates = await _mainchainService.RetrieveContractInformation(chainName);
-                var numberOfProducersRequired = contractStates.NumberOfValidatorProducersRequired + contractStates.NumberOfHistoryProducersRequired + contractStates.NumberOfFullProducersRequired;
-                return Ok(new OperationResponse<uint>(numberOfProducersRequired));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets the total number of current candidates for a given sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the sidechain</param>
-        /// <returns>The number of candidates in the sidechain</returns>
-        /// <response code="200">Total producers retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving total candidates information.</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the current number of candidates for a given sidechain",
-            Description = "Gets the current number of candidates that have applied to produce a given sidechain",
-            OperationId = "GetTotalCandidatesInChain"
-        )]
-        public async Task<ObjectResult> GetTotalCandidatesInChain(string chainName)
-        {
-            try
-            {
-                var candidates = await _mainchainService.RetrieveCandidates(chainName);
-                return Ok(new OperationResponse<int>(candidates.Count));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
-            }
+            throw new NotImplementedException();
         }
     }
 }
