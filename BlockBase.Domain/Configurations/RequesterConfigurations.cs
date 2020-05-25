@@ -19,5 +19,6 @@ namespace BlockBase.Domain.Configurations
         public uint BlockTimeInSeconds { get; set; }
         public uint NumberOfBlocksBetweenSettlements { get; set; }
         public uint BlockSizeInBytes { get; set; }
+        public List<string> ReservedProducerSeats { get; set; }
     }
 }

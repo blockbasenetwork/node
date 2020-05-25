@@ -168,7 +168,7 @@ namespace BlockBase.Node.Controllers
                 var configuration = GetSidechainConfigurations();
 
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
-                var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration);
+                var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
 
                 return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
             }
