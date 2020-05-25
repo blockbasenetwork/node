@@ -27,6 +27,8 @@ namespace BlockBase.Node.Controllers
     {
         private NodeConfigurations NodeConfigurations;
         private NetworkConfigurations NetworkConfigurations;
+        private RequesterConfigurations RequesterConfigurations;
+        private SidechainPhasesTimesConfigurations SidechainPhasesTimesConfigurations;
         private readonly ILogger _logger;
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
@@ -37,10 +39,12 @@ namespace BlockBase.Node.Controllers
 
         private IConnectionsChecker _connectionsChecker;
 
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
+            RequesterConfigurations = requesterConfigurations?.Value;
+            SidechainPhasesTimesConfigurations = sidechainPhasesTimesConfigurations?.Value;
 
             _logger = logger;
             _sidechainProducerService = sidechainProducerService;
@@ -159,46 +163,18 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var tx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
+                var configuration = GetSidechainConfigurations();
 
-                return Ok(new OperationResponse<bool>(true, $"Chain successfully created. Tx: {tx}"));
+                var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
+                var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
+
+                return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
             }
             catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }
         }
-
-        /// <summary>
-        /// Sends a transaction to Blockbase Operations Contract with the configuration requested for the sidechain
-        /// </summary>
-        /// <param name="configuration">The sidechain configuration</param>
-        /// <returns>The success of the configuration</returns>
-        /// <response code="200">Chain configured with success</response>
-        /// <response code="400">Configuration parameters invalid</response>
-        /// <response code="500">Error configurating the chain</response>
-        [HttpPost]
-        [SwaggerOperation(
-            Summary = "Step 2 - Sends a transaction to BlockBase Operations Contract with the configuration requested for the sidechain",
-            Description = "The requester uses this service to configure the requirements for the sidechain and for producers participation",
-            OperationId = "ConfigureSidechain"
-        )]
-        public async Task<ObjectResult> ConfigureSidechain([FromBody] ContractInformationTable configuration)
-        {
-            try
-            {
-                var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configuration));
-                mappedConfig.Add("key", NodeConfigurations.AccountName);
-                var tx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, mappedConfig);
-
-                return Ok(new OperationResponse<bool>(true, $"Chain configuration successfully sent. Tx: {tx}"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
-        }
-
 
         /// <summary>
         /// Starts the maintenance of the sidechain
@@ -208,7 +184,7 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error starting the maintenance of the chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Step 3 - Starts the maintenance of the sidechain",
+            Summary = "Step 2 - Starts the maintenance of the sidechain",
             Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
             OperationId = "RunSidechainMaintenance"
         )]
@@ -347,5 +323,34 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        private Dictionary<string, object> GetSidechainConfigurations()
+        {
+            var configurations = new ContractInformationTable();
+
+            configurations.Key = NodeConfigurations.AccountName;
+
+            configurations.BlocksBetweenSettlement = RequesterConfigurations.NumberOfBlocksBetweenSettlements;
+            configurations.BlockTimeDuration = RequesterConfigurations.BlockTimeInSeconds;
+            configurations.SizeOfBlockInBytes = RequesterConfigurations.BlockSizeInBytes;
+            configurations.NumberOfFullProducersRequired = RequesterConfigurations.NumberOfFullProducersRequired;
+            configurations.NumberOfHistoryProducersRequired = RequesterConfigurations.NumberOfHistoryProducersRequired;
+            configurations.NumberOfValidatorProducersRequired = RequesterConfigurations.NumberOfValidatorProducersRequired;
+            configurations.MaxPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockFullProducers);
+            configurations.MaxPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockHistoryProducers);
+            configurations.MaxPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockValidatorProducers);
+            configurations.MinPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockFullProducers);
+            configurations.MinPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockHistoryProducers);
+            configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockValidatorProducers);
+            configurations.Stake = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumCandidatureStake);
+
+            configurations.CandidatureTime = SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
+            configurations.SendSecretTime = SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;
+            configurations.SendTime = SidechainPhasesTimesConfigurations.IpSendingPhaseDurationInSeconds;
+            configurations.ReceiveTime = SidechainPhasesTimesConfigurations.IpRetrievalPhaseDurationInSeconds;
+
+            var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
+
+            return mappedConfig;
+        }
     }
 }
