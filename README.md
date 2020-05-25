@@ -104,7 +104,7 @@ Before you can request the network for a new sidechain, you have to configure th
     "BlockTimeInSeconds": 60, // The time in seconds between the production of each block
     "NumberOfBlocksBetweenSettlements": 10, // The number of blocks between each settlement. Its during settlements that payments are made
     "BlockSizeInBytes": 1000000, // The maximum size of a block in bytes
-    "ReservedProducerSeats": ["producer1eosaccount", "producer2eosaccount"]
+    "ReservedProducerSeats": ["producer1eosaccount", "producer2eosaccount"] // A list of EOS accounts you want to pre-select as service providers for your network
   }
 }
 ```
@@ -112,7 +112,71 @@ Before you can request the network for a new sidechain, you have to configure th
 The way you configure your sidechain request is very important. You need to understand the costs involved for you and for the service providers. If the sidechain you request demands too much from a SP and you pay too little, no SP you will want to participate in your sidechain. Inversely, if you pay too much to a SP and demand too little from him, you will be squandering resources. To get an idea of how much your sidechain will cost, [visit our sidechain costs calculator](https://blockbase.network/costs-calculator).
 
 ### Choosing the right network
-The number of nodes you want for your sidechain depends on the security you need and how much you're willing to spend. As you can see in the configuration, there are three types of providers: Validator Nodes, History Nodes, and Full Nodes. Validator nodes **do not** need to store the whole sidechain on their side. They just help in block production. History Nodes **have to** store the whole sidechain on their side, and are checked on every settlement. Full nodes have to store the sidechain and the resulting databases from executing all operations on the sidechains. *Full nodes are not yet fully implemented*.
+The number of nodes you want for your sidechain depends on the security you need and how much you're willing to spend. As you can see in the configuration, there are three types of providers: *Validator Nodes*, *History Nodes*, and *Full Nodes*. Validator nodes **do not** need to store the whole sidechain on their side. They just help in block production. History Nodes **have to** store the whole sidechain on their side, and are checked on every settlement. Full nodes have to store the sidechain and the resulting databases from executing all operations on the sidechains. _*Full nodes are not yet fully implemented*_.
+
+### Adding reserved seats
+In some cases, it may make sense to have a preselected list of accounts that will have a reserved spot for them on the network you're requesting. This is especially useful if you want your network to be partially or fully produced by nodes you manage.
+
+## Step #2 - Configuring the data security
+BlockBase has an encryption layer built in that allows you to encrypt all you data before it is sent to the providers. You can configure that security the appsettings file. Before you do though, you have to consider the implications of doing so.
+
+Storing all your data passwords on your appsettings file poses a security problem. For that reason, you may leave this section unconfigured. If you choose to do so, you have to consider the following consequences:
+1. You will have to provide that configuration further ahead when you *"Start the sidechain maintenance"* and that information will be stored only in memory.
+
+2. You will have to safely store the configuration you provided on another medium. **If you lose the configuration you will lose all access to all encrypted data**!
+
+3. If the node or the machine its running on crash for some reason, when you restart the node you will have to go through the *"Start the sidechain maintenance"* step again and provide the configuration information again.
+
+4. If you choose to leave the data security on your appsettings file, when the node is restarted it can automatically *"Start the sidechain maintenance"* step because it has all the data it needs.
+
+If you wish to keep the data security configuration on your appsettings file here BlockBase.Node/appsettings.json, find the section below and edit it.
+
+```js
+{
+  
+  "isEncrypted": true,
+  "filePassword": "string",
+  "encryptionMasterKey": "string",
+  "encryptionPassword": "string",
+  "publicKey": "string",
+  "encryptedData": "string"
+
+}
+```
+
+### Understanding the data security configurations
+TODO
+
+## Step #3 - Requesting the sidechain
+After you've configured your sidechain, you can request it to the network. This will make your sidechain configuration public to all the providers on the network. To do that, follow these steps:
+
+**Start the node**
+1. Navigate to the folder node/BlockBase.Node
+
+2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+
+**Request the sidechain**
+1. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+
+2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+
+3. Click on `/api/Requester/RequestNewSidechain` then on `Try it out` and then on `Execute`.
+
+## Step #4 - Starting the sidechain maintenance
+After you've announced your sidechain request, now you have to participate on the maintenance of the sidechain. Your node is responsible for keeping up with the providers, for sending them transactions with the data you will want to store, and for moving forward with the lifecycle of the sidechain.
+
+Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**. You don't need to request the sidechain again, that has already been done.
+
+**Start the sidechain maintenance**
+1. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+
+2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+
+3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out`. 
+
+4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. Otherwise, select and delete the whole json configuration in the body of the request.
+5. Press `Execute`.
+
 
 # Running as a service provider
 ## Sending a candidature for a sidechain
