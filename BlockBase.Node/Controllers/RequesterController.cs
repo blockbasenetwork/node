@@ -310,13 +310,13 @@ namespace BlockBase.Node.Controllers
             configurations.NumberOfFullProducersRequired = RequesterConfigurations.NumberOfFullProducersRequired;
             configurations.NumberOfHistoryProducersRequired = RequesterConfigurations.NumberOfHistoryProducersRequired;
             configurations.NumberOfValidatorProducersRequired = RequesterConfigurations.NumberOfValidatorProducersRequired;
-            configurations.MaxPaymentPerBlockFullProducers = RequesterConfigurations.MaxPaymentPerBlockFullProducers;
-            configurations.MaxPaymentPerBlockHistoryProducers = RequesterConfigurations.MaxPaymentPerBlockHistoryProducers;
-            configurations.MaxPaymentPerBlockValidatorProducers = RequesterConfigurations.MaxPaymentPerBlockValidatorProducers;
-            configurations.MinPaymentPerBlockFullProducers = RequesterConfigurations.MinimumPaymentPerBlockFullProducers;
-            configurations.MinPaymentPerBlockHistoryProducers = RequesterConfigurations.MinimumPaymentPerBlockHistoryProducers;
-            configurations.MinPaymentPerBlockValidatorProducers = RequesterConfigurations.MinimumPaymentPerBlockValidatorProducers;
-            configurations.Stake = RequesterConfigurations.MinimumCandidatureStake;
+            configurations.MaxPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockFullProducers);
+            configurations.MaxPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockHistoryProducers);
+            configurations.MaxPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockValidatorProducers);
+            configurations.MinPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockFullProducers);
+            configurations.MinPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockHistoryProducers);
+            configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockValidatorProducers);
+            configurations.Stake = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumCandidatureStake);
 
             configurations.CandidatureTime = SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
             configurations.SendSecretTime = SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;

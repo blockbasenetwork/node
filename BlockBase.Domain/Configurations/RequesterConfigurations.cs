@@ -6,13 +6,13 @@ namespace BlockBase.Domain.Configurations
 {
     public class RequesterConfigurations
     {
-        public ulong MaxPaymentPerBlockValidatorProducers { get; set; }
-        public ulong MaxPaymentPerBlockHistoryProducers { get; set; }
-        public ulong MaxPaymentPerBlockFullProducers { get; set; }
-        public ulong MinimumPaymentPerBlockValidatorProducers { get; set; }
-        public ulong MinimumPaymentPerBlockHistoryProducers { get; set; }
-        public ulong MinimumPaymentPerBlockFullProducers { get; set; }
-        public ulong MinimumCandidatureStake { get; set; }
+        public double MaxPaymentPerBlockValidatorProducers { get; set; }
+        public double MaxPaymentPerBlockHistoryProducers { get; set; }
+        public double MaxPaymentPerBlockFullProducers { get; set; }
+        public double MinimumPaymentPerBlockValidatorProducers { get; set; }
+        public double MinimumPaymentPerBlockHistoryProducers { get; set; }
+        public double MinimumPaymentPerBlockFullProducers { get; set; }
+        public double MinimumCandidatureStake { get; set; }
         public uint NumberOfValidatorProducersRequired { get; set; }
         public uint NumberOfHistoryProducersRequired { get; set; }
         public uint NumberOfFullProducersRequired { get; set; }
