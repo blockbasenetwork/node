@@ -39,12 +39,12 @@ namespace BlockBase.Network.Mainchain
 
         #region Transactions
 
-        public async Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType) =>
+        public async Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType) =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_CANDIDATE,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountName,
-                CreateDataForAddCandidate(chain, accountName, worktimeInSeconds, publicKey, secretHash, producerType)),
+                CreateDataForAddCandidate(chain, accountName, publicKey, secretHash, producerType)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
@@ -213,6 +213,17 @@ namespace BlockBase.Network.Mainchain
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
+
+        public async Task<string> AddStake(string sidechainName, string accountName, string stakeInserted, string permission = "active") =>
+            await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_STAKE,
+                NetworkConfigurations.BlockBaseTokenContract,
+                accountName,
+                CreateDataForAddStake(accountName, sidechainName ,stakeInserted),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+        
 
         public async Task<string> BlacklistProducer(string owner, string producerToBlacklist, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
@@ -444,17 +455,24 @@ namespace BlockBase.Network.Mainchain
             return tokenBalanceTable;
         }
 
+        public async Task<List<TokenLedgerTable>> RetrieveSidechainTokenLedgerTable(string chain)
+        {
+            var listLedger = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            List<TokenLedgerTable> tokenTable = listLedger.Where(b => b.Sidechain == chain).ToList();
+
+            return tokenTable;
+        }
+
         #endregion
 
         #region Data Helpers
 
-        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, int worktimeInSeconds, string publicKey, string secretHash, int producerType)
+        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, string publicKey, string secretHash, int producerType)
         {
             return new Dictionary<string, object>()
             {
                 {EosParameterNames.OWNER, chain},
                 {EosParameterNames.CANDIDATE, name},
-                {EosParameterNames.WORK_TIME_IN_SECONDS, worktimeInSeconds},
                 {EosParameterNames.PUBLIC_KEY, publicKey},
                 {EosParameterNames.SECRET_HASH, secretHash},
                 {EosParameterNames.PRODUCER_TYPE, producerType}
@@ -647,6 +665,16 @@ namespace BlockBase.Network.Mainchain
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.PRODUCER, producerName }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForAddStake(string owner, string sidechainName, string stake)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.SIDECHAIN, sidechainName },
+                { EosParameterNames.STAKE, stake}
             };
         }
 

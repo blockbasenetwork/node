@@ -106,6 +106,7 @@ namespace BlockBase.Domain.Eos
         public const string SIDECHAIN = "sidechain";
         public const string BYTE_INDEX = "byteIndex";
         public const string BYTE_IN_HEXADECIMAL = "byteInHex";   
+        public const string STAKE = "stake";
     }
 
     public class EosAtributeNames

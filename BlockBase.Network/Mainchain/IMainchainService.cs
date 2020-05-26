@@ -8,7 +8,7 @@ namespace BlockBase.Network.Mainchain
     public interface IMainchainService
     {
         Task<GetAccountResponse> GetAccount(string accountName);
-        Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType);
+        Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
         Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader, int limit);
@@ -32,6 +32,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> RequestHistoryValidation(string owner, string producerName, string blockHash, string permission = "active");
         Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active");
         Task<string> ProposeHistoryValidation(string chain, string accountName, List<string> requestedApprovals, string proposalName);
+        Task<string> AddStake(string chain, string account, string stakeInserted, string permission = "active");
 
         Task<ClientTable> RetrieveClientTable(string chain);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);
@@ -51,5 +52,6 @@ namespace BlockBase.Network.Mainchain
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string account);
         Task<TokenAccountTable> RetrieveTokenBalance(string account);
+        Task<List<TokenLedgerTable>> RetrieveSidechainTokenLedgerTable(string chain);
     }
 }

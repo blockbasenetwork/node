@@ -16,6 +16,7 @@ using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain.Pocos;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain.Enums;
+using BlockBase.Domain;
 
 namespace BlockBase.Node.Controllers
 {
@@ -45,7 +46,7 @@ namespace BlockBase.Node.Controllers
         /// Sends a transaction to BlockBase Operations Contract that contains the producer application information for producing the sidechain
         /// </summary>
         /// <param name="chainName">Account name of the sidechain</param>
-        /// <param name="workTime">How much time in seconds the producer will produce the sidechain</param>
+        /// <param name="stake">The amount of BBT that the producer want's to stake</param>
         /// <param name="producerType">The type of producer the node is going to be for this sidechain</param>
         /// <param name="forceDelete">This parameter is here only to simplify testing purposes. It makes it more easy to restart the whole system and delete previous existing databases</param>
         /// <returns>The success of the task</returns>
@@ -58,9 +59,9 @@ namespace BlockBase.Node.Controllers
             Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
             OperationId = "SendCandidatureToChain"
         )]
-        public async Task<ObjectResult> SendCandidatureToChain(string chainName, int workTime, int producerType, bool forceDelete = false)
+        public async Task<ObjectResult> SendCandidatureToChain(string chainName, int producerType, decimal stake = 0, bool forceDelete = false)
         {
-            if (string.IsNullOrEmpty(chainName) || workTime <= 0)
+            if (string.IsNullOrEmpty(chainName))
             {
                 return BadRequest(new OperationResponse<bool>(new ArgumentException()));
             }
@@ -69,7 +70,7 @@ namespace BlockBase.Node.Controllers
                 var sidechainExists = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
                 var poolOfSidechains = _sidechainProducerService.GetSidechains();
                 var chainExists = poolOfSidechains.TryGetValue(chainName, out var existingChain);
-                
+                var contractCandidates = await _mainchainService.RetrieveCandidates(chainName);
                 if (chainExists && !forceDelete) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
                 if (chainExists && forceDelete) _sidechainProducerService.RemoveSidechainFromProducer(existingChain);
                 if (sidechainExists && !forceDelete) return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new ApplicationException(), "Sidechain not being produced but added in local database, please force delete in order to remove it."));
@@ -77,8 +78,14 @@ namespace BlockBase.Node.Controllers
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 
+                if(stake > 0 && contractCandidates.Where(o => o.Key == NodeConfigurations.AccountName).Count() == 0) {
+                    string stakeToInsert = stake.ToString("F4") + " BBT";
+                    var stakeTransaction = await _mainchainService.AddStake(chainName, NodeConfigurations.AccountName, stakeToInsert);
+                    _logger.LogDebug("Sent stake to contract. Tx = " + stakeTransaction);
+                    _logger.LogDebug("Stake inserted = " + stakeToInsert);
+                }
                 var secretHash = HashHelper.Sha256Data(HashHelper.Sha256Data(Encoding.ASCII.GetBytes(NodeConfigurations.SecretPassword)));
-                var transaction = await _mainchainService.AddCandidature(chainName, NodeConfigurations.AccountName, workTime, NodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), producerType);
+                var transaction = await _mainchainService.AddCandidature(chainName, NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), producerType);
 
                 _logger.LogDebug("Sent producer application. Tx = " + transaction);
 
@@ -174,7 +181,24 @@ namespace BlockBase.Node.Controllers
             try
             {
                 var contractStates = await _mainchainService.RetrieveContractState(chainName);
-                return Ok(new OperationResponse<ContractStateTable>(contractStates));
+                var candidates = await _mainchainService.RetrieveCandidates(chainName);
+                var stakes = await _mainchainService.RetrieveSidechainTokenLedgerTable(chainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
+                var sidechainState = new SidechainState() {
+                    NumberOfFullProducersCandidatesSoFar = candidates.Where(o => o.ProducerType == 3).Count(),
+                    NumberOfHistoryProducersCandidatesSoFar = candidates.Where(o => o.ProducerType == 2).Count(),
+                    NumberOfValidatorProducersCandidatesSoFar = candidates.Where(o => o.ProducerType == 1).Count(),
+                    State = contractStates.ConfigTime ? "Configure state" : contractStates.SecretTime ? "Secrect state" : contractStates.IPSendTime ? "Ip Send Time" : contractStates.IPReceiveTime ? "Ip Receive Time" : contractStates.ProductionTime ? "Production" : contractStates.Startchain ? "Startchain" : "No State in chain",
+                    Production = new Production() {
+                        CurrentNumberOfFullProducersInChain = producers.Where(o => o.ProducerType == 3).Count(),
+                        CurrentNumberOfHistoryProducersInChain = producers.Where(o => o.ProducerType == 2).Count(),
+                        CurrentNumberOfValidatorProducersInChain = producers.Where(o => o.ProducerType == 1).Count(),
+                        inProduction = contractStates.ProductionTime
+                    },
+                    StakeDepletionEndDate = await StakeEndTimeCalculationAtMaxPayments(chainName),
+                    CurrentSidechainStake = stakes.Where(o => o.Owner == chainName).FirstOrDefault().Stake
+                };
+                return Ok(new OperationResponse<SidechainState>(sidechainState));
             }
             catch (Exception e)
             {
@@ -235,6 +259,22 @@ namespace BlockBase.Node.Controllers
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
             }
+        }
+
+        private async Task<DateTime> StakeEndTimeCalculationAtMaxPayments(string sidechainName) {
+            var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
+            var sidechainStake = (await _mainchainService.RetrieveSidechainTokenLedgerTable(sidechainName)).Where(o => o.Owner == sidechainName).FirstOrDefault();
+            var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
+           
+            var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
+            var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;
+            var validatorProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfValidatorProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
+
+            var sidechainStakeString = sidechainStake.Stake.Split(" ")[0];
+            var sidechainStakeInUnitsString = sidechainStakeString.Split(".")[0] + sidechainStakeString.Split(".")[1];
+
+            var timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice = ulong.Parse(sidechainStakeInUnitsString) / ((fullProducerPaymentPerSettlement + historyroducerPaymentPerSettlement + validatorProducerPaymentPerSettlement) * 10000);
+            return DateTime.UtcNow.AddSeconds((contractInfo.BlockTimeDuration * contractInfo.BlocksBetweenSettlement) * timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice);
         }
     }
 }
