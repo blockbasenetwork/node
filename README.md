@@ -19,9 +19,9 @@ Each instance of the node has to have an EOS account associated to it. We recomm
 
 2. Buy RAM: Buy 10k of RAM for your account.
 
-3. Get CPU and NET: A BlockBase node uses a lot of CPU and a good amount of NET. We recommend buying renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
+3. Get CPU and NET: A BlockBase node uses a lot of CPU and a good amount of NET. We recommend renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
 
-4. Ensure you have always enough CPU and NET: Buying REX rents you CPU and NET for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend them.
+4. Ensure you have always enough CPU and NET: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend them.
 
 5. Transfer BBT (The BlockBase token) to that account. You will need BBT as a SR or a SP. SRs use BBT to pay to SPs for running their sidechain. And SPs pledge BBT as collateral that they will lose if they fail to provide the service accordingly. In both cases BBT has to be staked.
 
@@ -150,7 +150,6 @@ The `encryptionMasterKey` has to be encoded in a zbase32 format. We use this for
 
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
-
 **Generating a master key**
 1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
@@ -227,7 +226,18 @@ A sidechain request has information about the stake in BBT it requires from the 
 A sidechain that has been requested has a specified number of validator, history, and full nodes requested. If the number of nodes that apply to a certain position is higher than the number of requested nodes, some nodes will be left out. This process is done through a random elimination process that favors providers with the larger stake on the sidechain. The providers who are left out remain on a list of backup nodes that will start producing if one of the selected nodes leaves the network or is kicked out.
 
 ## Applying to participate on a sidechain manually
-To participate on a sidechain manually the first thing you need to do is to find a sidechain that has been requested and is currently in a candidature phase. That means it is currently accepting providers to join.
+To participate on a sidechain manually the first thing you need to do is to find a sidechain that has been requested and is currently in a candidature phase. That means it is currently accepting providers to join. To participate on a sidechain manually, follow these steps:
+
+
+**Start the node** (If it's not running)
+1. Navigate to the folder node/BlockBase.Node
+
+2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+
+**Find a sidechain**
+1. Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and find a sidechain that is in a candidature phase and take note of the sidechain account name.
+
+**Apply to participate**
 
 TODO
 
