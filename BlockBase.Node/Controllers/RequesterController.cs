@@ -14,8 +14,6 @@ using BlockBase.Runtime.Mainchain;
 using Newtonsoft.Json;
 using BlockBase.Runtime.Network;
 using Swashbuckle.AspNetCore.Annotations;
-using BlockBase.Domain.Blockchain;
-using System.Linq;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.DataPersistence.Utils;
 using BlockBase.DataProxy.Pocos;
@@ -291,6 +289,33 @@ namespace BlockBase.Node.Controllers
                 var trx = await _mainchainService.ClaimStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
 
                 return Ok(new OperationResponse<bool>(true, $"Stake successfully claimed. Tx = {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+
+        /// <summary>
+        /// Generates a formatted base 32 string to be used as a master key
+        /// </summary>
+        /// <returns>Formatted base 32 string</returns>
+        /// <response code="200">Base 32 string generated with success</response>
+        /// <response code="500">Error generating base 32 string</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Returns a newly random generated Master Key",
+            Description = "The client can use this method to generate the master key used to encrypt the database data",
+            OperationId = "GenerateMasterKey"
+        )]
+        public ObjectResult GenerateMasterKey()
+        {
+            try
+            {
+                var key = KeyAndIVGenerator.CreateRandomKey();
+
+                return Ok(new OperationResponse<string>(key, $"Master key successfully created. Master Key = {key}"));
             }
             catch (Exception e)
             {

@@ -1,6 +1,7 @@
 ﻿using BlockBase.Utils.Crypto;
 using System.Security.Cryptography;
 using System.Text;
+using Wiry.Base32;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -9,13 +10,13 @@ namespace BlockBase.DataProxy.Encryption
         public const int AES_BLOCK_SIZE = 16;
         private const int AES_KEY_SIZE = 32;
 
-        public static byte[] CreateRandomKey()
+        public static string CreateRandomKey()
         {
             using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
             {
                 var key = new byte[AES_KEY_SIZE];
                 rngCryptoServiceProvider.GetBytes(key);
-                return key;
+                return Base32Encoding.ZBase32.GetString(key);
             }
         }
 
