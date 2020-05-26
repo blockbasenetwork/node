@@ -198,8 +198,8 @@ Starting the maintenance of the sidechain is a fundamental step for your network
 
 4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. **Otherwise, select and delete the whole json configuration in the body of the request** and jump to step 5.
 
-4.1. If you didn't store your data security configuration on the appsettings.json file, you will need to pass it here.
-4.2. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
+  4.1. If you didn't store your data security configuration on the appsettings.json file, you will need to pass it here.
+  4.2. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
 
 ```js
 {
