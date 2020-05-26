@@ -347,17 +347,17 @@ namespace BlockBase.Node.Controllers
 
             configurations.BlocksBetweenSettlement = RequesterConfigurations.NumberOfBlocksBetweenSettlements;
             configurations.BlockTimeDuration = RequesterConfigurations.BlockTimeInSeconds;
-            configurations.SizeOfBlockInBytes = RequesterConfigurations.BlockSizeInBytes;
-            configurations.NumberOfFullProducersRequired = RequesterConfigurations.NumberOfFullProducersRequired;
-            configurations.NumberOfHistoryProducersRequired = RequesterConfigurations.NumberOfHistoryProducersRequired;
-            configurations.NumberOfValidatorProducersRequired = RequesterConfigurations.NumberOfValidatorProducersRequired;
-            configurations.MaxPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockFullProducers);
-            configurations.MaxPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockHistoryProducers);
-            configurations.MaxPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MaxPaymentPerBlockValidatorProducers);
-            configurations.MinPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockFullProducers);
-            configurations.MinPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockHistoryProducers);
-            configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumPaymentPerBlockValidatorProducers);
-            configurations.Stake = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumCandidatureStake);
+            configurations.SizeOfBlockInBytes = RequesterConfigurations.MaxBlockSizeInBytes;
+            configurations.NumberOfFullProducersRequired = RequesterConfigurations.FullNodes.RequiredNumber;
+            configurations.NumberOfHistoryProducersRequired = RequesterConfigurations.HistoryNodes.RequiredNumber;
+            configurations.NumberOfValidatorProducersRequired = RequesterConfigurations.ValidatorNodes.RequiredNumber;
+            configurations.MaxPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.FullNodes.MaxPaymentPerBlock);
+            configurations.MaxPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.HistoryNodes.MaxPaymentPerBlock);
+            configurations.MaxPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.ValidatorNodes.MaxPaymentPerBlock);
+            configurations.MinPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.FullNodes.MinPaymentPerBlock);
+            configurations.MinPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.HistoryNodes.MinPaymentPerBlock);
+            configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.ValidatorNodes.MinPaymentPerBlock);
+            configurations.Stake = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumProducerStake);
 
             configurations.CandidatureTime = SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
             configurations.SendSecretTime = SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;

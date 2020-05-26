@@ -11,7 +11,7 @@ The BlockBase node can be run for two different purposes:
 The node software is in beta and in active testing on the EOS network. The software is usable, but will probably still have bugs. Use with care and avoid large sums of BBT.
 
 # Installation Guide
-Here you can find all the steps to run a node as a service requester or as a service provider. This installation guide is tailored to a Linux installation, but it should work on Windows too.
+Here you can find all the steps to run a node as a [service requester](#Running-a-Node-as-a-Service-Requester) or as a [service provider](#Running-as-a-service-provider). This installation guide is tailored to a Linux installation, but it should work on Windows too.
 
 ## EOS Accounts
 Each instance of the node has to have an EOS account associated to it. We recommend using a new EOS account just for that purpose. This account must have enough RAM, CPU, and NET to work properly. We recommend the following steps to prepare your EOS account:
@@ -19,9 +19,9 @@ Each instance of the node has to have an EOS account associated to it. We recomm
 
 2. Buy RAM: Buy 10k of RAM for your account.
 
-3. Get CPU and NET: A BlockBase node uses a lot of CPU and a good amount of NET. We recommend buying renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
+3. Get CPU and NET: A BlockBase node uses a lot of CPU and a good amount of NET. We recommend renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
 
-4. Ensure you have always enough CPU and NET: Buying REX rents you CPU and NET for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend them.
+4. Ensure you have always enough CPU and NET: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend them.
 
 5. Transfer BBT (The BlockBase token) to that account. You will need BBT as a SR or a SP. SRs use BBT to pay to SPs for running their sidechain. And SPs pledge BBT as collateral that they will lose if they fail to provide the service accordingly. In both cases BBT has to be staked.
 
@@ -34,6 +34,12 @@ The BlockBase node software is built with C# and runs on the .NET Core Platform,
 2. The latest version of MondoDB Server (It should work fine with previous versions too)
 
 3. The latest version of PostgreSQL (It should work fine with previous versions too)
+
+## Downloading the code
+To download the code and run the node follow the following steps:
+1. Create a folder where the code will be downloaded to
+
+2. Open a terminal on that folder and run `git clone https://github.com/blockbasenetwork/node.git`
 
 ## Configuring the Node
 Inside BlockBase.Node/appsettings.json you'll find all the settings you need to configure in order to run the BlockBase node.
@@ -62,25 +68,20 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
   }
 }
 ```
-## Downloading the code and running the node
-To download the code and run the node follow the following steps:
-1. Create a folder where the code will be downloaded to
-
-2. Open a terminal on that folder and run `git clone https://github.com/blockbasenetwork/node.git`
-
-3. Navigate to the folder node/BlockBase.Node
-
-4. Run the code with the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
-
-5. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
 
 ## Checking if everything is correctly configured
-With the node running, the first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
-1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+The first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
+1. Navigate to the folder node/BlockBase.Node
 
-2. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
+2. Run the code with the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
-3. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with you configuration.
+3. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+
+4. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+
+5. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
+
+6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with you configuration.
 
 # Running a Node as a Service Requester
 Running a node as a SR allows you to store your data on the BlockBase Network. To do this, you have to follow the steps below.
@@ -90,20 +91,26 @@ Before you can request the network for a new sidechain, you have to configure th
 
 ```js
 {
-    "RequesterConfigurations": {
-    "MaxPaymentPerBlockValidatorProducers": 10.0, // The payment in BBT each validator node will receive when he produces a block filled to the max with transactions
-    "MaxPaymentPerBlockHistoryProducers": 100.0, // The payment in BBT each history node will receive when he produces a block filled to the max with transactions
-    "MaxPaymentPerBlockFullProducers": 0, // The payment in BBT each full node will receive when he produces a block filled to the max with transactions
-    "MinimumPaymentPerBlockValidatorProducers": 1.0, // The payment in BBT each validator node will receive when he produces a block that has no transactions
-    "MinimumPaymentPerBlockHistoryProducers": 1.0, // The payment in BBT each history node will receive when he produces a block that has no transactions
-    "MinimumPaymentPerBlockFullProducers": 0, // The payment in BBT each full node will receive when he produces a block that has no transactions
-    "MinimumCandidatureStake": 100.0, // The minimum stake each node has to have staked as collateral on the sidechain
-    "NumberOfValidatorProducersRequired": 1, // The desired number of validator nodes
-    "NumberOfHistoryProducersRequired": 3, // The desired number of history nodes
-    "NumberOfFullProducersRequired": 0, // The desired number of full nodes
+  "RequesterConfigurations": {
+    "ValidatorNodes": {
+      "RequiredNumber": 0, // The required number of validator nodes
+      "MaxPaymentPerBlock": 0, // The payment in BBT each validator node will receive when he produces a block filled to the max with transactions
+      "MinPaymentPerBlock": 0 // The payment in BBT each validator node will receive when he produces a block that has no transactions
+    },
+    "HistoryNodes": {
+      "RequiredNumber": 0, // The required number of history nodes
+      "MaxPaymentPerBlock": 0, // The payment in BBT each history node will receive when he produces a block filled to the max with transactions
+      "MinPaymentPerBlock": 0 // The payment in BBT each history node will receive when he produces a block that has no transactions
+    },
+    "FullNodes": {
+      "RequiredNumber": 0, // The required number of full nodes
+      "MaxPaymentPerBlock": 0, // The payment in BBT each full node will receive when he produces a block filled to the max with transactions
+      "MinPaymentPerBlock": 0 // The payment in BBT each full node will receive when he produces a block that has no transactions
+    },
+    "MinimumProducerStake": 0, // The minimum stake each node has to provide as collateral to apply to participation
     "BlockTimeInSeconds": 60, // The time in seconds between the production of each block
     "NumberOfBlocksBetweenSettlements": 10, // The number of blocks between each settlement. Its during settlements that payments are made
-    "BlockSizeInBytes": 1000000, // The maximum size of a block in bytes
+    "MaxBlockSizeInBytes": 1000000, // The maximum size of a block in bytes
     "ReservedProducerSeats": ["producer1eosaccount", "producer2eosaccount"] // A list of EOS accounts you want to pre-select as service providers for your network
   }
 }
@@ -118,12 +125,12 @@ The number of nodes you want for your sidechain depends on the security you need
 In some cases, it may make sense to have a preselected list of accounts that will have a reserved spot for them on the network you're requesting. This is especially useful if you want your network to be partially or fully produced by nodes you manage.
 
 ## Step #2 - Configuring the data security
-BlockBase has an encryption layer built in that allows you to encrypt all you data before it is sent to the providers. You can configure that security the appsettings file. Before you do though, you have to consider the implications of doing so.
+BlockBase has an encryption layer built in that allows you to encrypt all your data before it is sent to the providers. You can configure the security on the appsettings file. Before you do that though, you have to consider the implications of doing so.
 
-Storing all your data passwords on your appsettings file poses a security problem. For that reason, you may leave this section unconfigured. If you choose to do so, you have to consider the following consequences:
-1. You will have to provide that configuration further ahead when you *"Start the sidechain maintenance"* and that information will be stored only in memory.
+Storing all your encryption passwords on your appsettings file poses a security problem. Furthermore, the owner of the data may not be the requester of the sidechain, and may want to keep the encryption passwords on his side. For that reason, you may choose to leave this section unconfigured. If you choose to do so, you have to consider the following consequences:
+1. That security configuration will need to be provided further ahead when you *"Start the sidechain maintenance"* and that information will be stored only in memory.
 
-2. You will have to safely store the configuration you provided on another medium. **If you lose the configuration you will lose all access to all encrypted data**!
+2. The owner of the data will have to safely store the security configuration on another medium. **If the configuration is lost all access to all encrypted data will be lost**!
 
 3. If the node or the machine its running on crash for some reason, when you restart the node you will have to go through the *"Start the sidechain maintenance"* step again and provide the configuration information again.
 
@@ -133,30 +140,51 @@ If you wish to keep the data security configuration on your appsettings file her
 
 ```js
 {
-  
-  "isEncrypted": true,
-  "filePassword": "string",
-  "encryptionMasterKey": "string",
-  "encryptionPassword": "string",
-  "publicKey": "string",
-  "encryptedData": "string"
-
+  "securityConfigurations":
+  {
+  "useSecurityConfigurations": true, // indicates if the security configurations here should be used or ignored
+  "filePassword": "string", // encrypts the contents of the file where the keys are going to get stored
+  "encryptionMasterKey": "string", // a master key for generation of all encryption keys of all databases - you can generate one yourself with the GenerateMasterKey service
+  "encryptionPassword": "string", // initial passphrase to generate the master IV
+  }
 }
 ```
 
-### Understanding the data security configurations
-TODO
+The `encryptionMasterKey` has to be encoded in a zbase32 format. We use this format mainly for readability. The key should be generated through a random process though, and we provide a service for that. To generate a masterkey, follow these steps:
+
+**Start the node** (If it's not running)
+1. Navigate to the folder node/BlockBase.Node
+
+2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+
+**Generating a master key**
+1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+
+2. Click on `/api/Requester/GenerateMasterKey` then on `Try it out` and then on `Execute`.
+
+Inspect the response message.
+
+```js
+{
+  "succeeded": true,
+  "exception": null,
+  "response": "<your master key should be here>",
+  "responseMessage": "Master key successfully created. Master Key = <your master key should be here>"
+}
+```
+3. Copy the master key and paste it on the value of the `encryptionMasterKey` on the `securityConfigurations` of the BlockBase.Node/appsettings.json file.
+
 
 ## Step #3 - Requesting the sidechain
 After you've configured your sidechain, you can request it to the network. This will make your sidechain configuration public to all the providers on the network. To do that, follow these steps:
 
-**Starting the node**
+**Start the node**
 1. Navigate to the folder node/BlockBase.Node
 
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
 **Requesting the sidechain**
-1. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+1. Open a browser and navigate to the link you set as parameter for urls.
 
 2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
@@ -168,34 +196,109 @@ After you've announced your sidechain request, now you have to participate on th
 Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**. You don't need to request the sidechain again, that has already been done.
 
 **Start the sidechain maintenance**
-1. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+1. Open a browser and navigate to the link you set as parameter for urls.
 
 2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
 3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out`. 
 
-4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. Otherwise, select and delete the whole json configuration in the body of the request.
+4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. **Otherwise, select and delete the whole json configuration in the body of the request** and jump to step 5.
+  
+	4.1. If you didn't store your data security configuration on the appsettings.json file, you will need to pass it here.
+  
+	4.2. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
 
-5. Press `Execute`.
+```js
+{
+  {
+  "filePassword": "string", // encrypts the contents of the file where the keys are going to get stored
+  "encryptionMasterKey": "string", // master key for generation of all encryption keys of all databases
+  "encryptionPassword": "string", // initial passphrase to generate master IV
+  }
+```
 
+5. Click `Execute`.
+
+## Your node is configured and running
+Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a little while to appear there.
 
 # Running as a service provider
-Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. To do this, you have to follow the steps below.
+Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. Running the node as a SP is easier than as a SR. There are less steps involved. A SP has to worry mostly about his infrastructure, and about the costs/benefits of participating on building a sidechain that has been requested.
 
-TODO
+There are two main ways to apply to participate on producing sidechains. The first one is manual and the second one is automatic. With the manual way you can identify a sidechain that you want to participate on, read all its requirements, and decide if you want to apply or not. With the automatic way you can configure your node to be on the lookout for sidechain requests that fulfill your participation requirements. Both ways are explained further below.
 
-## Sending a candidature for a sidechain
-if you intend on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
+### Participating on a sidechain means you have responsabilities
+A sidechain request has information about the stake in BBT it requires from the providers in order to participate. This stake is a pledge in BBT as collateral that will be lost if the provider doesn't do his job right. A provider may stake more BBT than the required amount on the sidechain request. The main reason to do this is explained right below.
 
-`https://`_`apiendpoint`_`/api/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_`&producerType=`_`producerType`_
+### Applying to participate on a sidechain doesn't mean your node will be selected
+A sidechain that has been requested has a specified number of validator, history, and full nodes requested. If the number of nodes that apply to a certain position is higher than the number of requested nodes, some nodes will be left out. This process is done through a random elimination process that favors providers with the larger stake on the sidechain. The providers who are left out remain on a list of backup nodes that will start producing if one of the selected nodes leaves the network or is kicked out.
 
-Where workTime is the amount of time in seconds the producers will work on the chain, and producerType is the type of producer it intends to be. ProducerType may assume one of three numbers: 1, 2 and 3. This will determine the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also produces the sidechain, and 3 is a node that produces the sidechain and executes the operations on a local database.
+## Manually applying to participate on a sidechain
+To participate on a sidechain manually the first thing you need to do is to find a sidechain that has been requested and is currently in a candidature phase. That means it is currently accepting providers to join. To participate on a sidechain manually, follow these steps:
+
+**Start the node** (If it's not running)
+1. Navigate to the folder node/BlockBase.Node
+
+2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+
+**Find a sidechain**
+Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and find a sidechain that is in a candidature phase and take note of the sidechain account name.
+
+**Apply to participate**
+1. Open a browser and navigate to the link you set as parameter for urls.
+
+2. On the upper right side of the swagger page choose the "Service Provider" API from the list of available APIs.
+
+3. Click on `/api/Producer/RequestToProduceSidechain` then on `Try it out`.
+
+4. Fill the fields
+
+	4.1. `chainName`: the name of the sidechain
+	4.2. `stake`: the amount of stake in BBT you want to put as collateral
+	4.3. `producerType`: the type of provider your node is going to be. *ProducerType may assume one of three numbers: 1, 2 and 3, which states the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also builds the sidechain, and 3 is a node that builds the sidechain and executes the operations on a local database.*
+  
+5. Click `Execute`.
+
+## Automatically applying to participate on sidechains
+If you want to fire and forget your node you can configure it to automatically apply to sidechains that fulfill your participation requirements. To do that, you need to edit the BlockBase.Node/appsettings.json file and edit the configuration below.
+
+**Note: if you change the configurations you will need to restart the node.**
+
+By setting any of the `IsActive` active properties to `true`, when the node starts it will automatically try to find sidechains that meet your requirements.
+
+```js
+{
+  "AutomaticProduction": {
+    "ValidatorNode": {
+      "IsActive": false, // Determines if the automatic production as a validator is active
+      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
+    },
+    "HistoryNode": {
+      "IsActive": false, // Determines if the automatic production as a validator is active
+      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
+      "MaxSidechainGrowthPerMonthInMB":0 // The maximum amount in MB a sidechain may grow per month
+    },
+    
+    "FullNode": {
+      "IsActive": false, // Determines if the automatic production as a validator is active
+      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
+      "MaxSidechainGrowthPerMonthInMB":0 // The maximum amount in MB a sidechain may grow per month
+    },
+    "MaxNumberOfSidechains":0, // The maximum number of sidechains the node will work on simultaneously
+    "MaxGrowthPerMonthInMB":0 // The maximum growth in MB per month that all sidechains may contribute to
+  }
+}
+```
 
 
-# Staking BBT
+# Manually Staking and Unstaking BBT
 In order to stake BBT as a service requester, run the 'addstake' action in the blockbase token contract with both 'owner' and 'sidechain' with your sidechain account name.
 
 In case you want to stake as a service provider, run the 'addstake' action with 'owner' as your producer accout name and 'sidechain' as the sidechain you want to candidate as a producer.
+
 
 # Smart Contracts
 **blockbaseopr** - Operations Contract
@@ -203,44 +306,11 @@ In case you want to stake as a service provider, run the 'addstake' action with 
 
 
 
-# Example: Running a chain with 3 producers
-**Note: Public networks where the BlockBase contracts are currently deployed are the EOS Mainnet, as well as Jungle and Kylin test networks.**
-
-You’ll need to run four different instances of the BlockBase node (either in different machines or in the same machine for testing purposes, as long as they’re listening on different ports).
-
-You also need four different EOS accounts in the EOSIO network where you’re going to run the nodes, these need to be configured in the appsettings.json file inside the BlockBase.Node folder, alongisde the ports they’re using for the peer to peer connectinos. For the moment, you’ll need to use the key of the active permission of this account in order to run the node, we suggest creating accounts for the sole purpose of running BlockBase nodes. We also plan to add support for custom permissions in future updates.
-
-Next, you need to have some BBT in order do add stake to your new chain. To get BBT on the mainnet you can participate in our Airgrabs, in order to get BBT in Jungle or Kylin just drop a message in our Telegram channel.
-
-Adding stake is done through the addstake action in the BlockBase token contract, which can be used with cleos like the following examples:
-
-Staking as a requester:
-
-`cleos -u `_`network_endpoint`_` push action blockbasetkn addstake '[`_`sidechainaccount`_`,`_`sidechainaccount`_`,"X.XXXX BBT", ""]'`
-
-Staking as a provider:
-
-`cleos -u `_`network_endpoint`_` push action blockbasetkn addstake '[`_`provideraccount`_`,`_`sidechainaccount`_`,"X.XXXX BBT", ""]'`
-
-The ammount to stake should be higher than what you plan to set as a minimum stake as a requester. The providers can add the stake after the node is running and the sidechain has been configured.
-
-After configuring each node, run the four nodes:
-
-`dotnet run --project `_`BlockBase.Node_Folder`_` --urls=`_`Api_Endpoint`_
-
-Next you’ll need to start and configure the chain, using the requests to the api endpoint explained in the “Creating a new sidechain” section above.
-
-For the providers, you’ll need to follow the “Sending a candidature for a sidechain” section above for each one.
-
-If everything was configured correctly, the BlockBase sidechain should start after the candidature period is over.
-
-
-
-## Querying BlockBase sidechains
+# Querying BlockBase sidechains
 
 To query a BlockBase sidechain, you need to send the query to the following node endpoint of the service requester:
 
-`https://`_`apiendpoint`_`/api/Query/ExecuteQuery/`
+_`apiendpoint`_`/api/Query/ExecuteQuery/`
 
 With the query string inside the body of the POST request.
 
