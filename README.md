@@ -10,6 +10,9 @@ The BlockBase node can be run for two different purposes:
 ## Development State
 The node software is in beta and in active testing on the EOS network. The software is usable, but will probably still have bugs. Use with care and avoid large sums of BBT.
 
+## Smart Contracts
+If you are curious about which smart contracts are used, you can find them on bloks.io here [blockbaseopr - Operations Contract](https://bloks.io/account/blockbaseopr) [blockbasetkn - Token Contract](https://bloks.io/account/blockbasetkn)
+
 # Installation Guide
 Here you can find all the steps to run a node as a [service requester](#Running-a-Node-as-a-Service-Requester) or as a [service provider](#Running-as-a-service-provider). This installation guide is tailored to a Linux installation, but it should work on Windows too.
 
@@ -178,7 +181,7 @@ Inspect the response message.
 ## Step #3 - Requesting the sidechain
 After you've configured your sidechain, you can request it to the network. This will make your sidechain configuration public to all the providers on the network. To do that, follow these steps:
 
-**Start the node**
+**Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
@@ -193,7 +196,7 @@ After you've configured your sidechain, you can request it to the network. This 
 ## Step #4 - Starting the sidechain maintenance
 After you've announced your sidechain request, now you have to participate on the maintenance of the sidechain. Your node is responsible for keeping up with the providers, for sending them transactions with the data you will want to store, and for moving forward with the lifecycle of the sidechain.
 
-Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**. You don't need to request the sidechain again, that has already been done.
+Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**.
 
 **Start the sidechain maintenance**
 1. Open a browser and navigate to the link you set as parameter for urls.
@@ -220,10 +223,10 @@ Starting the maintenance of the sidechain is a fundamental step for your network
 5. Click `Execute`.
 
 ## Your node is configured and running
-Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a little while to appear there.
+Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a while to appear there.
 
 # Running as a service provider
-Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. Running the node as a SP is easier than as a SR. There are less steps involved. A SP has to worry mostly about his infrastructure, and about the costs/benefits of participating on building a sidechain that has been requested.
+Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. Running the node as a SP is easier than as a SR. There are less steps involved. A SP has to worry mostly about the infrastructure, and about the costs/benefits of participating on building a sidechain that has been requested.
 
 There are two main ways to apply to participate on producing sidechains. The first one is manual and the second one is automatic. With the manual way you can identify a sidechain that you want to participate on, read all its requirements, and decide if you want to apply or not. With the automatic way you can configure your node to be on the lookout for sidechain requests that fulfill your participation requirements. Both ways are explained further below.
 
@@ -293,17 +296,12 @@ By setting any of the `IsActive` active properties to `true`, when the node star
 }
 ```
 
-
 # Manually Staking and Unstaking BBT
-In order to stake BBT as a service requester, run the 'addstake' action in the blockbase token contract with both 'owner' and 'sidechain' with your sidechain account name.
+A service requester or service provider may manually add or remove stake to and from the sidechain. There are some restrictions though. A SR can not remove its stake from the sidechain before terminating the sidechain first. Similarly, a SP can not remove its stake before it leaves the production of the sidechain. Also, it doesn't make sense for a SP to add more stake to a sidechain it's already actively producing. It wouldn't help in anything.
 
-In case you want to stake as a service provider, run the 'addstake' action with 'owner' as your producer accout name and 'sidechain' as the sidechain you want to candidate as a producer.
+It does make sense though, for the SR to regularly add stake to the sidechain to make sure he has enough BBT to pay to the SPs. In order to add more stake to the sidechain, the EOS account associated to the SR sidechain has to have the required amount of BBT to stake.
 
-
-# Smart Contracts
-**blockbaseopr** - Operations Contract
-**blockbasetkn** - Token Contract
-
+After following all the above steps you won't have difficulties in finding the corresponding APIs on the "Service Requester" and "Service Provider" APIs. To add stake use the `addStake` service, and to remove stake use the `claimStake` method.
 
 
 # Querying BlockBase sidechains
