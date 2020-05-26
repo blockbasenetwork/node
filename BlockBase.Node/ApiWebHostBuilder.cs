@@ -68,6 +68,7 @@ namespace BlockBase.Api
                 services.Configure<NodeConfigurations>(configuration.GetSection("NodeConfigurations"));
                 services.Configure<RequesterConfigurations>(configuration.GetSection("RequesterConfigurations"));
                 services.Configure<SidechainPhasesTimesConfigurations>(configuration.GetSection("SidechainPhasesTimesConfigurations"));
+                services.Configure<SecurityConfigurations>(configuration.GetSection("SecurityConfigurations"));
                 services.AddOptions();
                 services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(

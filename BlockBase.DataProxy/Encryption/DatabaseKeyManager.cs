@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using System.Threading.Tasks;
 using System.Linq;
-using BlockBase.DataProxy.Pocos;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -33,7 +32,7 @@ namespace BlockBase.DataProxy.Encryption
             _connector = connector;
             _nodeConfigurations = nodeConfigurations.Value;
         }
-        public void SetInitialSecrets(DataEncryptionConfig config)
+        public void SetInitialSecrets(SecurityConfigurations config)
         {
             var filePassword = "";
             var encryptionMasterKey = "";

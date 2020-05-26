@@ -16,7 +16,8 @@ using BlockBase.Runtime.Network;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.DataPersistence.Utils;
-using BlockBase.DataProxy.Pocos;
+using System.IO;
+using System.Text;
 
 namespace BlockBase.Node.Controllers
 {
@@ -36,10 +37,10 @@ namespace BlockBase.Node.Controllers
         private PeerConnectionsHandler _peerConnectionsHandler;
         private SidechainMaintainerManager _sidechainMaintainerManager;
         private DatabaseKeyManager _databaseKeyManager;
-
+        private SecurityConfigurations _securityConfigurations;
         private IConnectionsChecker _connectionsChecker;
 
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
@@ -54,6 +55,7 @@ namespace BlockBase.Node.Controllers
             _sidechainMaintainerManager = sidechainMaintainerManager;
             _databaseKeyManager = databaseKeyManager;
             _connectionsChecker = connectionsChecker;
+            _securityConfigurations = securityConfigurations.Value;
         }
 
 
@@ -188,11 +190,25 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
             OperationId = "RunSidechainMaintenance"
         )]
-        public async Task<ObjectResult> RunSidechainMaintenance([FromBody] DataEncryptionConfig config)
+        public async Task<ObjectResult> RunSidechainMaintenance()
         {
+            SecurityConfigurations config;
             try
             {
-                _databaseKeyManager.SetInitialSecrets(config);
+
+
+                if (_securityConfigurations.UseSecurityConfigurations)
+                    _databaseKeyManager.SetInitialSecrets(_securityConfigurations);
+
+                else
+                {
+                    using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
+                    {
+                        var json = await reader.ReadToEndAsync();
+                        config = JsonConvert.DeserializeObject<SecurityConfigurations>(json);
+                    }
+                    _databaseKeyManager.SetInitialSecrets(config);
+                }
                 string tx = null;
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 
