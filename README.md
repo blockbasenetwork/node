@@ -118,12 +118,12 @@ The number of nodes you want for your sidechain depends on the security you need
 In some cases, it may make sense to have a preselected list of accounts that will have a reserved spot for them on the network you're requesting. This is especially useful if you want your network to be partially or fully produced by nodes you manage.
 
 ## Step #2 - Configuring the data security
-BlockBase has an encryption layer built in that allows you to encrypt all you data before it is sent to the providers. You can configure that security the appsettings file. Before you do though, you have to consider the implications of doing so.
+BlockBase has an encryption layer built in that allows you to encrypt all your data before it is sent to the providers. You can configure the security on the appsettings file. Before you do that though, you have to consider the implications of doing so.
 
-Storing all your data passwords on your appsettings file poses a security problem. For that reason, you may leave this section unconfigured. If you choose to do so, you have to consider the following consequences:
-1. You will have to provide that configuration further ahead when you *"Start the sidechain maintenance"* and that information will be stored only in memory.
+Storing all your encryption passwords on your appsettings file poses a security problem. Furthermore, the owner of the data may not be the requester of the sidechain, and may want to keep the encryption passwords on his side. For that reason, you may choose to leave this section unconfigured. If you choose to do so, you have to consider the following consequences:
+1. That security configuration will need to be provided further ahead when you *"Start the sidechain maintenance"* and that information will be stored only in memory.
 
-2. You will have to safely store the configuration you provided on another medium. **If you lose the configuration you will lose all access to all encrypted data**!
+2. The owner of the data will have to safely store the security configuration on another medium. **If the configuration is lost all access to all encrypted data will be lost**!
 
 3. If the node or the machine its running on crash for some reason, when you restart the node you will have to go through the *"Start the sidechain maintenance"* step again and provide the configuration information again.
 
@@ -133,24 +133,46 @@ If you wish to keep the data security configuration on your appsettings file her
 
 ```js
 {
-  
-  "isEncrypted": true,
-  "filePassword": "string",
-  "encryptionMasterKey": "string",
-  "encryptionPassword": "string",
-  "publicKey": "string",
-  "encryptedData": "string"
-
+  "securityConfigurations":
+  {
+  "useSecurityConfigurations": true, // indicates if the security configurations here should be used or ignored
+  "filePassword": "string", // encrypts the contents of the file where the keys are going to get stored
+  "encryptionMasterKey": "string", // a master key for generation of all encryption keys of all databases - you can generate one yourself with the GenerateMasterKey service
+  "encryptionPassword": "string", // initial passphrase to generate the master IV
+  }
 }
 ```
 
-### Understanding the data security configurations
-TODO
+The `encryptionMasterKey` has to be encoded in a zbase32 format. We use this format mainly for readability. The key should be generated through a random process though, and we provide a service for that. To generate a masterkey, follow these steps:
+
+**Start the node** (If it's not running)
+1. Navigate to the folder node/BlockBase.Node
+
+2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+
+
+**Generating a master key**
+1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+
+2. Click on `/api/Requester/GenerateMasterKey` then on `Try it out` and then on `Execute`.
+
+Inspect the response message.
+
+```js
+{
+  "succeeded": true,
+  "exception": null,
+  "response": "<your master key should be here>",
+  "responseMessage": "Master key successfully created. Master Key = <your master key should be here>"
+}
+```
+3. Copy the master key and paste it on the value of the `encryptionMasterKey` on the `securityConfigurations` of the BlockBase.Node/appsettings.json file.
+
 
 ## Step #3 - Requesting the sidechain
 After you've configured your sidechain, you can request it to the network. This will make your sidechain configuration public to all the providers on the network. To do that, follow these steps:
 
-**Starting the node**
+**Start the node**
 1. Navigate to the folder node/BlockBase.Node
 
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
@@ -174,9 +196,24 @@ Starting the maintenance of the sidechain is a fundamental step for your network
 
 3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out`. 
 
-4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. Otherwise, select and delete the whole json configuration in the body of the request.
+4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. **Otherwise, select and delete the whole json configuration in the body of the request** and jump to step 5.
+
+4.1. If you didn't store your data security configuration on the appsettings.json file, you will need to pass it here.
+4.2. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
+
+```js
+{
+  {
+  "filePassword": "string", // encrypts the contents of the file where the keys are going to get stored
+  "encryptionMasterKey": "string", // master key for generation of all encryption keys of all databases
+  "encryptionPassword": "string", // initial passphrase to generate master IV
+  }
+```
 
 5. Press `Execute`.
+
+## Your node is configured and running
+Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a little while to appear there.
 
 
 # Running as a service provider
