@@ -35,6 +35,12 @@ The BlockBase node software is built with C# and runs on the .NET Core Platform,
 
 3. The latest version of PostgreSQL (It should work fine with previous versions too)
 
+## Downloading the code
+To download the code and run the node follow the following steps:
+1. Create a folder where the code will be downloaded to
+
+2. Open a terminal on that folder and run `git clone https://github.com/blockbasenetwork/node.git`
+
 ## Configuring the Node
 Inside BlockBase.Node/appsettings.json you'll find all the settings you need to configure in order to run the BlockBase node.
 
@@ -62,25 +68,20 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
   }
 }
 ```
-## Downloading the code and running the node
-To download the code and run the node follow the following steps:
-1. Create a folder where the code will be downloaded to
-
-2. Open a terminal on that folder and run `git clone https://github.com/blockbasenetwork/node.git`
-
-3. Navigate to the folder node/BlockBase.Node
-
-4. Run the code with the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
-
-5. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
 
 ## Checking if everything is correctly configured
-With the node running, the first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
-1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+The first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
+1. Navigate to the folder node/BlockBase.Node
 
-2. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
+2. Run the code with the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
-3. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with you configuration.
+3. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+
+4. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
+
+5. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
+
+6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with you configuration.
 
 # Running a Node as a Service Requester
 Running a node as a SR allows you to store your data on the BlockBase Network. To do this, you have to follow the steps below.
@@ -177,7 +178,7 @@ After you've configured your sidechain, you can request it to the network. This 
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
 **Requesting the sidechain**
-1. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+1. Open a browser and navigate to the link you set as parameter for urls.
 
 2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
@@ -189,14 +190,13 @@ After you've announced your sidechain request, now you have to participate on th
 Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**. You don't need to request the sidechain again, that has already been done.
 
 **Start the sidechain maintenance**
-1. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+1. Open a browser and navigate to the link you set as parameter for urls.
 
 2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
 3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out`. 
 
 4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. **Otherwise, select and delete the whole json configuration in the body of the request** and jump to step 5.
-
   4.1. If you didn't store your data security configuration on the appsettings.json file, you will need to pass it here.
   4.2. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
 
@@ -209,7 +209,7 @@ Starting the maintenance of the sidechain is a fundamental step for your network
   }
 ```
 
-5. Press `Execute`.
+5. Click `Execute`.
 
 ## Your node is configured and running
 Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a little while to appear there.
@@ -225,9 +225,8 @@ A sidechain request has information about the stake in BBT it requires from the 
 ### Applying to participate on a sidechain doesn't mean your node will be selected
 A sidechain that has been requested has a specified number of validator, history, and full nodes requested. If the number of nodes that apply to a certain position is higher than the number of requested nodes, some nodes will be left out. This process is done through a random elimination process that favors providers with the larger stake on the sidechain. The providers who are left out remain on a list of backup nodes that will start producing if one of the selected nodes leaves the network or is kicked out.
 
-## Applying to participate on a sidechain manually
+## Manually applying to participate on a sidechain
 To participate on a sidechain manually the first thing you need to do is to find a sidechain that has been requested and is currently in a candidature phase. That means it is currently accepting providers to join. To participate on a sidechain manually, follow these steps:
-
 
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
@@ -235,19 +234,24 @@ To participate on a sidechain manually the first thing you need to do is to find
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
 
 **Find a sidechain**
-1. Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and find a sidechain that is in a candidature phase and take note of the sidechain account name.
+Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and find a sidechain that is in a candidature phase and take note of the sidechain account name.
 
 **Apply to participate**
+1. Open a browser and navigate to the link you set as parameter for urls.
 
+2. On the upper right side of the swagger page choose the "Service Provider" API from the list of available APIs.
+
+3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out`.
+
+4. Fill the fields
+  4.1. `chainName`: the name of the sidechain
+  4.2. `stake`: the amount of stake in BBT you want to put as collateral
+  4.3. `producerType`: the type of provider your node is going to be. *ProducerType may assume one of three numbers: 1, 2 and 3. This will determine the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also produces the sidechain, and 3 is a node that produces the sidechain and executes the operations on a local database.*
+  
+5. Click `Execute`.
+
+## Automatically applying to participate on sidechains
 TODO
-
-## Sending a candidature for a sidechain
-if you intend on running the node as a service provider, you can use the following action to send a candidature to a sidechain:
-
-`https://`_`apiendpoint`_`/api/Producer/SendCandidatureToChain?chainName=`_`ChainName`_`&workTime=`_`WorkTimeInSeconds`_`&producerType=`_`producerType`_
-
-Where workTime is the amount of time in seconds the producers will work on the chain, and producerType is the type of producer it intends to be. ProducerType may assume one of three numbers: 1, 2 and 3. This will determine the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also produces the sidechain, and 3 is a node that produces the sidechain and executes the operations on a local database.
-
 
 # Staking BBT
 In order to stake BBT as a service requester, run the 'addstake' action in the blockbase token contract with both 'owner' and 'sidechain' with your sidechain account name.
