@@ -11,7 +11,7 @@ The BlockBase node can be run for two different purposes:
 The node software is in beta and in active testing on the EOS network. The software is usable, but will probably still have bugs. Use with care and avoid large sums of BBT.
 
 # Installation Guide
-Here you can find all the steps to run a node as a service requester or as a service provider. This installation guide is tailored to a Linux installation, but it should work on Windows too.
+Here you can find all the steps to run a node as a [service requester](#Running-a-Node-as-a-Service-Requester) or as a [service provider](#Running-as-a-service-provider). This installation guide is tailored to a Linux installation, but it should work on Windows too.
 
 ## EOS Accounts
 Each instance of the node has to have an EOS account associated to it. We recommend using a new EOS account just for that purpose. This account must have enough RAM, CPU, and NET to work properly. We recommend the following steps to prepare your EOS account:
@@ -215,9 +215,19 @@ Starting the maintenance of the sidechain is a fundamental step for your network
 ## Your node is configured and running
 Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a little while to appear there.
 
-
 # Running as a service provider
-Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. To do this, you have to follow the steps below.
+Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. Running the node as a SP is easier than as a SR. There are less steps involved. A SP has to worry mostly about his infrastructure, and about the costs/benefits of participating on building a sidechain that has been requested.
+
+There are two main ways to apply to participate on producing sidechains. The first one is manual and the second one is automatic. With the manual way you can identify a sidechain that you want to participate on, read all its requirements, and decide if you want to apply or not. With the automatic way you can configure your node to be on the lookout for sidechain requests that fulfill your participation requirements. Both ways are explained further below.
+
+### Participating on a sidechain means you have responsabilities
+A sidechain request has information about the stake in BBT it requires from the providers in order to participate. This stake is a pledge in BBT as collateral that will be lost if the provider doesn't do his job right. A provider may stake more BBT than the required amount on the sidechain request. The main reason to do this is explained right below.
+
+### Applying to participate on a sidechain doesn't mean your node will be selected
+A sidechain that has been requested has a specified number of validator, history, and full nodes requested. If the number of nodes that apply to a certain position is higher than the number of requested nodes, some nodes will be left out. This process is done through a random elimination process that favors providers with the larger stake on the sidechain. The providers who are left out remain on a list of backup nodes that will start producing if one of the selected nodes leaves the network or is kicked out.
+
+## Applying to participate on a sidechain manually
+To participate on a sidechain manually the first thing you need to do is to find a sidechain that has been requested and is currently in a candidature phase. That means it is currently accepting providers to join.
 
 TODO
 
