@@ -84,7 +84,7 @@ The first thing you should check is if everything is correctly configured. Follo
 
 5. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
 
-6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with you configuration.
+6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with your configuration.
 
 # Running a Node as a Service Requester
 Running a node as a SR allows you to store your data on the BlockBase Network. To do this, you have to follow the steps below.
@@ -198,18 +198,22 @@ After you've announced your sidechain request, now you have to participate on th
 
 Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**.
 
-**Start the sidechain maintenance**
+### Start the sidechain maintenance with the security on the appsettings file
 1. Open a browser and navigate to the link you set as parameter for urls.
 
 2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
-3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out`. 
+3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out` and then `Execute`
 
-4. If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request. **Otherwise, select and delete the whole json configuration in the body of the request** and jump to step 5.
-  
-	4.1. If you didn't store your data security configuration on the appsettings.json file, you will need to pass it here.
-  
-	4.2. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
+### Start the sidechain maintenance without the security on the appsettings file
+If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request.
+
+Unfortunately, for technical reasons you won't be able to do this through swagger so you will have to use an alternative method. We recommend you to use [Postman](https://www.postman.com/) for that. Follow these steps:
+1. Download Postman.
+
+2. Prepare a Post request to _`your_api_endpoint`_`/api/Requester/RunSidechainMaintenance/`
+   
+3. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
 
 ```js
 {
@@ -220,12 +224,12 @@ Starting the maintenance of the sidechain is a fundamental step for your network
   }
 ```
 
-5. Click `Execute`.
+4. Click `Send`.
 
 ## Your node is configured and running
 Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a while to appear there.
 
-# Running as a service provider
+# Running as a Service Provider
 Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. Running the node as a SP is easier than as a SR. There are less steps involved. A SP has to worry mostly about the infrastructure, and about the costs/benefits of participating on building a sidechain that has been requested.
 
 There are two main ways to apply to participate on producing sidechains. The first one is manual and the second one is automatic. With the manual way you can identify a sidechain that you want to participate on, read all its requirements, and decide if you want to apply or not. With the automatic way you can configure your node to be on the lookout for sidechain requests that fulfill your participation requirements. Both ways are explained further below.
