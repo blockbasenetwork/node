@@ -32,7 +32,7 @@ Each node has to have an EOS account associated to it. We recommend using a new 
 
 ## Software Prerequisites
 The BlockBase node software is built with C# and runs on the .NET Core Platform, and uses MongoBD and PostgreSQL to store its data. Before running the node, you should install:
-1. .NET Core SDK 2.1 (BlockBase doesn't run on 3.1)
+1. .NET Core SDK 2.1 (The current version of BlockBase doesn't run on 3.1)
 
 2. The latest version of MongoDB Server (It should work fine with previous versions too)
 
@@ -76,7 +76,7 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
 The first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
 1. Navigate to the folder node/BlockBase.Node
 
-2. Run the code with the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Run the code with the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
 
 3. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
 
@@ -158,7 +158,7 @@ The `encryptionMasterKey` has to be encoded in a zbase32 format. We use this for
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
 
 **Generating a master key**
 1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
@@ -184,7 +184,7 @@ After you've configured your sidechain, you can request it to the network. This 
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
 
 **Requesting the sidechain**
 1. Open a browser and navigate to the link you set as parameter for urls.
@@ -242,7 +242,7 @@ To participate on a sidechain manually the first thing you need to do is to find
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
 
 **Find a sidechain**
 Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and find a sidechain that is in a candidature phase and take note of the sidechain account name.
