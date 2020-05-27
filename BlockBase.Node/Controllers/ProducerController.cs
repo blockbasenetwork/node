@@ -17,6 +17,7 @@ using BlockBase.Network.Mainchain.Pocos;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain.Enums;
 using BlockBase.DataPersistence.Utils;
+using BlockBase.Domain;
 
 namespace BlockBase.Node.Controllers
 {
@@ -136,7 +137,7 @@ namespace BlockBase.Node.Controllers
         /// Sends a transaction to BlockBase Operations Contract that contains the producer application information for producing the sidechain
         /// </summary>
         /// <param name="chainName">Account name of the sidechain</param>
-        /// <param name="workTime">How much time in seconds the producer will produce the sidechain</param>
+        /// <param name="stake">The amount of BBT that the producer want's to stake</param>
         /// <param name="producerType">The type of producer the node is going to be for this sidechain</param>
         /// <param name="forceDelete">This parameter is here only to simplify testing purposes. It makes it more easy to restart the whole system and delete previous existing databases</param>
         /// <returns>The success of the task</returns>
@@ -149,9 +150,9 @@ namespace BlockBase.Node.Controllers
             Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
             OperationId = "RequestToProduceSidechain"
         )]
-        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int workTime, int producerType)
+        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int producerType, decimal stake = 0)
         {
-            if (string.IsNullOrEmpty(chainName) || workTime <= 0)
+            if (string.IsNullOrEmpty(chainName))
             {
                 return BadRequest(new OperationResponse<bool>(new ArgumentException()));
             }
@@ -166,8 +167,14 @@ namespace BlockBase.Node.Controllers
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 
+                if(stake > 0) {
+                    var stakeTransaction = await _mainchainService.AddStake(chainName, NodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
+                    _logger.LogDebug("Sent stake to contract. Tx = " + stakeTransaction);
+                    _logger.LogDebug("Stake inserted = " + stake.ToString("F4") + " BBT");
+                }
+                
                 var secretHash = HashHelper.Sha256Data(HashHelper.Sha256Data(Encoding.ASCII.GetBytes(NodeConfigurations.SecretPassword)));
-                var transaction = await _mainchainService.AddCandidature(chainName, NodeConfigurations.AccountName, workTime, NodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), producerType);
+                var transaction = await _mainchainService.AddCandidature(chainName, NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), producerType);
 
                 _logger.LogDebug("Sent producer application. Tx = " + transaction);
 
@@ -200,7 +207,20 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RequestToLeaveSidechainProduction(string sidechainName)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(sidechainName))
+            {
+                return BadRequest(new OperationResponse<bool>(new ArgumentException()));
+            }
+            try
+            {
+                var trx = await _mainchainService.SidechainExitRequest(sidechainName);
+
+                return Ok(new OperationResponse<bool>(true, $"Exit successfully requested. Tx = {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
         }
 
         /// <summary>

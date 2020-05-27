@@ -10,11 +10,10 @@ namespace BlockBase.Network.Mainchain
     {
         Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null);
         Task<GetAccountResponse> GetAccount(string accountName);
-
-        Task<string> GetAccountStake(string sidechain, string accountName);
+        Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName);
         Task<string> AddStake(string sidechain, string accountName, string stake);
         Task<string> ClaimStake(string sidechain, string accountName);
-        Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType);
+        Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
         Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader, int limit);
@@ -31,6 +30,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> StartCandidatureTime(string owner, string permission = "active");
         Task<string> PunishProd(string owner, string permission = "active");
         Task<string> BlacklistProducer(string owner, string producerToPunish, string permission = "active");
+        Task<string> SidechainExitRequest(string sidechainName, string permission = "active");
         Task<int> ExecuteChainMaintainerAction(string actionname, string accountname, string permission = "active");
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string authorizationToAssign, string permission = "active", string accountPermission = "active");
         Task<string> LinkAuthorization(string actionName ,string accountname, string authorization, string permission = "active");

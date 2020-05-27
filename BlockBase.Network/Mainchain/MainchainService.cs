@@ -41,10 +41,10 @@ namespace BlockBase.Network.Mainchain
             => await TryAgain(async () => await EosStub.GetAccount(accountName), NetworkConfigurations.MaxNumberOfConnectionRetries);
 
 
-        public async Task<string> GetAccountStake(string sidechain, string accountName)
+        public async Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName)
         {
-            //TODO
-            throw new NotImplementedException();
+            var listLedger = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, sidechain), MAX_NUMBER_OF_TRIES);
+            return listLedger.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
         }
 
         #region Transactions
@@ -67,12 +67,12 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
-        public async Task<string> AddCandidature(string chain, string accountName, int worktimeInSeconds, string publicKey, string secretHash, int producerType) =>
+        public async Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType) =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_CANDIDATE,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountName,
-                CreateDataForAddCandidate(chain, accountName, worktimeInSeconds, publicKey, secretHash, producerType)),
+                CreateDataForAddCandidate(chain, accountName, publicKey, secretHash, producerType)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
@@ -232,12 +232,12 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
-        public async Task<string> ExitRequest(string owner, string permission = "active") =>
+        public async Task<string> SidechainExitRequest(string sidechainName, string permission = "active") =>
             await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.EXIT_REQUEST,
                 NetworkConfigurations.BlockBaseOperationsContract,
-                owner,
-                CreateDataForExitRequest(owner),
+                NodeConfigurations.AccountName,
+                CreateDataForSidechainExitRequest(sidechainName),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -571,13 +571,12 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, int worktimeInSeconds, string publicKey, string secretHash, int producerType)
+        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, string publicKey, string secretHash, int producerType)
         {
             return new Dictionary<string, object>()
             {
                 {EosParameterNames.OWNER, chain},
                 {EosParameterNames.CANDIDATE, name},
-                {EosParameterNames.WORK_TIME_IN_SECONDS, worktimeInSeconds},
                 {EosParameterNames.PUBLIC_KEY, publicKey},
                 {EosParameterNames.SECRET_HASH, secretHash},
                 {EosParameterNames.PRODUCER_TYPE, producerType}
@@ -735,12 +734,12 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForExitRequest(string chain)
+        private Dictionary<string, object> CreateDataForSidechainExitRequest(string sidechainName)
         {
             return new Dictionary<string, object>()
             {
-                { EosParameterNames.OWNER, chain },
-                { EosParameterNames.PRODUCER, NodeConfigurations.AccountName },
+                { EosParameterNames.OWNER, sidechainName },
+                { EosParameterNames.ACCOUNT, NodeConfigurations.AccountName },
             };
         }
 

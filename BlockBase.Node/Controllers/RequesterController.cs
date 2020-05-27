@@ -152,6 +152,7 @@ namespace BlockBase.Node.Controllers
         /// <summary>
         /// Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration
         /// </summary>
+        /// <param name="stake">The amount of BBT that the producer want's to stake</param>
         /// <returns>The success of the transaction</returns>
         /// <response code="200">Chain started with success</response>
         /// <response code="500">Error starting chain</response>
@@ -161,11 +162,18 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to request a new sidechain for storing his databases",
             OperationId = "RequestNewSidechain"
         )]
-        public async Task<ObjectResult> RequestNewSidechain()
+        public async Task<ObjectResult> RequestNewSidechain(decimal stake = 0)
         {
             try
             {
                 var configuration = GetSidechainConfigurations();
+
+                if(stake > 0) {
+                    string stakeToInsert = stake.ToString("F4") + " BBT";
+                    var stakeTransaction = await _mainchainService.AddStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName, stakeToInsert);
+                    _logger.LogDebug("Stake sent to contract. Tx = " + stakeTransaction);
+                    _logger.LogDebug("Stake inserted = " + stakeToInsert);
+                }
 
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
                 var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
