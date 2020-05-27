@@ -132,7 +132,7 @@ namespace BlockBase.Node.Controllers
         /// <summary>
         /// Gets the current state of a given sidechain
         /// </summary>
-        /// <param name="chainName">Name of the sidechain</param>
+        /// <param name="sidechainName">Name of the sidechain</param>
         /// <returns>The current state of the contract</returns>
         /// <response code="200">Contract state retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
@@ -141,29 +141,64 @@ namespace BlockBase.Node.Controllers
         [SwaggerOperation(
             Summary = "Gets the current state of a given sidechain",
             Description = "Gets the current state of a given sidechain e.g. has chain started, is in configuration phase, is in candidature phase, is secret sharing phase, etc",
-            OperationId = "GetChainState"
+            OperationId = "GetSidechainState"
         )]
-        public async Task<ObjectResult> GetChainState(string chainName)
+        public async Task<ObjectResult> GetSidechainState(string sidechainName)
         {
             try
             {
-                var contractStates = await _mainchainService.RetrieveContractState(chainName);
-                var candidates = await _mainchainService.RetrieveCandidates(chainName);
-                var tokenLedger = await _mainchainService.GetAccountStake(chainName, chainName);
-                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
+                var contractStates = await _mainchainService.RetrieveContractState(sidechainName);
+                var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
+                var tokenLedger = await _mainchainService.GetAccountStake(sidechainName, sidechainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(sidechainName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
+                var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
+                
+                var slotsTakenByReservedSeats = 0;
+                var fullNumberOfSlotsTakenByReservedSeats = 0;
+                var historyNumberOfSlotsTakenByReservedSeats = 0;
+                var validatorNumberOfSlotsTakenByReservedSeats = 0;
+
+                foreach(var reservedSeat in reservedSeats) {
+                    var producer = producers.Where(o => o.Key == reservedSeat.Key).FirstOrDefault();
+                    if(producer != null) {
+                        slotsTakenByReservedSeats = slotsTakenByReservedSeats+1;
+                        if(producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats+1;
+                        if(producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats+1;
+                        if(producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats+1;
+                    } 
+                }
+
                 var sidechainState = new SidechainState() {
-                    NumberOfFullProducersCandidatesSoFar = candidates.Where(o => o.ProducerType == 3).Count(),
-                    NumberOfHistoryProducersCandidatesSoFar = candidates.Where(o => o.ProducerType == 2).Count(),
-                    NumberOfValidatorProducersCandidatesSoFar = candidates.Where(o => o.ProducerType == 1).Count(),
+                   
                     State = contractStates.ConfigTime ? "Configure state" : contractStates.SecretTime ? "Secrect state" : contractStates.IPSendTime ? "Ip Send Time" : contractStates.IPReceiveTime ? "Ip Receive Time" : contractStates.ProductionTime ? "Production" : contractStates.Startchain ? "Startchain" : "No State in chain",
-                    Production = new Production() {
-                        CurrentNumberOfFullProducersInChain = producers.Where(o => o.ProducerType == 3).Count(),
-                        CurrentNumberOfHistoryProducersInChain = producers.Where(o => o.ProducerType == 2).Count(),
-                        CurrentNumberOfValidatorProducersInChain = producers.Where(o => o.ProducerType == 1).Count(),
-                        inProduction = contractStates.ProductionTime
+                    StakeDepletionEndDate = await StakeEndTimeCalculationAtMaxPayments(sidechainName),
+                    CurrentSidechainStake = tokenLedger.Stake,
+                    InProduction = contractStates.ProductionTime,
+                    ReservedSeats = new ReservedSeats() {
+                        TotalNumber = reservedSeats.Count,
+                        SlotsStillAvailable = reservedSeats.Count - slotsTakenByReservedSeats,
+                        SlotsTaken = slotsTakenByReservedSeats
                     },
-                    StakeDepletionEndDate = await StakeEndTimeCalculationAtMaxPayments(chainName),
-                    CurrentSidechainStake = tokenLedger.Stake
+                    FullProducersInfo = new SidechainProducersInfo() {
+                        NumberOfProducersRequired = (int) contractInfo.NumberOfFullProducersRequired,
+                        NumberOfProducersInChain = producers.Where(o => o.ProducerType == 3).Count(),
+                        CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 3).Count(),
+                        NumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats
+                        
+                    },
+                    HistoryProducersInfo = new SidechainProducersInfo() {
+                        NumberOfProducersRequired = (int) contractInfo.NumberOfHistoryProducersRequired,
+                        NumberOfProducersInChain = producers.Where(o => o.ProducerType == 2).Count(),
+                        CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 2).Count(),
+                        NumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats
+                    },
+                    ValidatorProducersInfo = new SidechainProducersInfo() {
+                        NumberOfProducersRequired = (int) contractInfo.NumberOfValidatorProducersRequired,
+                        NumberOfProducersInChain = producers.Where(o => o.ProducerType == 1).Count(),
+                        CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 1).Count(),
+                        NumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats
+                    }
                 };
                 return Ok(new OperationResponse<SidechainState>(sidechainState));
             }
@@ -300,8 +335,8 @@ namespace BlockBase.Node.Controllers
             
             var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
             var sidechainStake = (await _mainchainService.GetAccountStake(sidechainName, sidechainName));
+            
             var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
-
             var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
             var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;
             var validatorProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfValidatorProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;

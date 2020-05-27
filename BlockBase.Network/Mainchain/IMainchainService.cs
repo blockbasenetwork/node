@@ -49,6 +49,7 @@ namespace BlockBase.Network.Mainchain
         Task<List<CandidateTable>> RetrieveCandidates(string chain);
         Task<List<BlockheaderTable>> RetrieveBlockheaderList(string chain, int numberOfBlocks);
         Task<List<IPAddressTable>> RetrieveIPAddresses(string chain);
+        Task<List<ReservedSeatsTable>> RetrieveReservedSeatsTable(string account);
         Task<TransactionProposalApprovalsTable> RetrieveApprovals(string proposerAccount, string proposalName);
         Task<List<RewardTable>> RetrieveRewardTable(string account);
         Task<ContractInformationTable> RetrieveContractInformation(string chain);

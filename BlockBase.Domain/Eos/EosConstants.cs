@@ -20,6 +20,7 @@ namespace BlockBase.Domain.Eos
         public const string BLACKLIST_TABLE = "blacklist";
         public const string HISTORY_VALIDATION_TABLE = "histval";
         public const string VERIFY_SIGNATURE_TABLE = "verifysig";
+        public const string RESERVED_SEATS_TABLE = "reservedseat";
     }
 
     public class EosTableValues

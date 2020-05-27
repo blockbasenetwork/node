@@ -8,29 +8,37 @@ namespace BlockBase.Domain
 {
     public class SidechainState
     {
-        public int NumberOfFullProducersCandidatesSoFar { get; set; }
-
-        public int NumberOfHistoryProducersCandidatesSoFar { get; set; }
-
-        public int NumberOfValidatorProducersCandidatesSoFar { get; set; }
-
         public string CurrentSidechainStake { get; set; }
 
         public DateTime StakeDepletionEndDate { get; set; }
 
         public string State { get; set; }
 
-        public Production Production { get; set; }
+        public bool InProduction { get; set; }
+
+        public ReservedSeats ReservedSeats { get; set; }
+        
+        public SidechainProducersInfo FullProducersInfo { get; set; }
+
+        public SidechainProducersInfo HistoryProducersInfo { get; set; }
+
+        public SidechainProducersInfo ValidatorProducersInfo { get; set; }
     }
 
-    public class Production 
-    {
-        public bool inProduction { get; set; }
+    public class SidechainProducersInfo {
+        public int NumberOfProducersRequired { get; set; }
+        public int NumberOfProducersInChain { get; set; }
+        public int CandidatesWaitingForSeat { get; set; }
+        public int NumberOfSlotsTakenByReservedSeats { get; set; }
+    }
 
-        public int CurrentNumberOfFullProducersInChain { get; set; }
+    public class ReservedSeats {
 
-        public int CurrentNumberOfHistoryProducersInChain { get; set; }
+        public int TotalNumber { get; set; }
+        
+        public int SlotsTaken { get; set; }
+        
+        public int SlotsStillAvailable { get; set; }
 
-        public int CurrentNumberOfValidatorProducersInChain { get; set; }
     }
 }
