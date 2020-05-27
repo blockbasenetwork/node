@@ -252,8 +252,8 @@ namespace BlockBase.Node.Controllers
             try
             {
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
-
-                return Ok(new OperationResponse<bool>(true, $"Ended chain. Tx: {tx}"));
+                SecretStore.ClearSecrets();
+                return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
             }
             catch (Exception e)
             {

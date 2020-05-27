@@ -7,6 +7,7 @@ using BlockBase.Utils;
 using System.Text;
 using System.Security.Cryptography;
 using BlockBase.Utils.Crypto;
+using System.IO;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -14,7 +15,7 @@ namespace BlockBase.DataProxy.Encryption
     public class SecretStore : ISecretStore
     {
         private Dictionary<string, byte[]> _secretStoreDict = new Dictionary<string, byte[]>();
-        private static readonly string keysFileName = "keys.txt";
+        private static readonly string KEYS_FILE_NAME = "keys.txt";
         private ILogger _logger;
         private byte[] _key;
         private byte[] _iv;
@@ -34,12 +35,12 @@ namespace BlockBase.DataProxy.Encryption
 
             _secretStoreDict.Add(secretId, key);
             var iv = secretId != EncryptionConstants.MASTER_KEY && secretId != EncryptionConstants.MASTER_IV ? Base32Encoding.ZBase32.ToBytes(secretId) : _iv;
-            FileWriterReader.Write(keysFileName, secretId + ":" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(key, _key, iv)), System.IO.FileMode.Append);
+            FileWriterReader.Write(KEYS_FILE_NAME, secretId + ":" + Base32Encoding.ZBase32.GetString(AES256.EncryptWithCBC(key, _key, iv)), System.IO.FileMode.Append);
         }
 
         public void LoadSecrets()
         {
-            var fileLines = FileWriterReader.Read(keysFileName);
+            var fileLines = FileWriterReader.Read(KEYS_FILE_NAME);
             foreach (var line in fileLines)
             {
                 var idKey = line.Split(":");
@@ -72,6 +73,11 @@ namespace BlockBase.DataProxy.Encryption
             Array.Resize( ref hashIV, 16 );
 
             _iv = hashIV;
+        }
+
+        public static void ClearSecrets()
+        {
+            File.Delete(KEYS_FILE_NAME);
         }
     }
 }
