@@ -59,7 +59,32 @@ namespace BlockBase.Node.Controllers
                 var clientLedger = await _mainchainService.RetrieveClientTokenLedgerTable(sidechainName);
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
 
-                return Ok(new OperationResponse<ContractInformationTable>(contractInfo));
+                var result = new GetSidechainConfigurationModel {
+                    account_name = contractInfo.Key,
+                    BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement,
+                    BlockTimeDuration = contractInfo.BlockTimeDuration,
+                    CandidatureEndDate = DateTimeOffset.FromUnixTimeSeconds(contractInfo.CandidatureEndDate).DateTime,
+                    CandidatureTime = contractInfo.CandidatureTime,
+                    MaxPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers/10000,4),
+                    MaxPaymentPerBlockHistoryProducers =  Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers/10000,4),
+                    MaxPaymentPerBlockValidatorProducers =  Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers/10000,4),
+                    MinPaymentPerBlockFullProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers/10000,4),
+                    MinPaymentPerBlockHistoryProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers/10000,4),
+                    MinPaymentPerBlockValidatorProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers/10000,4),
+                    Stake =  Math.Round((decimal)contractInfo.Stake/10000,4),
+                    NumberOfFullProducersRequired = contractInfo.NumberOfFullProducersRequired,
+                    NumberOfHistoryProducersRequired = contractInfo.NumberOfHistoryProducersRequired,
+                    NumberOfValidatorProducersRequired = contractInfo.NumberOfValidatorProducersRequired,
+                    ReceiveEndDate = contractInfo.ReceiveEndDate,
+                    ReceiveTime = contractInfo.ReceiveTime,
+                    SecretEndDate = contractInfo.SecretEndDate,
+                    SendEndDate = contractInfo.SendEndDate,
+                    SendSecretTime = contractInfo.SendSecretTime,
+                    SendTime = contractInfo.SendTime,
+                    SizeOfBlockInBytes = contractInfo.SizeOfBlockInBytes
+                };
+                
+                return Ok(new OperationResponse<dynamic>(result));
             }
             catch (Exception e)
             {
@@ -72,8 +97,7 @@ namespace BlockBase.Node.Controllers
         /// </summary>
         /// <param name="accountName">Name of the producer</param>
         /// <param name="sidechainName">Name of the sidechain</param>
-        /// <param name="forceDelete">This parameter is here only to simplify testing purposes. It makes it more easy to restart the whole system and delete previous existing databases</param>
-        /// <returns> A boolean if the account is candidate in the sidechain</returns>
+        /// <returns>Information about the producer in the sidechain</returns>
         /// <response code="200">Information retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
         /// <response code="500">Error retrieving the information</response>
@@ -84,15 +108,20 @@ namespace BlockBase.Node.Controllers
             OperationId = "GetProducerCandidatureState"
         )]
         //TODO Change name to something more intuitive.
-        public async Task<ObjectResult> GetProducerCandidatureState(string accountName, string sidechainName, bool forceDelete = false)
+        public async Task<ObjectResult> GetProducerCandidatureState(string accountName, string sidechainName)
         {
             try
             {
-                var contractStates = await _mainchainService.RetrieveContractState(sidechainName);
+                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
 
-                if (!contractStates.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time"));
-                return Ok(new OperationResponse<bool>(candidatureTable.Select(m => m.Key).Contains(accountName)));
+                if (!contractState.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time"));
+                
+                var hasProducerApplied = candidatureTable.Select(m => m.Key).Contains(accountName);
+
+                if(!hasProducerApplied) return Ok(new OperationResponse<bool>(hasProducerApplied,$"Producer {accountName} not found"));
+                else return Ok(new OperationResponse<bool>(hasProducerApplied,$"Producer {accountName} found"));
+                
             }
             catch (Exception e)
             {
