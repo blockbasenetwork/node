@@ -427,7 +427,9 @@ namespace BlockBase.Network.Mainchain
         public async Task<List<RewardTable>> RetrieveRewardTable(string account) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<RewardTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PENDING_REWARD_TABLE, account), MAX_NUMBER_OF_TRIES);
 
-
+         public async Task<List<ReservedSeatsTable>> RetrieveReservedSeatsTable(string chain) =>
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ReservedSeatsTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.RESERVED_SEATS_TABLE, chain), MAX_NUMBER_OF_TRIES);
+        
         public async Task<TransactionProposalApprovalsTable> RetrieveApprovals(string proposerAccount, string proposalName)
         {
             var list = await TryAgain(async () => (await EosStub.GetRowsFromSmartContractTable<TransactionProposalApprovalsTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_APPROVALS_TABLE_NAME, proposerAccount)), MAX_NUMBER_OF_TRIES);
