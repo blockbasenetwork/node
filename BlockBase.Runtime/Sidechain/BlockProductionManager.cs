@@ -194,8 +194,10 @@ namespace BlockBase.Runtime.Sidechain
                     var block = new Block(blockHeader, transactions);
                     var serializedBlockHeader = JsonConvert.SerializeObject(block.BlockHeader);
                     var blockHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedBlockHeader));
+                    var blockBytes = block.ConvertToProto().ToByteArray().Count();
 
                     block.BlockHeader.BlockHash = blockHash;
+                    block.BlockHeader.BlockSizeInBytes = Convert.ToUInt64(blockBytes);
                     block.BlockHeader.ProducerSignature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, blockHash);
 
                     _logger.LogInformation($"Produced Block -> sequence number: {currentSequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(blockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(previousBlockhash)}");
