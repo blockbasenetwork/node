@@ -17,6 +17,7 @@ namespace BlockBase.Domain.Blockchain
         public byte[] PreviousBlockHash { get; set; }
         public ulong SequenceNumber { get; set; }
         public ulong Timestamp { get; set; }
+        public ulong BlockSizeInBytes { get; set; }
         public uint TransactionCount { get; set; } 
         public string ProducerSignature { get; set; }
         public byte[] MerkleRoot { get; set; }
@@ -47,6 +48,7 @@ namespace BlockBase.Domain.Blockchain
                 { EosAtributeNames.PREVIOUS_BLOCK_HASH, HashHelper.ByteArrayToFormattedHexaString(PreviousBlockHash) },
                 { EosAtributeNames.SEQUENCE_NUMBER, SequenceNumber},
                 { EosAtributeNames.TIMESTAMP, Timestamp },
+                { EosAtributeNames.BLOCK_SIZE_IN_BYTES, BlockSizeInBytes },
                 { EosAtributeNames.TRANSACTIONS_COUNT, TransactionCount},
                 { EosAtributeNames.PRODUCER_SIGNATURE, ProducerSignature},
                 { EosAtributeNames.MERKLETREE_ROOT_HASH, HashHelper.ByteArrayToFormattedHexaString(MerkleRoot) },
@@ -66,7 +68,8 @@ namespace BlockBase.Domain.Blockchain
                 Timestamp = Timestamp,
                 TransactionCount = TransactionCount,
                 ProducerSignature = ProducerSignature,
-                MerkleRoot = ByteString.CopyFrom(MerkleRoot)
+                MerkleRoot = ByteString.CopyFrom(MerkleRoot),
+                BlockSizeInBytes = BlockSizeInBytes
             };
 
             return blockHeaderProto;
@@ -79,6 +82,7 @@ namespace BlockBase.Domain.Blockchain
             PreviousBlockHash = HashHelper.FormattedHexaStringToByteArray((string)dic[EosAtributeNames.PREVIOUS_BLOCK_HASH]);
             SequenceNumber = (ulong) dic[EosAtributeNames.SEQUENCE_NUMBER];
             Timestamp = (ulong) dic[EosAtributeNames.TIMESTAMP];
+            BlockSizeInBytes = (ulong) dic[EosAtributeNames.BLOCK_SIZE_IN_BYTES];
             TransactionCount = (uint) dic[EosAtributeNames.TRANSACTIONS_COUNT];
             ProducerSignature = (string) dic[EosAtributeNames.PRODUCER_SIGNATURE];
             MerkleRoot = HashHelper.FormattedHexaStringToByteArray((string) dic[EosAtributeNames.MERKLETREE_ROOT_HASH]);
@@ -93,6 +97,7 @@ namespace BlockBase.Domain.Blockchain
             PreviousBlockHash = blockHeaderProto.PreviousBlockHash.ToByteArray();
             SequenceNumber = blockHeaderProto.SequenceNumber;
             Timestamp =  blockHeaderProto.Timestamp;
+            BlockSizeInBytes = blockHeaderProto.BlockSizeInBytes;
             TransactionCount = blockHeaderProto.TransactionCount;
             ProducerSignature = blockHeaderProto.ProducerSignature;
             MerkleRoot = blockHeaderProto.MerkleRoot.ToByteArray();
@@ -113,6 +118,7 @@ namespace BlockBase.Domain.Blockchain
             if(!ProducerSignature.SequenceEqual(item.ProducerSignature)) return false;
             if(Producer != item.Producer) return false;
             if(Timestamp != item.Timestamp) return false;
+            if(BlockSizeInBytes != item.BlockSizeInBytes) return false;
 
             return true;
         }
