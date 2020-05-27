@@ -3,40 +3,43 @@ BlockBase is the Power of Blockchain applied to Databases. It’s a distributed 
 
 ## Main concepts
 The BlockBase node can be run for two different purposes:
-1. To run as a service requester (SR): running the node as a service requester allows you to tap into the network and to issue a sidechain to be stored by service providers. That sidechain will hold all your database data. You can use the node APIs to insert, update, delete, and query data. Running a node as a SR can be viewed as something similar to running a database server. SRs pay with BBT (the BlockBase token) for this service.
+1. To run as a service requester (SR): running the node as a service requester allows you to tap into the network and issue a sidechain to be stored by service providers. That sidechain will hold all data of your databases. You can use the node APIs to insert, update, delete, and query data. Running a node as a SR can be viewed as something similar to running a database server. SRs pay with BBT (the BlockBase token) for this service.
 
-2. To run as a service provider (SP): running the node as a service provider allows you to participate on the network to store sidechains from SRs. The SPs earn BBT for providing this service.
+2. To run as a service provider (SP): running the node as a service provider allows you to participate on the network to store sidechains for SRs. The SPs earn BBT for providing this service.
 
 ## Development State
 The node software is in beta and in active testing on the EOS network. The software is usable, but will probably still have bugs. Use with care and avoid large sums of BBT.
+
+## Smart Contracts
+If you are curious about which smart contracts are used, you can find them on bloks.io here [blockbaseopr - Operations Contract](https://bloks.io/account/blockbaseopr) and [blockbasetkn - Token Contract](https://bloks.io/account/blockbasetkn).
 
 # Installation Guide
 Here you can find all the steps to run a node as a [service requester](#Running-a-Node-as-a-Service-Requester) or as a [service provider](#Running-as-a-service-provider). This installation guide is tailored to a Linux installation, but it should work on Windows too.
 
 ## EOS Accounts
-Each instance of the node has to have an EOS account associated to it. We recommend using a new EOS account just for that purpose. This account must have enough RAM, CPU, and NET to work properly. We recommend the following steps to prepare your EOS account:
+Each node has to have an EOS account associated to it. We recommend using a new EOS account just for that purpose. This account must have enough RAM, CPU, and NET to work properly. We recommend the following steps to prepare your EOS account:
 1. Create the EOS account: An EOS account can be easily created on bloks.io [here](https://bloks.io/wallet/create-account).
 
-2. Buy RAM: Buy 10k of RAM for your account.
+2. Buy RAM: Buy 10k of RAM for the EOS account you created.
 
-3. Get CPU and NET: A BlockBase node uses a lot of CPU and a good amount of NET. We recommend renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
+3. Get CPU and NET: A BlockBase node uses a lot of EOS CPU and a good amount of EOS NET. We recommend renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
 
-4. Ensure you have always enough CPU and NET: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend them.
+4. Ensure the EOS account has always enough CPU and NET: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend it.
 
-5. Transfer BBT (The BlockBase token) to that account. You will need BBT as a SR or a SP. SRs use BBT to pay to SPs for running their sidechain. And SPs pledge BBT as collateral that they will lose if they fail to provide the service accordingly. In both cases BBT has to be staked.
+5. Transfer BBT (The BlockBase token) to the EOS account. You will need BBT as a SR or as a SP. SRs use BBT to pay to SPs for running their sidechain. And SPs pledge BBT as collateral that they will lose if they fail to provide the service accordingly. In both cases BBT has to be staked.
 
 **Note: If you wish to run more than one instance of the node, you will need a different EOS account for every one of those instances.**
 
 ## Software Prerequisites
-The BlockBase node software is built with C# and runs on the .NET Core Platform, and uses MongoBD and Postgres to store its data. Before running the node, you should install:
+The BlockBase node software is built with C# and runs on the .NET Core Platform, and uses MongoBD and PostgreSQL to store its data. Before running the node, you should install:
 1. .NET Core SDK 2.1 (BlockBase doesn't run on 3.1)
 
-2. The latest version of MondoDB Server (It should work fine with previous versions too)
+2. The latest version of MongoDB Server (It should work fine with previous versions too)
 
 3. The latest version of PostgreSQL (It should work fine with previous versions too)
 
 ## Downloading the code
-To download the code and run the node follow the following steps:
+To download the code follow these steps:
 1. Create a folder where the code will be downloaded to
 
 2. Open a terminal on that folder and run `git clone https://github.com/blockbasenetwork/node.git`
@@ -53,18 +56,18 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
     "MongoDbConnectionString": "mongodb://localhost", // The MongoDB connection string
     "MongoDbPrefix": "blockbase", // A prefix that will be used in all created MongoDB databases
     "PostgresHost": "localhost", // The postgresql host address
-    "PostgresUser": "postgres", // The postgres user name to use for the connection
-    "PostgresPort": 5432, // The port to use in the postgres connection
-    "PostgresPassword": "yourpassword", // The password for the user used
+    "PostgresUser": "postgres", // The postgresql user name to use for the connection
+    "PostgresPort": 5432, // The port to use in the postgresql connection
+    "PostgresPassword": "yourpassword", // The password for the postgresql user
   },
   "NetworkConfigurations": {
     "LocalIpAddress": "127.0.0.1", // The IP address that other producers will connect to
     "LocalTcpPort": 4444, // The TCP port used to connect
-    "EosNet": "http://127.0.0.1:8888", // EOS network endpoint
-    "ConnectionExpirationTimeInSeconds": 15, // Connection expiration time
-    "MaxNumberOfConnectionRetries": 3, // Number of connection retries
-    "BlockBaseOperationsContract": "blockbaseopr", // The account running the BlockBase operations contract
-    "BlockBaseTokenContract": "blockbasetkn" // The account running the BlockBase token contract
+    "EosNet": "http://api.eosn.io", // A Top 21 EOS Network producer endpoint
+    "ConnectionExpirationTimeInSeconds": 15, // (no need to change) Connection expiration time
+    "MaxNumberOfConnectionRetries": 3, // (no need to change) Number of connection retries
+    "BlockBaseOperationsContract": "blockbaseopr", // (no need to change) The account running the BlockBase operations contract
+    "BlockBaseTokenContract": "blockbasetkn" // (no need to change) The account running the BlockBase token contract
   }
 }
 ```
@@ -122,7 +125,7 @@ The way you configure your sidechain request is very important. You need to unde
 The number of nodes you want for your sidechain depends on the security you need and how much you're willing to spend. As you can see in the configuration, there are three types of providers: *Validator Nodes*, *History Nodes*, and *Full Nodes*. Validator nodes **do not** need to store the whole sidechain on their side. They just help in block production. History Nodes **have to** store the whole sidechain on their side, and are checked on every settlement. Full nodes have to store the sidechain and the resulting databases from executing all operations on the sidechains. _*Full nodes are not yet fully implemented*_.
 
 ### Adding reserved seats
-In some cases, it may make sense to have a preselected list of accounts that will have a reserved spot for them on the network you're requesting. This is especially useful if you want your network to be partially or fully produced by nodes you manage.
+In some cases, it may make sense to have a preselected list of accounts that will have a reserved spot for them on the network you're requesting. This is especially useful if you want your network to be partially or fully produced by nodes you manage. To add reserved seats, add the corresponding EOS accounts to the list of `ReservedProducerSeats`. A producer that has a reserved seat may participate as a validator, history, or full node. If more producers apply than the `RequiredNumber` for that type of producer, the ones who register first will get the position and the remaining ones will be left out.
 
 ## Step #2 - Configuring the data security
 BlockBase has an encryption layer built in that allows you to encrypt all your data before it is sent to the providers. You can configure the security on the appsettings file. Before you do that though, you have to consider the implications of doing so.
@@ -178,7 +181,7 @@ Inspect the response message.
 ## Step #3 - Requesting the sidechain
 After you've configured your sidechain, you can request it to the network. This will make your sidechain configuration public to all the providers on the network. To do that, follow these steps:
 
-**Start the node**
+**Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
 2. Open a terminal there and run the command `dotnet run --urls=localhost:5000` (this is just an example url, change it accordingly to your needs)
@@ -193,7 +196,7 @@ After you've configured your sidechain, you can request it to the network. This 
 ## Step #4 - Starting the sidechain maintenance
 After you've announced your sidechain request, now you have to participate on the maintenance of the sidechain. Your node is responsible for keeping up with the providers, for sending them transactions with the data you will want to store, and for moving forward with the lifecycle of the sidechain.
 
-Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**. You don't need to request the sidechain again, that has already been done.
+Starting the maintenance of the sidechain is a fundamental step for your network to work. If for some reason your node crashes, after restarting the node you **have to start the maintenance of the sidechain again unless you configured your data security on the appsettings file as described on the section _Configuring the data security_**.
 
 **Start the sidechain maintenance**
 1. Open a browser and navigate to the link you set as parameter for urls.
@@ -220,10 +223,10 @@ Starting the maintenance of the sidechain is a fundamental step for your network
 5. Click `Execute`.
 
 ## Your node is configured and running
-Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a little while to appear there.
+Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a while to appear there.
 
 # Running as a service provider
-Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. Running the node as a SP is easier than as a SR. There are less steps involved. A SP has to worry mostly about his infrastructure, and about the costs/benefits of participating on building a sidechain that has been requested.
+Running a node as a SP allows you to produce sidechains for SRs in exchange for BBT. Running the node as a SP is easier than as a SR. There are less steps involved. A SP has to worry mostly about the infrastructure, and about the costs/benefits of participating on building a sidechain that has been requested.
 
 There are two main ways to apply to participate on producing sidechains. The first one is manual and the second one is automatic. With the manual way you can identify a sidechain that you want to participate on, read all its requirements, and decide if you want to apply or not. With the automatic way you can configure your node to be on the lookout for sidechain requests that fulfill your participation requirements. Both ways are explained further below.
 
@@ -293,17 +296,12 @@ By setting any of the `IsActive` active properties to `true`, when the node star
 }
 ```
 
-
 # Manually Staking and Unstaking BBT
-In order to stake BBT as a service requester, run the 'addstake' action in the blockbase token contract with both 'owner' and 'sidechain' with your sidechain account name.
+A service requester or service provider may manually add or remove stake to and from the sidechain. There are some restrictions though. A SR can not remove its stake from the sidechain before terminating the sidechain first. Similarly, a SP can not remove its stake before it leaves the production of the sidechain. Also, it doesn't make sense for a SP to add more stake to a sidechain it's already actively producing. It wouldn't help in anything.
 
-In case you want to stake as a service provider, run the 'addstake' action with 'owner' as your producer accout name and 'sidechain' as the sidechain you want to candidate as a producer.
+It does make sense though, for the SR to regularly add stake to the sidechain to make sure he has enough BBT to pay to the SPs. In order to add more stake to the sidechain, the EOS account associated to the SR sidechain has to have the required amount of BBT to stake.
 
-
-# Smart Contracts
-**blockbaseopr** - Operations Contract
-**blockbasetkn** - Token Contract
-
+After following all the above steps you won't have difficulties in finding the corresponding APIs on the "Service Requester" and "Service Provider" APIs. To add stake use the `addStake` service, and to remove stake use the `claimStake` method.
 
 
 # Querying BlockBase sidechains
