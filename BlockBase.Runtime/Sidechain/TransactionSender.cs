@@ -61,7 +61,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task Setup()
         {
-            if(_hasBeenSetup)
+            if(!_hasBeenSetup)
             {
                 await LoadTransactionsFromDatabase();
                 _hasBeenSetup = true;
