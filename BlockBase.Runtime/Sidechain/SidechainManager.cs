@@ -312,9 +312,11 @@ namespace BlockBase.Runtime.Sidechain
             await ExtractAndUpdateIPs();
 
             //TODO: Review this code
+
             if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby && _blockProductionManager.TaskContainer == null)
             {
-                _blockProductionManager.Start();
+                if(Sidechain.ProducerType != ProducerTypeEnum.Validator)
+                    _blockProductionManager.Start();
                 return;
             }
 
@@ -329,7 +331,8 @@ namespace BlockBase.Runtime.Sidechain
             if (Sidechain.ProducersInPool.GetEnumerable().Count(m => m.ProducerInfo.IPEndPoint != null) == 0) await ExtractAndUpdateIPs();
 
             _logger.LogDebug("Starting block production manager.");
-            _blockProductionManager.Start();
+            if(Sidechain.ProducerType != ProducerTypeEnum.Validator)
+                _blockProductionManager.Start();
         }
 
         #endregion Switch Methods
