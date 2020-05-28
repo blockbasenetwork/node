@@ -72,7 +72,7 @@ namespace BlockBase.Api
                 services.AddOptions();
                 services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(
-                        IPAddress.Parse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.LocalIpAddress),
+                        IPAddress.Parse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.PublicIpAddress),
                         s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.LocalTcpPort
                     )
                 );

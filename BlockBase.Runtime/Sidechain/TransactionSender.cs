@@ -61,7 +61,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public async Task Setup()
         {
-            if(_hasBeenSetup)
+            if(!_hasBeenSetup)
             {
                 await LoadTransactionsFromDatabase();
                 _hasBeenSetup = true;
@@ -160,7 +160,7 @@ namespace BlockBase.Runtime.Sidechain
                 data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
                 data.AddRange(transactionBytes);
             }
-            var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
+            var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.LocalTcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
             await _networkService.SendMessageAsync(message);
         }
 

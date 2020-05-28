@@ -47,7 +47,7 @@ namespace BlockBase.Runtime.SidechainProducer
             _blockValidator = blockValidator;
             _transactionValidator = transactionValidator;
             _blockSender = blockSender;
-            _endpoint = _networkConfigurations.LocalIpAddress + ":" + _networkConfigurations.LocalTcpPort;
+            _endpoint = _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.LocalTcpPort;
         }
 
         public async Task Run(bool RecoverChains = true)
