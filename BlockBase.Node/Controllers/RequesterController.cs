@@ -152,7 +152,7 @@ namespace BlockBase.Node.Controllers
         /// <summary>
         /// Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration
         /// </summary>
-        /// <param name="stake">The amount of BBT that the producer want's to stake</param>
+        /// <param name="stake">The amount of BBT the requester wants to stake in this sidechain for payment to service providers</param>
         /// <returns>The success of the transaction</returns>
         /// <response code="200">Chain started with success</response>
         /// <response code="500">Error starting chain</response>
