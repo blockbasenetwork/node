@@ -85,8 +85,7 @@ namespace BlockBase.Runtime.Sidechain
 
                         if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool))
                         {
-                            if(sidechainPool.ProducerType != ProducerTypeEnum.Validator)
-                                await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
+                            await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
                             await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
 
                             // var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
