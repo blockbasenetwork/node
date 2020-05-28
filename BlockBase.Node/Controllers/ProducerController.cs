@@ -162,17 +162,25 @@ namespace BlockBase.Node.Controllers
                 var poolOfSidechains = _sidechainProducerService.GetSidechains();
                 var chainExistsInPool = poolOfSidechains.TryGetValue(chainName, out var existingChain);
 
-                if (chainExistsInPool) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
+                if (chainExistsInPool)
+                {
+                    if (existingChain.ManagerTask.Task.Status == TaskStatus.Running)
+                        return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Candidature has already been sent for this Sidechain."));
+                    else
+                        _sidechainProducerService.RemoveSidechainFromProducer(existingChain);
+                }
+                
                 if (chainExistsInDb) await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 
-                if(stake > 0) {
+                if (stake > 0)
+                {
                     var stakeTransaction = await _mainchainService.AddStake(chainName, NodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
                     _logger.LogDebug("Sent stake to contract. Tx = " + stakeTransaction);
                     _logger.LogDebug("Stake inserted = " + stake.ToString("F4") + " BBT");
                 }
-                
+
                 var secretHash = HashHelper.Sha256Data(HashHelper.Sha256Data(Encoding.ASCII.GetBytes(NodeConfigurations.SecretPassword)));
                 var transaction = await _mainchainService.AddCandidature(chainName, NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), producerType);
 
@@ -335,7 +343,7 @@ namespace BlockBase.Node.Controllers
                 var chainBeingProduced = poolOfSidechains.TryGetValue(chainName, out var existingChain);
 
                 if (chainBeingProduced) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "This node is currently working on this sidechain and can't be deleted from the database."));
-                
+
                 await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
 
                 return Ok(new OperationResponse<bool>(true, $"Successfully deleted sidechain from database."));
