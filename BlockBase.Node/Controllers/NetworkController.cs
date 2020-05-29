@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain;
+using BlockBase.Utils;
 
 namespace BlockBase.Node.Controllers
 {
@@ -326,6 +327,33 @@ namespace BlockBase.Node.Controllers
                 if (looseTransactionsResponse == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
 
                 return Ok(new OperationResponse<IEnumerable<BlockBase.Domain.Blockchain.Transaction>>(looseTransactionsResponse));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets the top 21 producers in the EOS network and their endpoints
+        /// </summary>
+        /// <returns>The top 21 producers info and endpoints</returns>
+        /// <response code="200">Producer information retrieved with success</response>
+        /// <response code="500">Error retrieving information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the top 21 producers in the EOS network and their endpoints",
+            Description = "Allows node to get a list of producers and their endpoints without the need of knowing a specific endpoing",
+            OperationId = "GetTop21ProducersAndEndpoints"
+        )]
+        public async Task<ObjectResult> GetTop21ProducersAndEndpoints()
+        {
+            try
+            {
+                var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetTop21ProducersAndEndpoints/");
+                var json = await HttpHelper.CallWebRequest(request);
+
+                return Ok(new OperationResponse<string>(json));
             }
             catch (Exception e)
             {
