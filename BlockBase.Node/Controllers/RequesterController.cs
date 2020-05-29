@@ -18,6 +18,7 @@ using BlockBase.DataProxy.Encryption;
 using BlockBase.DataPersistence.Utils;
 using System.IO;
 using System.Text;
+using EosSharp.Core.Exceptions;
 
 namespace BlockBase.Node.Controllers
 {
@@ -176,9 +177,23 @@ namespace BlockBase.Node.Controllers
                 }
 
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
-                var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
+                var i = 0;
+                while (i < 3)
+                {
+                    await Task.Delay(1000);
 
-                return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
+                    try
+                    {
+                        var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
+                        return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
+                    }
+                    catch(ApiErrorException)
+                    {
+                        i++;
+                    }
+                }
+
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationCanceledException());
             }
             catch (Exception e)
             {
