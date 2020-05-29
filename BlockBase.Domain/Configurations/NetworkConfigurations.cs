@@ -7,7 +7,7 @@ namespace BlockBase.Domain.Configurations
     public class NetworkConfigurations
     {
         public string PublicIpAddress { get; set; }
-        public int LocalTcpPort { get; set; }
+        public int TcpPort { get; set; }
         public string EosNet { get; set; }
         public uint ConnectionExpirationTimeInSeconds { get; set; }
         public int MaxNumberOfConnectionRetries { get; set; }

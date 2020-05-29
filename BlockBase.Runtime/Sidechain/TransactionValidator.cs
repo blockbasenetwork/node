@@ -82,7 +82,7 @@ namespace BlockBase.Runtime.Sidechain
                     data.ToArray(),
                     TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey,
                     _nodeConfigurations.ActivePublicKey,
-                    _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.LocalTcpPort,
+                    _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort,
                     _nodeConfigurations.AccountName, sender);
 
             _logger.LogDebug("Sending confirmation transaction.");

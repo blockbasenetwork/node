@@ -59,6 +59,8 @@ namespace BlockBase.Node.Controllers
                 var clientLedger = await _mainchainService.RetrieveClientTokenLedgerTable(sidechainName);
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
 
+                if(contractInfo == null) throw new InvalidOperationException($"{sidechainName} not found");
+
                 var result = new GetSidechainConfigurationModel {
                     account_name = contractInfo.Key,
                     BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement,
