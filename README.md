@@ -61,8 +61,8 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
     "PostgresPassword": "yourpassword", // The password for the postgresql user
   },
   "NetworkConfigurations": {
-    "PublicIpAddress": "127.0.0.1", // The public IP address that other producers will connect to
-    "LocalTcpPort": 4440, // The TCP port used to connect
+    "PublicIpAddress": "your public ip address", // The public IP address that other producers will connect to
+    "TcpPort": 4440, // The TCP port used to connect
     "EosNet": "http://api.eosn.io", // A Top 21 EOS Network producer endpoint
     "ConnectionExpirationTimeInSeconds": 15, // (no need to change) Connection expiration time
     "MaxNumberOfConnectionRetries": 3, // (no need to change) Number of connection retries
