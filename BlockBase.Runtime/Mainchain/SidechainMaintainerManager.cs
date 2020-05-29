@@ -19,6 +19,8 @@ using static BlockBase.Network.PeerConnection;
 using BlockBase.Runtime.Sidechain;
 using Microsoft.Extensions.Options;
 using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataProxy.Encryption;
+using BlockBase.DataPersistence.Sidechain.Connectors;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -39,6 +41,10 @@ namespace BlockBase.Runtime.Mainchain
         public TaskContainer TaskContainer { get; private set; }
         private TransactionSender _transactionSender;
         private HistoryValidation _historyValidation;
+        private IConnector _connector;
+        private IMongoDbProducerService _mongoDbProducerService;
+
+
 
         public TaskContainer Start()
         {
@@ -47,7 +53,7 @@ namespace BlockBase.Runtime.Mainchain
             TaskContainer.Start();
             return TaskContainer;
         }
-        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbServices, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender)
+        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbService, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender, IConnector connector)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
             _mainchainService = mainchainService;
@@ -58,7 +64,9 @@ namespace BlockBase.Runtime.Mainchain
             _sidechain = new SidechainPool(_nodeConfigurations.AccountName);
             _forceTryAgain = true;
             _transactionSender = transactionSender;
-            _historyValidation = new HistoryValidation(_logger, mongoDbServices, _mainchainService);
+            _historyValidation = new HistoryValidation(_logger, mongoDbService, _mainchainService);
+            _connector = connector;
+            _mongoDbProducerService = mongoDbService;
         }
 
         public async Task SuperMethod()
@@ -339,6 +347,14 @@ namespace BlockBase.Runtime.Mainchain
                 var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(_sidechain));
                 checkConnectionTask.Start();
             }
+        }
+
+
+        public async Task EndSidechain()
+        {
+            await _mongoDbProducerService.DropRequesterDatabase(_sidechain.ClientAccountName);
+            await _connector.DropDefaultDatabase();
+            SecretStore.ClearSecrets();
         }
 
         #endregion Auxiliar Methods

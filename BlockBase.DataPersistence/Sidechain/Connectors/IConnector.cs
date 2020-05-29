@@ -15,5 +15,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         Task<IList<IList<string>>> ExecuteQuery(string sqlQuery, string databaseName);
         Task InsertToDatabasesTable(string databaseName);
         Task DeleteFromDatabasesTable(string databaseName);
+        Task DropDefaultDatabase();
     }
 }

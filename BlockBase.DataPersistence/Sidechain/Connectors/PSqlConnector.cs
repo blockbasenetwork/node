@@ -15,10 +15,9 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         private ILogger _logger;
         private static readonly string DEFAULT_DATABASE_NAME = "blockbasedb";
         private static readonly string DATABASES_TABLE_NAME = "databases";
-
         private static readonly string INFO_TABLE_NAME = "info";
-
         private bool _hasBeenSetup = false;
+        private string _defaultDatabaseNameWithPrefix;
 
 
         public PSqlConnector(IOptions<NodeConfigurations> nodeConfigurations, ILogger<PSqlConnector> logger)
@@ -29,6 +28,8 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             + ";Port=" + nodeConfigurationsValue.PostgresPort
             + ";Password=" + nodeConfigurationsValue.PostgresPassword;
             _logger = logger;
+            _defaultDatabaseNameWithPrefix = nodeConfigurationsValue.DatabasesPrefix + DEFAULT_DATABASE_NAME;
+
             //commented this code and moved to Setup method so it isn't executed on construction of object
             //CreateDefaultDatabaseIfNotExists().Wait();
         }
@@ -72,12 +73,12 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         public async Task InsertToDatabasesTable(string databaseName)
         {
-            await ExecuteCommand($"INSERT INTO {DATABASES_TABLE_NAME} (name) VALUES ( '{databaseName}' );", DEFAULT_DATABASE_NAME);
+            await ExecuteCommand($"INSERT INTO {DATABASES_TABLE_NAME} (name) VALUES ( '{databaseName}' );", _defaultDatabaseNameWithPrefix);
         }
 
         public async Task DeleteFromDatabasesTable(string databaseName)
         {
-            await ExecuteCommand($"DELETE FROM {DATABASES_TABLE_NAME} WHERE name = '{databaseName}';", DEFAULT_DATABASE_NAME);
+            await ExecuteCommand($"DELETE FROM {DATABASES_TABLE_NAME} WHERE name = '{databaseName}';", _defaultDatabaseNameWithPrefix);
         }
         private async Task<IList<InfoRecord>> GetInfoRecordsFromDatabase(string databaseName)
         {
@@ -123,7 +124,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
-                string cmdText = $"SELECT 1 FROM pg_database WHERE datname='{DEFAULT_DATABASE_NAME}'";
+                string cmdText = $"SELECT 1 FROM pg_database WHERE datname='{_defaultDatabaseNameWithPrefix}'";
                 NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
                 try
                 {
@@ -131,7 +132,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                     if (!dbExists)
                     {
                         cmd.Dispose();
-                        cmd = new NpgsqlCommand($"CREATE DATABASE {DEFAULT_DATABASE_NAME};", conn);
+                        cmd = new NpgsqlCommand($"CREATE DATABASE {_defaultDatabaseNameWithPrefix};", conn);
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
@@ -151,10 +152,33 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 //_logger.LogWarning(e.Message, "Unable to connect to postgres database");
             }
         }
+        public async Task DropDefaultDatabase()
+        {
+            
+           using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
+            {
+                await conn.OpenAsync();
+                NpgsqlCommand cmd = new NpgsqlCommand($"DROP DATABASE {_defaultDatabaseNameWithPrefix};", conn);
+                try
+                {
+                    await cmd.ExecuteNonQueryAsync();
+                    _hasBeenSetup = false;
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    cmd.Dispose();
+                    await conn.CloseAsync();
+                }
+            }
+            
+        }
         private async Task CreateTableIfNotExists()
         {
             bool tableExists = false;
-            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(DEFAULT_DATABASE_NAME)))
+            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(_defaultDatabaseNameWithPrefix)))
             {
                 await conn.OpenAsync();
                 string cmdText = $"select * from information_schema.tables where table_name ='{DATABASES_TABLE_NAME}';";
@@ -185,7 +209,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
             var results = new List<string>();
 
-            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(DEFAULT_DATABASE_NAME)))
+            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(_defaultDatabaseNameWithPrefix)))
             {
                 try
                 {

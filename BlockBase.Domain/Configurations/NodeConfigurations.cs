@@ -13,7 +13,7 @@ namespace BlockBase.Domain.Configurations
             get { return _secretPassword; }
         }
         public string MongoDbConnectionString { get; set; }
-        public string MongoDbPrefix { get; set; }
+        public string DatabasesPrefix { get; set; }
         public string PostgresHost { get; set; }
         public string PostgresUser { get; set; }
         public int PostgresPort { get; set; }

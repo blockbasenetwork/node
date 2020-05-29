@@ -112,7 +112,7 @@ namespace BlockBase.Node.Controllers
                 catch { }
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
-                var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
+                var mongoDbPrefix = NodeConfigurations.DatabasesPrefix;
 
                 var postgresHost = NodeConfigurations.PostgresHost;
                 var postgresPort = NodeConfigurations.PostgresPort;
@@ -203,8 +203,6 @@ namespace BlockBase.Node.Controllers
             SecurityConfigurations config;
             try
             {
-
-
                 if (_securityConfigurations.UseSecurityConfigurations)
                     _databaseKeyManager.SetInitialSecrets(_securityConfigurations);
 
@@ -251,8 +249,8 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                await _sidechainMaintainerManager.EndSidechain();
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
-                SecretStore.ClearSecrets();
                 return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
             }
             catch (Exception e)

@@ -26,7 +26,7 @@ namespace BlockBase.DataPersistence.ProducerData
             MongoClient = new MongoClient(nodeConfigurations.Value.MongoDbConnectionString);
 
             _logger = logger;
-            _dbPrefix = nodeConfigurations.Value.MongoDbPrefix;
+            _dbPrefix = nodeConfigurations.Value.DatabasesPrefix;
         }
 
         public async Task CreateDatabasesAndIndexes(string databaseName)
@@ -596,6 +596,14 @@ namespace BlockBase.DataPersistence.ProducerData
 
                 var result = query.ToList();
                 return result;
+            }
+        }
+
+        public async Task DropRequesterDatabase(string sidechain)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                await MongoClient.DropDatabaseAsync(_dbPrefix + sidechain);
             }
         }
 

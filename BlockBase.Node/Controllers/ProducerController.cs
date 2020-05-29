@@ -97,7 +97,7 @@ namespace BlockBase.Node.Controllers
                 catch { }
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
-                var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
+                var mongoDbPrefix = NodeConfigurations.DatabasesPrefix;
 
                 var postgresHost = NodeConfigurations.PostgresHost;
                 var postgresPort = NodeConfigurations.PostgresPort;

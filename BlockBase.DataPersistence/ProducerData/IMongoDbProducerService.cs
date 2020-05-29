@@ -42,5 +42,6 @@ namespace BlockBase.DataPersistence.ProducerData
         Task RemoveMaintainedSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfMaintainedSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllMaintainedSidechainsAsync();
+        Task DropRequesterDatabase(string sidechain);
     }
 }
