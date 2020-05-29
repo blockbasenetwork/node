@@ -18,6 +18,9 @@ using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain;
 using BlockBase.Utils;
+using Newtonsoft.Json;
+using BlockBase.Domain.Results;
+using System.Diagnostics;
 
 namespace BlockBase.Node.Controllers
 {
@@ -30,7 +33,7 @@ namespace BlockBase.Node.Controllers
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
-        
+
         public NetworkController(ILogger<NetworkController> logger, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _logger = logger;
@@ -60,19 +63,20 @@ namespace BlockBase.Node.Controllers
                 var clientLedger = await _mainchainService.RetrieveClientTokenLedgerTable(sidechainName);
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
 
-                var result = new GetSidechainConfigurationModel {
+                var result = new GetSidechainConfigurationModel
+                {
                     account_name = contractInfo.Key,
                     BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement,
                     BlockTimeDuration = contractInfo.BlockTimeDuration,
                     CandidatureEndDate = DateTimeOffset.FromUnixTimeSeconds(contractInfo.CandidatureEndDate).DateTime,
                     CandidatureTime = contractInfo.CandidatureTime,
-                    MaxPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers/10000,4),
-                    MaxPaymentPerBlockHistoryProducers =  Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers/10000,4),
-                    MaxPaymentPerBlockValidatorProducers =  Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers/10000,4),
-                    MinPaymentPerBlockFullProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers/10000,4),
-                    MinPaymentPerBlockHistoryProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers/10000,4),
-                    MinPaymentPerBlockValidatorProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers/10000,4),
-                    Stake =  Math.Round((decimal)contractInfo.Stake/10000,4),
+                    MaxPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers / 10000, 4),
+                    MaxPaymentPerBlockHistoryProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers / 10000, 4),
+                    MaxPaymentPerBlockValidatorProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers / 10000, 4),
+                    MinPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4),
+                    MinPaymentPerBlockHistoryProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4),
+                    MinPaymentPerBlockValidatorProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4),
+                    Stake = Math.Round((decimal)contractInfo.Stake / 10000, 4),
                     NumberOfFullProducersRequired = contractInfo.NumberOfFullProducersRequired,
                     NumberOfHistoryProducersRequired = contractInfo.NumberOfHistoryProducersRequired,
                     NumberOfValidatorProducersRequired = contractInfo.NumberOfValidatorProducersRequired,
@@ -84,7 +88,7 @@ namespace BlockBase.Node.Controllers
                     SendTime = contractInfo.SendTime,
                     SizeOfBlockInBytes = contractInfo.SizeOfBlockInBytes
                 };
-                
+
                 return Ok(new OperationResponse<dynamic>(result));
             }
             catch (Exception e)
@@ -117,12 +121,12 @@ namespace BlockBase.Node.Controllers
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
 
                 if (!contractState.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time"));
-                
+
                 var hasProducerApplied = candidatureTable.Select(m => m.Key).Contains(accountName);
 
-                if(!hasProducerApplied) return Ok(new OperationResponse<bool>(hasProducerApplied,$"Producer {accountName} not found"));
-                else return Ok(new OperationResponse<bool>(hasProducerApplied,$"Producer {accountName} found"));
-                
+                if (!hasProducerApplied) return Ok(new OperationResponse<bool>(hasProducerApplied, $"Producer {accountName} not found"));
+                else return Ok(new OperationResponse<bool>(hasProducerApplied, $"Producer {accountName} found"));
+
             }
             catch (Exception e)
             {
@@ -154,48 +158,55 @@ namespace BlockBase.Node.Controllers
                 var producers = await _mainchainService.RetrieveProducersFromTable(sidechainName);
                 var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
                 var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
-                
+
                 var slotsTakenByReservedSeats = 0;
                 var fullNumberOfSlotsTakenByReservedSeats = 0;
                 var historyNumberOfSlotsTakenByReservedSeats = 0;
                 var validatorNumberOfSlotsTakenByReservedSeats = 0;
 
-                foreach(var reservedSeat in reservedSeats) {
+                foreach (var reservedSeat in reservedSeats)
+                {
                     var producer = producers.Where(o => o.Key == reservedSeat.Key).FirstOrDefault();
-                    if(producer != null) {
-                        slotsTakenByReservedSeats = slotsTakenByReservedSeats+1;
-                        if(producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats+1;
-                        if(producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats+1;
-                        if(producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats+1;
-                    } 
+                    if (producer != null)
+                    {
+                        slotsTakenByReservedSeats = slotsTakenByReservedSeats + 1;
+                        if (producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats + 1;
+                        if (producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats + 1;
+                        if (producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats + 1;
+                    }
                 }
 
-                var sidechainState = new SidechainState() {
-                   
+                var sidechainState = new SidechainState()
+                {
+
                     State = contractStates.ConfigTime ? "Configure state" : contractStates.SecretTime ? "Secrect state" : contractStates.IPSendTime ? "Ip Send Time" : contractStates.IPReceiveTime ? "Ip Receive Time" : contractStates.ProductionTime ? "Production" : contractStates.Startchain ? "Startchain" : "No State in chain",
                     StakeDepletionEndDate = await StakeEndTimeCalculationAtMaxPayments(sidechainName),
                     CurrentSidechainStake = tokenLedger.Stake,
                     InProduction = contractStates.ProductionTime,
-                    ReservedSeats = new ReservedSeats() {
+                    ReservedSeats = new ReservedSeats()
+                    {
                         TotalNumber = reservedSeats.Count,
                         SlotsStillAvailable = reservedSeats.Count - slotsTakenByReservedSeats,
                         SlotsTaken = slotsTakenByReservedSeats
                     },
-                    FullProducersInfo = new SidechainProducersInfo() {
-                        NumberOfProducersRequired = (int) contractInfo.NumberOfFullProducersRequired,
+                    FullProducersInfo = new SidechainProducersInfo()
+                    {
+                        NumberOfProducersRequired = (int)contractInfo.NumberOfFullProducersRequired,
                         NumberOfProducersInChain = producers.Where(o => o.ProducerType == 3).Count(),
                         CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 3).Count(),
                         NumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats
-                        
+
                     },
-                    HistoryProducersInfo = new SidechainProducersInfo() {
-                        NumberOfProducersRequired = (int) contractInfo.NumberOfHistoryProducersRequired,
+                    HistoryProducersInfo = new SidechainProducersInfo()
+                    {
+                        NumberOfProducersRequired = (int)contractInfo.NumberOfHistoryProducersRequired,
                         NumberOfProducersInChain = producers.Where(o => o.ProducerType == 2).Count(),
                         CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 2).Count(),
                         NumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats
                     },
-                    ValidatorProducersInfo = new SidechainProducersInfo() {
-                        NumberOfProducersRequired = (int) contractInfo.NumberOfValidatorProducersRequired,
+                    ValidatorProducersInfo = new SidechainProducersInfo()
+                    {
+                        NumberOfProducersRequired = (int)contractInfo.NumberOfValidatorProducersRequired,
                         NumberOfProducersInChain = producers.Where(o => o.ProducerType == 1).Count(),
                         CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 1).Count(),
                         NumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats
@@ -333,25 +344,28 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the top 21 producers in the EOS network and their endpoints
+        /// Gets the top producers in the EOS Mainnet and their endpoints
         /// </summary>
-        /// <returns>The top 21 producers info and endpoints</returns>
+        /// <returns>The top producers info and endpoints</returns>
         /// <response code="200">Producer information retrieved with success</response>
         /// <response code="500">Error retrieving information</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the top 21 producers in the EOS network and their endpoints",
+            Summary = "Gets the top producers in the EOS Mainnet and their endpoints",
             Description = "Allows node to get a list of producers and their endpoints without the need of knowing a specific endpoing",
-            OperationId = "GetTop21ProducersAndEndpoints"
+            OperationId = "GetTopProducersAndEndpoints"
         )]
-        public async Task<ObjectResult> GetTop21ProducersAndEndpoints()
+        public async Task<ObjectResult> GetTopProducersAndEndpoints()
         {
             try
             {
                 var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetTop21ProducersAndEndpoints/");
                 var json = await HttpHelper.CallWebRequest(request);
+                var topProducers = JsonConvert.DeserializeObject<List<TopProducerEndpoint>>(json);
 
-                return Ok(new OperationResponse<string>(json));
+                var topProducersEndpointResponse = await ConvertToAndMeasureTopProducerEndpointResponse(topProducers.Take(10).ToList());
+
+                return Ok(new OperationResponse<List<TopProducerEndpointResponse>>(topProducersEndpointResponse));
             }
             catch (Exception e)
             {
@@ -359,11 +373,12 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        private async Task<DateTime> StakeEndTimeCalculationAtMaxPayments(string sidechainName) {
-            
+        private async Task<DateTime> StakeEndTimeCalculationAtMaxPayments(string sidechainName)
+        {
+
             var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
             var sidechainStake = (await _mainchainService.GetAccountStake(sidechainName, sidechainName));
-            
+
             var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
             var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
             var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;
@@ -374,6 +389,46 @@ namespace BlockBase.Node.Controllers
 
             var timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice = ulong.Parse(sidechainStakeInUnitsString) / ((fullProducerPaymentPerSettlement + historyroducerPaymentPerSettlement + validatorProducerPaymentPerSettlement));
             return DateTime.UtcNow.AddSeconds((contractInfo.BlockTimeDuration * contractInfo.BlocksBetweenSettlement) * timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice);
+        }
+
+        private async Task<List<TopProducerEndpointResponse>> ConvertToAndMeasureTopProducerEndpointResponse(List<TopProducerEndpoint> topProducers)
+        {
+            var topProducersEndpointResponse = new List<TopProducerEndpointResponse>();
+
+            foreach (var producer in topProducers)
+            {
+                if (!producer.Endpoints.Any()) continue;
+                var producerEndpointResponse = new TopProducerEndpointResponse();
+                producerEndpointResponse.ProducerInfo = producer.ProducerInfo;
+                producerEndpointResponse.Endpoints = new List<EndpointResponse>();
+
+                foreach (var endpoint in producer.Endpoints)
+                {
+                    if (!endpoint.Contains("http")) continue;
+                    var endpointResponse = new EndpointResponse();
+                    var infoRequest = HttpHelper.ComposeWebRequestGet($"{endpoint}/v1/chain/get_info");
+                    long measuredRequest = 0;
+
+                    try
+                    {
+                        measuredRequest = await HttpHelper.MeasureWebRequest(infoRequest);
+                    }
+                    catch (Exception)
+                    {
+                        continue;
+                    }
+
+                    endpointResponse.Endpoint = endpoint;
+                    endpointResponse.ResponseTimeInMs = measuredRequest;
+
+                    producerEndpointResponse.Endpoints.Add(endpointResponse);
+                }
+
+                producerEndpointResponse.Endpoints = producerEndpointResponse.Endpoints.OrderBy(e => e.ResponseTimeInMs).ToList();
+                topProducersEndpointResponse.Add(producerEndpointResponse);
+            }
+
+            return topProducersEndpointResponse.OrderBy(p => p.Endpoints.FirstOrDefault()?.ResponseTimeInMs).ToList();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -67,5 +68,17 @@ namespace BlockBase.Utils
             return await new StreamReader(response.GetResponseStream()).ReadToEndAsync();
         }
 
+        public static async Task<long> MeasureWebRequest(HttpWebRequest httpWebRequest)
+        {
+            httpWebRequest.ServerCertificateValidationCallback = delegate {return true;};
+            
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            var response = (HttpWebResponse)httpWebRequest.GetResponse();
+            var streamReader = await new StreamReader(response.GetResponseStream()).ReadToEndAsync();
+            stopwatch.Stop();
+
+            return stopwatch.ElapsedMilliseconds;
+        }
     }
 }
