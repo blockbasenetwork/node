@@ -235,7 +235,7 @@ namespace BlockBase.Node.Controllers
                 string tx = null;
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 
-                if (!contractSt.CandidatureTime && !contractSt.ProductionTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
+                if (!contractSt.CandidatureTime && !contractSt.ProductionTime && contractSt.ConfigTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
 
                 if (_sidechainMaintainerManager.TaskContainer == null)
                     _sidechainMaintainerManager.Start();
