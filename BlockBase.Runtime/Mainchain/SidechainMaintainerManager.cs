@@ -284,10 +284,19 @@ namespace BlockBase.Runtime.Mainchain
             {
                 var producer = table.Key;
                 var producerPublicKey = table.PublicKey;
+                //TODO rpinto - why a list of IPs and not only one?
                 var encryptedIp = table.EncryptedIPs?.LastOrDefault();
                 if (encryptedIp == null) continue;
-                decryptedProducerIPs.Add(producer, AssymetricEncryption.DecryptIP(encryptedIp, _nodeConfigurations.ActivePrivateKey, producerPublicKey));
 
+                try
+                {
+                    var decryptedIp = AssymetricEncryption.DecryptIP(encryptedIp, _nodeConfigurations.ActivePrivateKey, producerPublicKey);
+                    decryptedProducerIPs.Add(producer, decryptedIp);
+                }
+                catch
+                {
+                    _logger.LogWarning($"Unable to decrypt IP from producer: {producer}.");
+                }
             }
             return decryptedProducerIPs;
         }

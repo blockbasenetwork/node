@@ -45,6 +45,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
                 catch(Exception e)
                 {
+                    _logger.LogDebug(e.Message, "Unable to connect to postgres");
                     return false;
                 }
             }
@@ -54,6 +55,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         {
             if(!_hasBeenSetup)
             {
+                //TODO rpinto - what if this fails? There's no info returning from this method
                 await CreateDefaultDatabaseIfNotExists();
                 _hasBeenSetup = true;
             }
@@ -117,8 +119,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         private async Task CreateDefaultDatabaseIfNotExists()
         {
-            try
-            {
+            
             bool dbExists = false;
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
@@ -135,8 +136,9 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    _logger.LogWarning(e.Message, "Unable to create default database");
                 }
                 finally
                 {
@@ -145,11 +147,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
             }
             await CreateTableIfNotExists();
-            }
-            catch(Exception e)
-            {
-                //_logger.LogWarning(e.Message, "Unable to connect to postgres database");
-            }
+            
         }
         private async Task CreateTableIfNotExists()
         {

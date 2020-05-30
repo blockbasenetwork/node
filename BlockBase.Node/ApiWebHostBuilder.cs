@@ -106,7 +106,7 @@ namespace BlockBase.Api
                     .WriteTo.Console(theme: AnsiConsoleTheme.Code)
                     .WriteTo.File($"logs/ProducerD_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
                     .CreateLogger();
-
+                    
                 logging.AddSerilog();
             });
 
