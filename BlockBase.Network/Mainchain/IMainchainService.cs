@@ -45,7 +45,7 @@ namespace BlockBase.Network.Mainchain
 
         Task<ClientTable> RetrieveClientTable(string chain);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);
-        Task<List<CurrentProducerTable>> RetrieveCurrentProducer(string chain);
+        Task<CurrentProducerTable> RetrieveCurrentProducer(string chain);
         Task<List<CandidateTable>> RetrieveCandidates(string chain);
         Task<List<BlockheaderTable>> RetrieveBlockheaderList(string chain, int numberOfBlocks);
         Task<List<IPAddressTable>> RetrieveIPAddresses(string chain);

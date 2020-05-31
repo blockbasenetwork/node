@@ -63,6 +63,7 @@ namespace BlockBase.Runtime.Sidechain
         //TODO: Probably a good idea to protect from having a task already running in instance and replace taskcontainer with a new one and have multiple threads running per instance
         public TaskContainer Start()
         {
+            if(TaskContainer != null) TaskContainer.Stop();
             TaskContainer = TaskContainer.Create(async () => await Execute());
             TaskContainer.Start();
             return TaskContainer;
@@ -81,7 +82,7 @@ namespace BlockBase.Runtime.Sidechain
                         if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
                         {
-                            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName)).SingleOrDefault();
+                            var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
                             if (currentProducerTable != null)
                             {

@@ -32,10 +32,9 @@ namespace BlockBase.Runtime.Sidechain
             _mainchainService = mainchainService;
         }
 
-        public async Task SendRequestHistoryValidation(string clientAccountName, List<ProducerInTable> producers)
+        public async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
         {
-            var sidechainConfig = await _mainchainService.RetrieveContractInformation(clientAccountName);
-            var lastValidBlockheaderTable = await _mainchainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)sidechainConfig.BlocksBetweenSettlement);
+            var lastValidBlockheaderTable = await _mainchainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)contractInfo.BlocksBetweenSettlement);
             if (lastValidBlockheaderTable != null)
             {
                 var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
@@ -62,6 +61,7 @@ namespace BlockBase.Runtime.Sidechain
             return TaskContainer;
         }
 
+        //TODO rpinto - what does this do and why is it done assynchronously?
         public async Task ProposeHistoryValidationAndTryToExecute(string accountName, string blockhash, SidechainPool sidechainPool)
         {
             var historyTable = await _mainchainService.RetrieveHistoryValidationTable(sidechainPool.ClientAccountName);

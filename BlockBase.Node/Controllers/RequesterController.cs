@@ -261,6 +261,7 @@ namespace BlockBase.Node.Controllers
                 || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted)
                     _sidechainMaintainerManager.Start();
 
+
                 var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
 
                 return Ok(new OperationResponse<bool>(true, okMessage));

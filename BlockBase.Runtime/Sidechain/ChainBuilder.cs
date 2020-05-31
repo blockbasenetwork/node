@@ -76,6 +76,8 @@ namespace BlockBase.Runtime.Sidechain
         public TaskContainer Start(SidechainPool sidechainPool)
         {
             _sidechainPool = sidechainPool;
+
+            if(TaskContainer != null) TaskContainer.Stop();
             TaskContainer = TaskContainer.Create(async () => await Execute());
             TaskContainer.Start();
             return TaskContainer;

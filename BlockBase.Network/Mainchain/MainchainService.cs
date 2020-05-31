@@ -410,8 +410,12 @@ namespace BlockBase.Network.Mainchain
         public async Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ProducerInTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PRODUCERS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
 
-        public async Task<List<CurrentProducerTable>> RetrieveCurrentProducer(string chain) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CurrentProducerTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CURRENT_PRODUCER_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+        public async Task<CurrentProducerTable> RetrieveCurrentProducer(string chain) 
+        {
+            var result = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CurrentProducerTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CURRENT_PRODUCER_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            return result.SingleOrDefault();
+        }
+            
 
         public async Task<List<CandidateTable>> RetrieveCandidates(string chain) =>
             await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CandidateTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CANDIDATES_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);

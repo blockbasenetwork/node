@@ -372,7 +372,7 @@ namespace BlockBase.Node.Controllers
             {
                 var poolOfSidechains = _sidechainProducerService.GetSidechains();
 
-                return Ok(new OperationResponse<Dictionary<string, SidechainPool>>(poolOfSidechains, $"Get producing sidechains successful."));
+                return Ok(new OperationResponse<List<string>>(poolOfSidechains.Keys.ToList(), $"Get producing sidechains successful."));
             }
             catch (Exception e)
             {

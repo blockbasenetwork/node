@@ -30,6 +30,8 @@ namespace BlockBase.Utils.Threading
         public void Stop()
         {
             CancellationTokenSource.Cancel();
+            //better to wait for the task to cancel...
+            Task.Wait();
         }
     }
 }

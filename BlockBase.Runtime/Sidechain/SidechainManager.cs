@@ -47,6 +47,7 @@ namespace BlockBase.Runtime.Sidechain
 
         public TaskContainer Start()
         {
+            if(TaskContainer != null) TaskContainer.Stop();
             TaskContainer = TaskContainer.Create(async () => await SuperMethod());
             TaskContainer.Start();
             return TaskContainer;
@@ -78,23 +79,31 @@ namespace BlockBase.Runtime.Sidechain
             await Task.Delay(1000);
             try
             {
+                //TODO rpinto - this while should never be stopped unless specified by the user
                 while (true)
                 {
                     try
                     {
+                        var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+                        var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
+                        var currentProducer = await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName);
+                        var producerList = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
+                        var candidateList = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
+
                         switch (Sidechain.State)
                         {
                             case SidechainPoolStateEnum.WaitForNextState:
                                 _timeDiff = (Sidechain.NextStateWaitEndTime * 1000) - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 if (_timeDiff <= 0)
                                 {
-                                    await CheckContractAndUpdateStates();
-                                    await CheckContractAndUpdateWaitTimes();
-                                    await CheckContractEndState();
+                                    CheckContractAndUpdateStates(contractState);
+                                    CheckContractAndUpdateWaitTimes(contractInfo, currentProducer);
+                                    CheckContractEndState(producerList, candidateList);
+
                                     if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby && _previousWaitTime != Sidechain.NextStateWaitEndTime)
                                     {
-                                        await CheckPeerConnections();
-                                        await CheckContractAndUpdatePool();
+                                        await CheckPeerConnections(producerList);
+                                        await CheckContractAndUpdatePool(producerList);
                                         await CheckAndGetReward();
                                         await CheckSidechainValidation();
                                     };
@@ -109,15 +118,15 @@ namespace BlockBase.Runtime.Sidechain
                                 break;
 
                             case SidechainPoolStateEnum.CandidatureTime:
-                                await InitCandidature();
+                                InitCandidature(contractInfo);
                                 break;
 
                             case SidechainPoolStateEnum.SecretTime:
-                                await SendSecret();
+                                await SendSecret(contractState, contractInfo);
                                 break;
 
                             case SidechainPoolStateEnum.IPSendTime:
-                                await CheckCandidatureSuccess();
+                                CheckCandidatureSuccess(producerList);
                                 await InitProducerSendIP();
                                 break;
 
@@ -179,6 +188,7 @@ namespace BlockBase.Runtime.Sidechain
             //TODO rpinto - what happens if recoverRetry fails?
             while (recoverRetry < MAX_NUMBER_OF_TRIES)
             {
+                //TODO rpinto - can I move this to the outside like the remaining ones?
                 var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
                 var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
                 var selfCandidate = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault();
@@ -218,30 +228,29 @@ namespace BlockBase.Runtime.Sidechain
             _logger.LogDebug("State " + Sidechain.State);
         }
 
-        private async Task InitCandidature()
+        private void InitCandidature(ContractInformationTable contractInfo)
         {
             Sidechain.State = SidechainPoolStateEnum.WaitForNextState;
 
             if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby) return;
 
             _logger.LogInformation("Init candidature.");
-            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
-            if (contractInformation == null) _logger.LogCritical("contract info null");
+            
+            if (contractInfo == null) _logger.LogCritical("contract info null");
             if (Sidechain == null) _logger.LogCritical("contract info null");
-            Sidechain.BlockTimeDuration = contractInformation.BlockTimeDuration;
-            Sidechain.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;
+            Sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
+            Sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
             _logger.LogDebug($"Block time duration: {Sidechain.BlockTimeDuration} seconds, Settlement Blocks: {Sidechain.BlocksBetweenSettlement} blocks");
         }
 
-        private async Task SendSecret()
+        private async Task SendSecret(ContractStateTable contractState, ContractInformationTable contractInfo)
         {
             Sidechain.State = SidechainPoolStateEnum.WaitForNextState;
 
             if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby) return;
 
             _logger.LogInformation("Sending Secret...");
-            var contractInformation = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
-            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+            
 
             var secretPass = _nodeConfigurations.SecretPassword;
             _logger.LogDebug("Secret sent: " + _nodeConfigurations.SecretPassword);
@@ -252,19 +261,17 @@ namespace BlockBase.Runtime.Sidechain
             await _mainchainService.AddSecret(Sidechain.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
         }
 
-        private async Task CheckCandidatureSuccess()
+        private void CheckCandidatureSuccess(List<ProducerInTable> producerList)
         {
             Sidechain.State = SidechainPoolStateEnum.WaitForNextState;
 
             _logger.LogInformation("End Candidature.");
 
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-
-            if (IsProducerInTable(producersInTable))
+            if (IsProducerInTable(producerList))
             {
                 if (!Sidechain.ProducersInPool.GetEnumerable().Any())
                 {
-                    var producersInPool = producersInTable.Select(m => new ProducerInPool
+                    var producersInPool = producerList.Select(m => new ProducerInPool
                     {
                         ProducerInfo = new ProducerInfo
                         {
@@ -279,7 +286,7 @@ namespace BlockBase.Runtime.Sidechain
                 }
                 else
                 {
-                    UpdateAndCheckIfProducersInSidechainChanged(producersInTable);
+                    UpdateAndCheckIfProducersInSidechainChanged(producerList);
                 }
                 Sidechain.CandidatureOnStandby = false;
             }
@@ -309,6 +316,7 @@ namespace BlockBase.Runtime.Sidechain
             _logger.LogInformation("Init producer receive ips.");
             await ExtractAndUpdateIPs();
 
+            //TODO rpinto - this code is weird
             //TODO: Review this code
             if (Sidechain.ProducingBlocks && !Sidechain.CandidatureOnStandby && _blockProductionManager.TaskContainer == null)
             {
@@ -463,9 +471,8 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private async Task CheckContractAndUpdateStates()
+        private void CheckContractAndUpdateStates(ContractStateTable contractState)
         {
-            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
             if (contractState.ConfigTime) Sidechain.State = SidechainPoolStateEnum.ConfigTime;
             if (contractState.CandidatureTime) Sidechain.State = SidechainPoolStateEnum.CandidatureTime;
             if (contractState.SecretTime) Sidechain.State = SidechainPoolStateEnum.SecretTime;
@@ -479,10 +486,9 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private async Task CheckContractAndUpdateWaitTimes()
+        private void CheckContractAndUpdateWaitTimes(ContractInformationTable contractInfo, CurrentProducerTable currentProducer)
         {
             _previousWaitTime = Sidechain.NextStateWaitEndTime;
-            var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
             if (Sidechain.State == SidechainPoolStateEnum.ConfigTime) Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (contractInfo.CandidatureTime / 2);
             if (Sidechain.State == SidechainPoolStateEnum.CandidatureTime && contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
             if (Sidechain.State == SidechainPoolStateEnum.SecretTime && contractInfo.SecretEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SecretEndDate;
@@ -491,9 +497,8 @@ namespace BlockBase.Runtime.Sidechain
 
             if (!Sidechain.ProducingBlocks || Sidechain.CandidatureOnStandby) return;
 
-            var currentProd = (await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName)).SingleOrDefault();
-            var nextBlockTime = currentProd != null ?
-                currentProd.StartProductionTime + Sidechain.BlockTimeDuration :
+            var nextBlockTime = currentProducer != null ?
+                currentProducer.StartProductionTime + Sidechain.BlockTimeDuration :
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
 
             if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
@@ -502,12 +507,9 @@ namespace BlockBase.Runtime.Sidechain
                 Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds();
         }
 
-        private async Task CheckContractEndState()
+        private void CheckContractEndState(List<ProducerInTable> producerList, List<CandidateTable> candidateList)
         {
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-            var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
-
-            if (Sidechain.State == SidechainPoolStateEnum.ConfigTime || (!IsProducerInTable(producersInTable) && !candidatesInTable.Select(m => m.Key).Contains(_nodeConfigurations.AccountName)))
+            if (Sidechain.State == SidechainPoolStateEnum.ConfigTime || (!IsProducerInTable(producerList) && !candidateList.Select(m => m.Key).Contains(_nodeConfigurations.AccountName)))
             {
                 _logger.LogInformation("Smart Contract Ended");
 
@@ -519,11 +521,11 @@ namespace BlockBase.Runtime.Sidechain
             }
         }
 
-        private async Task CheckPeerConnections()
+        private async Task CheckPeerConnections(List<ProducerInTable> producerList)
         {
             var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-            var producersInPool = producersInTable.Select(m => new ProducerInPool
+
+            var producersInPool = producerList.Select(m => new ProducerInPool
             {
                 ProducerInfo = new ProducerInfo
                 {
@@ -543,15 +545,15 @@ namespace BlockBase.Runtime.Sidechain
 
             if (Sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
             {
+                //TODO rpinto - this returns a TaskContainer that isn't stored anywhere. So this is executed and not awaited. Is that the intended behavior?
                 var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(Sidechain));
                 checkConnectionTask.Start();
             }
         }
 
-        private async Task CheckContractAndUpdatePool()
+        private async Task CheckContractAndUpdatePool(List<ProducerInTable> producerList)
         {
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-            if (producersInTable == null || !producersInTable.Any() || !IsProducerInTable(producersInTable)) return;
+            if (producerList == null || !producerList.Any() || !IsProducerInTable(producerList)) return;
 
             await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(Sidechain);
         }
@@ -575,6 +577,8 @@ namespace BlockBase.Runtime.Sidechain
 
             if (sidechainValidation.Key == _nodeConfigurations.AccountName)
             {
+                //TODO rpinto - why is this run assynchronously when the CheckAndApproveHistoryValidation is done synchronously?
+                //TODO rpinto - this returns a TaskContainer that isn't stored anywhere!
                 _historyValidation.StartHistoryValidationTask(_nodeConfigurations.AccountName,
                     sidechainValidation.BlockHash,
                     Sidechain);

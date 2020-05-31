@@ -19,6 +19,7 @@ using static BlockBase.Network.PeerConnection;
 using BlockBase.Runtime.Sidechain;
 using Microsoft.Extensions.Options;
 using BlockBase.DataPersistence.ProducerData;
+using BlockBase.Network.Mainchain.Pocos;
 
 namespace BlockBase.Runtime.Mainchain
 {
@@ -43,9 +44,14 @@ namespace BlockBase.Runtime.Mainchain
         public TaskContainer Start()
         {
             _transactionSender.Setup().Wait();
+
+            if(TaskContainer != null) TaskContainer.Stop();
+
             TaskContainer = TaskContainer.Create(async () => await SuperMethod());
             TaskContainer.Start();
             return TaskContainer;
+
+            
         }
         public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbServices, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender)
         {
@@ -67,35 +73,58 @@ namespace BlockBase.Runtime.Mainchain
             {
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
                 var blocksCount = await _mainchainService.RetrieveBlockCount(_sidechain.ClientAccountName);
-                var numberOfRoundsAlreadyPassed = blocksCount.Sum(b => b.blocksproduced) + blocksCount.Sum(b => b.blocksfailed);
+                var contractState = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
+                var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechain.ClientAccountName);
+                
 
                 _sidechain.BlockSizeInBytes = contractInfo.SizeOfBlockInBytes;
                 _sidechain.BlockTimeDuration = contractInfo.BlockTimeDuration;
                 _sidechain.BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement;
+
+                var numberOfRoundsAlreadyPassed = blocksCount.Sum(b => b.blocksproduced) + blocksCount.Sum(b => b.blocksfailed);
                 _roundsUntilSettlement = Convert.ToInt32(contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
 
-                var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
-                if (stateTable.ProductionTime) await ConnectToProducers();
+                //TODO rpinto - so this is done only once? shouldn't it be done periodically inside the while?
+                if (contractState.ProductionTime) await ConnectToProducers();
 
-                await CheckContractAndUpdateWaitTimes();
+                CheckContractAndUpdateWaitTimes(contractInfo, currentProducer);
 
+                //TODO rpinto - this while should never be stopped unless specified by the user - the try should be on the inside
                 while (true)
                 {
+                    
                     _timeDiff = (_sidechain.NextStateWaitEndTime * 1000) - _timeToExecuteTrx - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     _logger.LogDebug($"timediff: {_timeDiff}");
 
                     if (_timeDiff <= 0)
                     {
-                        if (_previousWaitTime != _sidechain.NextStateWaitEndTime || _forceTryAgain || _timeDiff + _sidechain.BlockTimeDuration <= 0) await CheckContractEndState();
                         UpdateAverageTrxTime();
-                        await CheckContractAndUpdateStates();
-                        await CheckContractAndUpdateWaitTimes();
+
+                        currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechain.ClientAccountName);
+                        contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
+                        contractState = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
+
+                        //TODO rpinto - these types of ifs are difficult to understand...
+                        if (_previousWaitTime != _sidechain.NextStateWaitEndTime || _forceTryAgain || _timeDiff + _sidechain.BlockTimeDuration <= 0) 
+                        {
+                            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+                            var sidechainAccountInfo = await _mainchainService.GetAccount(_sidechain.ClientAccountName);
+
+
+                            await CheckContractEndState(contractInfo, contractState, producerList, currentProducer, sidechainAccountInfo);
+                        }
+                        
+                        CheckContractAndUpdateStates(contractState);
+                        CheckContractAndUpdateWaitTimes(contractInfo, currentProducer);
+
+                        //TODO rpinto - why this small delay here?
                         await Task.Delay(800);
                     }
                     else await Task.Delay((int)_timeDiff);
 
                     if (_previousWaitTime == _sidechain.NextStateWaitEndTime)
                     {
+                        //TODO rpinto - why this small delay here?
                         await Task.Delay(10);
                         _sidechain.State = SidechainPoolStateEnum.WaitForNextState;
                     }
@@ -116,43 +145,43 @@ namespace BlockBase.Runtime.Mainchain
 
         #region Auxiliar Methods
 
-        private async Task CheckContractEndState()
+        private async Task CheckContractEndState(ContractInformationTable contractInfo, ContractStateTable contractStateTable, List<ProducerInTable> producerList, CurrentProducerTable currentProducerTable, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
-            var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechain.ClientAccountName);
-            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
-            var stateTable = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
             int latestTrxTime = 0;
             _forceTryAgain = false;
 
             try
             {
-                if (stateTable.CandidatureTime &&
+                //TODO rpinto - shouldn't all these if have a return at the end of their body?
+                //this is risking entering many ifs given enough time to pass sufficient enddates...
+                if (contractStateTable.CandidatureTime &&
                     contractInfo.CandidatureEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorizations();
+                    await UpdateAuthorizations(producerList, sidechainAccountInfo);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.ClientAccountName);
                 }
-                if (stateTable.SecretTime &&
+                if (contractStateTable.SecretTime &&
                     contractInfo.SecretEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.ClientAccountName);
                 }
-                if (stateTable.IPSendTime &&
+                if (contractStateTable.IPSendTime &&
                     contractInfo.SendEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    await UpdateAuthorizations();
+                    await UpdateAuthorizations(producerList, sidechainAccountInfo);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_RECEIVE_TIME, _sidechain.ClientAccountName);
                 }
-                if (stateTable.IPReceiveTime &&
+                if (contractStateTable.IPReceiveTime &&
                     contractInfo.ReceiveEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     await LinkAuthorizarion(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechain.ClientAccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
                     await LinkAuthorizarion(EosMethodNames.HISTORY_VALIDATE, _sidechain.ClientAccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
+                    
                     await ConnectToProducers();
                 }
-                if (stateTable.ProductionTime && currentProducerTable.Any() &&
-                   (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                if (contractStateTable.ProductionTime && currentProducerTable != null &&
+                   (currentProducerTable.StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int) _sidechain.BlocksBetweenSettlement);
                     if(lastBlockHeader != null) 
@@ -160,11 +189,11 @@ namespace BlockBase.Runtime.Mainchain
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
                     _roundsUntilSettlement--;
                     _logger.LogDebug($"Rounds until settlement: {_roundsUntilSettlement}");
-                    if (_roundsUntilSettlement == 0) await ExecuteSettlementActions();
+                    if (_roundsUntilSettlement == 0) await ExecuteSettlementActions(contractInfo, producerList, sidechainAccountInfo);
                 }
-                if (stateTable.ProductionTime && currentProducerTable.Any())
+                if (contractStateTable.ProductionTime && currentProducerTable != null)
                 {
-                    await CheckPeerConnections();
+                    await CheckPeerConnections(producerList);
                 }
             }
             catch (HttpRequestException)
@@ -195,12 +224,10 @@ namespace BlockBase.Runtime.Mainchain
             await _peerConnectionsHandler.ConnectToProducers(ipAddresses);
         }
 
-        private async Task CheckContractAndUpdateWaitTimes()
+        private void CheckContractAndUpdateWaitTimes(ContractInformationTable contractInfo, CurrentProducerTable currentProducer)
         {
             _previousWaitTime = _sidechain.NextStateWaitEndTime;
-            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechain.ClientAccountName);
-            var currentProducerList = await _mainchainService.RetrieveCurrentProducer(_sidechain.ClientAccountName);
-            var currentProducer = currentProducerList.FirstOrDefault();
+            
             if (_sidechain.State == SidechainPoolStateEnum.ConfigTime) _sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (contractInfo.CandidatureTime / 2);
             if (contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) _sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
             if (contractInfo.SecretEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) _sidechain.NextStateWaitEndTime = contractInfo.SecretEndDate;
@@ -216,9 +243,8 @@ namespace BlockBase.Runtime.Mainchain
                 _sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds();
         }
 
-        private async Task CheckContractAndUpdateStates()
+        private void CheckContractAndUpdateStates(ContractStateTable contractState)
         {
-            var contractState = await _mainchainService.RetrieveContractState(_sidechain.ClientAccountName);
             if (contractState.ConfigTime) _sidechain.State = SidechainPoolStateEnum.ConfigTime;
             if (contractState.CandidatureTime) _sidechain.State = SidechainPoolStateEnum.CandidatureTime;
             if (contractState.SecretTime) _sidechain.State = SidechainPoolStateEnum.SecretTime;
@@ -232,10 +258,8 @@ namespace BlockBase.Runtime.Mainchain
             }
         }
 
-        private async Task UpdateAuthorizations()
+        private async Task UpdateAuthorizations(List<ProducerInTable> producerList, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
-            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
-            var sidechainAccountInfo = await _mainchainService.GetAccount(_sidechain.ClientAccountName);
             var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
             if (!producerList.Any()) return;
             if (!producerList.Any(p => !_sidechain.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) &&
@@ -300,11 +324,12 @@ namespace BlockBase.Runtime.Mainchain
             }
             return decryptedProducerIPs;
         }
-        private async Task ExecuteSettlementActions()
+        private async Task ExecuteSettlementActions(ContractInformationTable contractInfo, List<ProducerInTable> producers, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
             _logger.LogDebug("Settlement starting...");
 
-            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            //TODO rpinto - commented this but I'm not sure if it needs a refresh of the list of producers after all the operations done before it
+            //var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
             if (producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any())
             {
                 _logger.LogDebug("Blacklisting producers...");
@@ -316,17 +341,19 @@ namespace BlockBase.Runtime.Mainchain
                 await _mainchainService.PunishProd(_sidechain.ClientAccountName);
             }
 
-            await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, producers);
+            await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, contractInfo, producers);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
-            await UpdateAuthorizations();
+            await UpdateAuthorizations(producers, sidechainAccountInfo);
         }
 
-        private async Task CheckPeerConnections()
+        private async Task CheckPeerConnections(List<ProducerInTable> producers)
         {
             var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
-            var producersInPool = producersInTable.Select(m => new ProducerInPool
+
+            //TODO rpinto - commented this fetch to pass as parameter but I'm not sure it needs to be refreshed from before
+            // var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+            var producersInPool = producers.Select(m => new ProducerInPool
             {
                 ProducerInfo = new ProducerInfo
                 {
@@ -341,10 +368,12 @@ namespace BlockBase.Runtime.Mainchain
 
             _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
 
+            //TODO rpinto - this may also take time but is awaited. Why this way here and different right below
             await ConnectToProducers();
 
             if (_sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
             {
+                //TODO rpinto - this returns a TaskContainer that isn't stored anywhere. So this is executed and not awaited. Is that the intended behavior?
                 var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(_sidechain));
                 checkConnectionTask.Start();
             }
