@@ -54,7 +54,7 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
     "ActivePrivateKey": "", // The private key for the active permission key of the node account
     "ActivePublicKey": "", // The public key for the active permission key
     "MongoDbConnectionString": "mongodb://localhost", // The MongoDB connection string
-    "MongoDbPrefix": "blockbase", // A prefix that will be used in all created MongoDB databases
+    "MongoDbPrefix": "blockbase", // A prefix that will be used in all created MongoDB databases. If you're running multiple instance of the BlockBase node attached to the same mongodb you need to have a different prefix per node instance!
     "PostgresHost": "localhost", // The postgresql host address
     "PostgresUser": "postgres", // The postgresql user name to use for the connection
     "PostgresPort": 5432, // The port to use in the postgresql connection
