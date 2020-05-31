@@ -227,7 +227,7 @@ namespace BlockBase.Runtime.Mainchain
 
             if (contractState.ProductionTime != _sidechain.ProducingBlocks)
             {
-                if (contractState.ProductionTime) _sidechain.State = SidechainPoolStateEnum.InitMining;
+                if (contractState.ProductionTime) _sidechain.State = SidechainPoolStateEnum.InitProduction;
                 _sidechain.ProducingBlocks = contractState.ProductionTime;
             }
         }

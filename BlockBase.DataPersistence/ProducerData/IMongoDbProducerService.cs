@@ -29,7 +29,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<IList<Transaction>> RetrieveLastLooseTransactions(string databaseName);
         Task<Transaction> LastIncludedTransaction(string databaseName);
         Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash);
-        Task<IList<Transaction>> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
+        Task<Transaction> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
         Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber);
         Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash);
         Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName);

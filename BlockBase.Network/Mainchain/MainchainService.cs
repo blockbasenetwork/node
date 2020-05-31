@@ -217,6 +217,7 @@ namespace BlockBase.Network.Mainchain
                 EosMethodNames.END_CHAIN,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
+                //TODO rpinto - is this still a deferred transaction - doesn't seem so
                 CreateDataForDeferredTransaction(owner),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries

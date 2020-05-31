@@ -43,11 +43,7 @@ namespace BlockBase.Runtime.Sidechain
         private readonly IMongoDbProducerService _mongoDbProducerService;
         private readonly BlockSender _blockSender;
         private HistoryValidation _historyValidation;
-
-        private const uint MINIMUM_NUMBER_OF_CONNECTIONS = 1;
-        private const uint CONNECTION_EXPIRATION_TIME_IN_SECONDS_MAINCHAIN = 60;
         private const int MAX_NUMBER_OF_TRIES = 5;
-        private const int SETTLEMENT_BLOCKS_PER_PRODUCER = 5;
 
         public TaskContainer Start()
         {
@@ -129,11 +125,11 @@ namespace BlockBase.Runtime.Sidechain
                                 await InitProducerReceiveIPs();
                                 break;
 
-                            case SidechainPoolStateEnum.InitMining:
+                            case SidechainPoolStateEnum.InitProduction:
                                 await InitMining();
                                 break;
 
-                            case SidechainPoolStateEnum.RecoverInfo:
+                            case SidechainPoolStateEnum.Starting:
                                 await RecoverInfo();
                                 break;
                         }
@@ -179,15 +175,17 @@ namespace BlockBase.Runtime.Sidechain
             Sidechain.BlockSizeInBytes = contractInformation.SizeOfBlockInBytes;
 
             var recoverRetry = 0;
+
+            //TODO rpinto - what happens if recoverRetry fails?
             while (recoverRetry < MAX_NUMBER_OF_TRIES)
             {
                 var producersInTable = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
                 var candidatesInTable = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
-                var selfCandidate = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+                var selfCandidate = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault();
 
                 if (IsProducerInTable(producersInTable))
                 {
-                    var self = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+                    var self = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault();
                     Sidechain.ProducerType = (ProducerTypeEnum)self.ProducerType;
 
                     var producersInPool = producersInTable.Select(m => new ProducerInPool
@@ -476,7 +474,7 @@ namespace BlockBase.Runtime.Sidechain
 
             if (contractState.ProductionTime != Sidechain.ProducingBlocks)
             {
-                if (contractState.ProductionTime) Sidechain.State = SidechainPoolStateEnum.InitMining;
+                if (contractState.ProductionTime) Sidechain.State = SidechainPoolStateEnum.InitProduction;
                 Sidechain.ProducingBlocks = contractState.ProductionTime;
             }
         }
@@ -485,7 +483,6 @@ namespace BlockBase.Runtime.Sidechain
         {
             _previousWaitTime = Sidechain.NextStateWaitEndTime;
             var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
-            var currentProd = (await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName)).SingleOrDefault();
             if (Sidechain.State == SidechainPoolStateEnum.ConfigTime) Sidechain.NextStateWaitEndTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + (contractInfo.CandidatureTime / 2);
             if (Sidechain.State == SidechainPoolStateEnum.CandidatureTime && contractInfo.CandidatureEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.CandidatureEndDate;
             if (Sidechain.State == SidechainPoolStateEnum.SecretTime && contractInfo.SecretEndDate > DateTimeOffset.UtcNow.ToUnixTimeSeconds()) Sidechain.NextStateWaitEndTime = contractInfo.SecretEndDate;
@@ -494,9 +491,11 @@ namespace BlockBase.Runtime.Sidechain
 
             if (!Sidechain.ProducingBlocks || Sidechain.CandidatureOnStandby) return;
 
+            var currentProd = (await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName)).SingleOrDefault();
             var nextBlockTime = currentProd != null ?
                 currentProd.StartProductionTime + Sidechain.BlockTimeDuration :
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds() + Sidechain.BlockTimeDuration;
+
             if (nextBlockTime < Sidechain.NextStateWaitEndTime || DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= Sidechain.NextStateWaitEndTime)
                 Sidechain.NextStateWaitEndTime = nextBlockTime;
             if (Sidechain.NextStateWaitEndTime > DateTimeOffset.UtcNow.AddSeconds(15).ToUnixTimeSeconds())

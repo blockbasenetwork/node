@@ -122,6 +122,7 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        //TODO rpinto - Consider refactoring. This is just  boolean check with a throw
         private void CheckIfSecretIsSet()
         {
             if (!_databaseKeyManager.DataSynced)

@@ -114,12 +114,12 @@ namespace BlockBase.Network.Connectors
             }
             catch(EndOfStreamException exception)
             {
-                _logger.LogError($"Peer disconnected: {e.Peer.EndPoint}", exception);
+                _logger.LogError(exception.Message, $"Peer disconnected: {e.Peer.EndPoint}");
                 Disconnect(e.Peer);
             }
             catch (Exception exception)
             {
-                _logger.LogError("Peer communication crashed:", exception);
+                _logger.LogError(exception.Message, "Peer communication crashed:");
             }
         }
 

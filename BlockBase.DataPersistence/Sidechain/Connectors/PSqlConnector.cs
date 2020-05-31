@@ -110,7 +110,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 {
                     await conn.CloseAsync();
                 }
-
             }
 
             return infoRecords;
@@ -167,8 +166,9 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    _logger.LogWarning(e.Message, "Unable to create default table");
                 }
                 finally
                 {
@@ -202,12 +202,11 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
                 catch (Exception e)
                 {
-                    _logger.LogWarning(e.Message, "Database does not exist.");
+                    _logger.LogWarning(e.Message, "Default database does not exist.");
                 }
                 finally
                 {
                     await conn.CloseAsync();
-
                 }
 
             }

@@ -175,7 +175,7 @@ namespace BlockBase.Runtime.Sidechain
             }
             catch(Exception e)
             {
-                //_logger.LogWarning(e.Message, "Unable to connect to mongo db database");
+                _logger.LogWarning(e.Message, "Unable to connect to mongodb database");
             }
         }
     }

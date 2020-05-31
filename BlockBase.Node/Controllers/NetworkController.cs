@@ -6,21 +6,16 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.Utils;
-using BlockBase.Domain.Blockchain;
-using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Runtime.SidechainProducer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain;
 using BlockBase.Utils;
 using Newtonsoft.Json;
 using BlockBase.Domain.Results;
-using System.Diagnostics;
 
 namespace BlockBase.Node.Controllers
 {
@@ -49,6 +44,7 @@ namespace BlockBase.Node.Controllers
         /// <returns>The success of the task</returns>
         /// <response code="200">Contract information retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
+        /// <response code="404">Contract information not found</response>
         /// <response code="500">Error retrieving the contract information</response>
         [HttpGet]
         [SwaggerOperation(
@@ -60,10 +56,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var clientLedger = await _mainchainService.RetrieveClientTokenLedgerTable(sidechainName);
+                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a sidechain name."));
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-
-                if(contractInfo == null) throw new InvalidOperationException($"{sidechainName} not found");
+                
+                if(contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} configuration not found"));
 
                 var result = new GetSidechainConfigurationModel {
                     account_name = contractInfo.Key,
@@ -106,6 +102,7 @@ namespace BlockBase.Node.Controllers
         /// <returns>Information about the producer in the sidechain</returns>
         /// <response code="200">Information retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
+        /// <response code="404">Unable to retrieve sidechain data</response>
         /// <response code="500">Error retrieving the information</response>
         [HttpGet]
         [SwaggerOperation(
@@ -118,15 +115,24 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                if(string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(sidechainName))
+                {
+                    return BadRequest($"Please provide and producer account name and a sidechain name");
+                }
+
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
 
+                if(contractState == null) return NotFound($"Unable to retrieve {sidechainName} contract state");
+                if(candidatureTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature table");
+
+                //TODO rpinto - is it a bad request? And why not give info anyway even if not in candidature phase?
                 if (!contractState.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time"));
 
-                var hasProducerApplied = candidatureTable.Select(m => m.Key).Contains(accountName);
+                var hasProducerApplied = candidatureTable.Where(m => m.Key == accountName).Any();
 
-                if (!hasProducerApplied) return Ok(new OperationResponse<bool>(hasProducerApplied, $"Producer {accountName} not found"));
-                else return Ok(new OperationResponse<bool>(hasProducerApplied, $"Producer {accountName} found"));
+                if (!hasProducerApplied) return Ok(new OperationResponse<bool>(false, $"Producer {accountName} not found"));
+                else return Ok(new OperationResponse<bool>(true, $"Producer {accountName} found"));
 
             }
             catch (Exception e)
@@ -142,6 +148,7 @@ namespace BlockBase.Node.Controllers
         /// <returns>The current state of the contract</returns>
         /// <response code="200">Contract state retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
+        /// <response code="404">Sidechain state not found</response>
         /// <response code="500">Error retrieving contract state</response>
         [HttpGet]
         [SwaggerOperation(
@@ -153,37 +160,46 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var contractStates = await _mainchainService.RetrieveContractState(sidechainName);
+                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest("Please provide a valid sidechain name");
+
+                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
                 var tokenLedger = await _mainchainService.GetAccountStake(sidechainName, sidechainName);
                 var producers = await _mainchainService.RetrieveProducersFromTable(sidechainName);
                 var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
                 var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
 
+                if(contractState == null) return BadRequest($"Contract state not found for {sidechainName}");
+                if(candidates == null) return BadRequest($"Candidate table not found for {sidechainName}");
+                if(tokenLedger == null) return BadRequest($"Token ledger table not found for {sidechainName}");
+                if(producers == null) return BadRequest($"Producer table not found for {sidechainName}");
+                if(contractInfo == null) return BadRequest($"Contract info not found for {sidechainName}");
+                if(reservedSeats == null) return BadRequest($"Reserved seats table not found for {sidechainName}");
+
                 var slotsTakenByReservedSeats = 0;
                 var fullNumberOfSlotsTakenByReservedSeats = 0;
                 var historyNumberOfSlotsTakenByReservedSeats = 0;
                 var validatorNumberOfSlotsTakenByReservedSeats = 0;
 
-                foreach (var reservedSeat in reservedSeats)
+                foreach (var reservedSeatKey in reservedSeats.Select(r => r.Key).Distinct())
                 {
-                    var producer = producers.Where(o => o.Key == reservedSeat.Key).FirstOrDefault();
+                    var producer = producers.Where(o => o.Key == reservedSeatKey).SingleOrDefault();
                     if (producer != null)
                     {
-                        slotsTakenByReservedSeats = slotsTakenByReservedSeats + 1;
-                        if (producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats + 1;
-                        if (producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats + 1;
-                        if (producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats + 1;
+                        slotsTakenByReservedSeats++;
+                        if (producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats++;
+                        if (producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats++;
+                        if (producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats++;
                     }
                 }
 
                 var sidechainState = new SidechainState()
                 {
 
-                    State = contractStates.ConfigTime ? "Configure state" : contractStates.SecretTime ? "Secrect state" : contractStates.IPSendTime ? "Ip Send Time" : contractStates.IPReceiveTime ? "Ip Receive Time" : contractStates.ProductionTime ? "Production" : contractStates.Startchain ? "Startchain" : "No State in chain",
-                    StakeDepletionEndDate = await StakeEndTimeCalculationAtMaxPayments(sidechainName),
-                    CurrentSidechainStake = tokenLedger.Stake,
-                    InProduction = contractStates.ProductionTime,
+                    State = contractState.ConfigTime ? "Configure state" : contractState.SecretTime ? "Secrect state" : contractState.IPSendTime ? "Ip Send Time" : contractState.IPReceiveTime ? "Ip Receive Time" : contractState.ProductionTime ? "Production" : contractState.Startchain ? "Startchain" : "No State in chain",
+                    StakeDepletionEndDate = StakeEndTimeCalculationAtMaxPayments(contractInfo, tokenLedger),
+                    CurrentSidechainStake = tokenLedger.Stake, //TODO rpinto - needs conversion
+                    InProduction = contractState.ProductionTime,
                     ReservedSeats = new ReservedSeats()
                     {
                         TotalNumber = reservedSeats.Count,
@@ -221,134 +237,41 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        /// <summary>
-        /// Gets the total number of current candidates for a given sidechain
-        /// </summary>
-        /// <param name="sidechainName">Name of the sidechain</param>
-        /// <returns>The number of candidates in the sidechain</returns>
-        /// <response code="200">Total producers retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving total candidates information.</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the current number of candidates for a given sidechain",
-            Description = "Gets the current number of candidates that have applied to produce a given sidechain",
-            OperationId = "GetTotalCandidatesForSidechain"
-        )]
-        public async Task<ObjectResult> GetTotalCandidatesForSidechain(string sidechainName)
-        {
-            try
-            {
-                //TODO - this information is not enough as is
-                var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
-                return Ok(new OperationResponse<int>(candidates.Count));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
-            }
-        }
-
-
-        /// <summary>
-        /// Gets specific block in sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the Sidechain</param>
-        /// <param name="blockNumber">Number of the block</param>
-        /// <returns>The requested block</returns>
-        /// <response code="200">Block retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the block</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the block of a given sidechain",
-            Description = "Gets the block object requested",
-            OperationId = "GetBlock"
-        )]
-        public async Task<ObjectResult> GetBlock(string chainName, ulong blockNumber)
-        {
-            try
-            {
-                var blockResponse = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(chainName, blockNumber, blockNumber);
-                var block = blockResponse.FirstOrDefault();
-
-                if (block == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
-
-                return Ok(new OperationResponse<Block>(block));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets specific transaction in sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the Sidechain</param>
-        /// <param name="transactionNumber">Number of the transaction</param>
-        /// <returns>The requested Transaction</returns>
-        /// <response code="200">Transaction retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the block</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the transaction of a given sidechain",
-            Description = "Gets the transaction object requested",
-            OperationId = "GetTransaction"
-        )]
-        public async Task<ObjectResult> GetTransaction(string chainName, ulong transactionNumber)
-        {
-            try
-            {
-                var transactionsResponse = await _mongoDbProducerService.GetTransactionBySequenceNumber(chainName, transactionNumber);
-                var transaction = transactionsResponse.FirstOrDefault();
-
-                if (transaction == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
-
-                return Ok(new OperationResponse<BlockBase.Domain.Blockchain.Transaction>(transaction));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets all saved loosed transactions
-        /// </summary>
-        /// <param name="chainName">Name of the Sidechain</param>
-        /// <returns>The loose transactions</returns>
-        /// <response code="200">Transactions retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving transactions</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the loose transactions a given sidechain",
-            Description = "Gets all the loose transactions saved to be included in the specified sidechain",
-            OperationId = "GetLooseTransactions"
-        )]
-        public async Task<ObjectResult> GetLooseTransactions(string chainName)
-        {
-            try
-            {
-                var looseTransactionsResponse = await _mongoDbProducerService.RetrieveLastLooseTransactions(chainName);
-
-                if (looseTransactionsResponse == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
-
-                return Ok(new OperationResponse<IEnumerable<BlockBase.Domain.Blockchain.Transaction>>(looseTransactionsResponse));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
-            }
-        }
+        //TODO rpinto - deprecated - delete code
+        // /// <summary>
+        // /// Gets the total number of current candidates for a given sidechain
+        // /// </summary>
+        // /// <param name="sidechainName">Name of the sidechain</param>
+        // /// <returns>The number of candidates in the sidechain</returns>
+        // /// <response code="200">Total producers retrieved with success</response>
+        // /// <response code="400">Invalid parameters</response>
+        // /// <response code="500">Error retrieving total candidates information.</response>
+        // [HttpGet]
+        // [SwaggerOperation(
+        //     Summary = "Gets the current number of candidates for a given sidechain",
+        //     Description = "Gets the current number of candidates that have applied to produce a given sidechain",
+        //     OperationId = "GetTotalCandidatesForSidechain"
+        // )]
+        // public async Task<ObjectResult> GetTotalCandidatesForSidechain(string sidechainName)
+        // {
+        //     try
+        //     {
+        //         //TODO - this information is not enough as is
+        //         var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
+        //         return Ok(new OperationResponse<int>(candidates.Count));
+        //     }
+        //     catch (Exception e)
+        //     {
+        //         return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
+        //     }
+        // }
 
         /// <summary>
         /// Gets the top producers in the EOS Mainnet and their endpoints
         /// </summary>
         /// <returns>The top producers info and endpoints</returns>
         /// <response code="200">Producer information retrieved with success</response>
+        /// <response code="404">Unable to retrieve producers</response>
         /// <response code="500">Error retrieving information</response>
         [HttpGet]
         [SwaggerOperation(
@@ -364,9 +287,14 @@ namespace BlockBase.Node.Controllers
                 var json = await HttpHelper.CallWebRequest(request);
                 var topProducers = JsonConvert.DeserializeObject<List<TopProducerEndpoint>>(json);
 
+                //TODO rpinto - Nice implementation - should be done periodically though, and not on request
                 var topProducersEndpointResponse = await ConvertToAndMeasureTopProducerEndpointResponse(topProducers.Take(10).ToList());
 
                 return Ok(new OperationResponse<List<TopProducerEndpointResponse>>(topProducersEndpointResponse));
+            }
+            catch(Newtonsoft.Json.JsonReaderException)
+            {
+                return NotFound(new OperationResponse<string>("Unable to retrieve the list of producers"));
             }
             catch (Exception e)
             {
@@ -374,12 +302,8 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        private async Task<DateTime> StakeEndTimeCalculationAtMaxPayments(string sidechainName)
+        private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, TokenLedgerTable sidechainStake)
         {
-
-            var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-            var sidechainStake = (await _mainchainService.GetAccountStake(sidechainName, sidechainName));
-
             var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
             var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
             var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;

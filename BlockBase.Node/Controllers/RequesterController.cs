@@ -99,6 +99,11 @@ namespace BlockBase.Node.Controllers
                     var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
                     currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
 
+                    if(accountInfo == null)
+                    {
+                        _logger.LogError($"Account {NodeConfigurations.AccountName} not found");
+                    }
+
                     accountDataFetched = true;
                     cpuUsed = accountInfo.cpu_limit.used;
                     cpuLimit = accountInfo.cpu_limit.max;
@@ -110,7 +115,11 @@ namespace BlockBase.Node.Controllers
                     sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
 
                 }
-                catch { }
+                catch 
+                { 
+                    _logger.LogError("Failed to retrieve account info");
+
+                }
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
                 var mongoDbPrefix = NodeConfigurations.MongoDbPrefix;
@@ -167,6 +176,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+
+                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                if(contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
+
                 var configuration = GetSidechainConfigurations();
 
                 if(stake > 0) {
@@ -176,10 +189,14 @@ namespace BlockBase.Node.Controllers
                     _logger.LogDebug("Stake inserted = " + stakeToInsert);
                 }
 
+                //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
                 var i = 0;
+
+                //TODO rpinto - review this while loop
                 while (i < 3)
                 {
+                    
                     await Task.Delay(1000);
 
                     try
@@ -218,10 +235,10 @@ namespace BlockBase.Node.Controllers
             SecurityConfigurations config;
             try
             {
-
-
                 if (_securityConfigurations.UseSecurityConfigurations)
+                { 
                     _databaseKeyManager.SetInitialSecrets(_securityConfigurations);
+                }
 
                 else
                 {
@@ -235,9 +252,13 @@ namespace BlockBase.Node.Controllers
                 string tx = null;
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 
+                //TODO rpinto - could the contract state be in ConfigTime and CandidatureTime or/and ProductionTime?
+                //TODO rpinto - why is the StartCandidatureTime called from outside the SuperMethod?
                 if (!contractSt.CandidatureTime && !contractSt.ProductionTime && contractSt.ConfigTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
 
-                if (_sidechainMaintainerManager.TaskContainer == null)
+                if (_sidechainMaintainerManager.TaskContainer == null 
+                || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
+                || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted)
                     _sidechainMaintainerManager.Start();
 
                 var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
@@ -266,7 +287,12 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                if(contractSt == null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} not found"));
+
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
+                
+                //TODO rpinto - should they really be deleted? what happens to the access to the database data?
                 SecretStore.ClearSecrets();
                 return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
             }

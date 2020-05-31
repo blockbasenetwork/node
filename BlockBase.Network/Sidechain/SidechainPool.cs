@@ -31,7 +31,7 @@ namespace BlockBase.Network.Sidechain
         public SidechainPool(string clientAccountName, ProducerTypeEnum producerType = 0)
         {
             ClientAccountName = clientAccountName;
-            State = SidechainPoolStateEnum.RecoverInfo;
+            State = SidechainPoolStateEnum.Starting;
             ProducersInPool = new ThreadSafeList<ProducerInPool>();
             ProducerType = producerType;
         }

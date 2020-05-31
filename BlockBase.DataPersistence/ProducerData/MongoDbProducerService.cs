@@ -178,6 +178,7 @@ namespace BlockBase.DataPersistence.ProducerData
             {
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var blockHeaders = await (await blockHeaderCollection.FindAsync(b => b.SequenceNumber >= beginSequenceNumber && b.SequenceNumber <= endSequenceNumber)).ToListAsync();
                 await session.CommitTransactionAsync();
@@ -331,7 +332,7 @@ namespace BlockBase.DataPersistence.ProducerData
             }
         }
 
-        public async Task<IList<Transaction>> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber)
+        public async Task<Transaction> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
@@ -343,7 +344,7 @@ namespace BlockBase.DataPersistence.ProducerData
                                        where t.SequenceNumber == transactionNumber
                                        select t;
 
-                return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).ToList();
+                return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).SingleOrDefault();
             }
         }
 

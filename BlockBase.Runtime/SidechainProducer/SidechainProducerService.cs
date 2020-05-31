@@ -55,37 +55,37 @@ namespace BlockBase.Runtime.SidechainProducer
             if (RecoverChains) await GetSidechainsFromRecoverDB();
         }
 
-        public bool AddSidechainToProducer(SidechainPool sidechain)
+        public void AddSidechainToProducerAndStartIt(SidechainPool sidechain)
         {
             try
             {
                 var sidechainManager = new SidechainManager(sidechain, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _endpoint, _logger, _networkService, _mongoDbProducerService, _blockSender, _mainchainService);
+                var sidechainAdded = _sidechainKeeper.TryAddSidechain(sidechain);
+                if(!sidechainAdded) throw new Exception($"Unable to add sidechain {sidechain.ClientAccountName} to sidechain keeper");
+
                 var task = sidechainManager.Start();
                 sidechain.ManagerTask = task;
-                var sidechainAdded = _sidechainKeeper.TryAddSidechain(sidechain);
-                
-                return sidechainAdded;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unable to add sidechain. Exception thrown: {ex.Message}");
-                return false;
+                _logger.LogError($"Unable to add sidechain. Exception thrown: {ex.Message}");
+                throw ex;
             }
         }
 
-        public bool RemoveSidechainFromProducer(SidechainPool sidechain)
+        public void RemoveSidechainFromProducerAndStopIt(SidechainPool sidechain)
         {
             try
             {
-                if (sidechain.ManagerTask.Task.Status != TaskStatus.Running) 
-                    return _sidechainKeeper.TryRemoveSidechain(sidechain);
-                else 
-                    return false;
+                var sidechainRemoved = _sidechainKeeper.TryRemoveSidechain(sidechain);
+                if(!sidechainRemoved) throw new Exception($"Unable to remove sidechain {sidechain.ClientAccountName} from sidechain keeper");
+                //TODO rpinto - should the stop be before trying to remove it from the keeper?
+                sidechain.ManagerTask.Stop();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Unable to remove sidechain. Exception thrown: {ex.Message}");
-                return false;
+                _logger.LogError($"Unable to remove sidechain. Exception thrown: {ex.Message}");
+                throw ex;
             }
         }
         
@@ -104,7 +104,7 @@ namespace BlockBase.Runtime.SidechainProducer
                 if (candidatesInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
 
                 var sidechainPool = new SidechainPool(sidechainDB.Id);
-                AddSidechainToProducer(sidechainPool);
+                AddSidechainToProducerAndStartIt(sidechainPool);
             }
         }
 

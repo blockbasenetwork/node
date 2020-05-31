@@ -177,7 +177,7 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        private async void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
+        private void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
         {
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
             if (peerConnection != null)

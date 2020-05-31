@@ -1,5 +1,8 @@
 grammar BareBonesSql;
 
+@parser::header {#pragma warning disable 3021}
+@lexer::header {#pragma warning disable 3021}
+
 parse: ( sql_stmt_list | error)* EOF;
 
 error:

@@ -124,6 +124,11 @@ namespace BlockBase.Domain.Blockchain
             return true;
         }
 
+        public override int GetHashCode() 
+        {
+            return base.GetHashCode();
+        }
+
         public object Clone()
         {
            return new BlockHeader(BlockHash, BlockSizeInBytes, PreviousBlockHash, Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp);

@@ -37,6 +37,8 @@ namespace BlockBase.Network.Rounting
 
                     await TcpConnector.SendData(messagePacket, message.Destination);
                 }
+
+                //TODO rpinto - this else if seems to never be reached because TransportType is never Udp?
                 else if (message.TransportType == TransportTypeEnum.Udp)
                 {
                     UdpConnector.SendData(message.ConvertToPacket(), message.Destination);
@@ -48,7 +50,7 @@ namespace BlockBase.Network.Rounting
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "Forward outgoing messages crashed: " + ex.Message);
+                _logger.LogCritical(ex, "MessageSender-SendMessage crashed: " + ex.Message);
             }
         }
     }

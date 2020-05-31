@@ -3,13 +3,13 @@
     //rpinto - state names should reflect state changes instead of only -> done
     public enum SidechainPoolStateEnum
     {
-        RecoverInfo,
+        Starting,
         CandidatureTime,
         ConfigTime,
         IPReceiveTime,
         IPSendTime,
         SecretTime,
-        InitMining,
+        InitProduction,
         WaitForNextState,
         Unknown
     }

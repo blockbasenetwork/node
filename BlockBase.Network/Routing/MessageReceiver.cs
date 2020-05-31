@@ -30,7 +30,7 @@ namespace BlockBase.Network.Rounting
         {
             try
             {
-                var messageParser = new MessageParser();
+                var messageParser = new MessageParser(_logger);
                 var parsingResult = messageParser.AnalyseAndParseMessage(rawNetworkMessage, out NetworkMessage networkMessage);
 
                 //TODO: rpinto - call the message analyser
@@ -45,14 +45,14 @@ namespace BlockBase.Network.Rounting
                 }
                 else
                 {
-                    _logger.LogDebug($"Error analysing and parsing message.");
+                    _logger.LogDebug($"Error analysing and parsing message from {rawNetworkMessage.IPEndPoint.Address.ToString()}");
                     //EventManager.Instance.RegisterEvent(this, EventSeverityLevelEnum.Low, "Discarded Message :" + message.ToString());
                 }
                 MessageForwarder.ReleaseAllExpiredMessageEvents();
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "Receiving message crashed: " + ex.Message);
+                _logger.LogCritical(ex, "MessageReceiver-ProcessIncomingMessage crashed: " + ex.Message);
             }
         }
 
