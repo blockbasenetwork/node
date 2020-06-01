@@ -278,7 +278,9 @@ namespace BlockBase.Runtime.Mainchain
 
             _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
             await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, producerList, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
-            await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).ToList(), EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+
+            var notValidatorProducers = producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).ToList();
+            if (notValidatorProducers.Any()) (await _mainchainService.AuthorizationAssign(_sidechain.ClientAccountName, , EosMsigConstants.VERIFY_HISTORY_PERMISSION);
         }
 
         private async Task LinkAuthorizarion(string actionsName, string owner, string authorization)
