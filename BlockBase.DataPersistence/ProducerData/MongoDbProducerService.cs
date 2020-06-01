@@ -479,7 +479,7 @@ namespace BlockBase.DataPersistence.ProducerData
 
             }
         }
-        public async Task<IList<Transaction>> RetrieveLastLooseTransactions(string databaseName)
+        public async Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {

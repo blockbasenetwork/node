@@ -169,7 +169,7 @@ namespace BlockBase.Runtime.Sidechain
             try
             {
             await _mongoDbProducerService.CreateTransactionInfoIfNotExists(_nodeConfigurations.AccountName);
-            var transactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(_nodeConfigurations.AccountName);
+            var transactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(_nodeConfigurations.AccountName);
             foreach (var transaction in transactions)
                 AddScriptTransactionToSend(transaction);  
             }

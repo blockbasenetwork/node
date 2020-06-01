@@ -220,7 +220,7 @@ namespace BlockBase.Runtime.Sidechain
         private async Task<IList<Transaction>> GetTransactionsToIncludeInBlock(int blockHeaderSizeInBytes)
         {
             var transactionsDatabaseName = _sidechainPool.ClientAccountName;
-            var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(transactionsDatabaseName);
+            var allLooseTransactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(transactionsDatabaseName);
             ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
             uint sizeInBytes = 0;
