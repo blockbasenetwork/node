@@ -356,68 +356,6 @@ namespace BlockBase.Runtime.Sidechain
             _logger.LogCritical("Unable to broadcast verify transaction during allowed time");
         }
 
-        private async Task TryProposeTransaction(List<string> requestedApprovals, string blockHash)
-        {
-            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                try
-                {
-                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
-                    if (proposal != null) return;
-                    await _mainchainService.ProposeBlockVerification(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, requestedApprovals, blockHash);
-                    await Task.Delay(60);
-                }
-                catch (ApiErrorException)
-                {
-                    _logger.LogCritical("Unable to propose transaction.");
-                    await Task.Delay(100);
-                }
-            }
-        }
-
-        private async Task TryVerifyAndExecuteTransaction(string proposer)
-        {
-            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                try
-                {
-                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
-                    var approvals = await _mainchainService.RetrieveApprovals(proposer, _sidechainPool.ClientAccountName);
-
-                    if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
-                    {
-                        await TryApproveTransaction(proposal);
-                    }
-                    else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
-                    {
-                        await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
-                        _logger.LogInformation("Executed block verification");
-                        return;
-                    }
-
-                    await Task.Delay(100);
-                }
-                catch (ApiErrorException)
-                {
-                    _logger.LogCritical("Unable to execute proposed transaction, number of required approvals might not have been reached");
-                    await Task.Delay(100);
-                }
-            }
-            _logger.LogCritical("Unable to approve and execute transaction during allowed time");
-        }
-
-        private async Task TryApproveTransaction(TransactionProposal proposal)
-        {
-            try
-            {
-                await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
-            }
-            catch (ApiErrorException apiException)
-            {
-                _logger.LogCritical($"Unable to approve transaction with error: {apiException?.error?.name}");
-            }
-        }
-
         private async Task BuildChain()
         {
             _logger.LogDebug("Building chain.");
