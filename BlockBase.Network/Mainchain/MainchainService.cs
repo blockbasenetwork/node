@@ -35,15 +35,21 @@ namespace BlockBase.Network.Mainchain
         }
 
         public async Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null)
-            => await TryAgain(async () => await EosStub.GetCurrencyBalance(smartContractName, accountName, symbol), NetworkConfigurations.MaxNumberOfConnectionRetries);
+            => await TryAgain(async () => await EosStub.GetCurrencyBalance(smartContractName, accountName, symbol), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         public async Task<GetAccountResponse> GetAccount(string accountName)
-            => await TryAgain(async () => await EosStub.GetAccount(accountName), NetworkConfigurations.MaxNumberOfConnectionRetries);
+            => await TryAgain(async () => await EosStub.GetAccount(accountName), 
+            NetworkConfigurations.MaxNumberOfConnectionRetries);
 
 
         public async Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName)
         {
-            var listLedger = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, sidechain), MAX_NUMBER_OF_TRIES);
+            var listLedger = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(
+                NetworkConfigurations.BlockBaseTokenContract, 
+                EosTableNames.TOKEN_LEDGER_TABLE_NAME, 
+                sidechain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
             return listLedger.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
         }
 
@@ -218,7 +224,7 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
                 //TODO rpinto - is this still a deferred transaction - doesn't seem so
-                CreateDataForDeferredTransaction(owner),
+                CreateDataForTransaction(owner),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -228,7 +234,7 @@ namespace BlockBase.Network.Mainchain
                 EosMethodNames.START_CANDIDATURE_TIME,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
-                CreateDataForDeferredTransaction(owner),
+                CreateDataForTransaction(owner),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -271,7 +277,7 @@ namespace BlockBase.Network.Mainchain
                 actionname,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountname,
-                CreateDataForDeferredTransaction(accountname),
+                CreateDataForTransaction(accountname),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -352,7 +358,7 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
 
-        public async Task<string> CreateVerifyBlockTransactionAndAddToContract(string owner, string accountName, string blockHash, string permission = "acctive")
+        public async Task<string> CreateVerifyBlockTransactionAndAddToContract(string owner, string accountName, string blockHash)
         {
             var transaction = new Transaction()
             {
@@ -408,52 +414,92 @@ namespace BlockBase.Network.Mainchain
         #region Table Retrievers
 
         public async Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ProducerInTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PRODUCERS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ProducerInTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.PRODUCERS_TABLE_NAME, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         public async Task<CurrentProducerTable> RetrieveCurrentProducer(string chain) 
         {
-            var result = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CurrentProducerTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CURRENT_PRODUCER_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            var result = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CurrentProducerTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.CURRENT_PRODUCER_TABLE_NAME, chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
             return result.SingleOrDefault();
         }
             
 
         public async Task<List<CandidateTable>> RetrieveCandidates(string chain) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CandidateTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CANDIDATES_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<CandidateTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.CANDIDATES_TABLE_NAME, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         public async Task<List<BlockheaderTable>> RetrieveBlockheaderList(string chain, int numberOfBlocks) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKHEADERS_TABLE_NAME, chain, numberOfBlocks), MAX_NUMBER_OF_TRIES);
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.BLOCKHEADERS_TABLE_NAME, 
+                chain, 
+                numberOfBlocks), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         public async Task<List<IPAddressTable>> RetrieveIPAddresses(string chain) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<IPAddressTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.IP_ADDRESS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<IPAddressTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.IP_ADDRESS_TABLE_NAME, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         public async Task<List<BlockCountTable>> RetrieveBlockCount(string proposerAccount) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockCountTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKCOUNT_TABLE_NAME, proposerAccount), MAX_NUMBER_OF_TRIES);
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockCountTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.BLOCKCOUNT_TABLE_NAME, 
+                proposerAccount), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
         public async Task<List<RewardTable>> RetrieveRewardTable(string account) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<RewardTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.PENDING_REWARD_TABLE, account), MAX_NUMBER_OF_TRIES);
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<RewardTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.PENDING_REWARD_TABLE, 
+                account), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
          public async Task<List<ReservedSeatsTable>> RetrieveReservedSeatsTable(string chain) =>
-            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ReservedSeatsTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.RESERVED_SEATS_TABLE, chain), MAX_NUMBER_OF_TRIES);
+            await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ReservedSeatsTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.RESERVED_SEATS_TABLE, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
         
         public async Task<TransactionProposalApprovalsTable> RetrieveApprovals(string proposerAccount, string proposalName)
         {
-            var list = await TryAgain(async () => (await EosStub.GetRowsFromSmartContractTable<TransactionProposalApprovalsTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_APPROVALS_TABLE_NAME, proposerAccount)), MAX_NUMBER_OF_TRIES);
-            TransactionProposalApprovalsTable transactionProposalApprovalsTable = list.Where(t => t.ProposalName == proposalName).SingleOrDefault();
-
-            return transactionProposalApprovalsTable;
+            var list = await TryAgain(async () => (await EosStub.GetRowsFromSmartContractTable<TransactionProposalApprovalsTable>(
+                EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, 
+                EosMsigConstants.EOSIO_MSIG_APPROVALS_TABLE_NAME, 
+                proposerAccount)), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            return list.Where(t => t.ProposalName == proposalName).SingleOrDefault();
         }
 
         public async Task<ContractInformationTable> RetrieveContractInformation(string chain)
         {
-            var listContractInfo = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractInformationTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CONTRACT_INFO_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
-            ContractInformationTable contractInfo = listContractInfo.SingleOrDefault();
-
-            return contractInfo;
+            var listContractInfo = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractInformationTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.CONTRACT_INFO_TABLE_NAME, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            return listContractInfo.SingleOrDefault();
         }
 
         public async Task<ContractStateTable> RetrieveContractState(string chain)
         {
-            var listContractState = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractStateTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CONTRACT_STATE_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            var listContractState = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractStateTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.CONTRACT_STATE_TABLE_NAME, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
             ContractStateTable contractState = listContractState.SingleOrDefault();
 
             return contractState;
@@ -461,7 +507,11 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string chain, int numberOfBlocks)
         {
-            var listLastBlock = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.BLOCKHEADERS_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            var listLastBlock = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.BLOCKHEADERS_TABLE_NAME, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
             var lastBlockTable = listLastBlock.Where(b => b.IsLastBlock == true).FirstOrDefault();
 
             return lastBlockTable;
@@ -469,7 +519,11 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<ClientTable> RetrieveClientTable(string chain)
         {
-            var listClient = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ClientTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.CLIENT_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
+            var listClient = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ClientTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.CLIENT_TABLE_NAME, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
             ClientTable clientTable = listClient.SingleOrDefault();
 
             return clientTable;
@@ -491,7 +545,12 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)
         {
-            var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, proposerName), MAX_NUMBER_OF_TRIES);
+            var proposals = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TransactionProposalTable>(
+                EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME, 
+                EosMsigConstants.EOSIO_MSIG_PROPOSAL_TABLE_NAME, 
+                proposerName), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+
             var proposal = proposals?.FirstOrDefault(x => x.ProposalName == proposalName);
             if (proposal != null)
             {
@@ -509,7 +568,11 @@ namespace BlockBase.Network.Mainchain
         public async Task<List<VerifySignature>> RetrieveVerifySignatures(string account)
         {
             var verifySignaturesList = new List<VerifySignature>();
-            var verifySignaturesTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VerifySignatureTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.VERIFY_SIGNATURE_TABLE, account), MAX_NUMBER_OF_TRIES);
+            var verifySignaturesTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VerifySignatureTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.VERIFY_SIGNATURE_TABLE, 
+                account), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             foreach (var verifySignature in verifySignaturesTable)
             {
@@ -530,30 +593,14 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<HistoryValidationTable> RetrieveHistoryValidationTable(string chain)
         {
-            var listValidationTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<HistoryValidationTable>(NetworkConfigurations.BlockBaseOperationsContract, EosTableNames.HISTORY_VALIDATION_TABLE, chain), MAX_NUMBER_OF_TRIES);
-            HistoryValidationTable historyValidationTable = listValidationTable.SingleOrDefault();
-
-            return historyValidationTable;
+            var listValidationTable = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<HistoryValidationTable>(
+                NetworkConfigurations.BlockBaseOperationsContract, 
+                EosTableNames.HISTORY_VALIDATION_TABLE, 
+                chain), 
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            return listValidationTable.SingleOrDefault();
         }
 
-
-        //TOKEN TABLES
-
-        public async Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string chain)
-        {
-            var listLedger = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, chain), MAX_NUMBER_OF_TRIES);
-            TokenLedgerTable tokenTable = listLedger.Where(b => b.Sidechain == chain).SingleOrDefault();
-
-            return tokenTable;
-        }
-
-        public async Task<TokenAccountTable> RetrieveTokenBalance(string account)
-        {
-            var tokenTableList = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenAccountTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_TABLE_NAME, account), MAX_NUMBER_OF_TRIES);
-            var tokenBalanceTable = tokenTableList.FirstOrDefault();
-
-            return tokenBalanceTable;
-        }
 
         #endregion
 
@@ -712,7 +759,7 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForDeferredTransaction(string owner)
+        private Dictionary<string, object> CreateDataForTransaction(string owner)
         {
             return new Dictionary<string, object>()
             {
@@ -805,7 +852,7 @@ namespace BlockBase.Network.Mainchain
 
         #region Transaction Send Helper
 
-        public async Task<T> TryAgain<T>(Func<Task<OpResult<T>>> func, int maxTry)
+        public async Task<T> TryAgain<T>(Func<Task<OpResult<T>>> func, int maxTry = 15, Func<OpResult<T>, bool> expectedResult = null, int delayInMilliseconds = 100)
         {
             Exception exception = null;
 
@@ -813,14 +860,24 @@ namespace BlockBase.Network.Mainchain
             {
                 var opResult = await func.Invoke();
 
-                if (opResult.Succeeded)
+                if (opResult.Succeeded && expectedResult == null)
                 {
                     return opResult.Result;
+                }
+                else if(opResult.Succeeded && expectedResult != null && expectedResult.Invoke(opResult))
+                {
+                    return opResult.Result;
+                }
+                else if(opResult.Succeeded && expectedResult != null && !expectedResult.Invoke(opResult))
+                {
+                    exception = new ArgumentException($"Api called {i} times and expected result not found");
                 }
                 else
                 {
                     exception = opResult.Exception;
                 }
+
+                await Task.Delay(delayInMilliseconds);
             }
 
             var errorMessage = exception is ApiErrorException apiException ?

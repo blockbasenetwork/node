@@ -151,6 +151,8 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int producerType, decimal stake = 0)
         {
+            //TODO rpinto - to verify when done. The request to produce a sidechain won't be allowed if there still exists data related to that sidechain on the database
+            //The user will have to delete it manually. This only happens if the user registered on the sidechain manually too
 
             if(string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
             if(producerType < 1 || producerType > 3)  return BadRequest(new OperationResponse<string>("Please provide a valid producer type. (1) Validator, (2) History, (3) Full"));
@@ -232,6 +234,8 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RequestToLeaveSidechainProduction(string sidechainName, bool cleanLocalSidechainData = false)
         {
+            //TODO rpinto - to verify that a manual request to leave a sidechain shouldn't delete the database. That has to be done independently
+
             if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
 
             try
@@ -243,10 +247,8 @@ namespace BlockBase.Node.Controllers
                 if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
                 if(candidatureTable == null) return NotFound(new OperationResponse<string>($"Unable to retrieve {sidechainName} candidature table"));
 
-                //TODO rpinto - is it a bad request? And why not give info anyway even if not in candidature phase?
                 var isProducerInCandidature = candidatureTable.Where(m => m.Key == NodeConfigurations.AccountName).Any();
                 var isProducerAnActiveProducer = producersTable.Where(m => m.Key == NodeConfigurations.AccountName).Any();
-
 
                 if(!isProducerInCandidature && !isProducerAnActiveProducer)
                     return BadRequest(new OperationResponse<string>($"Producer {NodeConfigurations.AccountName} not found in sidechain {sidechainName}"));
@@ -268,7 +270,7 @@ namespace BlockBase.Node.Controllers
                 }
                 
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(sidechainName);
-                //TODO rpinto - this deletes the whole database - what if a producer leaves production and joins further ahead...?
+                //TODO rpinto - this shouldn't delete the database - manual requests don't delete anything
                 if (chainExistsInDb && cleanLocalSidechainData) 
                 {
                     _logger.LogDebug($"Removing sidechain {sidechainName} data from database");
@@ -339,11 +341,6 @@ namespace BlockBase.Node.Controllers
 
             try
             {
-                
-                //TODO rpinto - uncomment if necessary. Does the contract state still exist if the chain has been deleted?
-                // var chainContract = await _mainchainService.RetrieveContractState(sidechainName);
-                // if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
-
                 var trx = await _mainchainService.ClaimStake(sidechainName, NodeConfigurations.AccountName);
 
                 return Ok(new OperationResponse<bool>(true, $"Stake successfully claimed. Tx = {trx}"));
@@ -511,7 +508,7 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets all saved loosed transactions
+        /// Gets all transactions that haven't been added to a block
         /// </summary>
         /// <param name="chainName">Name of the Sidechain</param>
         /// <returns>The loose transactions</returns>
@@ -520,26 +517,22 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error retrieving transactions</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the loose transactions a given sidechain",
-            Description = "Gets all the loose transactions saved to be included in the specified sidechain",
-            OperationId = "GetLooseTransactions"
+            Summary = "Gets all transactions that haven't been added to a block",
+            Description = "Gets all transactions that haven't been included in the specified sidechain",
+            OperationId = "GetTransactionsInMempool"
         )]
-        public async Task<ObjectResult> GetLooseTransactions(string chainName)
+        public async Task<ObjectResult> GetTransactionsInMempool(string chainName)
         {
             if(string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
             try
             {
                 var doesSidechainExist = await _mongoDbProducerService.CheckIfMaintainedSidechainAlreadyExists(chainName);
-
                 if(!doesSidechainExist) return NotFound(new OperationResponse<string>("Sidechain not found"));
+                var transactionsInMempool = await _mongoDbProducerService.RetrieveTransactionsInMempool(chainName);
+                
+                if (transactionsInMempool == null) return NotFound(new OperationResponse<string>("Sidechain not found."));
 
-
-                var looseTransactionsResponse = await _mongoDbProducerService.RetrieveLastLooseTransactions(chainName);
-
-                //TODO rpinto - why is this a BadRequest??
-                if (looseTransactionsResponse == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
-
-                return Ok(new OperationResponse<IEnumerable<BlockBase.Domain.Blockchain.Transaction>>(looseTransactionsResponse));
+                return Ok(new OperationResponse<IEnumerable<BlockBase.Domain.Blockchain.Transaction>>(transactionsInMempool));
             }
             catch (Exception e)
             {

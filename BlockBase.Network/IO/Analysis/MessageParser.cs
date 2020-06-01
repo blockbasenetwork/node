@@ -18,7 +18,7 @@ namespace BlockBase.Network.IO.Analysis
 
         public MessageParsingResultEnum AnalyseAndParseMessage(RawNetworkMessage rawNetworkMessage, out NetworkMessage networkMessage)
         {
-            //TODO: rpinto - voltar a pôr esta secção quando o RatingManager for novamente implementado
+            //TODO: rpinto - add this section to the rating manager when it's implemented again
             //if (!RatingManager.Instance.IsSenderTrustful(sender)
             //    || RatingManager.Instance.IsSpammer(sender))
             //    return RecommendedActionEnum.Ignore;

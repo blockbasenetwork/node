@@ -122,18 +122,18 @@ namespace BlockBase.Node.Controllers
 
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
+                var producerTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
 
                 if(contractState == null) return NotFound($"Unable to retrieve {sidechainName} contract state");
-                if(candidatureTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature table");
+                if(candidatureTable == null && producerTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature and production table");
 
-                //TODO rpinto - is it a bad request? And why not give info anyway even if not in candidature phase?
-                if (!contractState.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time"));
+                if(candidatureTable != null && candidatureTable.Where(m=>m.Key == accountName).Any())
+                    return Ok(new OperationResponse<bool>(false, $"Account {accountName} has applied for {sidechainName}"));
 
-                var hasProducerApplied = candidatureTable.Where(m => m.Key == accountName).Any();
+                if(producerTable != null && producerTable.Where(m => m.Key == accountName).Any())
+                    return Ok(new OperationResponse<bool>(false, $"Account {accountName} is producing for {sidechainName}"));
 
-                if (!hasProducerApplied) return Ok(new OperationResponse<bool>(false, $"Producer {accountName} not found"));
-                else return Ok(new OperationResponse<bool>(true, $"Producer {accountName} found"));
-
+                return Ok(new OperationResponse<bool>(false, $"Producer {accountName} not found"));
             }
             catch (Exception e)
             {
@@ -198,7 +198,7 @@ namespace BlockBase.Node.Controllers
 
                     State = contractState.ConfigTime ? "Configure state" : contractState.SecretTime ? "Secrect state" : contractState.IPSendTime ? "Ip Send Time" : contractState.IPReceiveTime ? "Ip Receive Time" : contractState.ProductionTime ? "Production" : contractState.Startchain ? "Startchain" : "No State in chain",
                     StakeDepletionEndDate = StakeEndTimeCalculationAtMaxPayments(contractInfo, tokenLedger),
-                    CurrentSidechainStake = tokenLedger.Stake, //TODO rpinto - needs conversion
+                    CurrentRequesterStake = tokenLedger.Stake,
                     InProduction = contractState.ProductionTime,
                     ReservedSeats = new ReservedSeats()
                     {
@@ -236,35 +236,6 @@ namespace BlockBase.Node.Controllers
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<ContractStateTable>(e));
             }
         }
-
-        //TODO rpinto - deprecated - delete code
-        // /// <summary>
-        // /// Gets the total number of current candidates for a given sidechain
-        // /// </summary>
-        // /// <param name="sidechainName">Name of the sidechain</param>
-        // /// <returns>The number of candidates in the sidechain</returns>
-        // /// <response code="200">Total producers retrieved with success</response>
-        // /// <response code="400">Invalid parameters</response>
-        // /// <response code="500">Error retrieving total candidates information.</response>
-        // [HttpGet]
-        // [SwaggerOperation(
-        //     Summary = "Gets the current number of candidates for a given sidechain",
-        //     Description = "Gets the current number of candidates that have applied to produce a given sidechain",
-        //     OperationId = "GetTotalCandidatesForSidechain"
-        // )]
-        // public async Task<ObjectResult> GetTotalCandidatesForSidechain(string sidechainName)
-        // {
-        //     try
-        //     {
-        //         //TODO - this information is not enough as is
-        //         var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
-        //         return Ok(new OperationResponse<int>(candidates.Count));
-        //     }
-        //     catch (Exception e)
-        //     {
-        //         return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
-        //     }
-        // }
 
         /// <summary>
         /// Gets the top producers in the EOS Mainnet and their endpoints

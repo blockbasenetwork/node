@@ -38,7 +38,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> RequestHistoryValidation(string owner, string producerName, string blockHash, string permission = "active");
         Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active");
         Task<string> ProposeHistoryValidation(string chain, string accountName, List<string> requestedApprovals, string proposalName);
-        Task<string> CreateVerifyBlockTransactionAndAddToContract(string owner, string accountName, string blockHash, string permission = "acctive");
+        Task<string> CreateVerifyBlockTransactionAndAddToContract(string owner, string accountName, string blockHash);
         Task<string> SignVerifyTransactionAndAddToContract(string owner, string account, string blockHash, Transaction transaction, string permission = "active");
         Task<string> BroadcastTransactionWithSignatures(byte[] packedTransaction, List<string> signatures);
         Task<string> AddVerifyTransactionAndSignature(string owner, string accountName, string blockHash, string verifySignature, byte[] verifyBlockTransaction, string permission = "active");
@@ -61,7 +61,5 @@ namespace BlockBase.Network.Mainchain
         Task<List<BlockCountTable>> RetrieveBlockCount(string chain);
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<List<VerifySignature>> RetrieveVerifySignatures(string account);
-        Task<TokenLedgerTable> RetrieveClientTokenLedgerTable(string account);
-        Task<TokenAccountTable> RetrieveTokenBalance(string account);
     }
 }

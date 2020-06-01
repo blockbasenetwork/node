@@ -79,23 +79,29 @@ namespace BlockBase.Runtime.Sidechain
             await Task.Delay(1000);
             try
             {
+                var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
+                var currentProducer = await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName);
+                var producerList = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
+                var candidateList = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
+
                 //TODO rpinto - this while should never be stopped unless specified by the user
                 while (true)
                 {
                     try
                     {
-                        var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
-                        var contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
-                        var currentProducer = await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName);
-                        var producerList = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-                        var candidateList = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
-
                         switch (Sidechain.State)
                         {
                             case SidechainPoolStateEnum.WaitForNextState:
                                 _timeDiff = (Sidechain.NextStateWaitEndTime * 1000) - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                                 if (_timeDiff <= 0)
                                 {
+                                    contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+                                    contractInfo = await _mainchainService.RetrieveContractInformation(Sidechain.ClientAccountName);
+                                    currentProducer = await _mainchainService.RetrieveCurrentProducer(Sidechain.ClientAccountName);
+                                    producerList = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
+                                    candidateList = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
+
                                     CheckContractAndUpdateStates(contractState);
                                     CheckContractAndUpdateWaitTimes(contractInfo, currentProducer);
                                     CheckContractEndState(producerList, candidateList);

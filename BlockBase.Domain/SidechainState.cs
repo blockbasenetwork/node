@@ -8,7 +8,7 @@ namespace BlockBase.Domain
 {
     public class SidechainState
     {
-        public string CurrentSidechainStake { get; set; }
+        public string CurrentRequesterStake { get; set; }
 
         public DateTime StakeDepletionEndDate { get; set; }
 
