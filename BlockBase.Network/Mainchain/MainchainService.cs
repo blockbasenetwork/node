@@ -881,11 +881,11 @@ namespace BlockBase.Network.Mainchain
             }
 
             var errorMessage = exception is ApiErrorException apiException ?
-                        $"Error sending transaction: {apiException.error.name} Trace: {exception}" :
-                        $"Error sending transaction: {exception}";
+                        $"Error sending transaction: {apiException.error.name} Message: {apiException.error.details.FirstOrDefault()?.message}" :
+                        $"Error sending transaction";
 
             _logger.LogCritical(errorMessage);
-
+            _logger.LogDebug($"Send Transaction Error Trace: {exception}");
             throw exception;
         }
 
