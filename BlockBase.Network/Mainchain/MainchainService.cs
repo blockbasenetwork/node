@@ -824,7 +824,7 @@ namespace BlockBase.Network.Mainchain
             }
 
             var errorMessage = exception is ApiErrorException apiException ?
-                        $"Error sending transaction: {apiException.error.name} Message: {apiException.message}" :
+                        $"Error sending transaction: {apiException.error.name} Message: {apiException.error.details.FirstOrDefault()?.message}" :
                         $"Error sending transaction";
 
             _logger.LogCritical(errorMessage);
