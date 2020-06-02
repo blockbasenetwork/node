@@ -30,8 +30,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             _logger = logger;
             _defaultDatabaseNameWithPrefix = nodeConfigurationsValue.DatabasesPrefix + DEFAULT_DATABASE_NAME;
 
-            //commented this code and moved to Setup method so it isn't executed on construction of object
-            //CreateDefaultDatabaseIfNotExists().Wait();
         }
 
         public async Task<bool> TestConnection() 
@@ -154,11 +152,15 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         }
         public async Task DropDefaultDatabase()
         {
-            
-           using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
+          await DropDatabase(_defaultDatabaseNameWithPrefix);  
+        }
+
+        public async Task DropDatabase(string databaseName)
+        {
+             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
-                NpgsqlCommand cmd = new NpgsqlCommand($"DROP DATABASE {_defaultDatabaseNameWithPrefix};", conn);
+                NpgsqlCommand cmd = new NpgsqlCommand($"DROP DATABASE {databaseName};", conn);
                 try
                 {
                     await cmd.ExecuteNonQueryAsync();
@@ -173,8 +175,9 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                     await conn.CloseAsync();
                 }
             }
-            
         }
+
+
         private async Task CreateTableIfNotExists()
         {
             bool tableExists = false;

@@ -114,6 +114,7 @@ namespace BlockBase.Runtime.Mainchain
             catch (OperationCanceledException)
             {
                 _logger.LogWarning("Contract manager stopped.");
+                
             }
             catch (Exception ex)
             {
@@ -162,8 +163,8 @@ namespace BlockBase.Runtime.Mainchain
                 if (stateTable.ProductionTime && currentProducerTable.Any() &&
                    (currentProducerTable.Single().StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int) _sidechain.BlocksBetweenSettlement);
-                    if(lastBlockHeader != null) 
+                    var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int)_sidechain.BlocksBetweenSettlement);
+                    if (lastBlockHeader != null)
                         await _transactionSender.RemoveIncludedTransactions(lastBlockHeader.TransactionCount, lastBlockHeader.BlockHash);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
                     _roundsUntilSettlement--;
@@ -349,14 +350,13 @@ namespace BlockBase.Runtime.Mainchain
             }
         }
 
-
         public async Task EndSidechain()
         {
+            TaskContainer.CancellationTokenSource.Cancel();
             await _mongoDbProducerService.DropRequesterDatabase(_sidechain.ClientAccountName);
-            await _connector.DropDefaultDatabase();
-            SecretStore.ClearSecrets();
         }
-
+       
+      
         #endregion Auxiliar Methods
     }
 }

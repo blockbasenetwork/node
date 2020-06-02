@@ -18,6 +18,12 @@ using BlockBase.DataProxy.Encryption;
 using BlockBase.DataPersistence.Utils;
 using System.IO;
 using System.Text;
+using BlockBase.Runtime.Sidechain;
+using BlockBase.Runtime;
+using BlockBase.DataPersistence.Sidechain.Connectors;
+using BlockBase.DataProxy;
+using BlockBase.Domain.Results;
+using BlockBase.Domain.Pocos;
 
 namespace BlockBase.Node.Controllers
 {
@@ -39,8 +45,9 @@ namespace BlockBase.Node.Controllers
         private DatabaseKeyManager _databaseKeyManager;
         private SecurityConfigurations _securityConfigurations;
         private IConnectionsChecker _connectionsChecker;
+        private SqlCommandManager _sqlCommandManager;
 
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker)
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
@@ -56,6 +63,10 @@ namespace BlockBase.Node.Controllers
             _databaseKeyManager = databaseKeyManager;
             _connectionsChecker = connectionsChecker;
             _securityConfigurations = securityConfigurations.Value;
+            _databaseKeyManager = databaseKeyManager;
+            psqlConnector.Setup().Wait();
+            _sidechainMaintainerManager = sidechainMaintainerManager;
+            _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbProducerService);
         }
 
 
@@ -168,7 +179,8 @@ namespace BlockBase.Node.Controllers
             {
                 var configuration = GetSidechainConfigurations();
 
-                if(stake > 0) {
+                if (stake > 0)
+                {
                     string stakeToInsert = stake.ToString("F4") + " BBT";
                     var stakeTransaction = await _mainchainService.AddStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName, stakeToInsert);
                     _logger.LogDebug("Stake sent to contract. Tx = " + stakeTransaction);
@@ -220,7 +232,7 @@ namespace BlockBase.Node.Controllers
 
                 if (!contractSt.CandidatureTime && !contractSt.ProductionTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
 
-                if (_sidechainMaintainerManager.TaskContainer == null)
+                if (_sidechainMaintainerManager.TaskContainer == null || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
                     _sidechainMaintainerManager.Start();
 
                 var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
@@ -234,15 +246,15 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Sends a transaction to the BlockBase Operations Contract to terminate the sidechain
+        /// Sends a transaction to the BlockBase Operations Contract to terminate the sidechain and removes sidechain data
         /// </summary>
         /// <returns>The success of the transaction</returns>
         /// <response code="200">Chain terminated with success</response>
         /// <response code="500">Error terminating the chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a transaction to the BlockBase Operations Contract to terminate the sidechain",
-            Description = "The requester uses this service to terminate a given sidechain",
+            Summary = "Sends a transaction to the BlockBase Operations Contract to terminate the sidechain and removes unsent transactions",
+            Description = "The requester uses this service to terminate permanently a given sidechain",
             OperationId = "EndSidechain"
         )]
         public async Task<ObjectResult> EndSidechain()
@@ -258,6 +270,8 @@ namespace BlockBase.Node.Controllers
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
             }
         }
+
+
 
         /// <summary>
         /// Sends a transaction to BlockBase Token Contract to add sidechain stake
@@ -373,6 +387,133 @@ namespace BlockBase.Node.Controllers
             var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
 
             return mappedConfig;
+        }
+        /// <summary>
+        /// Sends a query to be executed
+        /// </summary>
+        /// <param name="queryScript">The query to execute</param>
+        /// <returns> Success or list of results </returns>
+        /// <response code="200">Query executed with success</response>
+        /// <response code="400">Query invalid</response>
+        /// <response code="500">Error executing query</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends query to be executed",
+            Description = "The requester uses this service to create databases, update them and delete them",
+            OperationId = "ExecuteQuery"
+        )]
+        public async Task<ObjectResult> ExecuteQuery([FromBody] string queryScript)
+        {
+            try
+            {
+                CheckIfSecretIsSet();
+                var queryResults = await _sqlCommandManager.Execute(queryScript);
+
+                return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<QueryResult>>(e));
+            }
+        }
+
+        /// <summary>
+        /// Sends a query to get all the values from a certain table in a certain database
+        /// </summary>
+        /// <returns> Success or list of results </returns>
+        /// <response code="200">Query executed with success</response>
+        /// <response code="400">Query invalid</response>
+        /// <response code="500">Error executing query</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Sends a query to get all the values from a certain table in a certain database",
+            Description = "The requester uses this service to see all values encrypted or not from a certain table",
+            OperationId = "GetAllTableValues"
+        )]
+        public async Task<ObjectResult> GetAllTableValues([FromBody] SidebarQueryInfo sidebarQueryInfo)
+        {
+            try
+            {
+                CheckIfSecretIsSet();
+                var query = $"USE {sidebarQueryInfo.DatabaseName}; SELECT {sidebarQueryInfo.TableName}.* FROM {sidebarQueryInfo.TableName}";
+                if (sidebarQueryInfo.Encrypted) query += " ENCRYPTED";
+                query += ";";
+
+                var queryResults = await _sqlCommandManager.Execute(query);
+
+                return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<QueryResult>>(e));
+            }
+        }
+
+        /// <summary>
+        /// Asks for databases, tables and columns structure
+        /// </summary>
+        /// <returns> Structure of databases </returns>
+        /// <response code="200">Structure retrieved with success</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="500">Error getting structure information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Asks for databases, tables and columns structure",
+            Description = "The requester uses this service to know databases structure",
+            OperationId = "GetStructure"
+        )]
+        public ObjectResult GetStructure()
+        {
+            try
+            {
+                CheckIfSecretIsSet();
+                var structure = _sqlCommandManager.GetStructure();
+                return Ok(new OperationResponse<IList<DatabasePoco>>(structure));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<DatabasePoco>>(e));
+            }
+        }
+
+        /// <summary>
+        /// Removes keys and postgres databases
+        /// </summary>
+        /// <returns>The success of the transaction</returns>
+        /// <response code="200">Data removed with success</response>
+        /// <response code="500">Error removing data</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Removes encrypted databases and the keys used to encrypt",
+            Description = "The requester should use this  after ending the sidechain, ",
+            OperationId = "RemoveSidechainDatabasesAndKeys"
+        )]
+        public async Task<ObjectResult> RemoveSidechainDatabasesAndKeys()
+        {
+            try
+            {
+                if (!_sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested) 
+                    return Ok(new OperationResponse<bool>(false, $"You need to end sidechain first."));
+                await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
+                return Ok(new OperationResponse<bool>(true, $"Removed data."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        private void CheckIfSecretIsSet()
+        {
+            if (!_databaseKeyManager.DataSynced)
+                throw new Exception("Passwords and main key not set.");
+
+        }
+        public class SidebarQueryInfo
+        {
+            public bool Encrypted { get; set; }
+            public string DatabaseName { get; set; }
+            public string TableName { get; set; }
         }
     }
 }
