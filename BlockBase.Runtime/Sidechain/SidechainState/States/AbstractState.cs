@@ -33,7 +33,7 @@ namespace BlockBase.Runtime.SidechainState.States
                     var jumpStatus = await HasConditionsToJump();
                     if(jumpStatus.inConditionsToJump) return jumpStatus.nextState;
 
-                    await DoWork();
+                    if (!await IsWorkDone()) await DoWork();
                 }
                 catch(Exception ex)
                 {
@@ -46,6 +46,8 @@ namespace BlockBase.Runtime.SidechainState.States
         protected abstract Task UpdateStatus();
 
         protected abstract Task<bool> HasConditionsToContinue();
+
+        protected abstract Task<bool> IsWorkDone();
 
         /// <summary>It is very important that DoWork is idempotent!</summary>
         protected abstract Task DoWork();

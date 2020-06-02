@@ -3,11 +3,11 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.SidechainState.States
 {
-    public class EndState : AbstractState
+    public class IPSendTimeState : AbstractState
     {
-        public EndState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public IPSendTimeState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
         {
-            
+
         }
 
         protected override Task<bool> IsWorkDone()
@@ -35,4 +35,5 @@ namespace BlockBase.Runtime.SidechainState.States
             throw new System.NotImplementedException();
         }
     }
+
 }
