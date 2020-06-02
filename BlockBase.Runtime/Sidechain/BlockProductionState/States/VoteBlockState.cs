@@ -5,41 +5,43 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.BlockProductionState.States
 {
-    public class CheckContactsState : AbstractState
+    public class VoteBlockState : AbstractState
     {
-        public CheckContactsState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public VoteBlockState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
         {
         }
 
         protected override Task DoWork()
         {
-            //checks comms and updates to whom he should be connected to
+            //verifies a block and votes on it if ok
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
             //TODO verifies if he is a producer and the sidechain is in production state
+            //and verifies if it's time for him to vote
             //if he has no contacts there shouldn't be no condition to continue
             throw new System.NotImplementedException();
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            
-            //jumps to the SynchronizeNodeState
+            //verifies if block is valid and if in that case he's vote is in the network
+            //verifies if his time to vote is done
+            //jumps to the StartState
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            //there isn't a clear rule to determine if the work is done because he could always improve a little in subsequent runs
+            //verifies if block is valid and if in that case he's vote is in the network
             throw new System.NotImplementedException();
         }
 
         protected override Task UpdateStatus()
         {
-            //fetches contact data
+            //I don't think he needs to fetch anything
             throw new System.NotImplementedException();
         }
     }
