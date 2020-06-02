@@ -3,18 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.SidechainState.States
+namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
     public abstract class AbstractState
     {
         protected ILogger _logger;
-        protected CurrentGlobalStatus Status { get; private set; }
-
         protected bool IsWorkFinished { get; set; }
 
-        public AbstractState(CurrentGlobalStatus status, ILogger logger)
+        public AbstractState(ILogger logger)
         {
-            Status = status;
             _logger = logger;
         }
         public virtual async Task<string> Run(CancellationToken cancellationToken = default(CancellationToken))

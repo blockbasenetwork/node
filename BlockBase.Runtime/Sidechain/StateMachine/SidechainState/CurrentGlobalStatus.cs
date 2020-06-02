@@ -1,6 +1,6 @@
 using BlockBase.Network.Sidechain;
 
-namespace BlockBase.Runtime.SidechainState
+namespace BlockBase.Runtime.StateMachine.SidechainState
 {
     public class CurrentGlobalStatus
     {

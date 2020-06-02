@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using BlockBase.Utils.Crypto;
 using System.Text;
 
-namespace BlockBase.Runtime.SidechainState.States
+namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
     public class SecretTimeState : AbstractState
     {

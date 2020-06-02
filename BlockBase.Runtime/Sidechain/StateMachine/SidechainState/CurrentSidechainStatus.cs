@@ -5,7 +5,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.SidechainState
+namespace BlockBase.Runtime.StateMachine.SidechainState
 {
     public class CurrentSidechainStatus
     {

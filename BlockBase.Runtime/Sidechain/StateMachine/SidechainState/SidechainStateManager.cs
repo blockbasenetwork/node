@@ -5,23 +5,27 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
-using BlockBase.Runtime.SidechainState.States;
+using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.SidechainState
+namespace BlockBase.Runtime.StateMachine.SidechainState
 {
-    public class BlockProductionStateManager : IThreadableComponent
+    public class SidechainStateManager : IThreadableComponent
     {
         private ILogger _logger;
+        private IMainchainService _mainchainService;
+        private NodeConfigurations _nodeConfigurations;
 
         public TaskContainer TaskContainer { get; private set; }
 
         
 
-        public BlockProductionStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, string endpoint, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, IMainchainService mainchainService)
+        public SidechainStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, string endpoint, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, IMainchainService mainchainService)
         {
             _logger = logger;
+            _mainchainService = mainchainService;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         public TaskContainer Start()
@@ -53,7 +57,8 @@ namespace BlockBase.Runtime.SidechainState
 
         private AbstractState BuildState(string state, CurrentGlobalStatus status)
         {
-            
+            if(state == typeof(StartState).Name) return new StartState(status, _logger);
+            if(state == typeof(CandidatureState).Name) return new CandidatureState(status, _logger, _mainchainService, _nodeConfigurations);
 
             return null;
         }

@@ -1,47 +1,45 @@
 using System.Threading.Tasks;
-using BlockBase.Runtime.SidechainState;
-using BlockBase.Runtime.SidechainState.States;
+using BlockBase.Runtime.StateMachine.SidechainState;
+using BlockBase.Runtime.StateMachine.SidechainState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.BlockProductionState.States
+namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class ProduceBlockState : AbstractState
+    public class SynchronizeNodeState : AbstractState
     {
-        public ProduceBlockState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public SynchronizeNodeState(ILogger logger) : base(logger)
         {
         }
 
         protected override Task DoWork()
         {
-            //produces a block and sends it to the network
+            //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
             //TODO verifies if he is a producer and the sidechain is in production state
-            //and verifies if it's he's turn to produce
-            //if he has no contacts there shouldn't be no condition to continue
+            //also verifies if he is unable to synchronize the node due to unresponsive nodes
             throw new System.NotImplementedException();
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            //verifies if block has been produced and is in the network
-            //verifies if his time to produce is done
-            //jumps to the StartState
+            //TODO verifies if he is synchronized
+            //jumps to one of two states, produce block or vote block
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            //verifies if block has been produced and is in the network
+            //TODO verifies if he is synchronized
             throw new System.NotImplementedException();
         }
 
         protected override Task UpdateStatus()
         {
-            //I don't think he needs to fetch anything
+            //fetches latest block data
             throw new System.NotImplementedException();
         }
     }

@@ -1,13 +1,13 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.SidechainState.States
+namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class EndState : AbstractState
+    public class IPReceiveState : AbstractState
     {
-        public EndState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public IPReceiveState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
         {
-            
+
         }
 
         protected override Task<bool> IsWorkDone()
@@ -35,4 +35,5 @@ namespace BlockBase.Runtime.SidechainState.States
             throw new System.NotImplementedException();
         }
     }
+
 }

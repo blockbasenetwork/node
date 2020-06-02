@@ -1,43 +1,45 @@
 using System.Threading.Tasks;
-using BlockBase.Runtime.SidechainState;
-using BlockBase.Runtime.SidechainState.States;
+using BlockBase.Runtime.StateMachine.SidechainState;
+using BlockBase.Runtime.StateMachine.SidechainState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.BlockProductionState.States
+namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class StartState : AbstractState
+    public class CheckContactsState : AbstractState
     {
-        public StartState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public CheckContactsState(ILogger logger) : base(logger)
         {
         }
 
         protected override Task DoWork()
         {
-            //TODO not really sure if there's anything to do
+            //checks comms and updates to whom he should be connected to
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
             //TODO verifies if he is a producer and the sidechain is in production state
+            //if he has no contacts there shouldn't be no condition to continue
             throw new System.NotImplementedException();
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            //TODO verifies if he is a producer and the sidechain is in production state - should be the same as above
-            //jumps to the CheckContactsState
+            
+            //jumps to the SynchronizeNodeState
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> IsWorkDone()
         {
+            //there isn't a clear rule to determine if the work is done because he could always improve a little in subsequent runs
             throw new System.NotImplementedException();
         }
 
         protected override Task UpdateStatus()
         {
-            //TODO get's data about his state as producer and the state of production of the sidechain
+            //fetches contact data
             throw new System.NotImplementedException();
         }
     }
