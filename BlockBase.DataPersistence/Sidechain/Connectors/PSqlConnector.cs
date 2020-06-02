@@ -32,17 +32,17 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         }
 
-        public async Task<bool> TestConnection() 
+        public async Task<bool> TestConnection()
         {
-            using(NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
+            using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 try
                 {
-                    await conn.OpenAsync(); 
+                    await conn.OpenAsync();
                     return conn.State == System.Data.ConnectionState.Open;
-                    
+
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     _logger.LogDebug(e.Message, "Unable to connect to postgres");
                     return false;
@@ -52,10 +52,10 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         public async Task Setup()
         {
-            if(!_hasBeenSetup)
+            if (!_hasBeenSetup)
             {
                 //TODO rpinto - what if this fails? There's no info returning from this method
-                await CreateDefaultDatabaseIfNotExists();
+                await CreateDefaultDatabase();
                 _hasBeenSetup = true;
             }
         }
@@ -115,28 +115,37 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         }
 
-        private async Task CreateDefaultDatabaseIfNotExists()
+        public async Task<bool> DoesDefaultDatabaseExist()
         {
-            
-            bool dbExists = false;
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
                 string cmdText = $"SELECT 1 FROM pg_database WHERE datname='{_defaultDatabaseNameWithPrefix}'";
                 NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
+
+                bool databaseExists = await cmd.ExecuteScalarAsync() != null;
+
+                cmd.Dispose();
+                await conn.CloseAsync();
+
+                return databaseExists;
+
+            }
+        }
+        private async Task CreateDefaultDatabase()
+        {
+            bool dbExists = await DoesDefaultDatabaseExist();
+            using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
+            {
+                await conn.OpenAsync();
+                NpgsqlCommand cmd = new NpgsqlCommand($"CREATE DATABASE {_defaultDatabaseNameWithPrefix};", conn);
                 try
                 {
-                    dbExists = await cmd.ExecuteScalarAsync() != null;
-                    if (!dbExists)
-                    {
-                        cmd.Dispose();
-                        cmd = new NpgsqlCommand($"CREATE DATABASE {_defaultDatabaseNameWithPrefix};", conn);
-                        await cmd.ExecuteNonQueryAsync();
-                    }
+                    await cmd.ExecuteNonQueryAsync();
                 }
                 catch (Exception e)
                 {
-                    _logger.LogWarning(e.Message, "Unable to create default database");
+                    _logger.LogWarning(e.Message, "Unable to create default database.");
                 }
                 finally
                 {
@@ -144,17 +153,18 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                     await conn.CloseAsync();
                 }
             }
+
             await CreateTableIfNotExists();
-            
+
         }
         public async Task DropDefaultDatabase()
         {
-          await DropDatabase(_defaultDatabaseNameWithPrefix);  
+            await DropDatabase(_defaultDatabaseNameWithPrefix);
         }
 
         public async Task DropDatabase(string databaseName)
         {
-             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
+            using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
                 NpgsqlCommand cmd = new NpgsqlCommand($"DROP DATABASE {databaseName};", conn);

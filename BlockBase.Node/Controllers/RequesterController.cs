@@ -46,6 +46,7 @@ namespace BlockBase.Node.Controllers
         private SecurityConfigurations _securityConfigurations;
         private IConnectionsChecker _connectionsChecker;
         private SqlCommandManager _sqlCommandManager;
+        private IConnector _connector;
 
         public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender)
         {
@@ -64,8 +65,8 @@ namespace BlockBase.Node.Controllers
             _connectionsChecker = connectionsChecker;
             _securityConfigurations = securityConfigurations.Value;
             _databaseKeyManager = databaseKeyManager;
-            psqlConnector.Setup().Wait();
             _sidechainMaintainerManager = sidechainMaintainerManager;
+            _connector = psqlConnector;
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbProducerService);
         }
 
@@ -186,7 +187,11 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-
+                if(await _connector.DoesDefaultDatabaseExist())
+                   return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix.")));
+                
+                _connector.Setup().Wait();
+                
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
                 if(contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
 
@@ -536,7 +541,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (!_sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested) 
-                    return Ok(new OperationResponse<bool>(false, $"You need to end sidechain first."));
+                    return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You need to end sidechain first.")));
                 await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
                 return Ok(new OperationResponse<bool>(true, $"Removed data."));
             }
