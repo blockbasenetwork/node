@@ -450,7 +450,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                CheckIfSecretIsSet();
+                if (!_databaseKeyManager.DataSynced) throw new Exception("Passwords and main key not set.");
                 var queryResults = await _sqlCommandManager.Execute(queryScript);
 
                 return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
@@ -478,7 +478,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                CheckIfSecretIsSet();
+                if (!_databaseKeyManager.DataSynced) throw new Exception("Passwords and main key not set.");
                 var query = $"USE {sidebarQueryInfo.DatabaseName}; SELECT {sidebarQueryInfo.TableName}.* FROM {sidebarQueryInfo.TableName}";
                 if (sidebarQueryInfo.Encrypted) query += " ENCRYPTED";
                 query += ";";
@@ -510,7 +510,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                CheckIfSecretIsSet();
+                if (!_databaseKeyManager.DataSynced) throw new Exception("Passwords and main key not set.");
                 var structure = _sqlCommandManager.GetStructure();
                 return Ok(new OperationResponse<IList<DatabasePoco>>(structure));
             }
@@ -547,12 +547,6 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        private void CheckIfSecretIsSet()
-        {
-            if (!_databaseKeyManager.DataSynced)
-                throw new Exception("Passwords and main key not set.");
-
-        }
         public class SidebarQueryInfo
         {
             public bool Encrypted { get; set; }
