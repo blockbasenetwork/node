@@ -4,6 +4,7 @@ using System;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.Domain.Configurations;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -13,10 +14,13 @@ namespace BlockBase.DataPersistence.Utils
     {
         private IConnector _connector;
         private IMongoClient _mongoClient;
-        public ConnectionsChecker(IConnector connector, IOptions<NodeConfigurations> nodeConfigurations)
+
+        private ILogger<ConnectionsChecker> _logger;
+        public ConnectionsChecker(IConnector connector, IOptions<NodeConfigurations> nodeConfigurations, ILogger<ConnectionsChecker> logger)
         {
             _connector = connector;
             _mongoClient = new MongoClient(nodeConfigurations.Value.MongoDbConnectionString);
+            _logger = logger;
         }
 
         public async Task<bool> IsAbleToConnectToMongoDb() 
@@ -29,8 +33,9 @@ namespace BlockBase.DataPersistence.Utils
 
                 return true;
             }
-            catch(Exception)
+            catch(Exception e)
             {
+                _logger.LogWarning(e.Message, "Unable to connect to MongoDB");
                 return false;
             }
         }

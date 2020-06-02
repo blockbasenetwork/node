@@ -26,10 +26,11 @@ namespace BlockBase.Domain.Blockchain
         {
         }
 
-        public BlockHeader(byte[] blockHash, byte[] previousBlockHash, string producer, string producerSignature, byte[] merkleRoot,
-            ulong sequenceNumber,uint transactionCount,  ulong? timestamp = null)
+        public BlockHeader(byte[] blockHash,ulong blockSizeInBytes, byte[] previousBlockHash, string producer, string producerSignature, byte[] merkleRoot,
+            ulong sequenceNumber,uint transactionCount, ulong? timestamp = null)
         {
             BlockHash = blockHash;
+            BlockSizeInBytes = blockSizeInBytes;
             PreviousBlockHash = previousBlockHash;
             MerkleRoot = merkleRoot;
             SequenceNumber = sequenceNumber;
@@ -123,9 +124,14 @@ namespace BlockBase.Domain.Blockchain
             return true;
         }
 
+        public override int GetHashCode() 
+        {
+            return base.GetHashCode();
+        }
+
         public object Clone()
         {
-           return new BlockHeader(BlockHash, PreviousBlockHash, Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp);
+           return new BlockHeader(BlockHash, BlockSizeInBytes, PreviousBlockHash, Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp);
         }
     }
 }

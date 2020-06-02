@@ -133,7 +133,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private async Task<bool> IsTimeForThisProducerToProduce(SidechainPool sidechainPool, string blockProducer)
         {
-            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(sidechainPool.ClientAccountName)).SingleOrDefault();
+            var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(sidechainPool.ClientAccountName);
             if (currentProducerTable.Producer == blockProducer) return true;
             return false;
         }
@@ -162,7 +162,8 @@ namespace BlockBase.Runtime.Sidechain
                     return;
                 }
 
-                var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.ClientAccountName)).SingleOrDefault().StartProductionTime;
+                //TODO rpinto - may throw an exception if currentproduceris null
+                var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPoolValuePair.Value.ClientAccountName)).StartProductionTime;
 
                 var lastValidBlockheaderSmartContract = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPoolValuePair.Value.ClientAccountName, (int)sidechainPoolValuePair.Value.BlocksBetweenSettlement);
 

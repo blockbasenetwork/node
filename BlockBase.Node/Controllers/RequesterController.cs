@@ -24,7 +24,7 @@ using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
 using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
-
+using EosSharp.Core.Exceptions;
 namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]
@@ -109,6 +109,11 @@ namespace BlockBase.Node.Controllers
                     var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
                     currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
 
+                    if(accountInfo == null)
+                    {
+                        _logger.LogError($"Account {NodeConfigurations.AccountName} not found");
+                    }
+
                     accountDataFetched = true;
                     cpuUsed = accountInfo.cpu_limit.used;
                     cpuLimit = accountInfo.cpu_limit.max;
@@ -120,7 +125,11 @@ namespace BlockBase.Node.Controllers
                     sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
 
                 }
-                catch { }
+                catch 
+                { 
+                    _logger.LogError("Failed to retrieve account info");
+
+                }
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
                 var mongoDbPrefix = NodeConfigurations.DatabasesPrefix;
@@ -177,6 +186,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+
+                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                if(contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
+
                 var configuration = GetSidechainConfigurations();
 
                 if (stake > 0)
@@ -187,10 +200,28 @@ namespace BlockBase.Node.Controllers
                     _logger.LogDebug("Stake inserted = " + stakeToInsert);
                 }
 
+                //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
-                var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
+                var i = 0;
 
-                return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
+                //TODO rpinto - review this while loop
+                while (i < 3)
+                {
+                    
+                    await Task.Delay(1000);
+
+                    try
+                    {
+                        var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
+                        return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
+                    }
+                    catch(ApiErrorException)
+                    {
+                        i++;
+                    }
+                }
+
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationCanceledException());
             }
             catch (Exception e)
             {
@@ -216,7 +247,9 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (_securityConfigurations.UseSecurityConfigurations)
+                { 
                     _databaseKeyManager.SetInitialSecrets(_securityConfigurations);
+                }
 
                 else
                 {
@@ -230,10 +263,16 @@ namespace BlockBase.Node.Controllers
                 string tx = null;
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 
-                if (!contractSt.CandidatureTime && !contractSt.ProductionTime) tx = await _mainchainService.StartCandidatureTime(NodeConfigurations.AccountName);
+                //TODO rpinto - could the contract state be in ConfigTime and CandidatureTime or/and ProductionTime?
+                //TODO rpinto - why is the StartCandidatureTime called from outside the SuperMethod?
 
-                if (_sidechainMaintainerManager.TaskContainer == null || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
+                if (_sidechainMaintainerManager.TaskContainer == null )
+                if (_sidechainMaintainerManager.TaskContainer == null 
+                || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
+                || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted
+                || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
                     _sidechainMaintainerManager.Start();
+
 
                 var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
 
@@ -262,7 +301,12 @@ namespace BlockBase.Node.Controllers
             try
             {
                 await _sidechainMaintainerManager.EndSidechain();
+              
+                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                if(contractSt == null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} not found"));
+
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
+                
                 return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
             }
             catch (Exception e)

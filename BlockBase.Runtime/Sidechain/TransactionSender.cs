@@ -169,13 +169,13 @@ namespace BlockBase.Runtime.Sidechain
             try
             {
             await _mongoDbProducerService.CreateTransactionInfoIfNotExists(_nodeConfigurations.AccountName);
-            var transactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(_nodeConfigurations.AccountName);
+            var transactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(_nodeConfigurations.AccountName);
             foreach (var transaction in transactions)
                 AddScriptTransactionToSend(transaction);  
             }
             catch(Exception e)
             {
-                //_logger.LogWarning(e.Message, "Unable to connect to mongo db database");
+                _logger.LogWarning(e.Message, "Unable to connect to mongodb database");
             }
         }
     }

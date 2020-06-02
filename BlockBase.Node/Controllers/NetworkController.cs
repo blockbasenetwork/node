@@ -6,18 +6,16 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.Utils;
-using BlockBase.Domain.Blockchain;
-using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Runtime.SidechainProducer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain;
 using BlockBase.Utils;
+using Newtonsoft.Json;
+using BlockBase.Domain.Results;
 
 namespace BlockBase.Node.Controllers
 {
@@ -30,7 +28,7 @@ namespace BlockBase.Node.Controllers
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
-        
+
         public NetworkController(ILogger<NetworkController> logger, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _logger = logger;
@@ -46,6 +44,7 @@ namespace BlockBase.Node.Controllers
         /// <returns>The success of the task</returns>
         /// <response code="200">Contract information retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
+        /// <response code="404">Contract information not found</response>
         /// <response code="500">Error retrieving the contract information</response>
         [HttpGet]
         [SwaggerOperation(
@@ -57,10 +56,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var clientLedger = await _mainchainService.RetrieveClientTokenLedgerTable(sidechainName);
+                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a sidechain name."));
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-
-                if(contractInfo == null) throw new InvalidOperationException($"{sidechainName} not found");
+                
+                if(contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} configuration not found"));
 
                 var result = new GetSidechainConfigurationModel {
                     account_name = contractInfo.Key,
@@ -68,13 +67,13 @@ namespace BlockBase.Node.Controllers
                     BlockTimeDuration = contractInfo.BlockTimeDuration,
                     CandidatureEndDate = DateTimeOffset.FromUnixTimeSeconds(contractInfo.CandidatureEndDate).DateTime,
                     CandidatureTime = contractInfo.CandidatureTime,
-                    MaxPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers/10000,4),
-                    MaxPaymentPerBlockHistoryProducers =  Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers/10000,4),
-                    MaxPaymentPerBlockValidatorProducers =  Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers/10000,4),
-                    MinPaymentPerBlockFullProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers/10000,4),
-                    MinPaymentPerBlockHistoryProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers/10000,4),
-                    MinPaymentPerBlockValidatorProducers =  Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers/10000,4),
-                    Stake =  Math.Round((decimal)contractInfo.Stake/10000,4),
+                    MaxPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers / 10000, 4),
+                    MaxPaymentPerBlockHistoryProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers / 10000, 4),
+                    MaxPaymentPerBlockValidatorProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers / 10000, 4),
+                    MinPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4),
+                    MinPaymentPerBlockHistoryProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4),
+                    MinPaymentPerBlockValidatorProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4),
+                    Stake = Math.Round((decimal)contractInfo.Stake / 10000, 4),
                     NumberOfFullProducersRequired = contractInfo.NumberOfFullProducersRequired,
                     NumberOfHistoryProducersRequired = contractInfo.NumberOfHistoryProducersRequired,
                     NumberOfValidatorProducersRequired = contractInfo.NumberOfValidatorProducersRequired,
@@ -86,7 +85,7 @@ namespace BlockBase.Node.Controllers
                     SendTime = contractInfo.SendTime,
                     SizeOfBlockInBytes = contractInfo.SizeOfBlockInBytes
                 };
-                
+
                 return Ok(new OperationResponse<dynamic>(result));
             }
             catch (Exception e)
@@ -103,6 +102,7 @@ namespace BlockBase.Node.Controllers
         /// <returns>Information about the producer in the sidechain</returns>
         /// <response code="200">Information retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
+        /// <response code="404">Unable to retrieve sidechain data</response>
         /// <response code="500">Error retrieving the information</response>
         [HttpGet]
         [SwaggerOperation(
@@ -115,16 +115,25 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+                if(string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(sidechainName))
+                {
+                    return BadRequest($"Please provide and producer account name and a sidechain name");
+                }
+
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
+                var producerTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
 
-                if (!contractState.CandidatureTime) return BadRequest(new OperationResponse<bool>(false, "Sidechain not in candidature time"));
-                
-                var hasProducerApplied = candidatureTable.Select(m => m.Key).Contains(accountName);
+                if(contractState == null) return NotFound($"Unable to retrieve {sidechainName} contract state");
+                if(candidatureTable == null && producerTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature and production table");
 
-                if(!hasProducerApplied) return Ok(new OperationResponse<bool>(hasProducerApplied,$"Producer {accountName} not found"));
-                else return Ok(new OperationResponse<bool>(hasProducerApplied,$"Producer {accountName} found"));
-                
+                if(candidatureTable != null && candidatureTable.Where(m=>m.Key == accountName).Any())
+                    return Ok(new OperationResponse<bool>(false, $"Account {accountName} has applied for {sidechainName}"));
+
+                if(producerTable != null && producerTable.Where(m => m.Key == accountName).Any())
+                    return Ok(new OperationResponse<bool>(false, $"Account {accountName} is producing for {sidechainName}"));
+
+                return Ok(new OperationResponse<bool>(false, $"Producer {accountName} not found"));
             }
             catch (Exception e)
             {
@@ -139,6 +148,7 @@ namespace BlockBase.Node.Controllers
         /// <returns>The current state of the contract</returns>
         /// <response code="200">Contract state retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
+        /// <response code="404">Sidechain state not found</response>
         /// <response code="500">Error retrieving contract state</response>
         [HttpGet]
         [SwaggerOperation(
@@ -150,54 +160,70 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var contractStates = await _mainchainService.RetrieveContractState(sidechainName);
+                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest("Please provide a valid sidechain name");
+
+                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
                 var tokenLedger = await _mainchainService.GetAccountStake(sidechainName, sidechainName);
                 var producers = await _mainchainService.RetrieveProducersFromTable(sidechainName);
                 var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
                 var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
-                
+
+                if(contractState == null) return BadRequest($"Contract state not found for {sidechainName}");
+                if(candidates == null) return BadRequest($"Candidate table not found for {sidechainName}");
+                if(tokenLedger == null) return BadRequest($"Token ledger table not found for {sidechainName}");
+                if(producers == null) return BadRequest($"Producer table not found for {sidechainName}");
+                if(contractInfo == null) return BadRequest($"Contract info not found for {sidechainName}");
+                if(reservedSeats == null) return BadRequest($"Reserved seats table not found for {sidechainName}");
+
                 var slotsTakenByReservedSeats = 0;
                 var fullNumberOfSlotsTakenByReservedSeats = 0;
                 var historyNumberOfSlotsTakenByReservedSeats = 0;
                 var validatorNumberOfSlotsTakenByReservedSeats = 0;
 
-                foreach(var reservedSeat in reservedSeats) {
-                    var producer = producers.Where(o => o.Key == reservedSeat.Key).FirstOrDefault();
-                    if(producer != null) {
-                        slotsTakenByReservedSeats = slotsTakenByReservedSeats+1;
-                        if(producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats+1;
-                        if(producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats+1;
-                        if(producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats+1;
-                    } 
+                foreach (var reservedSeatKey in reservedSeats.Select(r => r.Key).Distinct())
+                {
+                    var producer = producers.Where(o => o.Key == reservedSeatKey).SingleOrDefault();
+                    if (producer != null)
+                    {
+                        slotsTakenByReservedSeats++;
+                        if (producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats++;
+                        if (producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats++;
+                        if (producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats++;
+                    }
                 }
 
-                var sidechainState = new SidechainState() {
-                   
-                    State = contractStates.ConfigTime ? "Configure state" : contractStates.SecretTime ? "Secrect state" : contractStates.IPSendTime ? "Ip Send Time" : contractStates.IPReceiveTime ? "Ip Receive Time" : contractStates.ProductionTime ? "Production" : contractStates.Startchain ? "Startchain" : "No State in chain",
-                    StakeDepletionEndDate = await StakeEndTimeCalculationAtMaxPayments(sidechainName),
-                    CurrentSidechainStake = tokenLedger.Stake,
-                    InProduction = contractStates.ProductionTime,
-                    ReservedSeats = new ReservedSeats() {
+                var sidechainState = new SidechainState()
+                {
+
+                    State = contractState.ConfigTime ? "Configure state" : contractState.SecretTime ? "Secrect state" : contractState.IPSendTime ? "Ip Send Time" : contractState.IPReceiveTime ? "Ip Receive Time" : contractState.ProductionTime ? "Production" : contractState.Startchain ? "Startchain" : "No State in chain",
+                    StakeDepletionEndDate = StakeEndTimeCalculationAtMaxPayments(contractInfo, tokenLedger),
+                    CurrentRequesterStake = tokenLedger.Stake,
+                    InProduction = contractState.ProductionTime,
+                    ReservedSeats = new ReservedSeats()
+                    {
                         TotalNumber = reservedSeats.Count,
                         SlotsStillAvailable = reservedSeats.Count - slotsTakenByReservedSeats,
                         SlotsTaken = slotsTakenByReservedSeats
                     },
-                    FullProducersInfo = new SidechainProducersInfo() {
-                        NumberOfProducersRequired = (int) contractInfo.NumberOfFullProducersRequired,
+                    FullProducersInfo = new SidechainProducersInfo()
+                    {
+                        NumberOfProducersRequired = (int)contractInfo.NumberOfFullProducersRequired,
                         NumberOfProducersInChain = producers.Where(o => o.ProducerType == 3).Count(),
                         CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 3).Count(),
                         NumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats
-                        
+
                     },
-                    HistoryProducersInfo = new SidechainProducersInfo() {
-                        NumberOfProducersRequired = (int) contractInfo.NumberOfHistoryProducersRequired,
+                    HistoryProducersInfo = new SidechainProducersInfo()
+                    {
+                        NumberOfProducersRequired = (int)contractInfo.NumberOfHistoryProducersRequired,
                         NumberOfProducersInChain = producers.Where(o => o.ProducerType == 2).Count(),
                         CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 2).Count(),
                         NumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats
                     },
-                    ValidatorProducersInfo = new SidechainProducersInfo() {
-                        NumberOfProducersRequired = (int) contractInfo.NumberOfValidatorProducersRequired,
+                    ValidatorProducersInfo = new SidechainProducersInfo()
+                    {
+                        NumberOfProducersRequired = (int)contractInfo.NumberOfValidatorProducersRequired,
                         NumberOfProducersInChain = producers.Where(o => o.ProducerType == 1).Count(),
                         CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 1).Count(),
                         NumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats
@@ -212,148 +238,34 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the total number of current candidates for a given sidechain
+        /// Gets the top producers in the EOS Mainnet and their endpoints
         /// </summary>
-        /// <param name="sidechainName">Name of the sidechain</param>
-        /// <returns>The number of candidates in the sidechain</returns>
-        /// <response code="200">Total producers retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving total candidates information.</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the current number of candidates for a given sidechain",
-            Description = "Gets the current number of candidates that have applied to produce a given sidechain",
-            OperationId = "GetTotalCandidatesForSidechain"
-        )]
-        public async Task<ObjectResult> GetTotalCandidatesForSidechain(string sidechainName)
-        {
-            try
-            {
-                //TODO - this information is not enough as is
-                var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
-                return Ok(new OperationResponse<int>(candidates.Count));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<int>(e));
-            }
-        }
-
-
-        /// <summary>
-        /// Gets specific block in sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the Sidechain</param>
-        /// <param name="blockNumber">Number of the block</param>
-        /// <returns>The requested block</returns>
-        /// <response code="200">Block retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the block</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the block of a given sidechain",
-            Description = "Gets the block object requested",
-            OperationId = "GetBlock"
-        )]
-        public async Task<ObjectResult> GetBlock(string chainName, ulong blockNumber)
-        {
-            try
-            {
-                var blockResponse = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(chainName, blockNumber, blockNumber);
-                var block = blockResponse.FirstOrDefault();
-
-                if (block == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
-
-                return Ok(new OperationResponse<Block>(block));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets specific transaction in sidechain
-        /// </summary>
-        /// <param name="chainName">Name of the Sidechain</param>
-        /// <param name="transactionNumber">Number of the transaction</param>
-        /// <returns>The requested Transaction</returns>
-        /// <response code="200">Transaction retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving the block</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the transaction of a given sidechain",
-            Description = "Gets the transaction object requested",
-            OperationId = "GetTransaction"
-        )]
-        public async Task<ObjectResult> GetTransaction(string chainName, ulong transactionNumber)
-        {
-            try
-            {
-                var transactionsResponse = await _mongoDbProducerService.GetTransactionBySequenceNumber(chainName, transactionNumber);
-                var transaction = transactionsResponse.FirstOrDefault();
-
-                if (transaction == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
-
-                return Ok(new OperationResponse<BlockBase.Domain.Blockchain.Transaction>(transaction));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets all saved loosed transactions
-        /// </summary>
-        /// <param name="chainName">Name of the Sidechain</param>
-        /// <returns>The loose transactions</returns>
-        /// <response code="200">Transactions retrieved with success</response>
-        /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error retrieving transactions</response>
-        [HttpGet]
-        [SwaggerOperation(
-            Summary = "Gets the loose transactions a given sidechain",
-            Description = "Gets all the loose transactions saved to be included in the specified sidechain",
-            OperationId = "GetLooseTransactions"
-        )]
-        public async Task<ObjectResult> GetLooseTransactions(string chainName)
-        {
-            try
-            {
-                var looseTransactionsResponse = await _mongoDbProducerService.RetrieveLastLooseTransactions(chainName);
-
-                if (looseTransactionsResponse == null) return BadRequest(new OperationResponse<bool>(new ArgumentException(), "Block not found."));
-
-                return Ok(new OperationResponse<IEnumerable<BlockBase.Domain.Blockchain.Transaction>>(looseTransactionsResponse));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
-            }
-        }
-
-        /// <summary>
-        /// Gets the top 21 producers in the EOS network and their endpoints
-        /// </summary>
-        /// <returns>The top 21 producers info and endpoints</returns>
+        /// <returns>The top producers info and endpoints</returns>
         /// <response code="200">Producer information retrieved with success</response>
+        /// <response code="404">Unable to retrieve producers</response>
         /// <response code="500">Error retrieving information</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the top 21 producers in the EOS network and their endpoints",
+            Summary = "Gets the top producers in the EOS Mainnet and their endpoints",
             Description = "Allows node to get a list of producers and their endpoints without the need of knowing a specific endpoing",
-            OperationId = "GetTop21ProducersAndEndpoints"
+            OperationId = "GetTopProducersAndEndpoints"
         )]
-        public async Task<ObjectResult> GetTop21ProducersAndEndpoints()
+        public async Task<ObjectResult> GetTopProducersAndEndpoints()
         {
             try
             {
                 var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetTop21ProducersAndEndpoints/");
                 var json = await HttpHelper.CallWebRequest(request);
+                var topProducers = JsonConvert.DeserializeObject<List<TopProducerEndpoint>>(json);
 
-                return Ok(new OperationResponse<string>(json));
+                //TODO rpinto - Nice implementation - should be done periodically though, and not on request
+                var topProducersEndpointResponse = await ConvertToAndMeasureTopProducerEndpointResponse(topProducers.Take(10).ToList());
+
+                return Ok(new OperationResponse<List<TopProducerEndpointResponse>>(topProducersEndpointResponse));
+            }
+            catch(Newtonsoft.Json.JsonReaderException)
+            {
+                return NotFound(new OperationResponse<string>("Unable to retrieve the list of producers"));
             }
             catch (Exception e)
             {
@@ -361,11 +273,8 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        private async Task<DateTime> StakeEndTimeCalculationAtMaxPayments(string sidechainName) {
-            
-            var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-            var sidechainStake = (await _mainchainService.GetAccountStake(sidechainName, sidechainName));
-            
+        private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, TokenLedgerTable sidechainStake)
+        {
             var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
             var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
             var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;
@@ -376,6 +285,46 @@ namespace BlockBase.Node.Controllers
 
             var timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice = ulong.Parse(sidechainStakeInUnitsString) / ((fullProducerPaymentPerSettlement + historyroducerPaymentPerSettlement + validatorProducerPaymentPerSettlement));
             return DateTime.UtcNow.AddSeconds((contractInfo.BlockTimeDuration * contractInfo.BlocksBetweenSettlement) * timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice);
+        }
+
+        private async Task<List<TopProducerEndpointResponse>> ConvertToAndMeasureTopProducerEndpointResponse(List<TopProducerEndpoint> topProducers)
+        {
+            var topProducersEndpointResponse = new List<TopProducerEndpointResponse>();
+
+            foreach (var producer in topProducers)
+            {
+                if (!producer.Endpoints.Any()) continue;
+                var producerEndpointResponse = new TopProducerEndpointResponse();
+                producerEndpointResponse.ProducerInfo = producer.ProducerInfo;
+                producerEndpointResponse.Endpoints = new List<EndpointResponse>();
+
+                foreach (var endpoint in producer.Endpoints)
+                {
+                    if (!endpoint.Contains("http")) continue;
+                    var endpointResponse = new EndpointResponse();
+                    var infoRequest = HttpHelper.ComposeWebRequestGet($"{endpoint}/v1/chain/get_info");
+                    long measuredRequest = 0;
+
+                    try
+                    {
+                        measuredRequest = await HttpHelper.MeasureWebRequest(infoRequest);
+                    }
+                    catch (Exception)
+                    {
+                        continue;
+                    }
+
+                    endpointResponse.Endpoint = endpoint;
+                    endpointResponse.ResponseTimeInMs = measuredRequest;
+
+                    producerEndpointResponse.Endpoints.Add(endpointResponse);
+                }
+
+                producerEndpointResponse.Endpoints = producerEndpointResponse.Endpoints.OrderBy(e => e.ResponseTimeInMs).ToList();
+                topProducersEndpointResponse.Add(producerEndpointResponse);
+            }
+
+            return topProducersEndpointResponse.OrderBy(p => p.Endpoints.FirstOrDefault()?.ResponseTimeInMs).ToList();
         }
     }
 }

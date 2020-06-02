@@ -12,8 +12,8 @@ namespace BlockBase.Runtime.SidechainProducer
 {
     public interface ISidechainProducerService
     {
-        bool AddSidechainToProducer(SidechainPool sidechain);
-        bool RemoveSidechainFromProducer(SidechainPool sidechain);
+        void AddSidechainToProducerAndStartIt(SidechainPool sidechain);
+        void RemoveSidechainFromProducerAndStopIt(SidechainPool sidechain);
         Task GetSidechainsFromRecoverDB();
         Task Run(bool RecoverChains = true);
         Dictionary<string, SidechainPool> GetSidechains();

@@ -1,5 +1,6 @@
 ﻿using BlockBase.Domain.Protos;
 using BlockBase.Utils.Crypto;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Linq;
@@ -9,9 +10,15 @@ namespace BlockBase.Network.IO.Analysis
 {
     public class MessageParser
     {
+        ILogger _logger;
+        public MessageParser(ILogger logger)
+        {
+            _logger = logger;
+        }
+
         public MessageParsingResultEnum AnalyseAndParseMessage(RawNetworkMessage rawNetworkMessage, out NetworkMessage networkMessage)
         {
-            //TODO: rpinto - voltar a pôr esta secção quando o RatingManager for novamente implementado
+            //TODO: rpinto - add this section to the rating manager when it's implemented again
             //if (!RatingManager.Instance.IsSenderTrustful(sender)
             //    || RatingManager.Instance.IsSpammer(sender))
             //    return RecommendedActionEnum.Ignore;
@@ -25,15 +32,14 @@ namespace BlockBase.Network.IO.Analysis
             try
             {
                 networkMessage = NetworkMessage.BuildFromPacket(rawNetworkMessage.IPEndPoint, NetworkMessageProto.Parser.ParseFrom(rawNetworkMessage.Bytes));
-                
-                if(networkMessage == null) Console.WriteLine("Network message is null.");
                 ValidateNetworkMessage(networkMessage);
             }
-            catch (Exception ex)
+            catch
             {
                 networkMessage = null;
                 //RatingManager.Instance.RecordIPEndPointBehavior(BehaviorTypeEnum.SentMalformedMessage, sender);
-                Console.WriteLine("Exception: " + ex.Message);
+                
+                _logger.LogWarning($"Unable to parse network message from {rawNetworkMessage.IPEndPoint.Address.ToString()}");
                 return MessageParsingResultEnum.Failure;
             }
 

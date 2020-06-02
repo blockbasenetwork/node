@@ -70,9 +70,20 @@ namespace BlockBase.Api
                 services.Configure<SidechainPhasesTimesConfigurations>(configuration.GetSection("SidechainPhasesTimesConfigurations"));
                 services.Configure<SecurityConfigurations>(configuration.GetSection("SecurityConfigurations"));
                 services.AddOptions();
+
+                Func<string, IPAddress> simpleParse = (ipAddressString) => {
+                    IPAddress ipAddress;
+                    if (!IPAddress.TryParse (ipAddressString, out ipAddress))
+                    {
+                        var addressList = Dns.GetHostEntry(ipAddressString)?.AddressList;
+                        if(addressList != null && addressList.Length > 0) ipAddress = addressList[0];
+                    }
+                    return ipAddress;
+                };
+
                 services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(
-                        IPAddress.Parse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.PublicIpAddress),
+                        simpleParse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.PublicIpAddress),
                         s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.TcpPort
                     )
                 );
@@ -106,7 +117,7 @@ namespace BlockBase.Api
                     .WriteTo.Console(theme: AnsiConsoleTheme.Code)
                     .WriteTo.File($"logs/ProducerD_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
                     .CreateLogger();
-
+                    
                 logging.AddSerilog();
             });
 

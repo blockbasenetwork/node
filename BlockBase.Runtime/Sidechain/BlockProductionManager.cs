@@ -63,6 +63,7 @@ namespace BlockBase.Runtime.Sidechain
         //TODO: Probably a good idea to protect from having a task already running in instance and replace taskcontainer with a new one and have multiple threads running per instance
         public TaskContainer Start()
         {
+            if(TaskContainer != null) TaskContainer.Stop();
             TaskContainer = TaskContainer.Create(async () => await Execute());
             TaskContainer.Start();
             return TaskContainer;
@@ -81,7 +82,8 @@ namespace BlockBase.Runtime.Sidechain
                         if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
                         {
-                            var currentProducerTable = (await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName)).SingleOrDefault();
+                            //retrieving producer may fail
+                            var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
                             if (currentProducerTable != null)
                             {
@@ -94,15 +96,24 @@ namespace BlockBase.Runtime.Sidechain
                                 _previousTimeToCheck = _nextTimeToCheckSmartContract;
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
+                                //updating canceling proposal may fail but fails silently
                                 await CancelProposalTransactionIfExists();
+
+                                //has a while loop inside that may fail
                                 await CheckIfBlockHeadersInSmartContractAreUpdated(currentProducerTable.StartProductionTime);
 
+                                //retrieving last valid block header may fail
                                 var lastValidBlockheaderSmartContract = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+                                
+                                //trying to sync databases section
                                 if (lastValidBlockheaderSmartContract != null)
                                 {
+                                    
                                     if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime) && _sidechainPool.ProducerType != ProducerTypeEnum.Validator)
                                     {
                                         _logger.LogDebug("Producer not up to date, building chain.");
+
+                                        //TODO rpinto - does the provider have enough time to build the chain before being banned?
                                         await BuildChain();
                                     }
 
@@ -115,6 +126,8 @@ namespace BlockBase.Runtime.Sidechain
                                     }
                                 }
 
+                                //TODO rpinto - the _currentProducingProducerAccountName and currentProducerTable may have been fetched way before
+                                //this isn't accounted here
                                 if (_currentProducingProducerAccountName == _nodeConfigurations.AccountName && !currentProducerTable.HasProducedBlock)
                                 {
                                     _logger.LogDebug("Producing block.");
@@ -192,12 +205,13 @@ namespace BlockBase.Runtime.Sidechain
                     blockHeader.MerkleRoot = MerkleTreeHelper.CalculateMerkleRootHash(transactions.Select(t => t.TransactionHash).ToList());
 
                     var block = new Block(blockHeader, transactions);
+                    var blockBytes = block.ConvertToProto().ToByteArray().Count();
+                    block.BlockHeader.BlockSizeInBytes = Convert.ToUInt64(blockBytes);
+                    
                     var serializedBlockHeader = JsonConvert.SerializeObject(block.BlockHeader);
                     var blockHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedBlockHeader));
-                    var blockBytes = block.ConvertToProto().ToByteArray().Count();
 
                     block.BlockHeader.BlockHash = blockHash;
-                    block.BlockHeader.BlockSizeInBytes = Convert.ToUInt64(blockBytes);
                     block.BlockHeader.ProducerSignature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, blockHash);
 
                     _logger.LogInformation($"Produced Block -> sequence number: {currentSequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(blockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(previousBlockhash)}");
@@ -218,7 +232,7 @@ namespace BlockBase.Runtime.Sidechain
         private async Task<IList<Transaction>> GetTransactionsToIncludeInBlock(int blockHeaderSizeInBytes)
         {
             var transactionsDatabaseName = _sidechainPool.ClientAccountName;
-            var allLooseTransactions = await _mongoDbProducerService.RetrieveLastLooseTransactions(transactionsDatabaseName);
+            var allLooseTransactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(transactionsDatabaseName);
             ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
             uint sizeInBytes = 0;
@@ -294,6 +308,7 @@ namespace BlockBase.Runtime.Sidechain
                     await Task.Delay(100);
                 }
 
+                //TODO rpinto - this may fail. Why isn't it inside the try clause
                 blockFromTable = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             }
         }
@@ -316,6 +331,7 @@ namespace BlockBase.Runtime.Sidechain
                     await Task.Delay(100);
                 }
 
+                //TODO rpinto - this may fail. Why isn't it inside the try clause
                 verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
                 ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
             }
@@ -352,68 +368,6 @@ namespace BlockBase.Runtime.Sidechain
                 }
             }
             _logger.LogCritical("Unable to broadcast verify transaction during allowed time");
-        }
-
-        private async Task TryProposeTransaction(List<string> requestedApprovals, string blockHash)
-        {
-            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                try
-                {
-                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
-                    if (proposal != null) return;
-                    await _mainchainService.ProposeBlockVerification(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, requestedApprovals, blockHash);
-                    await Task.Delay(60);
-                }
-                catch (ApiErrorException)
-                {
-                    _logger.LogCritical("Unable to propose transaction.");
-                    await Task.Delay(100);
-                }
-            }
-        }
-
-        private async Task TryVerifyAndExecuteTransaction(string proposer)
-        {
-            while ((_nextTimeToCheckSmartContract * 1000) > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
-            {
-                try
-                {
-                    var proposal = await _mainchainService.RetrieveProposal(_nodeConfigurations.AccountName, _sidechainPool.ClientAccountName);
-                    var approvals = await _mainchainService.RetrieveApprovals(proposer, _sidechainPool.ClientAccountName);
-
-                    if (proposal != null && approvals?.ProvidedApprovals?.Where(a => a.PermissionLevel.actor == _nodeConfigurations.AccountName).FirstOrDefault() == null)
-                    {
-                        await TryApproveTransaction(proposal);
-                    }
-                    else if (approvals?.ProvidedApprovals?.Count >= approvals?.RequestedApprovals?.Count + 1)
-                    {
-                        await _mainchainService.ExecuteTransaction(proposer, proposal.ProposalName, _nodeConfigurations.AccountName);
-                        _logger.LogInformation("Executed block verification");
-                        return;
-                    }
-
-                    await Task.Delay(100);
-                }
-                catch (ApiErrorException)
-                {
-                    _logger.LogCritical("Unable to execute proposed transaction, number of required approvals might not have been reached");
-                    await Task.Delay(100);
-                }
-            }
-            _logger.LogCritical("Unable to approve and execute transaction during allowed time");
-        }
-
-        private async Task TryApproveTransaction(TransactionProposal proposal)
-        {
-            try
-            {
-                await _mainchainService.ApproveTransaction(_nodeConfigurations.AccountName, proposal.ProposalName, _nodeConfigurations.AccountName, proposal.TransactionHash);
-            }
-            catch (ApiErrorException apiException)
-            {
-                _logger.LogCritical($"Unable to approve transaction with error: {apiException?.error?.name}");
-            }
         }
 
         private async Task BuildChain()

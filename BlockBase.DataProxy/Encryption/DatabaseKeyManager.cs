@@ -72,9 +72,13 @@ namespace BlockBase.DataProxy.Encryption
             SyncData().Wait();
             DataSynced = true;
         }
-        public async Task SyncData()
+        private async Task SyncData()
         {
             var infoRecords = await _connector.GetInfoRecords();
+
+            if(infoRecords == null || infoRecords.Count == 0)
+            _logger.LogDebug("No info records found to sync");
+
             LoadInfoRecordsToRecordManager(infoRecords);
         }
 
@@ -164,7 +168,6 @@ namespace BlockBase.DataProxy.Encryption
                 decryptedKeyNameData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyName), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
                 return decryptedKeyNameData;
             }
-
 
             catch (System.Security.Cryptography.CryptographicException)
             {

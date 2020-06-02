@@ -37,10 +37,6 @@ namespace BlockBase.Network.Rounting
 
                     await TcpConnector.SendData(messagePacket, message.Destination);
                 }
-                else if (message.TransportType == TransportTypeEnum.Udp)
-                {
-                    UdpConnector.SendData(message.ConvertToPacket(), message.Destination);
-                }
                 else
                 {
                     _logger.LogError("Request to forward outgoing message without transport defined");
@@ -48,7 +44,7 @@ namespace BlockBase.Network.Rounting
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "Forward outgoing messages crashed: " + ex.Message);
+                _logger.LogCritical(ex, "MessageSender-SendMessage crashed: " + ex.Message);
             }
         }
     }

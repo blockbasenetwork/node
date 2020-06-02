@@ -76,6 +76,8 @@ namespace BlockBase.Runtime.Sidechain
         public TaskContainer Start(SidechainPool sidechainPool)
         {
             _sidechainPool = sidechainPool;
+
+            if(TaskContainer != null) TaskContainer.Stop();
             TaskContainer = TaskContainer.Create(async () => await Execute());
             TaskContainer.Start();
             return TaskContainer;
@@ -108,6 +110,7 @@ namespace BlockBase.Runtime.Sidechain
                     }
                     catch (ApiErrorException)
                     {
+                        //TODO rpinto - this log here may miss inform because the api error failure may be from a different cause
                         _logger.LogInformation("Already notified ready.");
                     }
                     return;
