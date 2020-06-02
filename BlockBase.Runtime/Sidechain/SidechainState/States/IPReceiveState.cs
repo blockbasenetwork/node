@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.SidechainState.States
 {
-    public class IPReceiveTime : AbstractState
+    public class IPReceiveState : AbstractState
     {
-        public IPReceiveTime(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public IPReceiveState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
         {
 
         }

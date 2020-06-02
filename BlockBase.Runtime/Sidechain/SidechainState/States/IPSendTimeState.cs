@@ -58,7 +58,7 @@ namespace BlockBase.Runtime.SidechainState.States
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
-            return (isProducerInTable && _contractStateTable.IPReceiveTime, typeof(IPReceiveTime).Name);
+            return (isProducerInTable && _contractStateTable.IPReceiveTime, typeof(IPReceiveState).Name);
         }
 
         protected override async Task UpdateStatus()
