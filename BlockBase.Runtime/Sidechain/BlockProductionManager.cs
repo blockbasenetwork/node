@@ -82,6 +82,7 @@ namespace BlockBase.Runtime.Sidechain
                         if (_nextTimeToCheckSmartContract == _previousTimeToCheck) await Task.Delay(10);
                         try
                         {
+                            //retrieving producer may fail
                             var currentProducerTable = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
                             if (currentProducerTable != null)
@@ -95,15 +96,24 @@ namespace BlockBase.Runtime.Sidechain
                                 _previousTimeToCheck = _nextTimeToCheckSmartContract;
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
+                                //updating canceling proposal may fail but fails silently
                                 await CancelProposalTransactionIfExists();
+
+                                //has a while loop inside that may fail
                                 await CheckIfBlockHeadersInSmartContractAreUpdated(currentProducerTable.StartProductionTime);
 
+                                //retrieving last valid block header may fail
                                 var lastValidBlockheaderSmartContract = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+                                
+                                //trying to sync databases section
                                 if (lastValidBlockheaderSmartContract != null)
                                 {
+                                    
                                     if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime) && _sidechainPool.ProducerType != ProducerTypeEnum.Validator)
                                     {
                                         _logger.LogDebug("Producer not up to date, building chain.");
+
+                                        //TODO rpinto - does the provider have enough time to build the chain before being banned?
                                         await BuildChain();
                                     }
 
@@ -116,6 +126,8 @@ namespace BlockBase.Runtime.Sidechain
                                     }
                                 }
 
+                                //TODO rpinto - the _currentProducingProducerAccountName and currentProducerTable may have been fetched way before
+                                //this isn't accounted here
                                 if (_currentProducingProducerAccountName == _nodeConfigurations.AccountName && !currentProducerTable.HasProducedBlock)
                                 {
                                     _logger.LogDebug("Producing block.");
@@ -296,6 +308,7 @@ namespace BlockBase.Runtime.Sidechain
                     await Task.Delay(100);
                 }
 
+                //TODO rpinto - this may fail. Why isn't it inside the try clause
                 blockFromTable = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             }
         }
@@ -318,6 +331,7 @@ namespace BlockBase.Runtime.Sidechain
                     await Task.Delay(100);
                 }
 
+                //TODO rpinto - this may fail. Why isn't it inside the try clause
                 verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
                 ownSignature = verifySignatureTable.FirstOrDefault(t => t.Account == _nodeConfigurations.AccountName);
             }

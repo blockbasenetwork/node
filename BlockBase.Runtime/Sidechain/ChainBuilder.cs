@@ -110,6 +110,7 @@ namespace BlockBase.Runtime.Sidechain
                     }
                     catch (ApiErrorException)
                     {
+                        //TODO rpinto - this log here may miss inform because the api error failure may be from a different cause
                         _logger.LogInformation("Already notified ready.");
                     }
                     return;

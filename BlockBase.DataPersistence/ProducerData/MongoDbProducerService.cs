@@ -204,6 +204,7 @@ namespace BlockBase.DataPersistence.ProducerData
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var missingSequenceNumbers = new List<ulong>();
 
+                //TODO rpinto - why is this done in a while true loop
                 while (true)
                 {
                     upperEndToGet = lowerEndToGet + 99 > endSequenceNumber ? endSequenceNumber : lowerEndToGet + 99;
@@ -249,8 +250,11 @@ namespace BlockBase.DataPersistence.ProducerData
             }
         }
 
+        //TODO rpinto - all this should be done inside a transaction
         public async Task<bool> SynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime)
         {
+            
+            //gets the latest confirmed block
             var blockheaderDB = await GetBlockHeaderDByBlockHashAsync(databaseName, lastConfirmedSmartContractBlockHash);
             if (blockheaderDB != null)
             {
@@ -262,15 +266,23 @@ namespace BlockBase.DataPersistence.ProducerData
                     var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
 
 
+
+                    //TODO rpinto - this seems to be searching for local forks?
                     var blockHeaderQuery = from b in blockHeaderCollection.AsQueryable()
-                                           where b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp
+                                           where 
+                                           //all blocks with timestamps earlier than when the last production start time
+                                           b.Timestamp < (ulong)lastProductionStartTime 
+                                           //and with a timestamp bigger than the latest confirmed blockheader
+                                           && b.Timestamp > blockheaderDB.Timestamp
                                            select b;
 
+                    //TODO rpinto - why are block header hashes nulled here
                     foreach (var blockHeaderDBToRemove in blockHeaderQuery.AsEnumerable())
                     {
                         var update = Builders<TransactionDB>.Update.Set<string>("BlockHash", "");
                         await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockHeaderDBToRemove.BlockHash, update);
                     }
+
                     await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
                     if (Convert.ToInt64(blockheaderDB.SequenceNumber) == numberOfBlocks)
