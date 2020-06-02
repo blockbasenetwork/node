@@ -14,6 +14,12 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty(EosAtributeNames.STAKE)]
         public uint Stake { get; set; }
 
+        [JsonProperty(EosAtributeNames.SECRET_HASH)]
+        public string SecretHash { get; set; }
+
+        [JsonProperty(EosAtributeNames.SECRET)]
+        public string Secret { get; set; }
+
         [JsonProperty(EosAtributeNames.WORK_DURATION_IN_SECONDS)]
         public uint WorkTimeInSeconds { get; set; }
 

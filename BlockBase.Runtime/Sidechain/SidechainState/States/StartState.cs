@@ -11,7 +11,11 @@ namespace BlockBase.Runtime.SidechainState.States
             
         }
 
-        
+        protected override Task<bool> IsWorkDone()
+        {
+            throw new System.NotImplementedException();
+        }
+
         protected override async Task DoWork()
         {
 

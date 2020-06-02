@@ -133,6 +133,8 @@ namespace BlockBase.Domain.Eos
         public const string PRODUCER = "producer";
         public const string PUBLIC_KEY = "public_key";
         public const string STAKE = "stake";
+        public const string SECRET_HASH = "secret_hash";
+        public const string SECRET = "secret";
         public const string WORK_DURATION_IN_SECONDS = "work_duration_in_seconds";
         public const string PRODUCER_TYPE = "producer_type";
         public const string MAX_PAYMENT_PER_BLOCK_VALIDATOR_PRODUCERS = "max_payment_per_block_validator_producers";

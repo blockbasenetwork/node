@@ -14,6 +14,8 @@ namespace BlockBase.Runtime.SidechainState
     public class SidechainStateManager : IThreadableComponent
     {
         private ILogger _logger;
+        private IMainchainService _mainchainService;
+        private NodeConfigurations _nodeConfigurations;
 
         public TaskContainer TaskContainer { get; private set; }
 
@@ -22,6 +24,8 @@ namespace BlockBase.Runtime.SidechainState
         public SidechainStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, string endpoint, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, IMainchainService mainchainService)
         {
             _logger = logger;
+            _mainchainService = mainchainService;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         public TaskContainer Start()
@@ -54,7 +58,7 @@ namespace BlockBase.Runtime.SidechainState
         private AbstractState BuildState(string state, CurrentGlobalStatus status)
         {
             if(state == typeof(StartState).Name) return new StartState(status, _logger);
-            if(state == typeof(CandidatureState).Name) return new CandidatureState(status, _logger);
+            if(state == typeof(CandidatureState).Name) return new CandidatureState(status, _logger, _mainchainService, _nodeConfigurations);
 
             return null;
         }
