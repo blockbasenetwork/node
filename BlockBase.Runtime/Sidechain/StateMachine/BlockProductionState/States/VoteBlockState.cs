@@ -1,11 +1,12 @@
 using System.Threading.Tasks;
+using BlockBase.Runtime.Common;
 using BlockBase.Runtime.StateMachine.SidechainState;
 using BlockBase.Runtime.StateMachine.SidechainState.States;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class VoteBlockState : AbstractState
+    public class VoteBlockState : AbstractState<StartState, EndState>
     {
         public VoteBlockState(ILogger logger) : base(logger)
         {

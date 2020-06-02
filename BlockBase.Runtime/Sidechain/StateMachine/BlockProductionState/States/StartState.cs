@@ -8,10 +8,11 @@ using Microsoft.Extensions.Logging;
 using System.Linq;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Common;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class StartState : AbstractState
+    public class StartState : AbstractState<StartState, EndState>
     {
         private IMainchainService _mainchainService;
 

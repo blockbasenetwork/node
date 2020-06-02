@@ -1,11 +1,12 @@
 using System.Threading.Tasks;
+using BlockBase.Runtime.Common;
 using BlockBase.Runtime.StateMachine.SidechainState;
 using BlockBase.Runtime.StateMachine.SidechainState.States;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class SynchronizeNodeState : AbstractState
+    public class SynchronizeNodeState : AbstractState<StartState, EndState>
     {
         public SynchronizeNodeState(ILogger logger) : base(logger)
         {

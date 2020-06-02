@@ -21,6 +21,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
         
 
+        //TODO rpinto - it will be the state manager that besides coordinating state changes also is responsible to start the connectionchecker
         public SidechainStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, string endpoint, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, IMainchainService mainchainService)
         {
             _logger = logger;

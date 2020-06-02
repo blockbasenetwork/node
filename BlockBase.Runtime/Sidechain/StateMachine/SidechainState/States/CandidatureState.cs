@@ -15,7 +15,6 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
-        private List<ProducerInTable> _producers;
         private List<CandidateTable> _candidates;
         
         public CandidatureState(CurrentGlobalStatus status, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(status, logger)
@@ -24,9 +23,9 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             _nodeConfigurations = nodeConfigurations;
         }
 
-        protected override async Task<bool> IsWorkDone()
+        protected override Task<bool> IsWorkDone()
         {
-            return _candidates.Any(c => c.Key == _nodeConfigurations.AccountName);
+            return Task.FromResult(_candidates.Any(c => c.Key == _nodeConfigurations.AccountName));
         }
 
         protected override async Task DoWork()
@@ -35,16 +34,16 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             var addCandidateTransaction = await _mainchainService.AddCandidature(Status.Local.ClientAccountName, _nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), (int)Status.Local.ProducerType);
         }
 
-        protected override async Task<bool> HasConditionsToContinue()
+        protected override Task<bool> HasConditionsToContinue()
         {
-            return _contractStateTable.CandidatureTime || _contractStateTable.SecretTime;
+            return Task.FromResult(_contractStateTable.CandidatureTime || _contractStateTable.SecretTime);
         }
 
-        protected override async Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
+        protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
             var isCandidateInTable = _candidates.Any(c => c.Key == _nodeConfigurations.AccountName);
 
-            return (isCandidateInTable && _contractStateTable.SecretTime, typeof(SecretTimeState).Name);
+            return Task.FromResult((isCandidateInTable && _contractStateTable.SecretTime, typeof(SecretTimeState).Name));
         }
 
         protected override async Task UpdateStatus()
