@@ -53,8 +53,7 @@ namespace BlockBase.Runtime.SidechainState
 
         private AbstractState BuildState(string state, CurrentGlobalStatus status)
         {
-            if(state == typeof(StartState).Name) return new StartState(status, _logger);
-            if(state == typeof(CandidatureState).Name) return new CandidatureState(status, _logger);
+            
 
             return null;
         }

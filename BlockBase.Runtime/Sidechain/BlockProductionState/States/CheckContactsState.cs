@@ -30,6 +30,11 @@ namespace BlockBase.Runtime.BlockProductionState.States
             throw new System.NotImplementedException();
         }
 
+        protected override Task<bool> IsWorkDone()
+        {
+            throw new System.NotImplementedException();
+        }
+
         protected override Task UpdateStatus()
         {
             

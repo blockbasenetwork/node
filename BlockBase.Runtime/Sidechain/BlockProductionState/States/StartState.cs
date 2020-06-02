@@ -30,6 +30,11 @@ namespace BlockBase.Runtime.BlockProductionState.States
             throw new System.NotImplementedException();
         }
 
+        protected override Task<bool> IsWorkDone()
+        {
+            throw new System.NotImplementedException();
+        }
+
         protected override Task UpdateStatus()
         {
             //TODO get's data about his state as producer and the state of production of the sidechain
