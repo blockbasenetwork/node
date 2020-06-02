@@ -266,7 +266,6 @@ namespace BlockBase.Node.Controllers
                 //TODO rpinto - could the contract state be in ConfigTime and CandidatureTime or/and ProductionTime?
                 //TODO rpinto - why is the StartCandidatureTime called from outside the SuperMethod?
 
-                if (_sidechainMaintainerManager.TaskContainer == null )
                 if (_sidechainMaintainerManager.TaskContainer == null 
                 || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
                 || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted
