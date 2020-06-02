@@ -19,7 +19,7 @@ namespace BlockBase.DataProxy.Encryption
     public class DatabaseKeyManager
     {
         public ISecretStore SecretStore { get; private set; }
-        private readonly InfoRecordManager _infoRecordManager;
+        private InfoRecordManager _infoRecordManager;
         private ILogger<DatabaseKeyManager> _logger;
         private IConnector _connector;
         public bool DataSynced { get; private set; }
@@ -31,6 +31,10 @@ namespace BlockBase.DataProxy.Encryption
             _infoRecordManager = new InfoRecordManager();
             _connector = connector;
             _nodeConfigurations = nodeConfigurations.Value;
+        }
+        public void ClearInfoRecords()
+        {
+            _infoRecordManager = new InfoRecordManager();
         }
         public void SetInitialSecrets(SecurityConfigurations config)
         {

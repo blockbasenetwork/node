@@ -211,6 +211,12 @@ namespace BlockBase.DataProxy.Encryption
             return databases.Select(d => d.KeyName != null ? _encryptor.DecryptName(d) : d.Name).ToList();
         }
 
+        public IList<string> GetEncryptedDatabasesList()
+        {
+            var databases = _encryptor.FindChildren("0");
+            return databases.Select(d => d.Name).ToList();
+        }
+
 
         public string DecryptDatabaseName(string encryptedDatabaseName)
         {

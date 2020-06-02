@@ -32,16 +32,18 @@ namespace BlockBase.Runtime
         private TransactionSender _transactionSender;
         private NodeConfigurations _nodeConfigurations;
         private IMongoDbProducerService _mongoDbProducerService;
+        private MiddleMan _middleMan;
 
 
         public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
-            _generator = new PSqlGenerator(); 
+            _generator = new PSqlGenerator();
             _logger = logger;
             _connector = connector;
-            _transformer = new Transformer(middleMan);
+            _middleMan = middleMan;
+            _transformer = new Transformer(_middleMan);
             _concurrentVariables = concurrentVariables;
             _logger = logger;
             _transactionSender = transactionSender;
@@ -74,8 +76,8 @@ namespace BlockBase.Runtime
             return results;
         }
 
-        
-         private QueryResult CreateQueryResult(bool success, string statementType, string exceptionMessage = null)
+
+        private QueryResult CreateQueryResult(bool success, string statementType, string exceptionMessage = null)
         {
             var executed = success ? "True" : "False";
             var message = $"The {statementType} statement " + (success ? "executed correctly." : "didn't execute. Exception: " + exceptionMessage);
@@ -92,5 +94,18 @@ namespace BlockBase.Runtime
         {
             return _infoPostProcessing.GetStructure();
         }
+
+        public async Task RemoveSidechainDatabasesAndKeys()
+        {
+            var databases = _infoPostProcessing.GetEncryptedDatabasesList();
+
+            foreach(var database in databases) 
+                await _connector.DropDatabase(database);
+
+            await _connector.DropDefaultDatabase();
+            _middleMan.DatabaseKeyManager.ClearInfoRecords();
+            SecretStore.ClearSecrets();
+        }
+
     }
 }

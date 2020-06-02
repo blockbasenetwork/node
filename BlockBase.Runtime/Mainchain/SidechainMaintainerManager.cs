@@ -19,6 +19,7 @@ using static BlockBase.Network.PeerConnection;
 using BlockBase.Runtime.Sidechain;
 using Microsoft.Extensions.Options;
 using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.Network.Mainchain.Pocos;
 
 namespace BlockBase.Runtime.Mainchain
@@ -40,6 +41,10 @@ namespace BlockBase.Runtime.Mainchain
         public TaskContainer TaskContainer { get; private set; }
         private TransactionSender _transactionSender;
         private HistoryValidation _historyValidation;
+        private IConnector _connector;
+        private IMongoDbProducerService _mongoDbProducerService;
+
+
 
         public TaskContainer Start()
         {
@@ -53,7 +58,7 @@ namespace BlockBase.Runtime.Mainchain
 
             
         }
-        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbServices, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender)
+        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbService, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender, IConnector connector)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
             _mainchainService = mainchainService;
@@ -64,7 +69,9 @@ namespace BlockBase.Runtime.Mainchain
             _sidechain = new SidechainPool(_nodeConfigurations.AccountName);
             _forceTryAgain = true;
             _transactionSender = transactionSender;
-            _historyValidation = new HistoryValidation(_logger, mongoDbServices, _mainchainService);
+            _historyValidation = new HistoryValidation(_logger, mongoDbService, _mainchainService);
+            _connector = connector;
+            _mongoDbProducerService = mongoDbService;
         }
 
         public async Task SuperMethod()
@@ -135,6 +142,7 @@ namespace BlockBase.Runtime.Mainchain
             catch (OperationCanceledException)
             {
                 _logger.LogWarning("Contract manager stopped.");
+                
             }
             catch (Exception ex)
             {
@@ -183,8 +191,8 @@ namespace BlockBase.Runtime.Mainchain
                 if (contractStateTable.ProductionTime && currentProducerTable != null &&
                    (currentProducerTable.StartProductionTime + _sidechain.BlockTimeDuration) * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
-                    var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int) _sidechain.BlocksBetweenSettlement);
-                    if(lastBlockHeader != null) 
+                    var lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechain.ClientAccountName, (int)_sidechain.BlocksBetweenSettlement);
+                    if (lastBlockHeader != null)
                         await _transactionSender.RemoveIncludedTransactions(lastBlockHeader.TransactionCount, lastBlockHeader.BlockHash);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _sidechain.ClientAccountName);
                     _roundsUntilSettlement--;
@@ -381,6 +389,13 @@ namespace BlockBase.Runtime.Mainchain
             }
         }
 
+        public async Task EndSidechain()
+        {
+            TaskContainer.CancellationTokenSource.Cancel();
+            await _mongoDbProducerService.DropRequesterDatabase(_sidechain.ClientAccountName);
+        }
+       
+      
         #endregion Auxiliar Methods
     }
 }
