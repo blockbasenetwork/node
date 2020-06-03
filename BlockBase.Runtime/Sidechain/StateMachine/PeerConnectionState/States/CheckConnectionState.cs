@@ -20,7 +20,6 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
         private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private bool _peersConnected;
-        private bool _isWorkDone;
         private SidechainPool _sidechainPool;
         private ContractStateTable _contractStateTable;
         public CheckConnectionState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
@@ -33,14 +32,13 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
         protected override Task<bool> IsWorkDone()
         {
             //Will always do work when in this state
-            _isWorkDone = false;
-            return Task.FromResult(_isWorkDone);
+            return Task.FromResult(false);
         }
 
         protected override async Task DoWork()
         {
             _peersConnected = await _peerConnectionsHandler.ArePeersConnected(_sidechainPool);
-            _isWorkDone = true;
+            if (!_peersConnected) _delay = TimeSpan.FromSeconds(0);
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -58,7 +56,7 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
 
             _contractStateTable = contractState;
-            _delay = 15000;
+            _delay = TimeSpan.FromSeconds(15);
         }
     }
 }

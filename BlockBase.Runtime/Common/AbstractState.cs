@@ -14,7 +14,7 @@ namespace BlockBase.Runtime.Common
             where TEndState : IState
     {
         protected ILogger _logger;
-        protected int _delay;
+        protected TimeSpan _delay;
 
         public AbstractState(ILogger logger)
         {
@@ -30,7 +30,6 @@ namespace BlockBase.Runtime.Common
                     if (cancellationToken.IsCancellationRequested) return typeof(TEndState).Name;
 
                     await UpdateStatus();
-                    if (await IsWorkDone()) await Task.Delay(_delay);
 
                     if (!await HasConditionsToContinue()) return typeof(TStartState).Name; //returns control to the State Manager indicating same state
 
@@ -38,6 +37,7 @@ namespace BlockBase.Runtime.Common
                     if (jumpStatus.inConditionsToJump) return jumpStatus.nextState;
 
                     if (!await IsWorkDone()) await DoWork();
+                    await Task.Delay(_delay);
                 }
                 catch (Exception ex)
                 {
