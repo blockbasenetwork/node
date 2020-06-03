@@ -26,9 +26,9 @@ namespace BlockBase.Runtime.SidechainState.States
             _networkConfigurations = networkConfigurations;
         }
 
-        protected override async Task<bool> IsWorkDone()
+        protected override Task<bool> IsWorkDone()
         {
-            return _ipAddressTable.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.EncryptedIPs.Any() ?? false;
+            return Task.FromResult(_ipAddressTable.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.EncryptedIPs.Any() ?? false);
         }
 
         protected override async Task DoWork()
@@ -47,18 +47,18 @@ namespace BlockBase.Runtime.SidechainState.States
             await _mainchainService.AddEncryptedIps(Status.Local.ClientAccountName, _nodeConfigurations.AccountName, listEncryptedIps);
         }
 
-        protected override async Task<bool> HasConditionsToContinue()
+        protected override Task<bool> HasConditionsToContinue()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
-            return (_contractStateTable.IPSendTime || _contractStateTable.IPReceiveTime) && isProducerInTable;
+            return Task.FromResult((_contractStateTable.IPSendTime || _contractStateTable.IPReceiveTime) && isProducerInTable);
         }
 
-        protected override async Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
+        protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
-            return (isProducerInTable && _contractStateTable.IPReceiveTime, typeof(IPReceiveState).Name);
+            return Task.FromResult((isProducerInTable && _contractStateTable.IPReceiveTime, typeof(IPReceiveState).Name));
         }
 
         protected override async Task UpdateStatus()

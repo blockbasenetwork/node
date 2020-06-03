@@ -23,12 +23,12 @@ namespace BlockBase.Runtime.SidechainState.States
             _nodeConfigurations = nodeConfigurations;
         }
 
-        protected override async Task<bool> IsWorkDone()
+        protected override Task<bool> IsWorkDone()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
             var addedSecretToCandidate = _candidates.Where(c => c.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.Secret;
 
-            return isProducerInTable || !string.IsNullOrWhiteSpace(addedSecretToCandidate);
+            return Task.FromResult(isProducerInTable || !string.IsNullOrWhiteSpace(addedSecretToCandidate));
         }
 
         protected override async Task DoWork()
@@ -37,19 +37,19 @@ namespace BlockBase.Runtime.SidechainState.States
             var addSecretTransaction = await _mainchainService.AddSecret(Status.Local.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
         }
 
-        protected override async Task<bool> HasConditionsToContinue()
+        protected override Task<bool> HasConditionsToContinue()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
             var isCandidateInTable = _candidates.Any(c => c.Key == _nodeConfigurations.AccountName);
 
-            return (_contractStateTable.SecretTime || _contractStateTable.IPSendTime) && (isProducerInTable || isCandidateInTable);
+            return Task.FromResult((_contractStateTable.SecretTime || _contractStateTable.IPSendTime) && (isProducerInTable || isCandidateInTable));
         }
 
-        protected override async Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
+        protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
-            return (isProducerInTable && _contractStateTable.IPSendTime, typeof(IPSendTimeState).Name);
+            return Task.FromResult((isProducerInTable && _contractStateTable.IPSendTime, typeof(IPSendTimeState).Name));
         }
 
         protected override async Task UpdateStatus()

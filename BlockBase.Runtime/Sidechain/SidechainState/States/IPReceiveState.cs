@@ -1,38 +1,59 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
+using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Utils;
+using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.SidechainState.States
 {
     public class IPReceiveState : AbstractState
     {
-        public IPReceiveState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        private readonly IMainchainService _mainchainService;
+        private NodeConfigurations _nodeConfigurations;
+        private ContractStateTable _contractStateTable;
+        private List<ProducerInTable> _producers;
+        public IPReceiveState(CurrentGlobalStatus status, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(status, logger)
         {
-
+            _mainchainService = mainchainService;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(_producers.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.IsReadyToProduce ?? false);
         }
 
-        protected override Task DoWork()
+        protected override async Task DoWork()
         {
-            throw new System.NotImplementedException();
+            await _mainchainService.NotifyReady(Status.Local.ClientAccountName, _nodeConfigurations.AccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new System.NotImplementedException();
+            var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
+
+            return Task.FromResult((_contractStateTable.IPReceiveTime || _contractStateTable.ProductionTime) && isProducerInTable);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new System.NotImplementedException();
+            var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
+
+            return Task.FromResult((isProducerInTable && _contractStateTable.ProductionTime, typeof(ProductionState).Name));
         }
 
-        protected override Task UpdateStatus()
+        protected override async Task UpdateStatus()
         {
-            throw new System.NotImplementedException();
+            var producers = await _mainchainService.RetrieveProducersFromTable(Status.Local.ClientAccountName);
+            var contractState = await _mainchainService.RetrieveContractState(Status.Local.ClientAccountName);
+            
+            _producers = producers;
+            _contractStateTable = contractState;
         }
     }
 
