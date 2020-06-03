@@ -1,18 +1,13 @@
 using System.Threading.Tasks;
+using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.SidechainState.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.States
 {
-    public class EndState : AbstractState
+    public class StartState : AbstractState<StartState, EndState>
     {
-        public EndState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public StartState(ILogger logger) : base(logger)
         {
-            
-        }
-
-        protected override Task<bool> IsWorkDone()
-        {
-            throw new System.NotImplementedException();
         }
 
         protected override Task DoWork()
@@ -26,6 +21,11 @@ namespace BlockBase.Runtime.SidechainState.States
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override Task<bool> IsWorkDone()
         {
             throw new System.NotImplementedException();
         }

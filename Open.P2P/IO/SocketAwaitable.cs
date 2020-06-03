@@ -76,6 +76,8 @@ namespace Open.P2P.IO
             awaitable.Reset();
             if (!socket.SendAsync(awaitable.EventArgs))
                 awaitable.WasCompleted = true;
+
+            
             return awaitable;
         }
 

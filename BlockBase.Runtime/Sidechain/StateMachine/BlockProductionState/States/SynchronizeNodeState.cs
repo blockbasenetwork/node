@@ -1,47 +1,46 @@
 using System.Threading.Tasks;
-using BlockBase.Runtime.SidechainState;
-using BlockBase.Runtime.SidechainState.States;
+using BlockBase.Runtime.Common;
+using BlockBase.Runtime.StateMachine.SidechainState;
+using BlockBase.Runtime.StateMachine.SidechainState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.BlockProductionState.States
+namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class VoteBlockState : AbstractState
+    public class SynchronizeNodeState : AbstractState<StartState, EndState>
     {
-        public VoteBlockState(CurrentGlobalStatus status, ILogger logger) : base(status, logger)
+        public SynchronizeNodeState(ILogger logger) : base(logger)
         {
         }
 
         protected override Task DoWork()
         {
-            //verifies a block and votes on it if ok
+            //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
             //TODO verifies if he is a producer and the sidechain is in production state
-            //and verifies if it's time for him to vote
-            //if he has no contacts there shouldn't be no condition to continue
+            //also verifies if he is unable to synchronize the node due to unresponsive nodes
             throw new System.NotImplementedException();
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            //verifies if block is valid and if in that case he's vote is in the network
-            //verifies if his time to vote is done
-            //jumps to the StartState
+            //TODO verifies if he is synchronized
+            //jumps to one of two states, produce block or vote block
             throw new System.NotImplementedException();
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            //verifies if block is valid and if in that case he's vote is in the network
+            //TODO verifies if he is synchronized
             throw new System.NotImplementedException();
         }
 
         protected override Task UpdateStatus()
         {
-            //I don't think he needs to fetch anything
+            //fetches latest block data
             throw new System.NotImplementedException();
         }
     }

@@ -96,8 +96,6 @@ namespace BlockBase.Runtime.Sidechain
                                 _previousTimeToCheck = _nextTimeToCheckSmartContract;
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
-                                //updating canceling proposal may fail but fails silently
-                                await CancelProposalTransactionIfExists();
 
                                 //has a while loop inside that may fail
                                 await CheckIfBlockHeadersInSmartContractAreUpdated(currentProducerTable.StartProductionTime);

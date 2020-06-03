@@ -3,39 +3,41 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.SidechainState.States
+namespace BlockBase.Runtime.Common
 {
-    public abstract class AbstractState
+    public interface IState
+    {
+        Task<string> Run(CancellationToken cancellationToken = default(CancellationToken));
+    }
+    public abstract class AbstractState<TStartState, TEndState> : IState
+            where TStartState : IState
+            where TEndState : IState
     {
         protected ILogger _logger;
-        protected CurrentGlobalStatus Status { get; private set; }
 
-        protected bool IsWorkFinished { get; set; }
-
-        public AbstractState(CurrentGlobalStatus status, ILogger logger)
+        public AbstractState(ILogger logger)
         {
-            Status = status;
             _logger = logger;
         }
         public virtual async Task<string> Run(CancellationToken cancellationToken = default(CancellationToken))
         {
-            while(true)
+            while (true)
             {
                 try
                 {
                     //checks if execution is cancelled
-                    if(cancellationToken.IsCancellationRequested) return typeof(EndState).Name;
+                    if (cancellationToken.IsCancellationRequested) return typeof(TEndState).Name;
 
 
                     await UpdateStatus();
-                    if(!await HasConditionsToContinue()) return typeof(StartState).Name; //returns control to the State Manager indicating same state
-                    
+                    if (!await HasConditionsToContinue()) return typeof(TStartState).Name; //returns control to the State Manager indicating same state
+
                     var jumpStatus = await HasConditionsToJump();
-                    if(jumpStatus.inConditionsToJump) return jumpStatus.nextState;
+                    if (jumpStatus.inConditionsToJump) return jumpStatus.nextState;
 
                     if (!await IsWorkDone()) await DoWork();
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     _logger.LogError($"{this.GetType().Name} crashed", ex.Message);
                 }
@@ -53,7 +55,6 @@ namespace BlockBase.Runtime.SidechainState.States
         protected abstract Task DoWork();
 
         protected abstract Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump();
-        
 
     }
 }

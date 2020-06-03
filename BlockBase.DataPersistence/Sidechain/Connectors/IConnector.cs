@@ -17,5 +17,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         Task DeleteFromDatabasesTable(string databaseName);
         Task DropDefaultDatabase();
         Task DropDatabase(string databaseName);
+        Task<bool> DoesDefaultDatabaseExist();
     }
 }
