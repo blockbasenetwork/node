@@ -29,11 +29,12 @@ using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using static BlockBase.Network.PeerConnection;
 using static BlockBase.Network.Rounting.MessageForwarder;
 using EosSharp.Core.Exceptions;
+using BlockBase.Utils.Operation;
 
 namespace BlockBase.Runtime.Sidechain
 {
     // public class ChainBuilder : IThreadableComponent
-    public class ChainBuilder
+    public class ChainBuilder2
     {
         public TaskContainer TaskContainer { get; private set; }
 
@@ -58,7 +59,7 @@ namespace BlockBase.Runtime.Sidechain
         private static readonly int SLICE_SIZE = 40;
         private object locker = new object();
 
-        public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
+        public ChainBuilder2(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
         {
             _logger = logger;
             _sidechainPool = sidechainPool;
@@ -73,77 +74,64 @@ namespace BlockBase.Runtime.Sidechain
             _sidechainDatabaseManager = sidechainDatabaseManager;
         }
 
-        public TaskContainer Start(SidechainPool sidechainPool)
+        public async Task<OpResult<bool>> Run()
         {
-            _sidechainPool = sidechainPool;
-
-            if(TaskContainer != null) TaskContainer.Stop();
-            TaskContainer = TaskContainer.Create(async () => await Execute());
-            TaskContainer.Start();
-            return TaskContainer;
-        }
-
-        public async Task Execute()
-        {
-            var producerIndex = 0;
-            var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
-
-            if (!validConnectedProducers.Any())
+            try
             {
-                _logger.LogDebug("No connected producers to request blocks.");
-                return;
+                var producerIndex = 0;
+                var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
+
+                if (!validConnectedProducers.Any())
+                {
+                    _logger.LogDebug("No connected producers to request blocks.");
+                    return new OpResult<bool>(new Exception("Unable to synchronize. No connected producers to request blocks."));
+                }
+
+                _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks()).ToList();
+
+                while (true)
+                {
+                    _currentSendingProducer = validConnectedProducers.ElementAt(producerIndex);
+
+                    if (_missingBlocksSequenceNumber.Count() == 0)
+                    {
+                        _logger.LogDebug("No more missing blocks.");
+                        return new OpResult<bool>(true);
+                    }
+
+                    _currentlyGettingBlocks = _missingBlocksSequenceNumber.Take(SLICE_SIZE).ToList();
+
+                    await _mongoDbProducerService.RemoveUnconfirmedBlocks(_sidechainPool.ClientAccountName);
+
+                    _receiving = true;
+
+                    _logger.LogDebug($"Asking for blocks:");
+                    foreach (var missingSequenceNumber in _currentlyGettingBlocks) _logger.LogDebug(missingSequenceNumber + "");
+
+                    var message = BuildRequestBlocksNetworkMessage(_currentSendingProducer, _currentlyGettingBlocks, _sidechainPool.ClientAccountName);
+                    await _networkService.SendMessageAsync(message);
+
+                    _lastReceivedDate = DateTime.UtcNow;
+                    while (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
+                    {
+                        await Task.Delay(50);
+                    }
+
+                    if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
+                    {
+                        _logger.LogDebug("Too much time without receiving block. Asking another producer for remaining blocks.");
+                        producerIndex = !validConnectedProducers.Contains(_currentSendingProducer) ? 0 : validConnectedProducers.IndexOf(_currentSendingProducer) + 1;
+                        if (producerIndex > validConnectedProducers.Count() - 1)
+                        {
+                            _logger.LogDebug("Tried all producers and didn't manage to build chain, trying again later...");
+                            return new OpResult<bool>(new Exception("Tried all producers and didn't manage to build chain, trying again later"));
+                        }
+                    }
+                }
             }
-
-            _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks()).ToList();
-
-            while (true)
+            catch (Exception ex)
             {
-                _currentSendingProducer = validConnectedProducers.ElementAt(producerIndex);
-
-                if (_missingBlocksSequenceNumber.Count() == 0)
-                {
-                    _logger.LogDebug("No more missing blocks.");
-                    try
-                    {
-                        await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
-                        _logger.LogDebug("Notified ready.");
-                    }
-                    catch (ApiErrorException)
-                    {
-                        //TODO rpinto - this log here may miss inform because the api error failure may be from a different cause
-                        _logger.LogInformation("Already notified ready.");
-                    }
-                    return;
-                }
-
-                _currentlyGettingBlocks = _missingBlocksSequenceNumber.Take(SLICE_SIZE).ToList();
-
-                await _mongoDbProducerService.RemoveUnconfirmedBlocks(_sidechainPool.ClientAccountName);
-
-                _receiving = true;
-
-                _logger.LogDebug($"Asking for blocks:");
-                foreach (var missingSequenceNumber in _currentlyGettingBlocks) _logger.LogDebug(missingSequenceNumber + "");
-
-                var message = BuildRequestBlocksNetworkMessage(_currentSendingProducer, _currentlyGettingBlocks, _sidechainPool.ClientAccountName);
-                await _networkService.SendMessageAsync(message);
-
-                _lastReceivedDate = DateTime.UtcNow;
-                while (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
-                {
-                    await Task.Delay(50);
-                }
-
-                if (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds > MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
-                {
-                    _logger.LogDebug("Too much time without receiving block. Asking another producer for remaining blocks.");
-                    producerIndex = !validConnectedProducers.Contains(_currentSendingProducer) ? 0 : validConnectedProducers.IndexOf(_currentSendingProducer) + 1;
-                    if (producerIndex > validConnectedProducers.Count() - 1)
-                    {
-                        _logger.LogDebug("Tried all producers and didn't manage to build chain, trying again later...");
-                        return;
-                    }
-                }
+                return new OpResult<bool>(ex);
             }
         }
 

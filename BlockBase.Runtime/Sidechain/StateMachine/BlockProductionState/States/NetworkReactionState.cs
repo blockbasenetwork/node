@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class VoteBlockState : AbstractState<StartState, EndState>
+    public class NetworkReactionState : AbstractState<StartState, EndState>
     {
-        public VoteBlockState(ILogger logger) : base(logger)
+        public NetworkReactionState(ILogger logger) : base(logger)
         {
         }
 

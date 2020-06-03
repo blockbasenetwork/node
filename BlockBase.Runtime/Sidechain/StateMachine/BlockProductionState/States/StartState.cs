@@ -15,7 +15,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
     public class StartState : AbstractState<StartState, EndState>
     {
         private IMainchainService _mainchainService;
-
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producerList;
         private SidechainPool _sidechainPool;
@@ -45,7 +44,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         {
             //TODO verifies if he is a producer and the sidechain is in production state - should be the same as above
             var inConditionsToJump = _contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName);
-                return Task.FromResult((inConditionsToJump, typeof(CheckContactsState).Name));
+                return Task.FromResult((inConditionsToJump, typeof(SynchronizeNodeState).Name));
             
         }
 

@@ -107,7 +107,7 @@ namespace BlockBase.Runtime.Sidechain
                                 if (lastValidBlockheaderSmartContract != null)
                                 {
                                     
-                                    if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime) && _sidechainPool.ProducerType != ProducerTypeEnum.Validator)
+                                    if (!await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime) && _sidechainPool.ProducerType != ProducerTypeEnum.Validator)
                                     {
                                         _logger.LogDebug("Producer not up to date, building chain.");
 

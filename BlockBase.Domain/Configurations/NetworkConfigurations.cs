@@ -13,5 +13,10 @@ namespace BlockBase.Domain.Configurations
         public int MaxNumberOfConnectionRetries { get; set; }
         public string BlockBaseOperationsContract { get; set; }
         public string BlockBaseTokenContract { get; set; }
+
+        public string GetEndPoint()
+        {
+            return this.PublicIpAddress + ":" + this.TcpPort;
+        }
     }
 }

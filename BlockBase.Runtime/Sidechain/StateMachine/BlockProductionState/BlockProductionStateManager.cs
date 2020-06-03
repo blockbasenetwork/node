@@ -20,9 +20,9 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private INetworkService _networkService;
         private IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
-        private ChainBuilder _chainBuilder;
         private NodeConfigurations _nodeConfigurations;
-        private string _endPoint;
+
+        private NetworkConfigurations _networkConfigurations;
         private BlockSender _blockSender;
         private long _nextTimeToCheckSmartContract;
         private long _previousTimeToCheck;
@@ -31,7 +31,12 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         //TODO: change this when client specifies database type (MYSQL, SQL, ...)
         private ISidechainDatabasesManager _sidechainDatabaseManager;
 
-        public BlockProductionStateManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockSender blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
+        public BlockProductionStateManager(ILogger logger, 
+            SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, 
+            NetworkConfigurations networkConfigurations, INetworkService networkService, 
+            PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, 
+            IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, 
+            ISidechainDatabasesManager sidechainDatabaseManager)
         {
             _logger = logger;
             _networkService = networkService;
@@ -39,14 +44,17 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _peerConnectionsHandler = peerConnectionsHandler;
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
+            _networkConfigurations = networkConfigurations;
             _mongoDbProducerService = mongoDbProducerService;
-            _endPoint = endPoint;
+            
             _blockSender = blockSender;
             _sidechainDatabaseManager = sidechainDatabaseManager;
         }
 
         protected override IState BuildState(string state)
         {
+            if(state == typeof(StartState).Name) return new StartState(_logger, _mainchainService, _nodeConfigurations, _sidechainPool);
+            if(state == typeof(SynchronizeNodeState).Name) return new SynchronizeNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _sidechainDatabaseManager, _networkService);
             throw new System.NotImplementedException();
         }
     }
