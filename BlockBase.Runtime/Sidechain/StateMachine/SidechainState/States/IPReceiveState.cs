@@ -26,12 +26,12 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_producers.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.IsReadyToProduce ?? false);
+            return Task.FromResult(true);
         }
 
-        protected override async Task DoWork()
+        protected override Task DoWork()
         {
-            await _mainchainService.NotifyReady(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
+            return default(Task);
         }
 
         protected override Task<bool> HasConditionsToContinue()
