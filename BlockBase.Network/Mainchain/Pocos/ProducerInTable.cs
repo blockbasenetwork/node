@@ -25,5 +25,8 @@ namespace BlockBase.Network.Mainchain.Pocos
 
         [JsonProperty(EosAtributeNames.PRODUCER_TYPE)]
         public uint ProducerType { get; set; }
+
+        [JsonProperty(EosAtributeNames.IS_READY_TO_PRODUCE)]
+        public bool IsReadyToProduce { get; set; }
     }
 }

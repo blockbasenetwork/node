@@ -34,7 +34,7 @@ namespace BlockBase.Runtime.Sidechain
         private ChainBuilder _chainBuilder;
         private NodeConfigurations _nodeConfigurations;
         private string _endPoint;
-        private BlockSender _blockSender;
+        private BlockRequestsHandler _blockSender;
         private long _nextTimeToCheckSmartContract;
         private long _previousTimeToCheck;
         private ILogger _logger;
@@ -44,7 +44,7 @@ namespace BlockBase.Runtime.Sidechain
         private ISidechainDatabasesManager _sidechainDatabaseManager;
 
 
-        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockSender blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
+        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockRequestsHandler blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
         {
             _logger = logger;
             _networkService = networkService;
@@ -96,8 +96,6 @@ namespace BlockBase.Runtime.Sidechain
                                 _previousTimeToCheck = _nextTimeToCheckSmartContract;
                                 _currentProducingProducerAccountName = currentProducerTable.Producer;
 
-                                //updating canceling proposal may fail but fails silently
-                                await CancelProposalTransactionIfExists();
 
                                 //has a while loop inside that may fail
                                 await CheckIfBlockHeadersInSmartContractAreUpdated(currentProducerTable.StartProductionTime);
@@ -109,7 +107,7 @@ namespace BlockBase.Runtime.Sidechain
                                 if (lastValidBlockheaderSmartContract != null)
                                 {
                                     
-                                    if (!await _mongoDbProducerService.SynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime) && _sidechainPool.ProducerType != ProducerTypeEnum.Validator)
+                                    if (!await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime) && _sidechainPool.ProducerType != ProducerTypeEnum.Validator)
                                     {
                                         _logger.LogDebug("Producer not up to date, building chain.");
 

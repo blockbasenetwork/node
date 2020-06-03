@@ -251,7 +251,7 @@ namespace BlockBase.DataPersistence.ProducerData
         }
 
         //TODO rpinto - all this should be done inside a transaction
-        public async Task<bool> SynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime)
+        public async Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime)
         {
             
             //gets the latest confirmed block

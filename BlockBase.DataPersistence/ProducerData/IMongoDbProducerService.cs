@@ -20,7 +20,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber);
         Task RemoveBlockFromDatabaseAsync(string databaseName, string blockHash);
         Task RemoveUnconfirmedBlocks(string databaseName);
-        Task<bool> SynchronizeDatabaseWithSmartContract(string databaseName, string blockHash, long lastProductionTime);
+        Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string blockHash, long lastProductionTime);
         Task<bool> IsBlockConfirmed(string databaseName, string blockHash);
         Task ConfirmBlock(string databaseName, string blockHash);
         Task<bool> IsTransactionInDB(string databaseName, Transaction transaction);
