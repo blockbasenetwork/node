@@ -504,7 +504,10 @@ namespace BlockBase.Network.Mainchain
                 Signatures = signatures.Distinct()
             };
 
-            return await EosStub.BroadcastTransaction(signedTransaction);
+            var opResult = await TryAgain(async () => 
+            await EosStub.BroadcastTransaction(signedTransaction), NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
         }
 
         public async Task<string> AddVerifyTransactionAndSignature(string owner, string accountName, string blockHash, string verifySignature, byte[] verifyBlockTransaction, string permission = "active")
