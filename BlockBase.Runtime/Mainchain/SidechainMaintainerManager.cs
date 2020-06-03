@@ -384,7 +384,7 @@ namespace BlockBase.Runtime.Mainchain
             if (_sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
             {
                 //TODO rpinto - this returns a TaskContainer that isn't stored anywhere. So this is executed and not awaited. Is that the intended behavior?
-                var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.CheckConnectionStatus(_sidechain));
+                var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.ArePeersConnected(_sidechain));
                 checkConnectionTask.Start();
             }
         }

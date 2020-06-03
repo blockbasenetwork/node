@@ -21,7 +21,6 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
-        private List<ProducerInTable> _producers;
         private SidechainPool _sidechainPool;
         public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {

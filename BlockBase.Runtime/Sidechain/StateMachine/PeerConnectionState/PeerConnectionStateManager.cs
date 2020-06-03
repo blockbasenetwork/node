@@ -23,12 +23,11 @@ namespace BlockBase.Runtime.StateMachine.PeerConectionState
 
         private SidechainPool _sidechain;
         private PeerConnectionsHandler _peerConnectionsHandler;
-        private BlockSender _blockSender;
 
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         
-        public PeerConnectionStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, ISidechainDatabasesManager sidechainDatabasesManager, BlockSender blockSender)
+        public PeerConnectionStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, ISidechainDatabasesManager sidechainDatabasesManager)
         {
             _sidechain = sidechain;
             _logger = logger;
@@ -39,7 +38,6 @@ namespace BlockBase.Runtime.StateMachine.PeerConectionState
             _mongoDbProducerService = mongoDbProducerService;
             _peerConnectionsHandler = peerConnectionsHandler;
             _sidechainDatabasesManager = sidechainDatabasesManager;
-            _blockSender = blockSender;
         }
 
         protected override IState BuildState(string state)

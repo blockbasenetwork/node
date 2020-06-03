@@ -19,41 +19,42 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
     {
         private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
-        private NodeConfigurations _nodeConfigurations;
-        private ContractStateTable _contractStateTable;
-        private List<ProducerInTable> _producers;
+        private bool _peersConnected;
         private SidechainPool _sidechainPool;
+        private ContractStateTable _contractStateTable;
         public CheckConnectionState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {
             _mainchainService = mainchainService;
-            _nodeConfigurations = nodeConfigurations;
             _sidechainPool = sidechain;
             _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new NotImplementedException();
+            //Will always do work when in this state
+            return Task.FromResult(false);
         }
 
         protected override async Task DoWork()
         {
-            throw new NotImplementedException();
+            _peersConnected = await _peerConnectionsHandler.ArePeersConnected(_sidechainPool);
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new NotImplementedException();
+            return Task.FromResult(_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new NotImplementedException();
+            return Task.FromResult((!_peersConnected, typeof(ConnectToPeersState).Name));
         }
 
         protected override async Task UpdateStatus() 
         {
-            throw new NotImplementedException();
+            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+
+            _contractStateTable = contractState;
         }
     }
 }
