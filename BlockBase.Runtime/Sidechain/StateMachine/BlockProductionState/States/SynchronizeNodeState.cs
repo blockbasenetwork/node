@@ -35,11 +35,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private ISidechainDatabasesManager _sidechainDatabaseManager;
         private NetworkConfigurations _networkConfigurations;
         private INetworkService _networkService;
-
-        private TaskContainer _chainBuilderTask;
-
-
         private bool _isNodeSynchronized;
+        private bool _isReadyToProduce;
+
 
         public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService, 
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool, 
@@ -55,12 +53,17 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _sidechainDatabaseManager = sidechainDatabaseManager;
             _networkService = networkService;
             _isNodeSynchronized = false;
+            _isReadyToProduce = false;
         }
 
         protected override async Task DoWork()
         {
             //if it's a validator the work is done
-            if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator) return;
+            if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator)
+            {
+                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
+                return;
+            }
 
             //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
             var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime);
@@ -74,36 +77,31 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             {
                 await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             }
-
-            throw new System.NotImplementedException();
         }
 
-        protected override async Task<bool> HasConditionsToContinue()
+        protected override Task<bool> HasConditionsToContinue()
         {
             //verifies if he is a producer and the sidechain is in production state
-            if (!(_contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName))) return false;
-
-            //TODO rpinto - also verifies if he is unable to synchronize the node due to unresponsive nodes
-            throw new System.NotImplementedException();
+            return Task.FromResult(_contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator) return Task.FromResult((true, typeof(NetworkReactionState).Name));
+            if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator && _isReadyToProduce) return Task.FromResult((true, typeof(NetworkReactionState).Name));
 
-            //verifies if he is synchronized
-            if (_isNodeSynchronized) return Task.FromResult((true, typeof(NetworkReactionState).Name));
+            //verifies if he is synchronized and ready to produce
+            if (_isNodeSynchronized && _isReadyToProduce) return Task.FromResult((true, typeof(NetworkReactionState).Name));
 
             return Task.FromResult((false, typeof(NetworkReactionState).Name));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            //if it's a validator the work is done
-            if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator) return Task.FromResult(true);
+            //if it's a validator the work is done if he's ready to produce
+            if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator && _isReadyToProduce) return Task.FromResult(true);
 
-            //verifies if he is synchronized
-            return Task.FromResult(_isNodeSynchronized);
+            //verifies if he is synchronized and ready to produce
+            return Task.FromResult(_isNodeSynchronized && _isReadyToProduce);
         }
 
         protected override async Task UpdateStatus()
@@ -114,11 +112,12 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
+
             var lastSubmittedBlockHeader = await WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(
                 //TODO rpinto - check if this timespan can be better estimated
                 currentProducer.StartProductionTime, TimeSpan.FromSeconds(5));
 
-
+            _isReadyToProduce = producerList.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce);
             _contractStateTable = contractState;
             _producerList = producerList;
             _currentProducer = currentProducer;
