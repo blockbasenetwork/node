@@ -110,7 +110,7 @@ namespace BlockBase.Node.Controllers
                     var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
                     currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
 
-                    if(accountInfo == null)
+                    if (accountInfo == null)
                     {
                         _logger.LogError($"Account {NodeConfigurations.AccountName} not found");
                     }
@@ -126,8 +126,8 @@ namespace BlockBase.Node.Controllers
                     sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
 
                 }
-                catch 
-                { 
+                catch
+                {
                     _logger.LogError("Failed to retrieve account info");
 
                 }
@@ -187,13 +187,13 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if(await _connector.DoesDefaultDatabaseExist())
-                   return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix.")));
-                
+                if (await _connector.DoesDefaultDatabaseExist())
+                    return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix.")));
+
                 _connector.Setup().Wait();
-                
+
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-                if(contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
+                if (contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
 
                 var configuration = GetSidechainConfigurations();
 
@@ -212,7 +212,7 @@ namespace BlockBase.Node.Controllers
                 //TODO rpinto - review this while loop
                 while (i < 3)
                 {
-                    
+
                     await Task.Delay(1000);
 
                     try
@@ -220,13 +220,53 @@ namespace BlockBase.Node.Controllers
                         var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
                         return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
                     }
-                    catch(ApiErrorException)
+                    catch (ApiErrorException)
                     {
                         i++;
                     }
                 }
 
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationCanceledException());
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Sets Secret
+        /// </summary>
+        /// <returns>The success of setting the secret </returns>
+        /// <response code="200">Secret set with success</response>
+        /// <response code="500">Error starting setting secret</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Step 2 - Sets secret",
+            Description = "The requester uses this service to set encrypting key and information",
+            OperationId = "SetSecret"
+        )]
+        public async Task<ObjectResult> SetSecret()
+        {
+            SecurityConfigurations config;
+            try
+            {
+                if (_securityConfigurations.UseSecurityConfigurations)
+                {
+                    _databaseKeyManager.SetInitialSecrets(_securityConfigurations);
+                }
+
+                else
+                {
+                    using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
+                    {
+                        var json = await reader.ReadToEndAsync();
+                        config = JsonConvert.DeserializeObject<SecurityConfigurations>(json);
+                    }
+                    _databaseKeyManager.SetInitialSecrets(config);
+                }
+
+                return Ok(new OperationResponse<bool>(true, "Secret set with success"));
             }
             catch (Exception e)
             {
@@ -242,45 +282,32 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error starting the maintenance of the chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Step 2 - Starts the maintenance of the sidechain",
+            Summary = "Step 3 - Starts the maintenance of the sidechain",
             Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
             OperationId = "RunSidechainMaintenance"
         )]
-        public async Task<ObjectResult> RunSidechainMaintenance()
+        public ObjectResult RunSidechainMaintenance()
         {
-            SecurityConfigurations config;
             try
             {
-                if (_securityConfigurations.UseSecurityConfigurations)
-                { 
-                    _databaseKeyManager.SetInitialSecrets(_securityConfigurations);
-                }
-
-                else
-                {
-                    using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
-                    {
-                        var json = await reader.ReadToEndAsync();
-                        config = JsonConvert.DeserializeObject<SecurityConfigurations>(json);
-                    }
-                    _databaseKeyManager.SetInitialSecrets(config);
-                }
                 string tx = null;
-                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                //var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 
                 //TODO rpinto - could the contract state be in ConfigTime and CandidatureTime or/and ProductionTime?
                 //TODO rpinto - why is the StartCandidatureTime called from outside the SuperMethod?
 
-                if (_sidechainMaintainerManager.TaskContainer == null 
+                if (_sidechainMaintainerManager.TaskContainer == null
                 || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
-                || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted
                 || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
+                {
                     _sidechainMaintainerManager.Start();
 
+                    var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
 
-                var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
+                    return Ok(new OperationResponse<bool>(true, okMessage));
+                }
 
-                return Ok(new OperationResponse<bool>(true, okMessage));
+                return BadRequest(new OperationResponse<string>($"Sidechain was already running."));
             }
             catch (Exception e)
             {
@@ -288,6 +315,37 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+
+        /// <summary>
+        /// Pauses sidechain maintenance task
+        /// </summary>
+        /// <returns>The success of the operation</returns>
+        /// <response code="200">Chain paused with success</response>
+        /// <response code="500">Error pausing the chain</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Pauses all sidechain state updates",
+            Description = "The requester can use this method to temporarely the maintenance of the sidechain while still being able to encrypt and decrypt queries.",
+            OperationId = "PauseSidechain"
+        )]
+        public ObjectResult PauseSidechain()
+        {
+            try
+            {
+                if (_sidechainMaintainerManager.TaskContainer == null
+                || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
+                || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
+                    return BadRequest(new OperationResponse<string>($"Sidechain was already paused."));
+
+                _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.Cancel();
+
+                return Ok(new OperationResponse<bool>(true, $"Sidechain maintenance paused."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
         /// <summary>
         /// Sends a transaction to the BlockBase Operations Contract to terminate the sidechain and removes sidechain data
         /// </summary>
@@ -305,12 +363,12 @@ namespace BlockBase.Node.Controllers
             try
             {
                 await _sidechainMaintainerManager.EndSidechain();
-              
+
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-                if(contractSt == null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} not found"));
+                if (contractSt == null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} not found"));
 
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
-                
+
                 return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
             }
             catch (Exception e)
@@ -540,7 +598,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested) 
+                if (!_sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
                     return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You need to end sidechain first.")));
                 await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
                 return Ok(new OperationResponse<bool>(true, $"Removed data."));

@@ -31,7 +31,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             if (_secretStoreDict.ContainsKey(secretId) && _secretStoreDict[secretId].SequenceEqual(key)) return;
 
-            if (_secretStoreDict.ContainsKey(secretId)) throw new Exception("There's already a key to that IV.");
+            if (_secretStoreDict.ContainsKey(secretId)) throw new Exception($"There's already a key to that for the identifier: {secretId}");
 
             _secretStoreDict.Add(secretId, key);
             var iv = secretId != EncryptionConstants.MASTER_KEY && secretId != EncryptionConstants.MASTER_IV ? Base32Encoding.ZBase32.ToBytes(secretId) : _iv;

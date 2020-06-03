@@ -145,9 +145,10 @@ namespace BlockBase.Network.Mainchain
             return await _eosConnection.SignTransaction(trx, new List<string>(){keyToUse});
         }
 
-        public async Task<string> BroadcastTransaction(SignedTransaction trx)
+        public async Task<OpResult<string>> BroadcastTransaction(SignedTransaction trx)
         {
-            return await _eosConnection.BroadcastTransaction(trx);
+            var opResult = await Op.RunAsync(async () => await _eosConnection.BroadcastTransaction(trx));
+            return opResult;
         }
 
         #endregion
