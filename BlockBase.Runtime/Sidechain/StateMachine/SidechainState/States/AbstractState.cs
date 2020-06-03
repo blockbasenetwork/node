@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BlockBase.Network.Sidechain;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
@@ -8,13 +9,13 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
     public abstract class AbstractState
     {
         protected ILogger _logger;
-        protected CurrentGlobalStatus Status { get; private set; }
+        protected SidechainPool Sidechain { get; private set; }
 
         protected bool IsWorkFinished { get; set; }
 
-        public AbstractState(CurrentGlobalStatus status, ILogger logger)
+        public AbstractState(SidechainPool sidechain, ILogger logger)
         {
-            Status = status;
+            Sidechain = sidechain;
             _logger = logger;
         }
         public virtual async Task<string> Run(CancellationToken cancellationToken = default(CancellationToken))
