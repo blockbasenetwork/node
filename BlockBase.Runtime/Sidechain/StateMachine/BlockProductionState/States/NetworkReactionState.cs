@@ -1,4 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
+using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
@@ -6,42 +12,57 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
     public class NetworkReactionState : AbstractState<StartState, EndState>
     {
-        public NetworkReactionState(ILogger logger) : base(logger)
+        private IMainchainService _mainchainService;
+        private ContractStateTable _contractStateTable;
+        private NodeConfigurations _nodeConfigurations;
+        private List<ProducerInTable> _producerList;
+        private CurrentProducerTable _currentProducer;
+        private SidechainPool _sidechainPool;
+
+        //TODO rpinto - this state has to be fast in jumping to block validation to not miss the connection
+        public NetworkReactionState(ILogger logger, NodeConfigurations nodeConfigurations, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
         {
+            _nodeConfigurations = nodeConfigurations;
+            _mainchainService = mainchainService;
+            _sidechainPool = sidechainPool;
         }
 
         protected override Task DoWork()
         {
-            //verifies a block and votes on it if ok
-            throw new System.NotImplementedException();
+            return Task.CompletedTask;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            //TODO verifies if he is a producer and the sidechain is in production state
-            //and verifies if it's time for him to vote
-            //if he has no contacts there shouldn't be no condition to continue
-            throw new System.NotImplementedException();
+            //verifies if he is a producer and the sidechain is in production state
+            return Task.FromResult(_contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            //verifies if block is valid and if in that case he's vote is in the network
-            //verifies if his time to vote is done
-            //jumps to the StartState
-            throw new System.NotImplementedException();
+            if(_currentProducer.Producer == _nodeConfigurations.AccountName) 
+                return Task.FromResult((true, typeof(ProduceBlockState).Name));
+            else
+                return Task.FromResult((true, typeof(VoteBlockState).Name));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            //verifies if block is valid and if in that case he's vote is in the network
-            throw new System.NotImplementedException();
+            //there shouldn't be any work to do
+            return Task.FromResult(true);
         }
 
-        protected override Task UpdateStatus()
+        protected override async Task UpdateStatus()
         {
-            //I don't think he needs to fetch anything
-            throw new System.NotImplementedException();
+            //fetches data related to the state of the sidechain, and information about if he needs to produce a block or vote on one
+            
+            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
+
+            _contractStateTable = contractState;
+            _producerList = producerList;
+            _currentProducer = currentProducer;
         }
     }
 }
