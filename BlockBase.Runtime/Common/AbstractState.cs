@@ -14,6 +14,7 @@ namespace BlockBase.Runtime.Common
             where TEndState : IState
     {
         protected ILogger _logger;
+        protected int _delay;
 
         public AbstractState(ILogger logger)
         {
@@ -28,8 +29,9 @@ namespace BlockBase.Runtime.Common
                     //checks if execution is cancelled
                     if (cancellationToken.IsCancellationRequested) return typeof(TEndState).Name;
 
-
                     await UpdateStatus();
+                    if (await IsWorkDone()) await Task.Delay(_delay);
+
                     if (!await HasConditionsToContinue()) return typeof(TStartState).Name; //returns control to the State Manager indicating same state
 
                     var jumpStatus = await HasConditionsToJump();
