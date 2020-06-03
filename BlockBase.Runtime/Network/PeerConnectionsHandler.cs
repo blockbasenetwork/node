@@ -271,10 +271,11 @@ namespace BlockBase.Runtime.Network
             await SendPingPongMessage(false, sender, args.nonce);
         }
 
-        public async Task CheckConnectionStatus(SidechainPool sidechain)
+        public async Task<bool> ArePeersConnected(SidechainPool sidechain)
         {
-            if (_checkingConnection) return;
-
+            var peersConnected = true;
+            if (_checkingConnection) return peersConnected;
+            
             try
             {
                 _checkingConnection = true;
@@ -296,6 +297,7 @@ namespace BlockBase.Runtime.Network
 
                         _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
                         Disconnect(producer.PeerConnection);
+                        peersConnected = false;
                     }
                 }
                 _checkingConnection = false;
@@ -304,6 +306,8 @@ namespace BlockBase.Runtime.Network
             {
                 _logger.LogCritical($"Check connection failed with exception: {e}");
             }
+
+            return peersConnected;
         }
 
         #endregion Enter Points
