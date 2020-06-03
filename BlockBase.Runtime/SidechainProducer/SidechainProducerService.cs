@@ -21,8 +21,8 @@ namespace BlockBase.Runtime.SidechainProducer
         //TODO: Catch events when sidechain service task has stopped and remove sidechain from sidechain services and sidechain keeper
 
         private readonly SidechainKeeper _sidechainKeeper;
-        private readonly BlockValidator _blockValidator;
-        private readonly TransactionValidator _transactionValidator;
+        private readonly BlockValidationsHandler _blockValidator;
+        private readonly TransactionValidationsHandler _transactionValidator;
         private readonly PeerConnectionsHandler _peerConnectionsHandler;
         private readonly NetworkConfigurations _networkConfigurations;
         private readonly NodeConfigurations _nodeConfigurations;
@@ -31,10 +31,10 @@ namespace BlockBase.Runtime.SidechainProducer
         private IMongoDbProducerService _mongoDbProducerService;
         private string _endpoint;
         private ILogger _logger;
-        private BlockSender _blockSender;
+        private BlockRequestsHandler _blockSender;
 
         public SidechainProducerService(SidechainKeeper sidechainKeeper, PeerConnectionsHandler peerConnectionsHandler, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ILogger<SidechainProducerService> logger, INetworkService networkService,
-                                        IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockValidator blockValidator, TransactionValidator transactionValidator, BlockSender blockSender)
+                                        IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockValidationsHandler blockValidator, TransactionValidationsHandler transactionValidator, BlockRequestsHandler blockSender)
         {
             _networkService = networkService;
             _mainchainService = mainchainService;

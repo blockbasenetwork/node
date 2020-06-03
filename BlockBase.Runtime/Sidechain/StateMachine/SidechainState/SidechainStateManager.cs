@@ -22,7 +22,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
         private SidechainPool _sidechain;
         private PeerConnectionsHandler _peerConnectionsHandler;
-        private BlockSender _blockSender;
+        private BlockRequestsHandler _blockSender;
 
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
@@ -33,7 +33,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         
 
         //TODO rpinto - it will be the state manager that besides coordinating state changes also is responsible to start the connectionchecker
-        public SidechainStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, ISidechainDatabasesManager sidechainDatabasesManager, BlockSender blockSender)
+        public SidechainStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, ISidechainDatabasesManager sidechainDatabasesManager, BlockRequestsHandler blockSender)
         {
             _sidechain = sidechain;
             _logger = logger;

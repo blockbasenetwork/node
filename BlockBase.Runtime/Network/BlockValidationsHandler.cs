@@ -27,9 +27,9 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using static BlockBase.Network.Rounting.MessageForwarder;
 
-namespace BlockBase.Runtime.Sidechain
+namespace BlockBase.Runtime.Network
 {
-    public class BlockValidator
+    public class BlockValidationsHandler
     {
         private NodeConfigurations _nodeConfigurations;
         private ILogger _logger;
@@ -38,12 +38,12 @@ namespace BlockBase.Runtime.Sidechain
         private IMainchainService _mainchainService;
         private SidechainKeeper _sidechainKeeper;
         private NetworkConfigurations _networkConfigurations;
-        private BlockSender _blockSender;
+        private BlockRequestsHandler _blockSender;
         private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
         private string _endPoint;
 
 
-        public BlockValidator(SystemConfig systemConfig, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, ILogger<BlockValidator> logger, INetworkService networkService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, SidechainKeeper sidechainKeeper, BlockSender blockSender)
+        public BlockValidationsHandler(SystemConfig systemConfig, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, ILogger<BlockValidationsHandler> logger, INetworkService networkService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, SidechainKeeper sidechainKeeper, BlockRequestsHandler blockSender)
         {
             _logger = logger;
             _mongoDbProducerService = mongoDbProducerService;

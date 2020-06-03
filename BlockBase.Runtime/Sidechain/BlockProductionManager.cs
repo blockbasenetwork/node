@@ -34,7 +34,7 @@ namespace BlockBase.Runtime.Sidechain
         private ChainBuilder _chainBuilder;
         private NodeConfigurations _nodeConfigurations;
         private string _endPoint;
-        private BlockSender _blockSender;
+        private BlockRequestsHandler _blockSender;
         private long _nextTimeToCheckSmartContract;
         private long _previousTimeToCheck;
         private ILogger _logger;
@@ -44,7 +44,7 @@ namespace BlockBase.Runtime.Sidechain
         private ISidechainDatabasesManager _sidechainDatabaseManager;
 
 
-        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockSender blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
+        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockRequestsHandler blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
         {
             _logger = logger;
             _networkService = networkService;
