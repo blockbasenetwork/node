@@ -39,7 +39,7 @@ namespace BlockBase.Runtime.Mainchain
         private PeerConnectionsHandler _peerConnectionsHandler;
         private const float DELAY_IN_SECONDS = 0.5f;
         public TaskContainer TaskContainer { get; private set; }
-        private TransactionSender _transactionSender;
+        private TransactionsHandler _transactionSender;
         private HistoryValidation _historyValidation;
         private IConnector _connector;
         private IMongoDbProducerService _mongoDbProducerService;
@@ -58,7 +58,7 @@ namespace BlockBase.Runtime.Mainchain
 
             
         }
-        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbService, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionSender transactionSender, IConnector connector)
+        public SidechainMaintainerManager(ILogger<SidechainMaintainerManager> logger, IMongoDbProducerService mongoDbService, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionsHandler transactionSender, IConnector connector)
         {
             _peerConnectionsHandler = peerConnectionsHandler;
             _mainchainService = mainchainService;

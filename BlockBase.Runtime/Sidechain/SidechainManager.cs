@@ -41,7 +41,7 @@ namespace BlockBase.Runtime.Sidechain
         private readonly NodeConfigurations _nodeConfigurations;
         private ILogger _logger;
         private readonly IMongoDbProducerService _mongoDbProducerService;
-        private readonly BlockSender _blockSender;
+        private readonly BlockRequestsHandler _blockSender;
         private HistoryValidation _historyValidation;
         private const int MAX_NUMBER_OF_TRIES = 5;
 
@@ -53,7 +53,7 @@ namespace BlockBase.Runtime.Sidechain
             return TaskContainer;
         }
 
-        public SidechainManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, string endpoint, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, IMainchainService mainchainService)
+        public SidechainManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, string endpoint, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, BlockRequestsHandler blockSender, IMainchainService mainchainService)
         {
             Sidechain = sidechain;
             EndPoint = endpoint;

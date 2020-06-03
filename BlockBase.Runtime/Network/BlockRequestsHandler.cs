@@ -20,10 +20,11 @@ using static BlockBase.Network.PeerConnection;
 using static BlockBase.Network.Rounting.MessageForwarder;
 using System.Collections.Generic;
 using BlockBase.Network.Mainchain;
+using BlockBase.Runtime.Sidechain;
 
-namespace BlockBase.Runtime.Sidechain
+namespace BlockBase.Runtime.Network
 {
-    public class BlockSender
+    public class BlockRequestsHandler
     {
         private INetworkService _networkService;
         private ILogger _logger;
@@ -33,7 +34,7 @@ namespace BlockBase.Runtime.Sidechain
         private IMainchainService _mainchainService;
         private HistoryValidation _historyValidation;
 
-        public BlockSender(ILogger<BlockSender> logger, IOptions<NodeConfigurations> nodeConfigurations, SystemConfig systemConfig, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService)
+        public BlockRequestsHandler(ILogger<BlockRequestsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, SystemConfig systemConfig, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService)
         {
             _networkService = networkService;
             _logger = logger;

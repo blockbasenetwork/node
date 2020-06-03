@@ -13,6 +13,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Rounting;
 using BlockBase.Runtime.Network;
+using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
 using BlockBase.Utils.Threading;
@@ -22,9 +23,9 @@ using Microsoft.Extensions.Options;
 using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.Sidechain
+namespace BlockBase.Runtime.Network
 {
-    public class TransactionSender
+    public class TransactionsHandler
     {
         private INetworkService _networkService;
         private ILogger _logger;
@@ -42,7 +43,7 @@ namespace BlockBase.Runtime.Sidechain
 
         private bool _hasBeenSetup = false;
 
-        public TransactionSender(ILogger<TransactionSender> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _networkService = networkService;
             _logger = logger;

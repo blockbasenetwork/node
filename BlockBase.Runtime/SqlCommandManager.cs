@@ -29,13 +29,13 @@ namespace BlockBase.Runtime
         private IConnector _connector;
         private ILogger _logger;
         private ConcurrentVariables _concurrentVariables;
-        private TransactionSender _transactionSender;
+        private TransactionsHandler _transactionSender;
         private NodeConfigurations _nodeConfigurations;
         private IMongoDbProducerService _mongoDbProducerService;
         private MiddleMan _middleMan;
 
 
-        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
+        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);

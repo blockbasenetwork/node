@@ -18,6 +18,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Results;
+using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
@@ -34,12 +35,12 @@ namespace BlockBase.Runtime
         private IConnector _connector;
         private InfoPostProcessing _infoPostProcessing;
         private ConcurrentVariables _concurrentVariables;
-        private TransactionSender _transactionSender;
+        private TransactionsHandler _transactionSender;
         private NodeConfigurations _nodeConfigurations;
         private IList<Transaction> _transactionsToSendToProducers;
         private IMongoDbProducerService _mongoDbProducerService;
 
-        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionSender transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
+        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _transformer = transformer;
             _generator = generator;

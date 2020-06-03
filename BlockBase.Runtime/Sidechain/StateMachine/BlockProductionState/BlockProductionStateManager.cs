@@ -23,7 +23,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private NodeConfigurations _nodeConfigurations;
 
         private NetworkConfigurations _networkConfigurations;
-        private BlockSender _blockSender;
+        private BlockRequestsHandler _blockSender;
         private long _nextTimeToCheckSmartContract;
         private long _previousTimeToCheck;
         private IMongoDbProducerService _mongoDbProducerService;
@@ -35,7 +35,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, 
             NetworkConfigurations networkConfigurations, INetworkService networkService, 
             PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, 
-            IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, 
+            IMongoDbProducerService mongoDbProducerService, BlockRequestsHandler blockSender, 
             ISidechainDatabasesManager sidechainDatabaseManager)
         {
             _logger = logger;

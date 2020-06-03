@@ -23,9 +23,9 @@ using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Utils.Threading;
 
-namespace BlockBase.Runtime.Sidechain
+namespace BlockBase.Runtime.Network
 {
-    public class TransactionValidator
+    public class TransactionValidationsHandler
     {
         private INetworkService _networkService;
         private ILogger _logger;
@@ -36,7 +36,7 @@ namespace BlockBase.Runtime.Sidechain
         private NetworkConfigurations _networkConfigurations;
         private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
 
-        public TransactionValidator(ILogger<TransactionValidator> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
+        public TransactionValidationsHandler(ILogger<TransactionValidationsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
         {
             _logger = logger;
             _logger.LogDebug("Creating transaction validator.");

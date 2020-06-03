@@ -11,6 +11,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
 using BlockBase.Utils.Crypto;
 using Google.Protobuf;
@@ -34,7 +35,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private SidechainPool _sidechainPool;
         private ISidechainDatabasesManager _sidechainDatabaseManager;
 
-        private BlockSender _blockSender;
+        private BlockRequestsHandler _blockSender;
 
         private BlockheaderTable _lastSubmittedBlockHeader;
         private bool _hasProducedBlock;
@@ -42,7 +43,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         public ProduceBlockState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
-            ISidechainDatabasesManager sidechainDatabaseManager, BlockSender blockSender) : base(logger)
+            ISidechainDatabasesManager sidechainDatabaseManager, BlockRequestsHandler blockSender) : base(logger)
         {
             _logger = logger;
             _mainchainService = mainchainService;
