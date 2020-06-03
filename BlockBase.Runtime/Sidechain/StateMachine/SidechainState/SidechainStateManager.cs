@@ -72,7 +72,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
                 if(currentState.GetType() == typeof(ProductionState) && BlockProductionTaskContainer == null)
                 {
-                    var blockProductionStateManager = new BlockProductionStateManager(_sidechain, _nodeConfigurations, _logger, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, _blockSender, _sidechainDatabasesManager);
+                    var blockProductionStateManager = new BlockProductionStateManager(_logger, _sidechain, _nodeConfigurations,_networkConfigurations, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, _blockSender, _sidechainDatabasesManager);
                     BlockProductionTaskContainer = blockProductionStateManager.Start();
                 }
             }
