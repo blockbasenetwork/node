@@ -50,6 +50,10 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private bool _hasEnoughSignatures;
         private bool _hasBroadcastedBlock;
 
+        private int _numOfBlockBroadcasts;
+
+        private const int MAX_NUMBER_OF_BLOCK_BROADCASTS = 3;
+
         private (byte[] packedTransaction, List<string> signatures) _packedTransactionAndSignatures;
 
 
@@ -109,7 +113,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             if (_hasProducedBlock && _hasSignedBlock && !_hasBroadcastedBlock)
             {
                 await _blockSender.SendBlockToSidechainMembers(_sidechainPool, _builtBlock.ConvertToProto(), _networkConfigurations.GetEndPoint());
-                _hasBroadcastedBlock = true;
+
+                if(_numOfBlockBroadcasts++ >= MAX_NUMBER_OF_BLOCK_BROADCASTS);
+                    _hasBroadcastedBlock = true;
             }
             if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && !_hasEnoughSignatures)
             {
