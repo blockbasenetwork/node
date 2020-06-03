@@ -6,22 +6,29 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Common;
+using BlockBase.Runtime.Network;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
+using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.StateMachine.SidechainState.States
+namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
 {
-    public class IPReceiveState : AbstractState
+    public class StartState : AbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
+        private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
-        public IPReceiveState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(sidechain, logger)
+        private SidechainPool _sidechainPool;
+        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
+            _sidechainPool = sidechain;
+            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         protected override Task<bool> IsWorkDone()
@@ -31,31 +38,24 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override Task DoWork()
         {
-            return default(Task);
+            return Task.CompletedTask;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
-
-            return Task.FromResult((_contractStateTable.IPReceiveTime || _contractStateTable.ProductionTime) && isProducerInTable);
+            return Task.FromResult(_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
-
-            return Task.FromResult((isProducerInTable && _contractStateTable.ProductionTime, typeof(ProductionState).Name));
+            return Task.FromResult((_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime, typeof(ConnectToPeersState).Name));
         }
 
-        protected override async Task UpdateStatus()
+        protected override async Task UpdateStatus() 
         {
-            var producers = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
-            
-            _producers = producers;
+            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+
             _contractStateTable = contractState;
         }
     }
-
 }
