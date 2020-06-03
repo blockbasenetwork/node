@@ -67,6 +67,7 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
 
             _producers = producers;
             _ipAddresses = ipAddresses;
+            _delay = 0;
         }
 
         private void AddProducersToSidechainPool()
