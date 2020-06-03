@@ -298,7 +298,6 @@ namespace BlockBase.Node.Controllers
 
                 if (_sidechainMaintainerManager.TaskContainer == null
                 || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
-                || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted
                 || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
                 {
                     _sidechainMaintainerManager.Start();
@@ -308,7 +307,7 @@ namespace BlockBase.Node.Controllers
                     return Ok(new OperationResponse<bool>(true, okMessage));
                 }
 
-                return BadRequest(new OperationResponse<string>($"Sidechain is running."));
+                return BadRequest(new OperationResponse<string>($"Sidechain was already running."));
             }
             catch (Exception e)
             {
@@ -335,9 +334,8 @@ namespace BlockBase.Node.Controllers
             {
                 if (_sidechainMaintainerManager.TaskContainer == null
                 || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
-                || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted
                 || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
-                    return BadRequest(new OperationResponse<string>($"Sidechain is not running."));
+                    return BadRequest(new OperationResponse<string>($"Sidechain was already paused."));
 
                 _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.Cancel();
 
