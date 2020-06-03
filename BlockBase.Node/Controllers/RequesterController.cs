@@ -235,18 +235,18 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Starts the maintenance of the sidechain
+        /// Sets Secret
         /// </summary>
-        /// <returns>The success of starting the sidechain maintenance</returns>
-        /// <response code="200">Chain maintenance started with success</response>
-        /// <response code="500">Error starting the maintenance of the chain</response>
+        /// <returns>The success of setting the secret </returns>
+        /// <response code="200">Secret set with success</response>
+        /// <response code="500">Error starting setting secret</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Step 2 - Starts the maintenance of the sidechain",
-            Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
-            OperationId = "RunSidechainMaintenance"
+            Summary = "Step 2 - Sets secret",
+            Description = "The requester uses this service to set encrypting key and information",
+            OperationId = "SetSecret"
         )]
-        public async Task<ObjectResult> RunSidechainMaintenance()
+        public async Task<ObjectResult> SetSecret()
         {
             SecurityConfigurations config;
             try
@@ -265,18 +265,8 @@ namespace BlockBase.Node.Controllers
                     }
                     _databaseKeyManager.SetInitialSecrets(config);
                 }
-                string tx = null;
-                //var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 
-                //TODO rpinto - could the contract state be in ConfigTime and CandidatureTime or/and ProductionTime?
-                //TODO rpinto - why is the StartCandidatureTime called from outside the SuperMethod?
-
-                TryToStartSidechainMaintenance();
-
-
-                var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
-
-                return Ok(new OperationResponse<bool>(true, okMessage));
+                return Ok(new OperationResponse<bool>(true, "Secret set with success"));
             }
             catch (Exception e)
             {
@@ -284,15 +274,48 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        private void TryToStartSidechainMaintenance()
+        /// <summary>
+        /// Starts the maintenance of the sidechain
+        /// </summary>
+        /// <returns>The success of starting the sidechain maintenance</returns>
+        /// <response code="200">Chain maintenance started with success</response>
+        /// <response code="500">Error starting the maintenance of the chain</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Step 3 - Starts the maintenance of the sidechain",
+            Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
+            OperationId = "RunSidechainMaintenance"
+        )]
+        public ObjectResult RunSidechainMaintenance()
         {
-            if (_sidechainMaintainerManager.TaskContainer == null
-              || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
-              || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted
-              || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
-                _sidechainMaintainerManager.Start();
+            try
+            {
+                string tx = null;
+                //var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
 
+                //TODO rpinto - could the contract state be in ConfigTime and CandidatureTime or/and ProductionTime?
+                //TODO rpinto - why is the StartCandidatureTime called from outside the SuperMethod?
+
+                if (_sidechainMaintainerManager.TaskContainer == null
+                || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
+                || _sidechainMaintainerManager.TaskContainer.Task.IsCompleted
+                || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
+                {
+                    _sidechainMaintainerManager.Start();
+
+                    var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
+
+                    return Ok(new OperationResponse<bool>(true, okMessage));
+                }
+
+                return BadRequest(new OperationResponse<string>($"Sidechain is running."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
         }
+
 
         /// <summary>
         /// Pauses sidechain maintenance task
@@ -302,7 +325,7 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error pausing the chain</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Pauses all sidechain state updates.",
+            Summary = "Pauses all sidechain state updates",
             Description = "The requester can use this method to temporarely the maintenance of the sidechain while still being able to encrypt and decrypt queries.",
             OperationId = "PauseSidechain"
         )]
