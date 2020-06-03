@@ -1,12 +1,13 @@
 using System.Threading.Tasks;
 using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class EndState : AbstractState
+    public class EndState : AbstractState<StartState, EndState>
     {
-        public EndState(SidechainPool sidechain, ILogger logger) : base(sidechain, logger)
+        public EndState(SidechainPool sidechain, ILogger logger) : base(logger)
         {
             
         }

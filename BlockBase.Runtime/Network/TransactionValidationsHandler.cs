@@ -12,8 +12,6 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
 using BlockBase.Network.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain.Helpers;
 using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
@@ -22,6 +20,7 @@ using BlockBase.Network.IO;
 using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Utils.Threading;
+using BlockBase.Runtime.Helpers;
 
 namespace BlockBase.Runtime.Network
 {

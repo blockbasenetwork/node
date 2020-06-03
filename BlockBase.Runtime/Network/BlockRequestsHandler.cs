@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using BlockBase.Domain.Blockchain;
@@ -10,7 +9,6 @@ using BlockBase.Network.IO;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Network.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.Runtime.Network;
 using BlockBase.Utils;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
@@ -20,7 +18,7 @@ using static BlockBase.Network.PeerConnection;
 using static BlockBase.Network.Rounting.MessageForwarder;
 using System.Collections.Generic;
 using BlockBase.Network.Mainchain;
-using BlockBase.Runtime.Sidechain;
+using BlockBase.Runtime.Helpers;
 
 namespace BlockBase.Runtime.Network
 {

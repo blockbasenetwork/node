@@ -7,6 +7,7 @@ using BlockBase.Domain.Enums;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Helpers;
 using BlockBase.Runtime.Network;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;

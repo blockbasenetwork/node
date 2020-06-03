@@ -16,11 +16,11 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Domain;
 using System.Net.Http;
 using static BlockBase.Network.PeerConnection;
-using BlockBase.Runtime.Sidechain;
 using Microsoft.Extensions.Options;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Runtime.Helpers;
 
 namespace BlockBase.Runtime.Mainchain
 {

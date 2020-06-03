@@ -6,22 +6,26 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Common;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class IPReceiveState : AbstractState
+    public class IPReceiveState : AbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
-        public IPReceiveState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(sidechain, logger)
+
+        private SidechainPool _sidechainPool;
+        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
+            _sidechainPool = sidechainPool;
         }
 
         protected override Task<bool> IsWorkDone()
@@ -50,8 +54,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
-            var producers = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
-            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             
             _producers = producers;
             _contractStateTable = contractState;

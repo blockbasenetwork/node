@@ -4,7 +4,7 @@ using System.Linq;
 using BlockBase.Domain.Protos;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Sidechain.Helpers
+namespace BlockBase.Runtime.Helpers
 {
     public static class SerializationHelper
     {

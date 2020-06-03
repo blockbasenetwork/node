@@ -8,7 +8,7 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace BlockBase.Runtime.Sidechain.Helpers
+namespace BlockBase.Runtime.Helpers
 {
     public static class ValidationHelper
     {

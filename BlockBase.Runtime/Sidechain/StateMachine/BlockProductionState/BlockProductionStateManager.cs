@@ -36,7 +36,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             NetworkConfigurations networkConfigurations, INetworkService networkService, 
             PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, 
             IMongoDbProducerService mongoDbProducerService, BlockRequestsHandler blockSender, 
-            ISidechainDatabasesManager sidechainDatabaseManager)
+            ISidechainDatabasesManager sidechainDatabaseManager):base(logger)
         {
             _logger = logger;
             _networkService = networkService;

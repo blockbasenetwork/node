@@ -14,7 +14,7 @@ using EosSharp.Core.Exceptions;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Sidechain
+namespace BlockBase.Runtime.Helpers
 {
     public class HistoryValidation
     {

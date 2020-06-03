@@ -8,16 +8,11 @@ using System.Threading.Tasks;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Enums;
-using BlockBase.Domain.Eos;
 using BlockBase.Domain.Protos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
-using BlockBase.DataPersistence;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
-using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain.Helpers;
 using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
@@ -26,6 +21,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using static BlockBase.Network.Rounting.MessageForwarder;
+using BlockBase.Runtime.Helpers;
 
 namespace BlockBase.Runtime.Network
 {

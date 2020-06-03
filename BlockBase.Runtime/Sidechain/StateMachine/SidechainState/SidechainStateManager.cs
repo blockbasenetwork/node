@@ -9,10 +9,11 @@ using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
+using BlockBase.Runtime.Common;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState
 {
-    public class SidechainStateManager : IThreadableComponent
+    public class SidechainStateManager : AbstractStateManager<StartState, EndState>
     {
         private ILogger _logger;
         private IMainchainService _mainchainService;
@@ -26,14 +27,17 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
-
-        public TaskContainer TaskContainer { get; private set; }
-        public TaskContainer BlockProductionTaskContainer { get; private set; }
+        private TaskContainer _blockProductionTaskContainer;
 
         
 
         //TODO rpinto - it will be the state manager that besides coordinating state changes also is responsible to start the connectionchecker
-        public SidechainStateManager(SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, ILogger logger, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, ISidechainDatabasesManager sidechainDatabasesManager, BlockRequestsHandler blockSender)
+        public SidechainStateManager(
+            SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, 
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, 
+            ILogger logger, INetworkService networkService, 
+            IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, 
+            BlockRequestsHandler blockSender, SidechainDatabasesManager sidechainDatabasesManager):base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
@@ -43,19 +47,11 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _networkService = networkService;
             _mongoDbProducerService = mongoDbProducerService;
             _peerConnectionsHandler = peerConnectionsHandler;
-            _sidechainDatabasesManager = sidechainDatabasesManager;
             _blockSender = blockSender;
+            _sidechainDatabasesManager = sidechainDatabasesManager;
         }
 
-        public TaskContainer Start()
-        {
-            if(TaskContainer != null) TaskContainer.Stop();
-            TaskContainer = TaskContainer.Create(async () => await Run());
-            TaskContainer.Start();
-            return TaskContainer;
-        }
-
-        private async Task Run() 
+        protected override async Task Run() 
         {
             var currentState = BuildState(typeof(StartState).Name);
 
@@ -67,19 +63,19 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
                 if(currentState.GetType() == typeof(EndState))
                 {
                     await currentState.Run();
-                    BlockProductionTaskContainer.Stop();
+                    _blockProductionTaskContainer.Stop();
                     break;
                 }
 
-                if(currentState.GetType() == typeof(ProductionState) && BlockProductionTaskContainer == null)
+                if(currentState.GetType() == typeof(ProductionState) && _blockProductionTaskContainer == null)
                 {
                     var blockProductionStateManager = new BlockProductionStateManager(_logger, _sidechain, _nodeConfigurations, _networkConfigurations, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, _blockSender, _sidechainDatabasesManager);
-                    BlockProductionTaskContainer = blockProductionStateManager.Start();
+                    _blockProductionTaskContainer = blockProductionStateManager.Start();
                 }
             }
         }
 
-        private AbstractState BuildState(string state)
+        protected override IState BuildState(string state)
         {
             if(state == typeof(StartState).Name) return new StartState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
             if(state == typeof(CandidatureState).Name) return new CandidatureState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
