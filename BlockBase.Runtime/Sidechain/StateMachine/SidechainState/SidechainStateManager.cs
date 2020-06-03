@@ -16,6 +16,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private ILogger _logger;
         private IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
+        private NetworkConfigurations _networkConfigurations;
 
         public TaskContainer TaskContainer { get; private set; }
 
@@ -27,6 +28,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _logger = logger;
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
+            _networkConfigurations = networkConfigurations;
         }
 
         public TaskContainer Start()
@@ -58,8 +60,13 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
         private AbstractState BuildState(string state, CurrentGlobalStatus status)
         {
-            if(state == typeof(StartState).Name) return new StartState(status, _logger);
+            if(state == typeof(StartState).Name) return new StartState(status, _logger, _mainchainService, _nodeConfigurations);
             if(state == typeof(CandidatureState).Name) return new CandidatureState(status, _logger, _mainchainService, _nodeConfigurations);
+            if(state == typeof(SecretTimeState).Name) return new SecretTimeState(status, _logger, _mainchainService, _nodeConfigurations);
+            if(state == typeof(IPSendTimeState).Name) return new IPSendTimeState(status, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
+            if(state == typeof(IPReceiveState).Name) return new IPReceiveState(status, _logger, _mainchainService, _nodeConfigurations);
+            if(state == typeof(ProductionState).Name) return new ProductionState(status, _logger, _mainchainService, _nodeConfigurations);
+            if(state == typeof(EndState).Name) return new EndState(status, _logger);
 
             return null;
         }

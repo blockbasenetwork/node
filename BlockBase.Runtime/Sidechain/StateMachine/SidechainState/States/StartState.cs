@@ -1,14 +1,23 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
+using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
     public class StartState : AbstractState
     {
-        public StartState(CurrentGlobalStatus status, ILogger logger): base(status, logger)
+        private readonly IMainchainService _mainchainService;
+        private NodeConfigurations _nodeConfigurations;
+        private ContractStateTable _contractStateTable;
+        private List<ProducerInTable> _producers;
+        public StartState(CurrentGlobalStatus status, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations): base(status, logger)
         {
-            
+            _mainchainService = mainchainService;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         protected override Task<bool> IsWorkDone()
