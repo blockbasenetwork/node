@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using BlockBase.Domain.Configurations;
 using BlockBase.Utils.Crypto;
 using System.Text;
+using BlockBase.Network.Sidechain;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
@@ -17,7 +18,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private ContractStateTable _contractStateTable;
         private List<CandidateTable> _candidates;
         
-        public CandidatureState(CurrentGlobalStatus status, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(status, logger)
+        public CandidatureState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(sidechain, logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -31,7 +32,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         protected override async Task DoWork()
         {
             var secretHash = HashHelper.Sha256Data(HashHelper.Sha256Data(Encoding.ASCII.GetBytes(_nodeConfigurations.SecretPassword)));
-            var addCandidateTransaction = await _mainchainService.AddCandidature(Status.Local.ClientAccountName, _nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), (int)Status.Local.ProducerType);
+            var addCandidateTransaction = await _mainchainService.AddCandidature(Sidechain.ClientAccountName, _nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), (int)Sidechain.ProducerType);
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -48,8 +49,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
-            var contractState = await _mainchainService.RetrieveContractState(Status.Local.ClientAccountName);
-            var candidates = await _mainchainService.RetrieveCandidates(Status.Local.ClientAccountName);
+            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+            var candidates = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
             
             _contractStateTable = contractState;
             _candidates = candidates;

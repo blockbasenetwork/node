@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Network.Sidechain;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private ContractStateTable _contractStateTable;
         private List<IPAddressTable> _ipAddressTable;
         private List<ProducerInTable> _producers;
-        public IPSendTimeState(CurrentGlobalStatus status, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(status, logger)
+        public IPSendTimeState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(sidechain, logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -35,7 +36,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         {
             int numberOfIpsToSend = (int)Math.Ceiling(_producers.Count() / 4.0);
             var keysToUse = ListHelper.GetListSortedCountingFrontFromIndex(_producers, _producers.FindIndex(m => m.Key == _nodeConfigurations.AccountName)).Take(numberOfIpsToSend).Select(p => p.PublicKey).ToList();
-            keysToUse.Add(Status.Local.ClientPublicKey);
+            keysToUse.Add(Sidechain.ClientPublicKey);
 
             var listEncryptedIps = new List<string>();
             var endpoint = _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort;
@@ -44,7 +45,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
                 listEncryptedIps.Add(AssymetricEncryption.EncryptText(endpoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
             }
 
-            await _mainchainService.AddEncryptedIps(Status.Local.ClientAccountName, _nodeConfigurations.AccountName, listEncryptedIps);
+            await _mainchainService.AddEncryptedIps(Sidechain.ClientAccountName, _nodeConfigurations.AccountName, listEncryptedIps);
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -63,9 +64,9 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
-            var producers = await _mainchainService.RetrieveProducersFromTable(Status.Local.ClientAccountName);
-            var contractState = await _mainchainService.RetrieveContractState(Status.Local.ClientAccountName);
-            var ipAddressTable = await _mainchainService.RetrieveIPAddresses(Status.Local.ClientAccountName);
+            var producers = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
+            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+            var ipAddressTable = await _mainchainService.RetrieveIPAddresses(Sidechain.ClientAccountName);
 
             _producers = producers;
             _contractStateTable = contractState;

@@ -7,6 +7,7 @@ using BlockBase.Network.Mainchain.Pocos;
 using Microsoft.Extensions.Logging;
 using BlockBase.Utils.Crypto;
 using System.Text;
+using BlockBase.Network.Sidechain;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
@@ -17,7 +18,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
         private List<CandidateTable> _candidates;
-        public SecretTimeState(CurrentGlobalStatus status, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(status, logger)
+        public SecretTimeState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(sidechain, logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -34,7 +35,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         protected override async Task DoWork()
         {
             var secret = HashHelper.Sha256Data(Encoding.ASCII.GetBytes(_nodeConfigurations.SecretPassword));
-            var addSecretTransaction = await _mainchainService.AddSecret(Status.Local.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
+            var addSecretTransaction = await _mainchainService.AddSecret(Sidechain.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -54,9 +55,9 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
-            var contractState = await _mainchainService.RetrieveContractState(Status.Local.ClientAccountName);
-            var candidates = await _mainchainService.RetrieveCandidates(Status.Local.ClientAccountName);
-            var producers = await _mainchainService.RetrieveProducersFromTable(Status.Local.ClientAccountName);
+            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
+            var candidates = await _mainchainService.RetrieveCandidates(Sidechain.ClientAccountName);
+            var producers = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
 
             _contractStateTable = contractState;
             _producers = producers;

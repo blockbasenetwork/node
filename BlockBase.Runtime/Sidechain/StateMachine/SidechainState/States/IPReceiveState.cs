@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Network.Sidechain;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
-        public IPReceiveState(CurrentGlobalStatus status, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(status, logger)
+        public IPReceiveState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(sidechain, logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -30,7 +31,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task DoWork()
         {
-            await _mainchainService.NotifyReady(Status.Local.ClientAccountName, _nodeConfigurations.AccountName);
+            await _mainchainService.NotifyReady(Sidechain.ClientAccountName, _nodeConfigurations.AccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -49,8 +50,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
-            var producers = await _mainchainService.RetrieveProducersFromTable(Status.Local.ClientAccountName);
-            var contractState = await _mainchainService.RetrieveContractState(Status.Local.ClientAccountName);
+            var producers = await _mainchainService.RetrieveProducersFromTable(Sidechain.ClientAccountName);
+            var contractState = await _mainchainService.RetrieveContractState(Sidechain.ClientAccountName);
             
             _producers = producers;
             _contractStateTable = contractState;

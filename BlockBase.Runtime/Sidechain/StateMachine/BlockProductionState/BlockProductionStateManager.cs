@@ -31,7 +31,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         //TODO: change this when client specifies database type (MYSQL, SQL, ...)
         private ISidechainDatabasesManager _sidechainDatabaseManager;
 
-        public BlockProductionStateManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockSender blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
+        public BlockProductionStateManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockSender blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
         {
             _logger = logger;
             _networkService = networkService;
@@ -40,7 +40,6 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
             _mongoDbProducerService = mongoDbProducerService;
-            _endPoint = endPoint;
             _blockSender = blockSender;
             _sidechainDatabaseManager = sidechainDatabaseManager;
         }
