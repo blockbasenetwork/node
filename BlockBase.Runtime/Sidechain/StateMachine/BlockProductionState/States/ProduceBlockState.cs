@@ -174,8 +174,10 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 blockHash = HashHelper.ByteArrayToFormattedHexaString(builtBlock.BlockHeader.BlockHash);
             }
-
-            
+            else
+            {
+                blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
+            }
 
             var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
             var hasSignedBlock = verifySignatureTable.Any(t => t.Account == _nodeConfigurations.AccountName);
