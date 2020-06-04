@@ -123,7 +123,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _currentProducer = currentProducer;
             _lastSubmittedBlockHeader = lastSubmittedBlockHeader;
 
-            _isNodeSynchronized = lastSubmittedBlockHeader == null;
+            if(lastSubmittedBlockHeader == null)
+                _isNodeSynchronized = true;
 
         }
 
