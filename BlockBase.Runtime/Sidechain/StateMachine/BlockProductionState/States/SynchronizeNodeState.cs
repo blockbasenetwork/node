@@ -81,7 +81,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 
             }
 
-            if (_isNodeSynchronized)
+            if (_isNodeSynchronized && !_isReadyToProduce)
             {
                 await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             }
