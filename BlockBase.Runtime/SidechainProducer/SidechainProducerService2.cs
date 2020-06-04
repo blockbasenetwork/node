@@ -60,7 +60,7 @@ namespace BlockBase.Runtime.SidechainProducer
         }
 
         //TODO rpinto - this probably needs to be in a try catch
-        public async Task AddSidechainToProducerAndStartIt(string sidechainName)
+        public async Task AddSidechainToProducerAndStartIt(string sidechainName, int producerType = 0)
         {
 
             if (_sidechainKeeper.ContainsKey(sidechainName)) throw new Exception("Sidechain already exists");
@@ -68,6 +68,7 @@ namespace BlockBase.Runtime.SidechainProducer
 
             //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
+            sidechainPool.ProducerType = (ProducerTypeEnum)producerType;
 
             var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender);
 
@@ -156,7 +157,6 @@ namespace BlockBase.Runtime.SidechainProducer
             sidechainPool.BlockTimeDuration = contractInformation.BlockTimeDuration;
             sidechainPool.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;
             sidechainPool.BlockSizeInBytes = contractInformation.SizeOfBlockInBytes;
-
 
             var selfCandidate = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault();
             var selfProducer = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault();
