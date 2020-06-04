@@ -61,5 +61,6 @@ namespace BlockBase.Network.Mainchain
         Task<List<BlockCountTable>> RetrieveBlockCount(string chain);
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<List<VerifySignature>> RetrieveVerifySignatures(string account);
+        Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName);
     }
 }
