@@ -32,6 +32,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task UpdateStatus()
         {
+            //fetch information about his status on the network
             throw new System.NotImplementedException();
         }
     }
