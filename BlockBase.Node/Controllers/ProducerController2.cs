@@ -212,7 +212,7 @@ namespace BlockBase.Node.Controllers
 
                 //arriving here, there shouldn't be an active state controller associated to this chain
                 //this was checked above
-                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainName);
+                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainName, producerType);
 
                 return Ok(new OperationResponse<bool>(true, "Candidature successfully added"));
             }

@@ -22,14 +22,16 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
         private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
+        private NetworkConfigurations _networkConfigurations;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
         private SidechainPool _sidechainPool;
-        public ConnectToPeersState(ref SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
+        public ConnectToPeersState(ref SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
+            _networkConfigurations = networkConfigurations;
             _sidechainPool = sidechain;
             _peerConnectionsHandler = peerConnectionsHandler;
         }
@@ -45,6 +47,7 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
         {
             AddProducersToSidechainPool();
             UpdateIPsInSidechain();
+            
             await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(_sidechainPool);
         }
 
@@ -67,7 +70,7 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
 
             _producers = producers;
             _ipAddresses = ipAddresses;
-            _delay = TimeSpan.FromSeconds(0);
+            _delay = TimeSpan.FromSeconds(_networkConfigurations.ConnectionExpirationTimeInSeconds);
         }
 
         private void AddProducersToSidechainPool()

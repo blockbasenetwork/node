@@ -21,16 +21,18 @@ namespace BlockBase.Runtime.StateMachine.PeerConectionState
         private PeerConnectionsHandler _peerConnectionsHandler;
 
         private NodeConfigurations _nodeConfigurations;
+        private NetworkConfigurations _networkConfigurations;
         
         public PeerConnectionStateManager(
             SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, 
-            NodeConfigurations nodeConfigurations, ILogger logger, 
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, ILogger logger, 
              IMainchainService mainchainService):base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
+            _networkConfigurations = networkConfigurations;
             _peerConnectionsHandler = peerConnectionsHandler;
 
         }
@@ -38,7 +40,7 @@ namespace BlockBase.Runtime.StateMachine.PeerConectionState
         protected override IState BuildState(string state)
         {
             if(state == typeof(StartState).Name) return new StartState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler);
-            if(state == typeof(ConnectToPeersState).Name) return new ConnectToPeersState(ref _sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler);
+            if(state == typeof(ConnectToPeersState).Name) return new ConnectToPeersState(ref _sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations,_peerConnectionsHandler);
             if(state == typeof(CheckConnectionState).Name) return new CheckConnectionState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler);
             if(state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler);
             throw new System.NotImplementedException();

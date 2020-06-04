@@ -21,6 +21,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private ContractInformationTable _contractInfo;
         private List<ProducerInTable> _producers;
         private List<CandidateTable> _candidates;
+        private const string _emptySecretString = "0000000000000000000000000000000000000000000000000000000000000000";
 
         private SidechainPool _sidechainPool;
         public SecretTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
@@ -35,7 +36,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
             var addedSecretToCandidate = _candidates.Where(c => c.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.Secret;
 
-            return Task.FromResult(isProducerInTable || !string.IsNullOrWhiteSpace(addedSecretToCandidate));
+            return Task.FromResult(isProducerInTable || !addedSecretToCandidate.Equals(_emptySecretString));
         }
 
         protected override async Task DoWork()
@@ -72,7 +73,10 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             _contractStateTable = contractState;
             _producers = producers;
             _candidates = candidates;
-            _delay = TimeSpan.FromSeconds(_contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+            var timeDiff = _contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            _delay = timeDiff > 0 ? TimeSpan.FromSeconds(timeDiff) : TimeSpan.FromMilliseconds(500);
         }
     }
 

@@ -395,7 +395,7 @@ namespace BlockBase.Runtime.Mainchain
 
         public async Task EndSidechain()
         {
-            TaskContainer.CancellationTokenSource.Cancel();
+            if(TaskContainer != null) TaskContainer.CancellationTokenSource.Cancel();
             await _mongoDbProducerService.DropRequesterDatabase(_sidechain.ClientAccountName);
         }
        

@@ -16,6 +16,7 @@ using BlockBase.Domain;
 using BlockBase.Utils;
 using Newtonsoft.Json;
 using BlockBase.Domain.Results;
+using BlockBase.Domain.Enums;
 
 namespace BlockBase.Node.Controllers
 {
@@ -266,6 +267,40 @@ namespace BlockBase.Node.Controllers
             catch(Newtonsoft.Json.JsonReaderException)
             {
                 return NotFound(new OperationResponse<string>("Unable to retrieve the list of producers"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets all the sidechains currently known
+        /// </summary>
+        /// <param name="network">The network you want to querie for the known tracker sidechains</param>
+        /// <returns>The top producers info and endpoints</returns>
+        /// <response code="200">Producer information retrieved with success</response>
+        /// <response code="404">Unable to retrieve producers</response>
+        /// <response code="500">Error retrieving information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets all the sidechains currently known",
+            Description = "Allows node to get a list of sidechains currently known from the blockbase tracker, where is possible to filter by network",
+            OperationId = "GetTopProducersAndEndpoints"
+        )]
+        public async Task<ObjectResult> GetAllBlockbaseSidechains(NetworkType network = NetworkType.All)
+        {
+            try
+            {
+                var request = HttpHelper.ComposeWebRequestGet($"https://127.0.0.1:5031/api/NodeSupport/GetAllTrackerSidechains?network={network.ToString()}");
+                var json = await HttpHelper.CallWebRequest(request);
+                var trackerSidechains = JsonConvert.DeserializeObject<List<TrackerSidechain>>(json);
+
+                return Ok(new OperationResponse<List<TrackerSidechain>>(trackerSidechains));
+            }
+            catch(Newtonsoft.Json.JsonReaderException)
+            {
+                return NotFound(new OperationResponse<string>("Unable to retrieve the list of sidechains"));
             }
             catch (Exception e)
             {

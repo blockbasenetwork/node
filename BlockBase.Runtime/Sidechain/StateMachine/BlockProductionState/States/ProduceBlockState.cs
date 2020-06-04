@@ -117,7 +117,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 if(_numOfBlockBroadcasts++ >= MAX_NUMBER_OF_BLOCK_BROADCASTS);
                     _hasBroadcastedBlock = true;
             }
-            if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && !_hasEnoughSignatures)
+            if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures)
             {
                 await TryBroadcastVerifyTransaction(_packedTransactionAndSignatures.packedTransaction, _packedTransactionAndSignatures.signatures);
             }
@@ -152,6 +152,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override async Task UpdateStatus()
         {
+            _delay = TimeSpan.FromMilliseconds(500);
+
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
@@ -166,7 +168,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
             
 
-            Block builtBlock = null;
+            Block builtBlock = _builtBlock;
             string blockHash = null;
 
             if (_builtBlock == null)
@@ -174,8 +176,10 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 blockHash = HashHelper.ByteArrayToFormattedHexaString(builtBlock.BlockHeader.BlockHash);
             }
-
-            
+            else
+            {
+                blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
+            }
 
             var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
             var hasSignedBlock = verifySignatureTable.Any(t => t.Account == _nodeConfigurations.AccountName);
@@ -189,7 +193,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 packedTransactionAndSignatures = GetPackedTransactionAndSignatures(verifySignatureTable, _blockHash, requestedApprovals.Count, requiredKeys);
             }
 
-            var hasBlockBeenVerified = lastSubmittedBlockHeader.BlockHash == blockHash && lastSubmittedBlockHeader.IsVerified;
+            var hasBlockBeenVerified = lastSubmittedBlockHeader?.BlockHash == blockHash && (lastSubmittedBlockHeader?.IsVerified ?? false);
 
             _contractStateTable = contractState;
             _producerList = producerList;
@@ -204,8 +208,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _hasEnoughSignatures = hasEnoughSignatures;
             _hasBlockBeenVerified = hasBlockBeenVerified;
             _packedTransactionAndSignatures = packedTransactionAndSignatures;
-
-            throw new System.NotImplementedException();
         }
 
 
@@ -312,7 +314,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var threshold = (numberOfProducers / 2) + 1;
             var requiredSignatures = threshold > requiredKeys.Count ? requiredKeys.Count : threshold;
             var signatures = verifySignatures.Select(v => v.Signature).Take(requiredSignatures).ToList();
-            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
+            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName)?.PackedTransaction;
             return (packedTransaction, signatures);
         }
 

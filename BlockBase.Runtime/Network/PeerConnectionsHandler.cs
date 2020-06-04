@@ -26,8 +26,10 @@ namespace BlockBase.Runtime.Network
 {
     public class PeerConnectionsHandler
     {
+        //TODO: Remove
         private readonly SidechainKeeper _sidechainKeeper;
         private readonly INetworkService _networkService;
+        public ThreadSafeList<SidechainPool> KnownSidechains { get; set; }
         public ThreadSafeList<PeerConnection> CurrentPeerConnections { private set; get; }
         private ThreadSafeList<Peer> _waitingForApprovalPeers;
         private NodeConfigurations _nodeConfigurations;
@@ -56,6 +58,7 @@ namespace BlockBase.Runtime.Network
             _nodeConfigurations = nodeConfigurations?.Value;
 
             CurrentPeerConnections = new ThreadSafeList<PeerConnection>();
+            KnownSidechains = new ThreadSafeList<SidechainPool>();
             _waitingForApprovalPeers = new ThreadSafeList<Peer>();
 
             _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
@@ -96,6 +99,11 @@ namespace BlockBase.Runtime.Network
 
         public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
         {
+            var sidechainAlreadyKnown = KnownSidechains.GetEnumerable().Where(p => p.ClientAccountName == sidechain.ClientAccountName).SingleOrDefault();
+            if (sidechainAlreadyKnown != null) KnownSidechains.Remove(sidechainAlreadyKnown);
+            
+            KnownSidechains.Add(sidechain);
+
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
 
@@ -229,7 +237,7 @@ namespace BlockBase.Runtime.Network
                 return;
             }
 
-            var sidechainPool = _sidechainKeeper.Sidechains.Values.Where(s => s.ClientAccountName == args.EosAccount).SingleOrDefault();
+            var sidechainPool = KnownSidechains.GetEnumerable().Where(s => s.ClientAccountName == args.EosAccount).SingleOrDefault();
             if (sidechainPool != null)
             {
                 _logger.LogDebug("Acceptable client connection.");
@@ -240,7 +248,7 @@ namespace BlockBase.Runtime.Network
                 return;
             }
 
-            var producer = _sidechainKeeper.Sidechains.Values.SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount)).FirstOrDefault();
+            var producer = KnownSidechains.GetEnumerable().SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount)).FirstOrDefault();
 
             if (producer == null)
             {
@@ -398,7 +406,7 @@ namespace BlockBase.Runtime.Network
 
         private bool CanDeleteConnection(PeerConnection peerConnection)
         {
-            var numberOfSidechainsWherePeerConnectionExists = _sidechainKeeper.Sidechains.Values.Count(s => s.ProducersInPool.GetEnumerable().Count(m => m.PeerConnection != null && m.PeerConnection.IPEndPoint.IsEqualTo(peerConnection.IPEndPoint)) != 0);
+            var numberOfSidechainsWherePeerConnectionExists = KnownSidechains.GetEnumerable().Count(s => s.ProducersInPool.GetEnumerable().Count(m => m.PeerConnection != null && m.PeerConnection.IPEndPoint.IsEqualTo(peerConnection.IPEndPoint)) != 0);
             if (numberOfSidechainsWherePeerConnectionExists > 1)
             {
                 return false;
