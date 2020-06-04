@@ -52,6 +52,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             if (isProducerInTable && _contractStateTable.IPSendTime) return Task.FromResult((true, typeof(IPSendTimeState).Name));
             if (isProducerInTable && _contractStateTable.ProductionTime) return Task.FromResult((true, typeof(ProductionState).Name));
             
+            _delay = TimeSpan.FromMinutes(1);
             return Task.FromResult((!isProducerInTable && !isCandidateInTable && !_contractStateTable.CandidatureTime, typeof(EndState).Name));
         }
 
@@ -64,7 +65,6 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             _contractStateTable = contractState;
             _producers = producers;
             _candidates = candidates;
-            _delay = TimeSpan.FromSeconds(0);
         }
 
     }
