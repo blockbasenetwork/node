@@ -68,12 +68,13 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var candidates = await _mainchainService.RetrieveCandidates(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            var timeDiff = _contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             _contractInfo = contractInfo;
             _contractStateTable = contractState;
             _producers = producers;
             _candidates = candidates;
-            _delay = TimeSpan.FromSeconds(_contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            _delay = timeDiff > 0 ? TimeSpan.FromSeconds(timeDiff) : TimeSpan.FromMilliseconds(500);
         }
     }
 

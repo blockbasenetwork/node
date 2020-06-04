@@ -67,8 +67,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         {
             var candidatureTimediff = _contractInfo.CandidatureEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var secretTimediff = _contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var ipSendTimediff = _contractInfo.SendEndDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var ipReceiveTimediff = _contractInfo.ReceiveEndDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var ipSendTimediff = _contractInfo.SendEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var ipReceiveTimediff = _contractInfo.ReceiveEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             if (candidatureTimediff > 0) return Convert.ToInt32(candidatureTimediff);
             if (secretTimediff > 0) return Convert.ToInt32(secretTimediff);
