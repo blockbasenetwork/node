@@ -27,6 +27,7 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
             _mainchainService = mainchainService;
             _sidechainPool = sidechain;
             _peerConnectionsHandler = peerConnectionsHandler;
+            _peersConnected = true;
         }
 
         protected override Task<bool> IsWorkDone()

@@ -80,8 +80,10 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             _producers = producers;
             _contractStateTable = contractState;
             _ipAddressTable = ipAddressTable;
-            _delay = TimeSpan.FromSeconds(_contractInfo.SendEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+            var timeDiff = _contractInfo.SendEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            _delay = timeDiff > 0 ? TimeSpan.FromSeconds(timeDiff) : TimeSpan.FromMilliseconds(500);
         }
     }
-
 }

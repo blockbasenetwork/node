@@ -598,7 +598,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
+                if (!_sidechainMaintainerManager?.TaskContainer?.CancellationTokenSource.IsCancellationRequested ?? false)
                     return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You need to end sidechain first.")));
                 await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
                 return Ok(new OperationResponse<bool>(true, $"Removed data."));

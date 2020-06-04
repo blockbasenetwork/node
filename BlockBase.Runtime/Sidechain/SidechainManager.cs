@@ -68,7 +68,6 @@ namespace BlockBase.Runtime.Sidechain
             _blockSender = blockSender;
             //TODO - commented this code in order to be able to remove completely the old Query Builder and its direct dependencies
             //TODO - it should receive an IConnector passed through dependency injection
-            IConnector connector = null; // new MySqlConnector(_nodeConfigurations.MySqlServer, _nodeConfigurations.MySqlUser, _nodeConfigurations.MySqlPort, _nodeConfigurations.MySqlPassword, logger);
             _blockProductionManager = new BlockProductionManager(Sidechain, _nodeConfigurations, _logger, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, EndPoint, _blockSender);
             _historyValidation = new HistoryValidation(_logger, _mongoDbProducerService, _mainchainService);
 

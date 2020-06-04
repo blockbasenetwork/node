@@ -26,6 +26,7 @@ namespace BlockBase.Network.Sidechain
  
         public SidechainPool()
         {
+            ProducersInPool = new ThreadSafeList<ProducerInPool>();
         }
 
         public SidechainPool(string clientAccountName, ProducerTypeEnum producerType = 0)
