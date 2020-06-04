@@ -27,10 +27,12 @@ namespace BlockBase.Utils.Threading
             Task = Task.Run(Action, CancellationTokenSource.Token);
         }
 
+        //TODO rpinto - consider doing an assynchronous version
         public void Stop()
         {
             CancellationTokenSource.Cancel();
             //better to wait for the task to cancel...
+
             Task.Wait();
         }
     }

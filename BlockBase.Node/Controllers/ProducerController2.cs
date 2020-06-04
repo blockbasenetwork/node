@@ -165,15 +165,19 @@ namespace BlockBase.Node.Controllers
                 if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} not found"));
                 if(!chainContract.CandidatureTime) return BadRequest(new OperationResponse<string>($"Sidechain not in candidature time"));
 
-                
-                var chainExistsInPool = _sidechainProducerService.DoesChainExist(chainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
+                var isProducerInTable = producers.Any(c => c.Key == NodeConfigurations.AccountName);
 
+                //if the chain exists in the pool it should mean that he's associated with it
+                var chainExistsInPool = _sidechainProducerService.DoesChainExist(chainName);
                 if (chainExistsInPool)
                 {
                     var sidechainContext = _sidechainProducerService.GetSidechainContext(chainName);
 
+                    //if it's running he should need to do anything because the state manager will decide what to do
                     if(sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
                         return BadRequest(new OperationResponse<bool>(new ArgumentException(), $"Request to produce sidechain {chainName} previously sent."));
+                    //if it's not running, there was a problem and it should be removed from the pool list
                     else
                     {
                         //if chain exists in pool and isn't running, remove it
@@ -182,15 +186,20 @@ namespace BlockBase.Node.Controllers
                         _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(chainName);
                     }
                 }
-                
-                //TODO rpinto - this should be done at the startstate of the SidechainManager
+
+
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
-                //TODO rpinto - this deletes the whole database - what if a producer leaves production and joins further ahead...?
-                if (chainExistsInDb) 
+                //if the database exists and he's on the producer table, then nothing should be done
+                if (chainExistsInDb && isProducerInTable) 
                 {
-                    _logger.LogDebug($"Removing sidechain {chainName} data from database");
-                    await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(chainName);
+                    return BadRequest(new OperationResponse<bool>(new ArgumentException(), $"{NodeConfigurations.AccountName} is a producer in {chainName}"));
                 }
+                //if he's not a producer, but is requesting again to be one, and has a database associated, he should delete it first
+                else if(chainExistsInDb)
+                {
+                    return BadRequest(new OperationResponse<bool>(new ArgumentException(), $"There is a database related to this chain. Please delete it"));
+                }
+
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 
@@ -201,6 +210,8 @@ namespace BlockBase.Node.Controllers
                     _logger.LogDebug("Stake inserted = " + stake.ToString("F4") + " BBT");
                 }
 
+                //arriving here, there shouldn't be an active state controller associated to this chain
+                //this was checked above
                 await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainName);
 
                 return Ok(new OperationResponse<bool>(true, "Candidature successfully added"));
@@ -243,9 +254,11 @@ namespace BlockBase.Node.Controllers
                     _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(sidechainName);
                 }
 
-                //TODO rpinto - this should be done at the endstate of the SidechainStateManager                
+
+                           
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(sidechainName);
-                //TODO rpinto - this shouldn't delete the database - manual requests don't delete anything
+                
+                //rpinto - if the endchain request is done manually, and the cleanLocalSidechanData is set to true, it should delete the data
                 if (chainExistsInDb && cleanLocalSidechainData) 
                 {
                     _logger.LogDebug($"Removing sidechain {sidechainName} data from database");

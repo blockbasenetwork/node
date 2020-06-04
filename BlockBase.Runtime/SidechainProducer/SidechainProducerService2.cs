@@ -67,6 +67,8 @@ namespace BlockBase.Runtime.SidechainProducer
 
             if (_sidechainKeeper.ContainsKey(sidechainName)) throw new Exception("Sidechain already exists");
 
+
+            //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
 
             var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _sidechainDatabasesManager);
