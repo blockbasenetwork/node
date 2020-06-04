@@ -168,7 +168,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
             
 
-            Block builtBlock = null;
+            Block builtBlock = _builtBlock;
             string blockHash = null;
 
             if (_builtBlock == null)
