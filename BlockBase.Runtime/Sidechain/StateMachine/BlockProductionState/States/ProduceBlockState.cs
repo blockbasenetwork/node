@@ -117,7 +117,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 if(_numOfBlockBroadcasts++ >= MAX_NUMBER_OF_BLOCK_BROADCASTS);
                     _hasBroadcastedBlock = true;
             }
-            if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && !_hasEnoughSignatures)
+            if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures)
             {
                 await TryBroadcastVerifyTransaction(_packedTransactionAndSignatures.packedTransaction, _packedTransactionAndSignatures.signatures);
             }
@@ -312,7 +312,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var threshold = (numberOfProducers / 2) + 1;
             var requiredSignatures = threshold > requiredKeys.Count ? requiredKeys.Count : threshold;
             var signatures = verifySignatures.Select(v => v.Signature).Take(requiredSignatures).ToList();
-            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
+            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName)?.PackedTransaction;
             return (packedTransaction, signatures);
         }
 
