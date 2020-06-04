@@ -34,14 +34,14 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         {
             var hasWorkToDo = !_blockHeaders.Any() && !_producers.SingleOrDefault(p => p.Key == _nodeConfigurations.AccountName).IsReadyToProduce ? true : false;
 
-            return Task.FromResult(hasWorkToDo);
+            return Task.FromResult(!hasWorkToDo);
         }
 
         protected override async Task DoWork()
         {
             var isReadyToProduceTransaction = await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             
-            _logger.LogDebug($"Sent is ready to produce transaction. Tx: {isReadyToProduceTransaction}");
+            _logger.LogDebug($"Sent ready to produce transaction. Tx: {isReadyToProduceTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()
