@@ -23,6 +23,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string blockHash, long lastProductionTime);
         Task<bool> IsBlockConfirmed(string databaseName, string blockHash);
         Task ConfirmBlock(string databaseName, string blockHash);
+        Task ClearValidatorNode(string databaseName, string blockHash, uint transactionCount);
         Task<bool> IsTransactionInDB(string databaseName, Transaction transaction);
         Task<bool> IsBlockInDatabase(string databaseName, string blockhash);
         Task SaveTransaction(string databaseName, Transaction transaction);

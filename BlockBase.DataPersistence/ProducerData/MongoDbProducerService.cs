@@ -253,7 +253,7 @@ namespace BlockBase.DataPersistence.ProducerData
         //TODO rpinto - all this should be done inside a transaction
         public async Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime)
         {
-            
+
             //gets the latest confirmed block
             var blockheaderDB = await GetBlockHeaderDByBlockHashAsync(databaseName, lastConfirmedSmartContractBlockHash);
             if (blockheaderDB != null)
@@ -267,16 +267,18 @@ namespace BlockBase.DataPersistence.ProducerData
 
 
 
-                    //TODO rpinto - this seems to be searching for local forks?
+                    //TODO rpinto - this seems to be searching for local forks? 
+                    //marciak - this is checking if there's unconfirmed blocks
                     var blockHeaderQuery = from b in blockHeaderCollection.AsQueryable()
-                                           where 
+                                           where
                                            //all blocks with timestamps earlier than when the last production start time
-                                           b.Timestamp < (ulong)lastProductionStartTime 
+                                           b.Timestamp < (ulong)lastProductionStartTime
                                            //and with a timestamp bigger than the latest confirmed blockheader
                                            && b.Timestamp > blockheaderDB.Timestamp
                                            select b;
 
-                    //TODO rpinto - why are block header hashes nulled here
+                    //TODO rpinto - why are block header hashes nulled here 
+                    //marciak - this is disassociating the transactions from the unconfirmed blocks, so that they can be associated to new blocks
                     foreach (var blockHeaderDBToRemove in blockHeaderQuery.AsEnumerable())
                     {
                         var update = Builders<TransactionDB>.Update.Set<string>("BlockHash", "");
@@ -312,6 +314,32 @@ namespace BlockBase.DataPersistence.ProducerData
                 await validBlockHeaderCollection.ReplaceOneAsync(b => b.BlockHash == blockHash, blockHeader);
             }
         }
+
+        public async Task ClearValidatorNode(string databaseName, string blockHash, uint transactionCount)
+        {
+            var blockHeader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockHash);
+            if (blockHeader == null) return;
+
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
+
+                blockHeader.Confirmed = true;
+                await blockHeaderCollection.ReplaceOneAsync(b => b.BlockHash == blockHash, blockHeader);
+
+                await blockHeaderCollection.DeleteManyAsync(b => b.SequenceNumber < blockHeader.SequenceNumber);
+
+                if (transactionCount != 0)
+                {
+                    var lastConfirmedTransaction = (await  GetTransactionsByBlockSequenceNumberAsync(databaseName, blockHeader.SequenceNumber)).OrderByDescending(t => t.SequenceNumber).First();
+                    var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+                    await transactionCollection.DeleteManyAsync(t => t.SequenceNumber < lastConfirmedTransaction.SequenceNumber);
+                }
+            }
+        }
+
+
         private async Task<BlockheaderDB> GetBlockHeaderDByBlockHashAsync(string databaseName, string blockHash)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -434,7 +462,7 @@ namespace BlockBase.DataPersistence.ProducerData
             var lastTransactionSequenceNumber = await GetLastTransactionSequenceNumberDBAsync(databaseName);
             var lastIncludedSequenceNumber = lastTransactionSequenceNumber + (ulong)numberOfIncludedTransactions;
             IList<ulong> sequenceNumbers = new List<ulong>();
-            for (ulong i = lastTransactionSequenceNumber+1; i <= lastIncludedSequenceNumber; i++)
+            for (ulong i = lastTransactionSequenceNumber + 1; i <= lastIncludedSequenceNumber; i++)
                 sequenceNumbers.Add(i);
 
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -443,16 +471,16 @@ namespace BlockBase.DataPersistence.ProducerData
 
                 var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
                 var info = await (await transactionInfoCollection.FindAsync(t => true)).SingleOrDefaultAsync();
-                if(info.BlockHash == lastValidBlockHash) return sequenceNumbers;
+                if (info.BlockHash == lastValidBlockHash) return sequenceNumbers;
 
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
-    
+
                 session.StartTransaction();
                 await transactionCollection.DeleteManyAsync(s => sequenceNumbers.Contains(s.SequenceNumber));
 
 
                 await transactionInfoCollection.DeleteManyAsync(t => true);
-                await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB() { BlockHash = lastValidBlockHash, LastIncludedSequenceNumber =  lastIncludedSequenceNumber});
+                await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB() { BlockHash = lastValidBlockHash, LastIncludedSequenceNumber = lastIncludedSequenceNumber });
 
                 await session.CommitTransactionAsync();
             }

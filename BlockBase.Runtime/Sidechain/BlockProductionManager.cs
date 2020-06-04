@@ -1,10 +1,8 @@
 ﻿using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
-using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.Sidechain;
 using BlockBase.Runtime.Network;
 using BlockBase.Utils.Crypto;
 using BlockBase.Utils.Threading;
@@ -117,9 +115,11 @@ namespace BlockBase.Runtime.Sidechain
                                     if (!await _mongoDbProducerService.IsBlockConfirmed(databaseName, lastValidBlockheaderSmartContract.BlockHash))
                                     {
                                         _logger.LogDebug("Confirming block.");
-                                        var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(databaseName, lastValidBlockheaderSmartContract.BlockHash);
+                                        //var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(databaseName, lastValidBlockheaderSmartContract.BlockHash);
                                         //_sidechainDatabaseManager.ExecuteBlockTransactions(transactions);
                                         await _mongoDbProducerService.ConfirmBlock(databaseName, lastValidBlockheaderSmartContract.BlockHash);
+                                        if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator)
+                                            await _mongoDbProducerService.ClearValidatorNode(databaseName, lastValidBlockheaderSmartContract.BlockHash, lastValidBlockheaderSmartContract.TransactionCount);
                                     }
                                 }
 
@@ -135,6 +135,7 @@ namespace BlockBase.Runtime.Sidechain
                                         var blockInDbHash = HashHelper.ByteArrayToFormattedHexaString(checkIfBlockInDb.BlockHeader.BlockHash);
                                         await _mongoDbProducerService.RemoveBlockFromDatabaseAsync(databaseName, blockInDbHash);
                                     }
+       
                                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
                                     await ProposeBlock(block);
                                 }
