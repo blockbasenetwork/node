@@ -1039,6 +1039,14 @@ namespace BlockBase.Network.Mainchain
                     exception = opResult.Exception;
                 }
 
+                if(exception is ApiErrorException)
+                {
+                    var apiEx = (ApiErrorException)exception;
+                    var details = apiEx.error?.details;
+                    if(details != null && details.Any(d => d.method == "eosio_assert"))
+                        break;
+                }
+
                 await Task.Delay(delayInMilliseconds);
             }
 
