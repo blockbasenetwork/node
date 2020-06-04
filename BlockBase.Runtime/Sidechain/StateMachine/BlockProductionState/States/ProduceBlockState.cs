@@ -189,7 +189,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 packedTransactionAndSignatures = GetPackedTransactionAndSignatures(verifySignatureTable, _blockHash, requestedApprovals.Count, requiredKeys);
             }
 
-            var hasBlockBeenVerified = lastSubmittedBlockHeader.BlockHash == blockHash && lastSubmittedBlockHeader.IsVerified;
+            var hasBlockBeenVerified = lastSubmittedBlockHeader?.BlockHash == blockHash && (lastSubmittedBlockHeader?.IsVerified ?? false);
 
             _contractStateTable = contractState;
             _producerList = producerList;
