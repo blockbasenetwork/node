@@ -19,6 +19,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private ContractStateTable _contractStateTable;
+        private ContractInformationTable _contractInfo;
         private List<IPAddressTable> _ipAddressTable;
         private List<ProducerInTable> _producers;
 
@@ -49,7 +50,9 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
                 listEncryptedIps.Add(AssymetricEncryption.EncryptText(endpoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
             }
 
-            await _mainchainService.AddEncryptedIps(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, listEncryptedIps);
+            var addIpsTransaction = await _mainchainService.AddEncryptedIps(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, listEncryptedIps);
+
+            _logger.LogDebug($"Sent encrypted ips. Tx: {addIpsTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -68,13 +71,16 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
+            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var ipAddressTable = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
 
+            _contractInfo = contractInfo;
             _producers = producers;
             _contractStateTable = contractState;
             _ipAddressTable = ipAddressTable;
+            _delay = TimeSpan.FromSeconds(_contractInfo.SendEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         }
     }
 

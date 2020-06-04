@@ -17,6 +17,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
+        private ContractInformationTable _contractInfo;
 
         private SidechainPool _sidechainPool;
         public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
@@ -52,11 +53,29 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
+            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
 
+            _contractInfo = contractInfo;
             _contractStateTable = contractState;
             _producers = producers;
+            _delay = TimeSpan.FromSeconds(GetDelayInProductionTime());
+        }
+
+        private int GetDelayInProductionTime()
+        {
+            var candidatureTimediff = _contractInfo.CandidatureEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var secretTimediff = _contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var ipSendTimediff = _contractInfo.SendEndDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var ipReceiveTimediff = _contractInfo.ReceiveEndDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            if (candidatureTimediff > 0) return Convert.ToInt32(candidatureTimediff);
+            if (secretTimediff > 0) return Convert.ToInt32(secretTimediff);
+            if (ipSendTimediff > 0) return Convert.ToInt32(ipSendTimediff);
+            if (ipReceiveTimediff > 0) return Convert.ToInt32(ipReceiveTimediff);
+
+            return Convert.ToInt32(_sidechainPool.BlockTimeDuration);
         }
     }
 

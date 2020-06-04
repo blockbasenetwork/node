@@ -18,6 +18,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
+        private ContractInformationTable _contractInfo;
         private List<ProducerInTable> _producers;
 
         private SidechainPool _sidechainPool;
@@ -54,11 +55,14 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
+            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             
+            _contractInfo = contractInfo;
             _producers = producers;
             _contractStateTable = contractState;
+            _delay = TimeSpan.FromSeconds(_contractInfo.ReceiveEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         }
     }
 

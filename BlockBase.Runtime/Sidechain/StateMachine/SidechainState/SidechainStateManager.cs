@@ -10,6 +10,7 @@ using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using BlockBase.Runtime.Common;
+using BlockBase.Runtime.StateMachine.PeerConectionState;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState
 {
@@ -28,6 +29,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private TaskContainer _blockProductionTaskContainer;
+        private TaskContainer _peerConnectionTaskContainer;
 
         
 
@@ -64,13 +66,24 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
                 {
                     await currentState.Run();
                     _blockProductionTaskContainer.Stop();
+                    _peerConnectionTaskContainer.Stop();
                     break;
+                }
+
+                if((currentState.GetType() == typeof(IPReceiveState) || currentState.GetType() == typeof(ProductionState)) && _peerConnectionTaskContainer == null)
+                {
+                    var peerConnectionStateManager = new PeerConnectionStateManager(_sidechain, _peerConnectionsHandler, _nodeConfigurations, _logger, _mainchainService);
+                    _peerConnectionTaskContainer = peerConnectionStateManager.Start();
+
+                    _logger.LogDebug("Started peer connection state manager");
                 }
 
                 if(currentState.GetType() == typeof(ProductionState) && _blockProductionTaskContainer == null)
                 {
                     var blockProductionStateManager = new BlockProductionStateManager(_logger, _sidechain, _nodeConfigurations, _networkConfigurations, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, _blockSender, _sidechainDatabasesManager);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
+
+                    _logger.LogDebug($"Started block production");
                 }
             }
         }

@@ -9,6 +9,7 @@ using BlockBase.Utils.Crypto;
 using System.Text;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using System;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
@@ -17,6 +18,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
+        private ContractInformationTable _contractInfo;
         private List<ProducerInTable> _producers;
         private List<CandidateTable> _candidates;
 
@@ -40,6 +42,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         {
             var secret = HashHelper.Sha256Data(Encoding.ASCII.GetBytes(_nodeConfigurations.SecretPassword));
             var addSecretTransaction = await _mainchainService.AddSecret(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
+        
+            _logger.LogDebug($"Sent secret {secret} Tx: {addSecretTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -59,13 +63,16 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
+            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var candidates = await _mainchainService.RetrieveCandidates(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
 
+            _contractInfo = contractInfo;
             _contractStateTable = contractState;
             _producers = producers;
             _candidates = candidates;
+            _delay = TimeSpan.FromSeconds(_contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         }
     }
 

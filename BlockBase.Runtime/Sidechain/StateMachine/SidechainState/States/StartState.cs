@@ -64,6 +64,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             _contractStateTable = contractState;
             _producers = producers;
             _candidates = candidates;
+            _delay = TimeSpan.FromSeconds(0);
         }
 
     }
