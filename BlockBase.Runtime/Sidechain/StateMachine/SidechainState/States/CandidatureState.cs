@@ -9,6 +9,7 @@ using BlockBase.Utils.Crypto;
 using System.Text;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using System;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
@@ -17,6 +18,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
+        private ContractInformationTable _contractInfo;
         private List<CandidateTable> _candidates;
 
         private SidechainPool _sidechainPool;
@@ -37,6 +39,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         {
             var secretHash = HashHelper.Sha256Data(HashHelper.Sha256Data(Encoding.ASCII.GetBytes(_nodeConfigurations.SecretPassword)));
             var addCandidateTransaction = await _mainchainService.AddCandidature(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), (int)_sidechainPool.ProducerType);
+            
+            _logger.LogDebug($"Sent candidature to chain {_sidechainPool.ClientAccountName} Tx: {addCandidateTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -53,11 +57,14 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
+            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var candidates = await _mainchainService.RetrieveCandidates(_sidechainPool.ClientAccountName);
             
+            _contractInfo = contractInfo;
             _contractStateTable = contractState;
             _candidates = candidates;
+            _delay = TimeSpan.FromSeconds(_contractInfo.CandidatureEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         }
     }
 

@@ -11,7 +11,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         protected ILogger _logger;
         protected SidechainPool Sidechain { get; private set; }
 
-        protected bool IsWorkFinished { get; set; }
+        protected TimeSpan _delay;
 
         public AbstractState(SidechainPool sidechain, ILogger logger)
         {
@@ -35,6 +35,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
                     if(jumpStatus.inConditionsToJump) return jumpStatus.nextState;
 
                     if (!await IsWorkDone()) await DoWork();
+
+                    await Task.Delay(_delay);
                 }
                 catch(Exception ex)
                 {

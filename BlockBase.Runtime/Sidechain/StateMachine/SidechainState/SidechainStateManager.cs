@@ -71,6 +71,8 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
                 {
                     var blockProductionStateManager = new BlockProductionStateManager(_logger, _sidechain, _nodeConfigurations, _networkConfigurations, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, _blockSender, _sidechainDatabasesManager);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
+
+                    _logger.LogDebug($"Started block production");
                 }
             }
         }
