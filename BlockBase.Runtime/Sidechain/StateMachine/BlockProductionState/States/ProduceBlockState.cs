@@ -159,6 +159,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
             _lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             
+            //TODO rpinto - it's not this block that has to be checked.
+            //Because if a valid block has been produced, then this will equate to true,
+            //even if the current producer hasn't produced a valid block...
             _hasBlockBeenVerified = _lastValidSubmittedBlockHeader?.IsVerified ?? false;
 
 
