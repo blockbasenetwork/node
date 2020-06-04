@@ -12,15 +12,12 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
-using BlockBase.Runtime.StateMachine.SidechainState;
-using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Operation;
-using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class SynchronizeNodeState : AbstractState<StartState, EndState>
+    public class SynchronizeValidatorNodeState : AbstractState<StartState, EndState>
     {
 
         private IMainchainService _mainchainService;
@@ -39,7 +36,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private bool _isReadyToProduce;
 
 
-        public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService, 
+        public SynchronizeValidatorNodeState(ILogger logger, IMainchainService mainchainService, 
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool, 
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, 
             ISidechainDatabasesManager sidechainDatabaseManager, INetworkService networkService) : base(logger)
@@ -56,20 +53,11 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _isReadyToProduce = false;
         }
 
-        protected override async Task DoWork()
+        protected override Task DoWork()
         {
-            //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
-            var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime);
-
-            _logger.LogDebug("Producer not up to date, building chain.");
-
-            //TODO rpinto - does the provider have enough time to build the chain before being banned?
-            var opResult = await SyncChain();
-
-            if(opResult.Succeeded)
-            {
-                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
-            }
+            //needs to sync all previous blocks until he finds one with a transaction
+            //needs to delete all blocks except that one
+            throw new NotImplementedException();
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -80,6 +68,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
+            
             //verifies if he is synchronized and ready to produce
             if (_isNodeSynchronized && _isReadyToProduce) return Task.FromResult((true, typeof(NetworkReactionState).Name));
 
@@ -94,6 +83,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override async Task UpdateStatus()
         {
+
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);

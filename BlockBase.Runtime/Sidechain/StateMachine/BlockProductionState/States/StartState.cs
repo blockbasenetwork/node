@@ -9,6 +9,7 @@ using System.Linq;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using BlockBase.Domain.Enums;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
@@ -44,7 +45,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         {
             //TODO verifies if he is a producer and the sidechain is in production state - should be the same as above
             var inConditionsToJump = _contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName);
-                return Task.FromResult((inConditionsToJump, typeof(SynchronizeNodeState).Name));
+            if(_sidechainPool.ProducerType == ProducerTypeEnum.Validator)
+                return Task.FromResult((inConditionsToJump, typeof(SynchronizeValidatorNodeState).Name));
+            else return Task.FromResult((inConditionsToJump, typeof(SynchronizeNodeState).Name));
             
         }
 

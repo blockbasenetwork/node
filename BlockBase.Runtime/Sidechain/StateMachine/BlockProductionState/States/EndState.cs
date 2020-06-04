@@ -12,28 +12,28 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task DoWork()
         {
-            throw new System.NotImplementedException();
+            return Task.CompletedTask;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(false);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult((true, string.Empty));
         }
+
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(true);
         }
 
         protected override Task UpdateStatus()
         {
-            //fetch information about his status on the network
-            throw new System.NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 }

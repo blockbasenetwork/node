@@ -55,6 +55,11 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         {
             if(state == typeof(StartState).Name) return new StartState(_logger, _mainchainService, _nodeConfigurations, _sidechainPool);
             if(state == typeof(SynchronizeNodeState).Name) return new SynchronizeNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _sidechainDatabaseManager, _networkService);
+            if(state == typeof(SynchronizeValidatorNodeState).Name) return new SynchronizeValidatorNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _sidechainDatabaseManager, _networkService);
+            if(state == typeof(NetworkReactionState).Name) return new NetworkReactionState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
+            if(state == typeof(ProduceBlockState).Name) return new ProduceBlockState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _sidechainDatabaseManager, _blockSender);
+            if(state == typeof(VoteBlockState).Name) return new VoteBlockState(_logger);
+            if(state == typeof(EndState).Name) return new EndState(_logger);
             throw new System.NotImplementedException();
         }
     }

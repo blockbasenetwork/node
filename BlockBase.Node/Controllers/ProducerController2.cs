@@ -246,26 +246,29 @@ namespace BlockBase.Node.Controllers
 
             try
             {
-                if(_sidechainProducerService.DoesChainExist(sidechainName))
-                {
-                    //if chain exists in pool and isn't running, remove it
-                    //this also means that there should be remnants of the database
-                    _logger.LogDebug($"Removing sidechain {sidechainName} execution engine");
-                    _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(sidechainName);
-                }
 
+                var chainContract = await _mainchainService.RetrieveContractState(sidechainName);
+                var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
+                var producersTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
+                if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
+                if(candidatureTable == null) return NotFound(new OperationResponse<string>($"Unable to retrieve {sidechainName} candidature table"));
 
-                           
-                var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(sidechainName);
+                var isProducerInCandidature = candidatureTable.Where(m => m.Key == NodeConfigurations.AccountName).Any();
+                var isProducerAnActiveProducer = producersTable.Where(m => m.Key == NodeConfigurations.AccountName).Any();
+
+                if(!isProducerInCandidature && !isProducerAnActiveProducer)
+                    return BadRequest(new OperationResponse<string>($"Producer {NodeConfigurations.AccountName} not found in sidechain {sidechainName}"));
                 
-                //rpinto - if the endchain request is done manually, and the cleanLocalSidechanData is set to true, it should delete the data
-                if (chainExistsInDb && cleanLocalSidechainData) 
-                {
-                    _logger.LogDebug($"Removing sidechain {sidechainName} data from database");
-                    await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(sidechainName);
-                }
+                _logger.LogDebug($"Sending sidechain exit request for {sidechainName}");
+                var trx = await _mainchainService.SidechainExitRequest(sidechainName);
 
+
+                //TODO rpinto - needs to verify if exist request has been sent successfully
+
+
+                
                 return Ok(new OperationResponse<bool>(true, $"Exit successfully requested for {sidechainName}"));
+
             }
             catch (Exception e)
             {
