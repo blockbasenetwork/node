@@ -152,6 +152,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override async Task UpdateStatus()
         {
+            _delay = TimeSpan.FromMilliseconds(500);
+
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
