@@ -70,7 +70,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
                 if((currentState.GetType() == typeof(IPReceiveState) || currentState.GetType() == typeof(ProductionState)) && _peerConnectionTaskContainer == null)
                 {
-                    var peerConnectionStateManager = new PeerConnectionStateManager(_sidechain, _peerConnectionsHandler, _nodeConfigurations, _logger, _mainchainService);
+                    var peerConnectionStateManager = new PeerConnectionStateManager(_sidechain, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _mainchainService);
                     _peerConnectionTaskContainer = peerConnectionStateManager.Start();
 
                     _logger.LogDebug("Started peer connection state manager");
