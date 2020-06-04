@@ -204,7 +204,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _hasEnoughSignatures = hasEnoughSignatures;
             _hasBlockBeenVerified = hasBlockBeenVerified;
             _packedTransactionAndSignatures = packedTransactionAndSignatures;
-
         }
 
 
