@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Domain.Configurations;
@@ -40,20 +41,26 @@ namespace BlockBase.Runtime.Common
             _logger = logger;
         }
 
-        protected virtual async Task Run() 
+        protected virtual async Task Run()
         {
-            var currentState = BuildState(typeof(StartState).Name);
-
+            var nextStateName = typeof(StartState).Name;
 
             while(true)
             {
-                var nextStateName = await currentState.Run(TaskContainer.CancellationTokenSource.Token);
-                currentState = BuildState(nextStateName);
-
-                if(currentState.GetType() == typeof(EndState))
+                try
                 {
-                    await currentState.Run();
-                    break;
+                    var currentState = BuildState(nextStateName);
+                    nextStateName = await currentState.Run(TaskContainer.CancellationTokenSource.Token);
+                }
+                catch(Exception ex)
+                {
+                    _logger.LogError($"{this.GetType().Name} crashed {ex.Message}");
+                    _logger.LogDebug($"Trace: {ex}");
+
+                    var crashDelay = TimeSpan.FromSeconds(10);
+                    _logger.LogDebug($"{this.GetType().Name} - Starting after crash delay... {crashDelay.Seconds} seconds");
+                    await Task.Delay(crashDelay);
+                    _logger.LogDebug($"{this.GetType().Name} - Finished after crash delay");
                 }
             }
         }
