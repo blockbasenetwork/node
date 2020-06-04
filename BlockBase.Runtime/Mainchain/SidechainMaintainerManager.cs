@@ -162,6 +162,10 @@ namespace BlockBase.Runtime.Mainchain
             {
                 //TODO rpinto - shouldn't all these if have a return at the end of their body?
                 //this is risking entering many ifs given enough time to pass sufficient enddates...
+                if (contractStateTable.ConfigTime)
+                {
+                    latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_CANDIDATURE_TIME, _sidechain.ClientAccountName);
+                }
                 if (contractStateTable.CandidatureTime &&
                     contractInfo.CandidatureEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
