@@ -146,6 +146,9 @@ namespace BlockBase.Runtime.SidechainProducer
 
             var publicKey = (await _mainchainService.RetrieveClientTable(sidechainName)).PublicKey;
 
+            sidechainPool.ClientAccountName = sidechainName;
+            sidechainPool.ClientPublicKey = publicKey;
+
             var contractInformation = await _mainchainService.RetrieveContractInformation(sidechainName);
             var candidatesInTable = await _mainchainService.RetrieveCandidates(sidechainName);
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
