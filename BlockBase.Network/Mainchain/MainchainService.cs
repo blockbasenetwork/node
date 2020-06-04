@@ -50,6 +50,11 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName) {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, accountName), MAX_NUMBER_OF_TRIES);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result.Where(b => b.Owner == accountName).ToList();
+        }
 
         public async Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName)
         {
