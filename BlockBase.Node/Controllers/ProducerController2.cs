@@ -22,7 +22,7 @@ namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
-    [ApiExplorerSettings(IgnoreApi = true, GroupName = "providerApi")]
+    [ApiExplorerSettings(IgnoreApi = false, GroupName = "providerApi")]
     public class ProducerController2 : ControllerBase
     {
         private NodeConfigurations NodeConfigurations;

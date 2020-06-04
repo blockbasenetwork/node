@@ -41,10 +41,9 @@ namespace BlockBase.Runtime.Sidechain
         private IMongoDbProducerService _mongoDbProducerService;
 
         //TODO: change this when client specifies database type (MYSQL, SQL, ...)
-        private ISidechainDatabasesManager _sidechainDatabaseManager;
 
 
-        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockRequestsHandler blockSender, ISidechainDatabasesManager sidechainDatabaseManager)
+        public BlockProductionManager(SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, ILogger logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, string endPoint, BlockRequestsHandler blockSender)
         {
             _logger = logger;
             _networkService = networkService;
@@ -56,8 +55,8 @@ namespace BlockBase.Runtime.Sidechain
             _mongoDbProducerService = mongoDbProducerService;
             _endPoint = endPoint;
             _blockSender = blockSender;
-            _sidechainDatabaseManager = sidechainDatabaseManager;
-            _chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
+            
+            _chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _nodeConfigurations, _networkService, _mainchainService, _endPoint);
         }
 
         //TODO: Probably a good idea to protect from having a task already running in instance and replace taskcontainer with a new one and have multiple threads running per instance

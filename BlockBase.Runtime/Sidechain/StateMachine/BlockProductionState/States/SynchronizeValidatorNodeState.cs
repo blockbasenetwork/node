@@ -28,8 +28,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private CurrentProducerTable _currentProducer;
         private BlockheaderTable _lastSubmittedBlockHeader;
         private SidechainPool _sidechainPool;
-
-        private ISidechainDatabasesManager _sidechainDatabaseManager;
         private NetworkConfigurations _networkConfigurations;
         private INetworkService _networkService;
         private bool _isNodeSynchronized;
@@ -38,8 +36,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         public SynchronizeValidatorNodeState(ILogger logger, IMainchainService mainchainService, 
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool, 
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, 
-            ISidechainDatabasesManager sidechainDatabaseManager, INetworkService networkService) : base(logger)
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, INetworkService networkService) : base(logger)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -47,7 +44,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
             _networkConfigurations = networkConfigurations;
-            _sidechainDatabaseManager = sidechainDatabaseManager;
+            
             _networkService = networkService;
             _isNodeSynchronized = false;
             _isReadyToProduce = false;
@@ -113,7 +110,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private async Task<OpResult<bool>> SyncChain()
         {
             _logger.LogDebug("Building chain.");
-            var chainBuilder = new ChainBuilder2(_logger, _sidechainPool, _mongoDbProducerService, _sidechainDatabaseManager, _nodeConfigurations, _networkService, _mainchainService, _networkConfigurations.GetEndPoint());
+            var chainBuilder = new ChainBuilder2(_logger, _sidechainPool, _mongoDbProducerService, _nodeConfigurations, _networkService, _mainchainService, _networkConfigurations.GetEndPoint());
             var opResult = await chainBuilder.Run();
 
             return opResult;

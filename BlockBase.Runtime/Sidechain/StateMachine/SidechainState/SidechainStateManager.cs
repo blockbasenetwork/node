@@ -20,7 +20,6 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private IMainchainService _mainchainService;
         private INetworkService _networkService;
         private IMongoDbProducerService _mongoDbProducerService;
-        private ISidechainDatabasesManager _sidechainDatabasesManager;
 
         private SidechainPool _sidechain;
         private PeerConnectionsHandler _peerConnectionsHandler;
@@ -39,7 +38,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, 
             ILogger logger, INetworkService networkService, 
             IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, 
-            BlockRequestsHandler blockSender, SidechainDatabasesManager sidechainDatabasesManager):base(logger)
+            BlockRequestsHandler blockSender):base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
@@ -50,7 +49,6 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _mongoDbProducerService = mongoDbProducerService;
             _peerConnectionsHandler = peerConnectionsHandler;
             _blockSender = blockSender;
-            _sidechainDatabasesManager = sidechainDatabasesManager;
         }
 
         protected override async Task Run() 
@@ -80,7 +78,10 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
                 if(currentState.GetType() == typeof(ProductionState) && _blockProductionTaskContainer == null)
                 {
-                    var blockProductionStateManager = new BlockProductionStateManager(_logger, _sidechain, _nodeConfigurations, _networkConfigurations, _networkService, _peerConnectionsHandler, _mainchainService, _mongoDbProducerService, _blockSender, _sidechainDatabasesManager);
+                    var blockProductionStateManager = new BlockProductionStateManager(
+                        _logger, _sidechain, _nodeConfigurations, _networkConfigurations, 
+                        _networkService, _peerConnectionsHandler, _mainchainService, 
+                        _mongoDbProducerService, _blockSender);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
 
                     _logger.LogDebug($"Started block production");

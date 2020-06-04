@@ -149,15 +149,19 @@ namespace BlockBase.Api
                 services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockRequestsHandler>();
                 services.AddSingleton<TransactionsHandler>();
-                services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<SidechainMaintainerManager>();
                 services.AddSingleton<PeerConnectionsHandler>();
-                services.AddSingleton<SidechainKeeper>();
                 services.AddSingleton<BlockValidationsHandler>();
                 services.AddSingleton<TransactionValidationsHandler>();
                 services.AddSingleton<DatabaseKeyManager>();                
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
+
+                services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
+                services.AddSingleton<SidechainKeeper>();
+
+                services.AddSingleton<ISidechainProducerService2, SidechainProducerService2>();
+                services.AddSingleton<SidechainKeeper2>();
             });
 
             return this;

@@ -28,15 +28,12 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private long _previousTimeToCheck;
         private IMongoDbProducerService _mongoDbProducerService;
 
-        //TODO: change this when client specifies database type (MYSQL, SQL, ...)
-        private ISidechainDatabasesManager _sidechainDatabaseManager;
 
         public BlockProductionStateManager(ILogger logger, 
             SidechainPool sidechainPool, NodeConfigurations nodeConfigurations, 
             NetworkConfigurations networkConfigurations, INetworkService networkService, 
             PeerConnectionsHandler peerConnectionsHandler, IMainchainService mainchainService, 
-            IMongoDbProducerService mongoDbProducerService, BlockRequestsHandler blockSender, 
-            ISidechainDatabasesManager sidechainDatabaseManager):base(logger)
+            IMongoDbProducerService mongoDbProducerService, BlockRequestsHandler blockSender):base(logger)
         {
             _logger = logger;
             _networkService = networkService;
@@ -48,16 +45,16 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _mongoDbProducerService = mongoDbProducerService;
             
             _blockSender = blockSender;
-            _sidechainDatabaseManager = sidechainDatabaseManager;
+            
         }
 
         protected override IState BuildState(string state)
         {
             if(state == typeof(StartState).Name) return new StartState(_logger, _mainchainService, _nodeConfigurations, _sidechainPool);
-            if(state == typeof(SynchronizeNodeState).Name) return new SynchronizeNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _sidechainDatabaseManager, _networkService);
-            if(state == typeof(SynchronizeValidatorNodeState).Name) return new SynchronizeValidatorNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _sidechainDatabaseManager, _networkService);
+            if(state == typeof(SynchronizeNodeState).Name) return new SynchronizeNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _networkService);
+            if(state == typeof(SynchronizeValidatorNodeState).Name) return new SynchronizeValidatorNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _networkService);
             if(state == typeof(NetworkReactionState).Name) return new NetworkReactionState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
-            if(state == typeof(ProduceBlockState).Name) return new ProduceBlockState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _sidechainDatabaseManager, _blockSender);
+            if(state == typeof(ProduceBlockState).Name) return new ProduceBlockState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations,  _blockSender);
             if(state == typeof(VoteBlockState).Name) return new VoteBlockState(_logger);
             if(state == typeof(EndState).Name) return new EndState(_logger);
             throw new System.NotImplementedException();

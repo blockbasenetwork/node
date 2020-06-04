@@ -44,7 +44,6 @@ namespace BlockBase.Runtime.Sidechain
         private IList<ulong> _missingBlocksSequenceNumber;
         private IList<ulong> _currentlyGettingBlocks;
         private BlockheaderTable _lastSidechainBlockheader;
-        private ISidechainDatabasesManager _sidechainDatabaseManager;
         private bool _receiving;
         private DateTime _lastReceivedDate;
         private ProducerInPool _currentSendingProducer;
@@ -53,7 +52,8 @@ namespace BlockBase.Runtime.Sidechain
         private static readonly int SLICE_SIZE = 40;
         private object locker = new object();
 
-        public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, ISidechainDatabasesManager sidechainDatabaseManager, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
+        public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService
+        , NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
         {
             _logger = logger;
             _sidechainPool = sidechainPool;
@@ -65,7 +65,6 @@ namespace BlockBase.Runtime.Sidechain
             _networkService.SubscribeRecoverBlockReceivedEvent(MessageForwarder_RecoverBlockReceived);
             _blocksApproved = new List<Block>();
             _orphanBlocks = new List<Block>();
-            _sidechainDatabaseManager = sidechainDatabaseManager;
         }
 
         public TaskContainer Start(SidechainPool sidechainPool)

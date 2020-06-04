@@ -34,7 +34,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
         private SidechainPool _sidechainPool;
-        private ISidechainDatabasesManager _sidechainDatabaseManager;
 
         private BlockRequestsHandler _blockSender;
 
@@ -61,8 +60,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         public ProduceBlockState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
-            ISidechainDatabasesManager sidechainDatabaseManager, BlockRequestsHandler blockSender) : base(logger)
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,  BlockRequestsHandler blockSender) : base(logger)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -70,7 +68,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
             _networkConfigurations = networkConfigurations;
-            _sidechainDatabaseManager = sidechainDatabaseManager;
             _blockSender = blockSender;
             _hasCheckedDbForOldBlock = false;
             _hasStoredBlockLocally = false;

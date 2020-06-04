@@ -42,8 +42,10 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         {
             if(_currentProducer.Producer == _nodeConfigurations.AccountName) 
                 return Task.FromResult((true, typeof(ProduceBlockState).Name));
-            else
-                return Task.FromResult((true, typeof(VoteBlockState).Name));
+            
+            else return Task.FromResult((true, typeof(StartState).Name));
+            // else
+            //     return Task.FromResult((true, typeof(VoteBlockState).Name));
         }
 
         protected override Task<bool> IsWorkDone()

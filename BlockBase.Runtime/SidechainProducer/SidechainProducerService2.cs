@@ -36,11 +36,9 @@ namespace BlockBase.Runtime.SidechainProducer
         private ILogger _logger;
         private BlockRequestsHandler _blockSender;
 
-        private SidechainDatabasesManager _sidechainDatabasesManager;
-
 
         public SidechainProducerService2(SidechainKeeper2 sidechainKeeper, PeerConnectionsHandler peerConnectionsHandler, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ILogger<SidechainProducerService> logger, INetworkService networkService,
-                                        IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockValidationsHandler blockValidator, TransactionValidationsHandler transactionValidator, BlockRequestsHandler blockSender, SidechainDatabasesManager sidechainDatabasesManager)
+                                        IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockValidationsHandler blockValidator, TransactionValidationsHandler transactionValidator, BlockRequestsHandler blockSender)
         {
             _networkService = networkService;
             _mainchainService = mainchainService;
@@ -53,7 +51,7 @@ namespace BlockBase.Runtime.SidechainProducer
             _blockValidator = blockValidator;
             _transactionValidator = transactionValidator;
             _blockSender = blockSender;
-            _sidechainDatabasesManager = sidechainDatabasesManager;
+            
         }
 
         public async Task Run(bool recoverChains = true)
@@ -71,7 +69,7 @@ namespace BlockBase.Runtime.SidechainProducer
             //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
 
-            var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _sidechainDatabasesManager);
+            var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender);
 
             var sidechainContext = new SidechainContext
             {
