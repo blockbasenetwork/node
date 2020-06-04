@@ -204,8 +204,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _hasEnoughSignatures = hasEnoughSignatures;
             _hasBlockBeenVerified = hasBlockBeenVerified;
             _packedTransactionAndSignatures = packedTransactionAndSignatures;
-
-            throw new System.NotImplementedException();
         }
 
 
