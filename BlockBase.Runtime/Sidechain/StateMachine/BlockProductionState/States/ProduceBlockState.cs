@@ -147,9 +147,11 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            var IsWorkDone = _hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures && _hasBlockBeenVerified;
+            var hasPreviousBlockBeenProducedByThisProducer = 
+                (_currentProducer.Producer == _nodeConfigurations.AccountName && _currentProducer.HasProducedBlock)
+                && (_lastSubmittedBlockHeader?.IsVerified ?? false);
 
-            if (IsWorkDone)
+            if (hasPreviousBlockBeenProducedByThisProducer)
             {
                 if(_builtBlock != null && _builtBlock.BlockHeader != null)
                 {
@@ -171,7 +173,20 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
             var lastSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
-            var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(_lastSubmittedBlockHeader);
+            var hasPreviousBlockBeenProducedByThisProducer = 
+                (currentProducer.Producer == _nodeConfigurations.AccountName && currentProducer.HasProducedBlock)
+                && (lastSubmittedBlockHeader?.IsVerified ?? false);
+
+            //no work to do
+            if(hasPreviousBlockBeenProducedByThisProducer)
+            {
+                _currentProducer = currentProducer;
+                _lastSubmittedBlockHeader = lastSubmittedBlockHeader;
+                return;
+            } 
+
+
+            var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastSubmittedBlockHeader);
             var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber);
             var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
 
@@ -205,7 +220,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 packedTransactionAndSignatures = GetPackedTransactionAndSignatures(verifySignatureTable, _blockHash, requestedApprovals.Count, requiredKeys);
             }
 
-            var hasBlockBeenVerified = lastSubmittedBlockHeader?.BlockHash == blockHash && (lastSubmittedBlockHeader?.IsVerified ?? false);
+            
 
             _contractStateTable = contractState;
             _producerList = producerList;
@@ -218,7 +233,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _hasProducedBlock = currentProducer.Producer == _nodeConfigurations.AccountName && currentProducer.HasProducedBlock;
             _hasSignedBlock = hasSignedBlock;
             _hasEnoughSignatures = hasEnoughSignatures;
-            _hasBlockBeenVerified = hasBlockBeenVerified;
+            _hasBlockBeenVerified = lastSubmittedBlockHeader?.BlockHash == blockHash && (lastSubmittedBlockHeader?.IsVerified ?? false);
             _packedTransactionAndSignatures = packedTransactionAndSignatures;
         }
 
