@@ -38,9 +38,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private bool _isReadyToProduce;
 
 
-        public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService, 
-            IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool, 
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, 
+        public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService,
+            IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
              INetworkService networkService) : base(logger)
         {
             _logger = logger;
@@ -49,7 +49,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
             _networkConfigurations = networkConfigurations;
-            
+
             _networkService = networkService;
             _isNodeSynchronized = false;
             _isReadyToProduce = false;
@@ -57,15 +57,23 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override async Task DoWork()
         {
-            //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
-            var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime);
+            OpResult<bool> opResult = null;
+            if (!_isNodeSynchronized)
+            {
+                //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
+                var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime);
 
-            _logger.LogDebug("Producer not up to date, building chain.");
+                //TODO - what should be done with syncResult?
 
-            //TODO rpinto - does the provider have enough time to build the chain before being banned?
-            var opResult = await SyncChain();
+                _logger.LogDebug("Producer not up to date, building chain.");
 
-            if(opResult.Succeeded)
+                //TODO rpinto - does the provider have enough time to build the chain before being banned?
+                opResult = await SyncChain();
+
+                _isNodeSynchronized = opResult.Succeeded;
+            }
+
+            if (_isNodeSynchronized)
             {
                 await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             }
@@ -106,6 +114,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _producerList = producerList;
             _currentProducer = currentProducer;
             _lastSubmittedBlockHeader = lastSubmittedBlockHeader;
+
+            _isNodeSynchronized = lastSubmittedBlockHeader == null;
+
         }
 
 
