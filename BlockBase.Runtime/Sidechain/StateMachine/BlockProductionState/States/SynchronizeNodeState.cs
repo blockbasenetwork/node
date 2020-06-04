@@ -133,7 +133,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             while (true)
             {
                 var lastSubmittedBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-                if (lastSubmittedBlock != null && lastSubmittedBlock.IsVerified && lastSubmittedBlock.Timestamp > currentStartProductionTime) return lastSubmittedBlock;
+                if(lastSubmittedBlock == null) return null;
+                else if (lastSubmittedBlock != null && lastSubmittedBlock.IsVerified && lastSubmittedBlock.Timestamp > currentStartProductionTime) return lastSubmittedBlock;
                 await Task.Delay(delayBetweenRequests);
             }
         }
