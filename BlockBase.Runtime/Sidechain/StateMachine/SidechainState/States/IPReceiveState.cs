@@ -20,6 +20,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private ContractStateTable _contractStateTable;
         private ContractInformationTable _contractInfo;
         private List<ProducerInTable> _producers;
+        private List<BlockheaderTable> _blockHeaders;
 
         private SidechainPool _sidechainPool;
         public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
@@ -31,12 +32,16 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(true);
+            var hasWorkToDo = !_blockHeaders.Any() && !_producers.SingleOrDefault(p => p.Key == _nodeConfigurations.AccountName).IsReadyToProduce ? true : false;
+
+            return Task.FromResult(hasWorkToDo);
         }
 
-        protected override Task DoWork()
+        protected override async Task DoWork()
         {
-            return default(Task);
+            var isReadyToProduceTransaction = await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
+            
+            _logger.LogDebug($"Sent is ready to produce transaction. Tx: {isReadyToProduceTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -58,10 +63,12 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            var blockHeaders = await _mainchainService.RetrieveBlockheaderList(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             
             _contractInfo = contractInfo;
             _producers = producers;
             _contractStateTable = contractState;
+            _blockHeaders = blockHeaders;
 
             var timeDiff = _contractInfo.ReceiveEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
