@@ -40,6 +40,7 @@ namespace BlockBase.Runtime.Common
                         _logger.LogDebug($"{this.GetType().Name} - No conditions to continue in this state");
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
                     }
+                    _logger.LogDebug($"{this.GetType().Name} - Conditions to continue verified");
 
                     _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has conditions to jump...");
                     var jumpStatus = await HasConditionsToJump();
@@ -48,6 +49,7 @@ namespace BlockBase.Runtime.Common
                         _logger.LogDebug($"{this.GetType().Name} - Conditions found to jump to {jumpStatus.nextState}");
                         return jumpStatus.nextState;
                     }
+                    _logger.LogDebug($"{this.GetType().Name} - No conditions found to jump");
 
                     _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has work to be done...");
                     if (!await IsWorkDone()) 
@@ -56,14 +58,23 @@ namespace BlockBase.Runtime.Common
                         await DoWork();
                         _logger.LogDebug($"{this.GetType().Name} - Work done");
                     }
-                    _logger.LogDebug($"{this.GetType().Name} - Starting to delay...");
+                    else
+                    {
+                        _logger.LogDebug($"{this.GetType().Name} - No work found to do");
+                    }
+                    _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
                     await Task.Delay(_delay);
-                    _logger.LogDebug($"{this.GetType().Name} - Delay done");
+                    _logger.LogDebug($"{this.GetType().Name} - Finished delay");
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError($"{this.GetType().Name} crashed {ex.Message}");
                     _logger.LogDebug($"Trace: {ex}");
+
+                    var crashDelay = TimeSpan.FromSeconds(10);
+                    _logger.LogDebug($"{this.GetType().Name} - Starting after crash delay... {crashDelay.Seconds} seconds");
+                    await Task.Delay(_delay);
+                    _logger.LogDebug($"{this.GetType().Name} - Finished after crash delay");
                 }
             }
         }
