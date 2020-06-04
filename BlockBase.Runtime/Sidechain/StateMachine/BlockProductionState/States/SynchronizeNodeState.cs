@@ -68,9 +68,17 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 _logger.LogDebug("Producer not up to date, building chain.");
 
                 //TODO rpinto - does the provider have enough time to build the chain before being banned?
-                opResult = await SyncChain();
+                if(!syncResult)
+                {
+                    opResult = await SyncChain();
 
-                _isNodeSynchronized = opResult.Succeeded;
+                    _isNodeSynchronized = opResult.Succeeded;
+                }
+                else
+                {
+                    _isNodeSynchronized = true;
+                }
+                
             }
 
             if (_isNodeSynchronized)
