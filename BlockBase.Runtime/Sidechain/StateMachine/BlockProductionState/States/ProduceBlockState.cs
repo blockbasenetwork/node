@@ -60,7 +60,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         public ProduceBlockState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,  BlockRequestsHandler blockSender) : base(logger)
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, BlockRequestsHandler blockSender) : base(logger)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -114,8 +114,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             {
                 await _blockSender.SendBlockToSidechainMembers(_sidechainPool, _builtBlock.ConvertToProto(), _networkConfigurations.GetEndPoint());
 
-                if(_numOfBlockBroadcasts++ >= MAX_NUMBER_OF_BLOCK_BROADCASTS);
-                    _hasBroadcastedBlock = true;
+                if (_numOfBlockBroadcasts++ >= MAX_NUMBER_OF_BLOCK_BROADCASTS) ;
+                _hasBroadcastedBlock = true;
             }
             if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures)
             {
@@ -147,7 +147,19 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures && _hasBlockBeenVerified);
+            var IsWorkDone = _hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures && _hasBlockBeenVerified;
+
+            if (IsWorkDone)
+            {
+                if(_builtBlock != null && _builtBlock.BlockHeader != null)
+                {
+                    _logger.LogInformation($"Produced Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}");
+                }
+                
+                return Task.FromResult(true);
+            }
+
+            return Task.FromResult(false);
         }
 
         protected override async Task UpdateStatus()
@@ -166,7 +178,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
             var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
 
-            
+
 
             Block builtBlock = _builtBlock;
             string blockHash = null;
@@ -225,8 +237,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
             block.BlockHeader.BlockHash = blockHash;
             block.BlockHeader.ProducerSignature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, blockHash);
-
-            _logger.LogInformation($"Produced Block -> sequence number: {block.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(blockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.PreviousBlockHash)}");
 
             return block;
         }
