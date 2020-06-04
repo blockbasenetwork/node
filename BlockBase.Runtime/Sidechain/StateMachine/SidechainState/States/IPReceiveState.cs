@@ -62,7 +62,10 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             _contractInfo = contractInfo;
             _producers = producers;
             _contractStateTable = contractState;
-            _delay = TimeSpan.FromSeconds(_contractInfo.ReceiveEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+            var timeDiff = _contractInfo.ReceiveEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            _delay = timeDiff > 0 ? TimeSpan.FromSeconds(timeDiff) : TimeSpan.FromMilliseconds(500);
         }
     }
 

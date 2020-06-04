@@ -73,7 +73,10 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             _contractStateTable = contractState;
             _producers = producers;
             _candidates = candidates;
-            _delay = TimeSpan.FromSeconds(_contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+            var timeDiff = _contractInfo.SecretEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            _delay = timeDiff > 0 ? TimeSpan.FromSeconds(timeDiff) : TimeSpan.FromMilliseconds(500);
         }
     }
 

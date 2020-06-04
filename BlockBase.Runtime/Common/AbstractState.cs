@@ -62,7 +62,8 @@ namespace BlockBase.Runtime.Common
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"{this.GetType().Name} crashed", ex.Message);
+                    _logger.LogError($"{this.GetType().Name} crashed {ex.Message}");
+                    _logger.LogDebug($"Trace: {ex}");
                 }
             }
         }
