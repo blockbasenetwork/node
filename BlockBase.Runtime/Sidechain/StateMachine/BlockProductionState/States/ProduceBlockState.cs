@@ -117,7 +117,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 if(_numOfBlockBroadcasts++ >= MAX_NUMBER_OF_BLOCK_BROADCASTS);
                     _hasBroadcastedBlock = true;
             }
-            if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && !_hasEnoughSignatures)
+            if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures)
             {
                 await TryBroadcastVerifyTransaction(_packedTransactionAndSignatures.packedTransaction, _packedTransactionAndSignatures.signatures);
             }
