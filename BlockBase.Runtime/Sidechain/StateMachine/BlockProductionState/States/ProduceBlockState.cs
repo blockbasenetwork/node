@@ -312,7 +312,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var threshold = (numberOfProducers / 2) + 1;
             var requiredSignatures = threshold > requiredKeys.Count ? requiredKeys.Count : threshold;
             var signatures = verifySignatures.Select(v => v.Signature).Take(requiredSignatures).ToList();
-            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
+            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName)?.PackedTransaction;
             return (packedTransaction, signatures);
         }
 
