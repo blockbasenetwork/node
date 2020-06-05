@@ -112,6 +112,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
             if (_hasProducedBlock && _hasSignedBlock && !_hasEnoughSignatures)
             {
+                _logger.LogDebug("Sending block to other producers");
                 await _blockSender.SendBlockToSidechainMembers(_sidechainPool, _builtBlock.ConvertToProto(), _networkConfigurations.GetEndPoint());
             }
 
