@@ -1,13 +1,12 @@
-
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using BlockBase.Runtime.Mainchain.StateMachine.PeerConnectionsState.States;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain.StateMachine.PeerConnectionState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Sidechain.StateMachine.PeerConectionState
+namespace BlockBase.Runtime.Mainchain.StateMachine.PeerConnectionsState
 {
     public class PeerConnectionStateManager : AbstractStateManager<StartState, EndState>
     {

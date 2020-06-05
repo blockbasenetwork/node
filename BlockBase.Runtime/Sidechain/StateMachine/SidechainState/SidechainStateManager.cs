@@ -1,16 +1,14 @@
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.Sidechain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using BlockBase.Runtime.Common;
-using BlockBase.Runtime.StateMachine.PeerConectionState;
+using BlockBase.Runtime.Sidechain.StateMachine.PeerConectionState;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState
 {
@@ -68,7 +66,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
                     break;
                 }
 
-                if((currentState.GetType() == typeof(IPReceiveState) || currentState.GetType() == typeof(ProductionState)) && _peerConnectionTaskContainer == null)
+                if(_peerConnectionTaskContainer == null && (currentState.GetType() == typeof(IPReceiveState) || currentState.GetType() == typeof(ProductionState)))
                 {
                     var peerConnectionStateManager = new PeerConnectionStateManager(_sidechain, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _mainchainService);
                     _peerConnectionTaskContainer = peerConnectionStateManager.Start();

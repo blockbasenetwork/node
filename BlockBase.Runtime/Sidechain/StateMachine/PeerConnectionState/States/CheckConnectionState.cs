@@ -13,7 +13,7 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
+namespace BlockBase.Runtime.Sidechain.StateMachine.PeerConnectionState.States
 {
     public class CheckConnectionState : AbstractState<StartState, EndState>
     {

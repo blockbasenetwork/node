@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
 {
     public class StartProductionState : AbstractMainchainState<StartState, EndState>
     {

@@ -13,48 +13,46 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.Sidechain.StateMachine.PeerConnectionState.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.PeerConnectionsState.States
 {
-    public class StartState : AbstractState<StartState, EndState>
+    public class CheckConnectionState : AbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
-        private NodeConfigurations _nodeConfigurations;
-        private ContractStateTable _contractStateTable;
+        private bool _peersConnected;
         private SidechainPool _sidechainPool;
-        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
+        private ContractStateTable _contractStateTable;
+        public CheckConnectionState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {
             _mainchainService = mainchainService;
-            _nodeConfigurations = nodeConfigurations;
             _sidechainPool = sidechain;
             _peerConnectionsHandler = peerConnectionsHandler;
+            _peersConnected = true;
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(true);
+            throw new NotImplementedException();
         }
 
-        protected override Task DoWork()
+        protected override async Task DoWork()
         {
-            return Task.CompletedTask;
+            throw new NotImplementedException();
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime);
+            throw new NotImplementedException();
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime, typeof(ConnectToPeersState).Name));
+            throw new NotImplementedException();
         }
 
         protected override async Task UpdateStatus() 
         {
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-
-            _contractStateTable = contractState;
+            throw new NotImplementedException();
         }
     }
 }

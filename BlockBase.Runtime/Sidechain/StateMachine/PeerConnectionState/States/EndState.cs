@@ -13,15 +13,13 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
+namespace BlockBase.Runtime.Sidechain.StateMachine.PeerConnectionState.States
 {
     public class EndState : AbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
-        private ContractStateTable _contractStateTable;
-        private List<ProducerInTable> _producers;
         private SidechainPool _sidechainPool;
         public EndState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {

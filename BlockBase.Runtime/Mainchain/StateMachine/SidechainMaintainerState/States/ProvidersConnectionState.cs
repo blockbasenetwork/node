@@ -7,7 +7,7 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
 {
     public class ProvidersConnectionState : AbstractMainchainState<StartState, EndState>
     {

@@ -13,7 +13,7 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.Sidechain.StateMachine.PeerConnectionState.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.PeerConnectionsState.States
 {
     public class StartState : AbstractState<StartState, EndState>
     {
@@ -32,29 +32,27 @@ namespace BlockBase.Runtime.Sidechain.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(true);
+            throw new NotImplementedException();
         }
 
         protected override Task DoWork()
         {
-            return Task.CompletedTask;
+            throw new NotImplementedException();
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime);
+            throw new NotImplementedException();
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime, typeof(ConnectToPeersState).Name));
+            throw new NotImplementedException();
         }
 
         protected override async Task UpdateStatus() 
         {
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-
-            _contractStateTable = contractState;
+            throw new NotImplementedException();
         }
     }
 }

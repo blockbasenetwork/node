@@ -3,9 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Common
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
 {
     public abstract class AbstractMainchainState<TStartState, TEndState> : AbstractState<TStartState, TEndState>
             where TStartState : IState

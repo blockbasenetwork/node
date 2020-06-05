@@ -1,8 +1,8 @@
 using BlockBase.Runtime.Common;
-using BlockBase.Runtime.Mainchain.StateMachine.States;
+using BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
 {
     public class SidechainMaintainerStateManager : AbstractStateManager<StartState, EndState>
     {

@@ -6,41 +6,40 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
 {
-    public class SecretSharingState : AbstractMainchainState<StartState, EndState>
+    public class IPSharingState : AbstractMainchainState<StartState, EndState>
     {
         private IMainchainService _mainchainService;
         private SidechainPool _sidechainPool;
         private ContractStateTable _contractState;
-
         private ContractInformationTable _contractInfo;
-        public SecretSharingState(ILogger logger, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
+
+        public IPSharingState(ILogger logger, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
         {
             _mainchainService = mainchainService;
             _sidechainPool = sidechainPool;
-            
         }
 
         protected override async Task DoWork()
         {
-            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechainPool.ClientAccountName);
+            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechainPool.ClientAccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.SecretEndDate, 0));
+            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.SendEndDate, 0));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if(_contractState.SecretTime) return Task.FromResult((true, typeof(NextStateRouter).Name));
+            if(_contractState.IPSendTime) return Task.FromResult((true, typeof(UpdateAuthorizationsState).Name));
             return Task.FromResult((false, string.Empty));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_contractState.SecretTime);
+            return Task.FromResult(_contractState.IPSendTime);
         }
 
         protected override async Task UpdateStatus()

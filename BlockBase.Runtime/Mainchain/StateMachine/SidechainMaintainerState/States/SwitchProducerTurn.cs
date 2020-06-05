@@ -2,11 +2,11 @@ using System.Threading.Tasks;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
 {
-    public class ExecuteSettlementState : AbstractMainchainState<StartState, EndState>
+    public class SwitchProducerTurn : AbstractState<StartState, EndState>
     {
-        public ExecuteSettlementState(ILogger logger) : base(logger)
+        public SwitchProducerTurn(ILogger logger) : base(logger)
         {
         }
 

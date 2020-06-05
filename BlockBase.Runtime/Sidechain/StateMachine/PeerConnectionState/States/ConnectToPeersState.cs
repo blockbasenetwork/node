@@ -15,7 +15,7 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
+namespace BlockBase.Runtime.Sidechain.StateMachine.PeerConnectionState.States
 {
     public class ConnectToPeersState : AbstractState<StartState, EndState>
     {
@@ -23,7 +23,6 @@ namespace BlockBase.Runtime.StateMachine.PeerConnectionState.States
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
-        private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
         private SidechainPool _sidechainPool;
