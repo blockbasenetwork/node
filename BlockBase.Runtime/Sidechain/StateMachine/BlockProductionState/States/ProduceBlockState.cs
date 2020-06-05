@@ -152,8 +152,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
-            var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-
             var lastSubmittedBlockHeader = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, 1);
 
             _hasProviderBuiltNewBlock = false;
@@ -181,11 +179,10 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 return;
             }
 
-
-
             // _builtBlock and _blockHash are set only once
             if (!_hasProviderBuiltNewBlock)
             {
+                var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
                 var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);
                 var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber);
                 var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
