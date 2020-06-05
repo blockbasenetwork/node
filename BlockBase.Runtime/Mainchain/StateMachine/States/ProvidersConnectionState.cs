@@ -1,4 +1,9 @@
+using System;
 using System.Threading.Tasks;
+using BlockBase.Domain.Eos;
+using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
@@ -6,33 +11,58 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.States
 {
     public class ProvidersConnectionState : AbstractMainchainState<StartState, EndState>
     {
-        public ProvidersConnectionState(ILogger logger) : base(logger)
+        private IMainchainService _mainchainService;
+        private SidechainPool _sidechainPool;
+        private ContractStateTable _contractState;
+        private ContractInformationTable _contractInfo;
+        public ProvidersConnectionState(ILogger logger, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
         {
+            _mainchainService = mainchainService;
+            _sidechainPool = sidechainPool;
         }
 
-        protected override Task DoWork()
+        protected async override Task DoWork()
         {
-            throw new System.NotImplementedException();
+            try
+            {
+                await _mainchainService.LinkAuthorization(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechainPool.ClientAccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+            }
+            catch
+            {
+                _logger.LogDebug($"Already linked authorization {EosMsigConstants.VERIFY_BLOCK_PERMISSION}");
+            }
+            try
+            {
+                await _mainchainService.LinkAuthorization(EosMethodNames.HISTORY_VALIDATE, _sidechainPool.ClientAccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+            }
+            catch
+            {
+                _logger.LogDebug($"Already linked authorization {EosMethodNames.HISTORY_VALIDATE}");
+            }
+
+            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechainPool.ClientAccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.ReceiveEndDate, 0));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new System.NotImplementedException();
+            if(_contractState.IPReceiveTime) return Task.FromResult((true, typeof(NextStateRouter).Name));
+            return Task.FromResult((false, string.Empty));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(_contractState.IPReceiveTime);
         }
 
-        protected override Task UpdateStatus()
+        protected override async Task UpdateStatus()
         {
-            throw new System.NotImplementedException();
+            _contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
         }
     }
 }

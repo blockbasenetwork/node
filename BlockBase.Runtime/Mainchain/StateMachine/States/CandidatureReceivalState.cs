@@ -28,7 +28,7 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractState.CandidatureTime && !IsTimeUpForSidechainPhase(_contractInfo.CandidatureEndDate, 0));
+            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.CandidatureEndDate, 0));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

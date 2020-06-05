@@ -1,4 +1,8 @@
 using System.Threading.Tasks;
+using BlockBase.Domain.Eos;
+using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
@@ -6,33 +10,43 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.States
 {
     public class SecretSharingState : AbstractMainchainState<StartState, EndState>
     {
-        public SecretSharingState(ILogger logger) : base(logger)
+        private IMainchainService _mainchainService;
+        private SidechainPool _sidechainPool;
+        private ContractStateTable _contractState;
+
+        private ContractInformationTable _contractInfo;
+        public SecretSharingState(ILogger logger, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
         {
+            _mainchainService = mainchainService;
+            _sidechainPool = sidechainPool;
+            
         }
 
-        protected override Task DoWork()
+        protected override async Task DoWork()
         {
-            throw new System.NotImplementedException();
+            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechainPool.ClientAccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.SecretEndDate, 0));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new System.NotImplementedException();
+            if(_contractState.SecretTime) return Task.FromResult((true, typeof(NextStateRouter).Name));
+            return Task.FromResult((false, string.Empty));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(_contractState.SecretTime);
         }
 
-        protected override Task UpdateStatus()
+        protected override async Task UpdateStatus()
         {
-            throw new System.NotImplementedException();
+            _contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
         }
     }
 }
