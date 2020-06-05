@@ -37,11 +37,10 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         private BlockRequestsHandler _blockSender;
 
-        private BlockheaderTable _lastValidSubmittedBlockHeader;
-
         private Block _builtBlock;
         private string _blockHash;
 
+        private bool _hasProviderBuiltNewBlock;
         private bool _hasCheckedDbForOldBlock;
         private bool _hasStoredBlockLocally;
         private bool _hasProducedBlock;
@@ -80,25 +79,29 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         protected override async Task DoWork()
         {
 
-            if (!_hasCheckedDbForOldBlock)
+            if (!_hasProviderBuiltNewBlock)
             {
-                var checkIfBlockInDb = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(
-                    _sidechainPool.ClientAccountName,
-                    _builtBlock.BlockHeader.SequenceNumber,
-                    _builtBlock.BlockHeader.SequenceNumber)).FirstOrDefault();
-
-                if (checkIfBlockInDb != null)
+                if (!_hasCheckedDbForOldBlock)
                 {
-                    var blockInDbHash = HashHelper.ByteArrayToFormattedHexaString(checkIfBlockInDb.BlockHeader.BlockHash);
-                    await _mongoDbProducerService.RemoveBlockFromDatabaseAsync(_sidechainPool.ClientAccountName, blockInDbHash);
+                    var checkIfBlockInDb = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(
+                        _sidechainPool.ClientAccountName,
+                        _builtBlock.BlockHeader.SequenceNumber,
+                        _builtBlock.BlockHeader.SequenceNumber)).FirstOrDefault();
+
+                    if (checkIfBlockInDb != null)
+                    {
+                        var blockInDbHash = HashHelper.ByteArrayToFormattedHexaString(checkIfBlockInDb.BlockHeader.BlockHash);
+                        await _mongoDbProducerService.RemoveBlockFromDatabaseAsync(_sidechainPool.ClientAccountName, blockInDbHash);
+                    }
+                    _hasCheckedDbForOldBlock = true;
                 }
-                _hasCheckedDbForOldBlock = true;
+                if (!_hasStoredBlockLocally)
+                {
+                    await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(_builtBlock, _sidechainPool.ClientAccountName);
+                    _hasStoredBlockLocally = true;
+                }
             }
-            if (!_hasStoredBlockLocally)
-            {
-                await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(_builtBlock, _sidechainPool.ClientAccountName);
-                _hasStoredBlockLocally = true;
-            }
+
 
 
             if (!_hasProducedBlock)
@@ -112,7 +115,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 await _blockSender.SendBlockToSidechainMembers(_sidechainPool, _builtBlock.ConvertToProto(), _networkConfigurations.GetEndPoint());
             }
 
-            if (_hasProducedBlock && _hasSignedBlock && _hasEnoughSignatures)
+            if (_hasProducedBlock && _hasSignedBlock && _hasEnoughSignatures && !_hasBlockBeenVerified)
             {
                 await TryBroadcastVerifyTransaction(_packedTransactionAndSignatures.packedTransaction, _packedTransactionAndSignatures.signatures);
             }
@@ -121,9 +124,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         protected override Task<bool> HasConditionsToContinue()
         {
             return Task.FromResult(
-                _contractState.ProductionTime
-                && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName)
-                && _currentProducer.Producer == _nodeConfigurations.AccountName);
+                _contractState.ProductionTime && _currentProducer.Producer == _nodeConfigurations.AccountName);
 
             //TODO rpinto - check if he has contacts
             //if he has no contacts there shouldn't be no condition to continue
@@ -131,7 +132,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (_currentProducer.Producer == _nodeConfigurations.AccountName && _hasProducedBlock && _hasSignedBlock && _hasEnoughSignatures && _hasBlockBeenVerified)
+            if (_hasBlockBeenVerified)
                 return Task.FromResult((true, typeof(StartState).Name));
 
             else return Task.FromResult((false, typeof(StartState).Name));
@@ -139,14 +140,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            var hasPreviousBlockBeenProducedByThisProducer =
-                _currentProducer.Producer == _nodeConfigurations.AccountName 
-                && _currentProducer.HasProducedBlock
-                && _hasBlockBeenVerified;
-
-            if (hasPreviousBlockBeenProducedByThisProducer) return Task.FromResult(true);
-            
-
+            if (_hasBlockBeenVerified) return Task.FromResult(true);
             return Task.FromResult(false);
         }
 
@@ -157,22 +151,26 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
-            _lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-            
-            //TODO rpinto - it's not this block that has to be checked.
-            //Because if a valid block has been produced, then this will equate to true,
-            //even if the current producer hasn't produced a valid block...
-            _hasBlockBeenVerified = _lastValidSubmittedBlockHeader?.IsVerified ?? false;
 
+            var lastSubmittedBlockHeader = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, 1);
 
-            
-            var hasPreviousBlockBeenProducedByThisProducer =
-            _currentProducer.Producer == _nodeConfigurations.AccountName 
+            _hasProviderBuiltNewBlock = false;
+            if (lastSubmittedBlockHeader != null
+                && _currentProducer.Producer == _nodeConfigurations.AccountName
                 && _currentProducer.HasProducedBlock
-                && _hasBlockBeenVerified;
+                && _currentProducer.StartProductionTime <= lastSubmittedBlockHeader.Timestamp)
+            {
+                _hasProviderBuiltNewBlock = true;
+            }
+
+
+            if (_hasProviderBuiltNewBlock && lastSubmittedBlockHeader.IsVerified)
+            {
+                _hasBlockBeenVerified = true;
+            }
 
             //block has been produced by producer - no more updating to do
-            if(hasPreviousBlockBeenProducedByThisProducer) 
+            if (_hasBlockBeenVerified)
             {
                 if (_builtBlock != null && _builtBlock.BlockHeader != null)
                 {
@@ -180,13 +178,12 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 }
                 return;
             }
-            
-
 
             // _builtBlock and _blockHash are set only once
-            if (_builtBlock == null)
+            if (!_hasProviderBuiltNewBlock)
             {
-                var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(_lastValidSubmittedBlockHeader);
+                var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+                var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);
                 var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber);
                 var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
                 _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
