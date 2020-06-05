@@ -29,7 +29,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private NodeConfigurations _nodeConfigurations;
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
-        private BlockheaderTable _lastSubmittedBlockHeader;
+        private BlockheaderTable _lastValidSubmittedBlockHeader;
         private SidechainPool _sidechainPool;
 
         private NetworkConfigurations _networkConfigurations;
@@ -61,15 +61,14 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             if (!_isNodeSynchronized)
             {
                 //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
-                var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime);
+                var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime);
 
                 //TODO - what should be done with syncResult?
 
-                _logger.LogDebug("Producer not up to date, building chain.");
-
                 //TODO rpinto - does the provider have enough time to build the chain before being banned?
-                if(!syncResult)
+                if (!syncResult)
                 {
+                    _logger.LogDebug("Producer not up to date, building chain.");
                     opResult = await SyncChain();
 
                     _isNodeSynchronized = opResult.Succeeded;
@@ -78,7 +77,11 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 {
                     _isNodeSynchronized = true;
                 }
-                
+
+                if (!await _mongoDbProducerService.IsBlockConfirmed(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash))
+                {
+                    await _mongoDbProducerService.ConfirmBlock(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash);
+                }
             }
 
             if (_isNodeSynchronized && !_isReadyToProduce)
@@ -113,15 +116,15 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
-            var lastSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+            var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
             _isReadyToProduce = producerList.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce);
             _contractStateTable = contractState;
             _producerList = producerList;
             _currentProducer = currentProducer;
-            _lastSubmittedBlockHeader = lastSubmittedBlockHeader;
+            _lastValidSubmittedBlockHeader = lastValidSubmittedBlockHeader;
 
-            if(lastSubmittedBlockHeader == null)
+            if (lastValidSubmittedBlockHeader == null)
                 _isNodeSynchronized = true;
 
         }
