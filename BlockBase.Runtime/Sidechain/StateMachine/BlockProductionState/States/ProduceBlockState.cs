@@ -43,7 +43,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private bool _hasProviderBuiltNewBlock;
         private bool _hasCheckedDbForOldBlock;
         private bool _hasStoredBlockLocally;
-        private bool _hasProducedBlock;
         private bool _hasSignedBlock;
         private bool _hasEnoughSignatures;
 
@@ -69,7 +68,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _blockSender = blockSender;
             _hasCheckedDbForOldBlock = false;
             _hasStoredBlockLocally = false;
-            _hasProducedBlock = false;
+            _hasProviderBuiltNewBlock = false;
             _hasSignedBlock = false;
             _hasEnoughSignatures = false;
             _hasBlockBeenVerified = false;
@@ -104,18 +103,18 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
 
 
-            if (!_hasProducedBlock)
+            if (!_hasProviderBuiltNewBlock)
                 await TryAddBlock(_builtBlock.BlockHeader);
 
-            if (_hasProducedBlock && !_hasSignedBlock)
+            if (_hasProviderBuiltNewBlock && !_hasSignedBlock)
                 await TryAddVerifyTransaction(_blockHash);
 
-            if (_hasProducedBlock && _hasSignedBlock && !_hasEnoughSignatures)
+            if (_hasProviderBuiltNewBlock && _hasSignedBlock && !_hasEnoughSignatures)
             {
                 await _blockSender.SendBlockToSidechainMembers(_sidechainPool, _builtBlock.ConvertToProto(), _networkConfigurations.GetEndPoint());
             }
 
-            if (_hasProducedBlock && _hasSignedBlock && _hasEnoughSignatures && !_hasBlockBeenVerified)
+            if (_hasProviderBuiltNewBlock && _hasSignedBlock && _hasEnoughSignatures && !_hasBlockBeenVerified)
             {
                 await TryBroadcastVerifyTransaction(_packedTransactionAndSignatures.packedTransaction, _packedTransactionAndSignatures.signatures);
             }
@@ -193,11 +192,11 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
 
             var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
-            _hasProducedBlock = _currentProducer.Producer == _nodeConfigurations.AccountName && _currentProducer.HasProducedBlock;
+            _hasProviderBuiltNewBlock = _currentProducer.Producer == _nodeConfigurations.AccountName && _currentProducer.HasProducedBlock;
             _hasSignedBlock = verifySignatureTable.Any(t => t.Account == _nodeConfigurations.AccountName);
 
 
-            if (_hasProducedBlock && _hasSignedBlock && !_hasEnoughSignatures)
+            if (_hasProviderBuiltNewBlock && _hasSignedBlock && !_hasEnoughSignatures)
             {
                 var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
                 var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
