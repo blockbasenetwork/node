@@ -39,7 +39,7 @@ namespace BlockBase.Network.Rounting
                 {
                     //Code to help debug
                     var payloadHash = HashHelper.ByteArrayToFormattedHexaString(HashHelper.Sha256Data(networkMessage.Payload));
-                    //_logger.LogDebug($"MESSAGE RECEIVED | Hash: {payloadHash} | Sender: {networkMessage.Sender} | Type: {networkMessage.NetworkMessageType}");
+                    _logger.LogDebug($"MESSAGE RECEIVED | Hash: {payloadHash} | Sender: {networkMessage.Sender} | Type: {networkMessage.NetworkMessageType}");
 
                     MessageForwarder.ProcessReceivedMessage(networkMessage);
                 }
