@@ -63,15 +63,10 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
                 var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime);
 
-                //TODO - what should be done with syncResult?
-
-                _logger.LogDebug("Producer not up to date, building chain.");
-
-                //TODO rpinto - does the provider have enough time to build the chain before being banned?
                 if(!syncResult)
                 {
+                    _logger.LogDebug("Producer not up to date, building chain.");
                     opResult = await SyncChain();
-
                     _isNodeSynchronized = opResult.Succeeded;
                 }
                 else

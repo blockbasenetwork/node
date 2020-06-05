@@ -193,7 +193,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
 
             var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
-            _hasProviderBuiltNewBlock = _currentProducer.Producer == _nodeConfigurations.AccountName && _currentProducer.HasProducedBlock;
             _hasSignedBlock = verifySignatureTable.Any(t => t.Account == _nodeConfigurations.AccountName);
 
 
