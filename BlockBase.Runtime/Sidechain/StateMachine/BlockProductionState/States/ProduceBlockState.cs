@@ -26,7 +26,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
     {
 
         private IMainchainService _mainchainService;
-        private ContractStateTable _contractStateTable;
+        private ContractStateTable _contractState;
         private IMongoDbProducerService _mongoDbProducerService;
         private NodeConfigurations _nodeConfigurations;
 
@@ -37,17 +37,14 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         private BlockRequestsHandler _blockSender;
 
-        private BlockheaderTable _lastSubmittedBlockHeader;
-
         private Block _builtBlock;
         private string _blockHash;
 
+        private bool _hasProviderBuiltNewBlock;
         private bool _hasCheckedDbForOldBlock;
         private bool _hasStoredBlockLocally;
-        private bool _hasProducedBlock;
         private bool _hasSignedBlock;
         private bool _hasEnoughSignatures;
-        private bool _hasBroadcastedBlock;
 
         private bool _hasBlockBeenVerified;
 
@@ -60,7 +57,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         public ProduceBlockState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,  BlockRequestsHandler blockSender) : base(logger)
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, BlockRequestsHandler blockSender) : base(logger)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -71,67 +68,63 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _blockSender = blockSender;
             _hasCheckedDbForOldBlock = false;
             _hasStoredBlockLocally = false;
-            _hasProducedBlock = false;
+            _hasProviderBuiltNewBlock = false;
             _hasSignedBlock = false;
             _hasEnoughSignatures = false;
-            _hasBroadcastedBlock = false;
             _hasBlockBeenVerified = false;
             _packedTransactionAndSignatures = (null, null);
         }
 
         protected override async Task DoWork()
         {
-            _logger.LogDebug("Producing block.");
 
-            if (!_hasCheckedDbForOldBlock)
+            if (!_hasProviderBuiltNewBlock)
             {
-                var checkIfBlockInDb = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(
-                    _sidechainPool.ClientAccountName,
-                    _builtBlock.BlockHeader.SequenceNumber,
-                    _builtBlock.BlockHeader.SequenceNumber)).FirstOrDefault();
-
-                if (checkIfBlockInDb != null)
+                if (!_hasCheckedDbForOldBlock)
                 {
-                    var blockInDbHash = HashHelper.ByteArrayToFormattedHexaString(checkIfBlockInDb.BlockHeader.BlockHash);
-                    await _mongoDbProducerService.RemoveBlockFromDatabaseAsync(_sidechainPool.ClientAccountName, blockInDbHash);
+                    var checkIfBlockInDb = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(
+                        _sidechainPool.ClientAccountName,
+                        _builtBlock.BlockHeader.SequenceNumber,
+                        _builtBlock.BlockHeader.SequenceNumber)).FirstOrDefault();
+
+                    if (checkIfBlockInDb != null)
+                    {
+                        var blockInDbHash = HashHelper.ByteArrayToFormattedHexaString(checkIfBlockInDb.BlockHeader.BlockHash);
+                        await _mongoDbProducerService.RemoveBlockFromDatabaseAsync(_sidechainPool.ClientAccountName, blockInDbHash);
+                    }
+                    _hasCheckedDbForOldBlock = true;
                 }
-                _hasCheckedDbForOldBlock = true;
-            }
-            if (!_hasStoredBlockLocally)
-            {
-                await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(_builtBlock, _sidechainPool.ClientAccountName);
-                _hasStoredBlockLocally = true;
+                if (!_hasStoredBlockLocally)
+                {
+                    await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(_builtBlock, _sidechainPool.ClientAccountName);
+                    _hasStoredBlockLocally = true;
+                }
             }
 
 
-            if (!_hasProducedBlock)
+
+            if (!_hasProviderBuiltNewBlock)
                 await TryAddBlock(_builtBlock.BlockHeader);
 
-            if (_hasProducedBlock && !_hasSignedBlock)
+            if (_hasProviderBuiltNewBlock && !_hasSignedBlock)
                 await TryAddVerifyTransaction(_blockHash);
 
-            if (_hasProducedBlock && _hasSignedBlock && !_hasBroadcastedBlock)
+            if (_hasProviderBuiltNewBlock && _hasSignedBlock && !_hasEnoughSignatures)
             {
+                _logger.LogDebug("Sending block to other producers");
                 await _blockSender.SendBlockToSidechainMembers(_sidechainPool, _builtBlock.ConvertToProto(), _networkConfigurations.GetEndPoint());
-
-                if(_numOfBlockBroadcasts++ >= MAX_NUMBER_OF_BLOCK_BROADCASTS);
-                    _hasBroadcastedBlock = true;
             }
-            if (_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && !_hasEnoughSignatures)
+
+            if (_hasProviderBuiltNewBlock && _hasSignedBlock && _hasEnoughSignatures && !_hasBlockBeenVerified)
             {
                 await TryBroadcastVerifyTransaction(_packedTransactionAndSignatures.packedTransaction, _packedTransactionAndSignatures.signatures);
             }
-
-            //delete this commented code?
-            //await TryVerifyAndExecuteTransaction(_nodeConfigurations.AccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
             return Task.FromResult(
-                _contractStateTable.ProductionTime
-                && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName)
-                && _currentProducer.Producer == _nodeConfigurations.AccountName);
+                _contractState.ProductionTime && _currentProducer.Producer == _nodeConfigurations.AccountName);
 
             //TODO rpinto - check if he has contacts
             //if he has no contacts there shouldn't be no condition to continue
@@ -139,7 +132,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (_currentProducer.Producer == _nodeConfigurations.AccountName && _hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures && _hasBlockBeenVerified)
+            if (_hasBlockBeenVerified)
                 return Task.FromResult((true, typeof(StartState).Name));
 
             else return Task.FromResult((false, typeof(StartState).Name));
@@ -147,67 +140,71 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_hasProducedBlock && _hasSignedBlock && _hasBroadcastedBlock && _hasEnoughSignatures && _hasBlockBeenVerified);
+            if (_hasBlockBeenVerified) return Task.FromResult(true);
+            return Task.FromResult(false);
         }
 
         protected override async Task UpdateStatus()
         {
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-            var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
-            var lastSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+            _delay = TimeSpan.FromMilliseconds(500);
 
-            var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(_lastSubmittedBlockHeader);
-            var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber);
-            var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
+            _contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
-            var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
-            var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
+            var lastSubmittedBlockHeader = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
-            
-
-            Block builtBlock = null;
-            string blockHash = null;
-
-            if (_builtBlock == null)
+            _hasProviderBuiltNewBlock = false;
+            if (lastSubmittedBlockHeader != null 
+                && _currentProducer.Producer == _nodeConfigurations.AccountName
+                && _currentProducer.HasProducedBlock
+                && _currentProducer.StartProductionTime <= lastSubmittedBlockHeader.Timestamp)
             {
-                builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
-                blockHash = HashHelper.ByteArrayToFormattedHexaString(builtBlock.BlockHeader.BlockHash);
+                _hasProviderBuiltNewBlock = true;
             }
 
-            
+
+            if (_hasProviderBuiltNewBlock && lastSubmittedBlockHeader.IsVerified)
+            {
+                _hasBlockBeenVerified = true;
+            }
+
+            //block has been produced by producer - no more updating to do
+            if (_hasBlockBeenVerified)
+            {
+                if (_builtBlock != null && _builtBlock.BlockHeader != null)
+                {
+                    _logger.LogInformation($"Produced Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}");
+                }
+                return;
+            }
+
+            // _builtBlock and _blockHash are set only once
+            if (!_hasProviderBuiltNewBlock && _builtBlock == null)
+            {
+                var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+                var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);
+                var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber);
+                var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
+                _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
+                _blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
+            }
+
+
 
             var verifySignatureTable = await _mainchainService.RetrieveVerifySignatures(_sidechainPool.ClientAccountName);
-            var hasSignedBlock = verifySignatureTable.Any(t => t.Account == _nodeConfigurations.AccountName);
+            _hasSignedBlock = verifySignatureTable.Any(t => t.Account == _nodeConfigurations.AccountName);
 
-            var hasEnoughSignatures = false;
-            (byte[] packedTransaction, List<string> signatures) packedTransactionAndSignatures = (null, null);
 
-            if (_hasProducedBlock && _hasSignedBlock)
+            if (_hasProviderBuiltNewBlock && _hasSignedBlock && !_hasEnoughSignatures)
             {
-                hasEnoughSignatures = CheckIfBlockHasMajorityOfSignatures(verifySignatureTable, _blockHash, requestedApprovals.Count, requiredKeys);
-                packedTransactionAndSignatures = GetPackedTransactionAndSignatures(verifySignatureTable, _blockHash, requestedApprovals.Count, requiredKeys);
+                var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
+                var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
+
+                _hasEnoughSignatures = CheckIfBlockHasMajorityOfSignatures(verifySignatureTable, _blockHash, requestedApprovals.Count, requiredKeys);
+                _packedTransactionAndSignatures = GetPackedTransactionAndSignatures(verifySignatureTable, _blockHash, requestedApprovals.Count, requiredKeys);
             }
-
-            var hasBlockBeenVerified = lastSubmittedBlockHeader.BlockHash == blockHash && lastSubmittedBlockHeader.IsVerified;
-
-            _contractStateTable = contractState;
-            _producerList = producerList;
-            _currentProducer = currentProducer;
-            _lastSubmittedBlockHeader = lastSubmittedBlockHeader;
-
-
-            _builtBlock = builtBlock;
-            _blockHash = blockHash;
-            _hasProducedBlock = currentProducer.Producer == _nodeConfigurations.AccountName && currentProducer.HasProducedBlock;
-            _hasSignedBlock = hasSignedBlock;
-            _hasEnoughSignatures = hasEnoughSignatures;
-            _hasBlockBeenVerified = hasBlockBeenVerified;
-            _packedTransactionAndSignatures = packedTransactionAndSignatures;
-
-            throw new System.NotImplementedException();
         }
-
 
         private Block BuildBlock(BlockHeader blockHeader, IEnumerable<Transaction> transactions)
         {
@@ -223,8 +220,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
             block.BlockHeader.BlockHash = blockHash;
             block.BlockHeader.ProducerSignature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, blockHash);
-
-            _logger.LogInformation($"Produced Block -> sequence number: {block.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(blockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.PreviousBlockHash)}");
 
             return block;
         }
@@ -312,7 +307,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var threshold = (numberOfProducers / 2) + 1;
             var requiredSignatures = threshold > requiredKeys.Count ? requiredKeys.Count : threshold;
             var signatures = verifySignatures.Select(v => v.Signature).Take(requiredSignatures).ToList();
-            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName).PackedTransaction;
+            var packedTransaction = verifySignatures.FirstOrDefault(v => v.Account == _nodeConfigurations.AccountName)?.PackedTransaction;
             return (packedTransaction, signatures);
         }
 
