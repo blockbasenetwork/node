@@ -477,11 +477,8 @@ namespace BlockBase.DataPersistence.ProducerData
 
                 session.StartTransaction();
                 await transactionCollection.DeleteManyAsync(s => sequenceNumbers.Contains(s.SequenceNumber));
-
-
                 await transactionInfoCollection.DeleteManyAsync(t => true);
                 await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB() { BlockHash = lastValidBlockHash, LastIncludedSequenceNumber = lastIncludedSequenceNumber });
-
                 await session.CommitTransactionAsync();
             }
 

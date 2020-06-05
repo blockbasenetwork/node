@@ -4,9 +4,9 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Mainchain.StateMachine.States
 {
-    public class StartState : AbstractMainchainState<StartState, EndState>
+    public class SecretSharingState : AbstractMainchainState<StartState, EndState>
     {
-        public StartState(ILogger logger) : base(logger)
+        public SecretSharingState(ILogger logger) : base(logger)
         {
         }
 

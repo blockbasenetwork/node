@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Mainchain.StateMachine.States
 {
-    public class EndState : AbstractState<StartState, EndState>
+    public class EndState : AbstractMainchainState<StartState, EndState>
     {
         public EndState(ILogger logger) : base(logger)
         {
