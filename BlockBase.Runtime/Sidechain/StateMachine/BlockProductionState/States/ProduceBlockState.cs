@@ -155,7 +155,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var lastSubmittedBlockHeader = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, 1);
 
             _hasProviderBuiltNewBlock = false;
-            if (lastSubmittedBlockHeader != null
+            if (lastSubmittedBlockHeader != null 
                 && _currentProducer.Producer == _nodeConfigurations.AccountName
                 && _currentProducer.HasProducedBlock
                 && _currentProducer.StartProductionTime <= lastSubmittedBlockHeader.Timestamp)
@@ -180,7 +180,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             }
 
             // _builtBlock and _blockHash are set only once
-            if (!_hasProviderBuiltNewBlock)
+            if (!_hasProviderBuiltNewBlock && _builtBlock == null)
             {
                 var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
                 var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);
