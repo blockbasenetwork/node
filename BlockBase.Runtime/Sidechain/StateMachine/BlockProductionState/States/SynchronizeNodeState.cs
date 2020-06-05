@@ -113,9 +113,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
-            var lastSubmittedBlockHeader = await WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(
-                //TODO rpinto - check if this timespan can be better estimated
-                currentProducer.StartProductionTime, TimeSpan.FromSeconds(5));
+            var lastSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
             _isReadyToProduce = producerList.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce);
             _contractStateTable = contractState;
@@ -126,18 +124,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             if(lastSubmittedBlockHeader == null)
                 _isNodeSynchronized = true;
 
-        }
-
-
-        private async Task<BlockheaderTable> WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(long currentStartProductionTime, TimeSpan delayBetweenRequests)
-        {
-            while (true)
-            {
-                var lastSubmittedBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-                if(lastSubmittedBlock == null) return null;
-                else if (lastSubmittedBlock != null && lastSubmittedBlock.IsVerified && lastSubmittedBlock.Timestamp > currentStartProductionTime) return lastSubmittedBlock;
-                await Task.Delay(delayBetweenRequests);
-            }
         }
 
         private async Task<OpResult<bool>> SyncChain()
