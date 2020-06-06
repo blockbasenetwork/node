@@ -172,7 +172,7 @@ namespace BlockBase.Node.Controllers
                 if (chainExistsInPool)
                 {
                     if (existingChain.ManagerTask.Task.Status == TaskStatus.Running)
-                        return BadRequest(new OperationResponse<bool>(new ArgumentException(), $"Request to produce sidechain {chainName} previously sent."));
+                        return BadRequest(new OperationResponse<string>($"Request to produce sidechain {chainName} previously sent."));
                     else
                     {
                         //if chain exists in pool and isn't running, remove it

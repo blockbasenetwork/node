@@ -54,5 +54,37 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.PeerConnectionsState.States
         {
             throw new NotImplementedException();
         }
+
+        // private async Task CheckPeerConnections(List<ProducerInTable> producers)
+        // {
+        //     var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
+
+        //     //TODO rpinto - commented this fetch to pass as parameter but I'm not sure it needs to be refreshed from before
+        //     // var producers = await _mainchainService.RetrieveProducersFromTable(_sidechain.ClientAccountName);
+        //     var producersInPool = producers.Select(m => new ProducerInPool
+        //     {
+        //         ProducerInfo = new ProducerInfo
+        //         {
+        //             AccountName = m.Key,
+        //             PublicKey = m.PublicKey,
+        //             ProducerType = (ProducerTypeEnum)m.ProducerType,
+        //             NewlyJoined = false,
+        //             IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
+        //         },
+        //         PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
+        //     }).ToList();
+
+        //     _sidechain.ProducersInPool.ClearAndAddRange(producersInPool);
+
+        //     //TODO rpinto - this may also take time but is awaited. Why this way here and different right below
+        //     await ConnectToProducers();
+
+        //     if (_sidechain.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected))
+        //     {
+        //         //TODO rpinto - this returns a TaskContainer that isn't stored anywhere. So this is executed and not awaited. Is that the intended behavior?
+        //         var checkConnectionTask = TaskContainer.Create(async () => await _peerConnectionsHandler.ArePeersConnected(_sidechain));
+        //         checkConnectionTask.Start();
+        //     }
+        // }
     }
 }

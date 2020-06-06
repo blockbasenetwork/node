@@ -59,6 +59,38 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.PeerConnectionsState.States
         {
             throw new NotImplementedException();
         }
+
+        // private async Task ConnectToProducers()
+        // {
+        //     var ipAddresses = await GetProducersIPs();
+        //     await _peerConnectionsHandler.ConnectToProducers(ipAddresses);
+        // }
+
+        // private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
+        // {
+        //     var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
+
+        //     var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
+        //     foreach (var table in ipAddressesTables)
+        //     {
+        //         var producer = table.Key;
+        //         var producerPublicKey = table.PublicKey;
+        //         //TODO rpinto - why a list of IPs and not only one?
+        //         var encryptedIp = table.EncryptedIPs?.LastOrDefault();
+        //         if (encryptedIp == null) continue;
+
+        //         try
+        //         {
+        //             var decryptedIp = AssymetricEncryption.DecryptIP(encryptedIp, _nodeConfigurations.ActivePrivateKey, producerPublicKey);
+        //             decryptedProducerIPs.Add(producer, decryptedIp);
+        //         }
+        //         catch
+        //         {
+        //             _logger.LogWarning($"Unable to decrypt IP from producer: {producer}.");
+        //         }
+        //     }
+        //     return decryptedProducerIPs;
+        // }
     }
 
 }

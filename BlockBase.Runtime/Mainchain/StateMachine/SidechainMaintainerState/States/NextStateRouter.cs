@@ -54,7 +54,7 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.Stat
             //TODO this should do a delay
             if(nextState == null)
             {
-                
+                _delay = TimeSpan.FromSeconds(3);
             }
         }
 
@@ -71,6 +71,9 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.Stat
             if(contractState.IPReceiveTime && IsTimeUpForSidechainPhase(contractInfo.ReceiveEndDate, 0))
                 return typeof(StartProductionState).Name;
 
+            //this works parallel to the remaining states, so perhaps it would be best to do this check in parallel to the ones above, and if
+            //it turns out true to give it priority.
+            //another alternative is to have a state machine just to manage production
             if(contractState.ProductionTime && currentProducer != null && IsTimeUpForSidechainPhase(currentProducer.StartProductionTime + sidechainPool.BlockTimeDuration, 0))
                 return typeof(SwitchProducerTurn).Name;
             

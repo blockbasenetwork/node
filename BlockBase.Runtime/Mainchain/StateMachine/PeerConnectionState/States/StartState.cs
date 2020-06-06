@@ -50,7 +50,7 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.PeerConnectionsState.States
             throw new NotImplementedException();
         }
 
-        protected override async Task UpdateStatus() 
+        protected override Task UpdateStatus() 
         {
             throw new NotImplementedException();
         }

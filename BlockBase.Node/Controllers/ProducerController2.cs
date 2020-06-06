@@ -66,7 +66,7 @@ namespace BlockBase.Node.Controllers
                 var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
                 var accountName = NodeConfigurations.AccountName;
-                var publicKey = NodeConfigurations.ActivePublicKey;
+                var activePublicKey = NodeConfigurations.ActivePublicKey;
 
 
                 bool eosAccountDataFetched = false;
@@ -77,6 +77,9 @@ namespace BlockBase.Node.Controllers
                 long netLimit = 0;
                 ulong ramUsed = 0;
                 long ramLimit = 0;
+
+                bool activeKeyFoundOnAccount = false;
+                bool activeKeyHasEnoughWeight = false;
 
 
                 try
@@ -92,8 +95,26 @@ namespace BlockBase.Node.Controllers
                     ramUsed = accountInfo.ram_usage;
                     ramLimit = accountInfo.ram_quota;
 
+                    var permission = accountInfo.permissions.SingleOrDefault(p => p.perm_name == "active");
+
+                    if(permission != null)
+                    {
+                        var correspondingActiveKey = permission.required_auth?.keys?.SingleOrDefault(k => k.key == activePublicKey);
+                        if(correspondingActiveKey != null)
+                            activeKeyFoundOnAccount = true;
+                        if(correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
+                            activeKeyHasEnoughWeight = true;
+                        
+                    }
+                    
+
                 }
                 catch { }
+
+
+
+                var publicIpAddress = NetworkConfigurations.PublicIpAddress;
+                var tcpPort = NetworkConfigurations.TcpPort;
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
                 var mongoDbPrefix = NodeConfigurations.DatabasesPrefix;
@@ -105,9 +126,13 @@ namespace BlockBase.Node.Controllers
                 return Ok(new OperationResponse<dynamic>(
                     new
                     {
+                        publicIpAddress,
+                        tcpPort,
                         accountName,
-                        publicKey,
                         eosAccountDataFetched,
+                        activePublicKey,
+                        activeKeyFoundOnAccount,
+                        activeKeyHasEnoughWeight,
                         currencyBalance,
                         cpuUsed,
                         cpuLimit,
@@ -115,13 +140,14 @@ namespace BlockBase.Node.Controllers
                         netLimit,
                         ramUsed,
                         ramLimit,
-                        isMongoLive,
-                        isPostgresLive,
+                        
                         mongoDbConnectionString,
                         mongoDbPrefix,
+                        isMongoLive,
                         postgresHost,
                         postgresPort,
-                        postgresUser
+                        postgresUser,
+                        isPostgresLive,
                     }
                     , $"Configuration and connection data retrieved."));
 
@@ -176,7 +202,7 @@ namespace BlockBase.Node.Controllers
 
                     //if it's running he should need to do anything because the state manager will decide what to do
                     if(sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
-                        return BadRequest(new OperationResponse<bool>(new ArgumentException(), $"Request to produce sidechain {chainName} previously sent."));
+                        return BadRequest(new OperationResponse<string>($"Request to produce sidechain {chainName} previously sent."));
                     //if it's not running, there was a problem and it should be removed from the pool list
                     else
                     {
@@ -192,12 +218,12 @@ namespace BlockBase.Node.Controllers
                 //if the database exists and he's on the producer table, then nothing should be done
                 if (chainExistsInDb && isProducerInTable) 
                 {
-                    return BadRequest(new OperationResponse<bool>(new ArgumentException(), $"{NodeConfigurations.AccountName} is a producer in {chainName}"));
+                    return BadRequest(new OperationResponse<string>($"{NodeConfigurations.AccountName} is a producer in {chainName}"));
                 }
                 //if he's not a producer, but is requesting again to be one, and has a database associated, he should delete it first
                 else if(chainExistsInDb)
                 {
-                    return BadRequest(new OperationResponse<bool>(new ArgumentException(), $"There is a database related to this chain. Please delete it"));
+                    return BadRequest(new OperationResponse<string>($"There is a database related to this chain. Please delete it"));
                 }
 
 

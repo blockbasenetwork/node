@@ -74,11 +74,11 @@ namespace BlockBase.Runtime.Common
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"{this.GetType().Name} crashed {ex.Message}");
-                    _logger.LogDebug($"Trace: {ex}");
+                    _logger.LogError($"{this.GetType().Name} | {ex.Message}");
+                    if(_verbose) _logger.LogDebug($"Trace: {ex}");
 
-                    var crashDelay = TimeSpan.FromSeconds(10);
-                    _logger.LogDebug($"{this.GetType().Name} - Starting after crash delay... {crashDelay.Seconds} seconds");
+                    var crashDelay = TimeSpan.FromSeconds(3);
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting after crash delay... {crashDelay.Seconds} seconds");
                     await Task.Delay(crashDelay);
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished after crash delay");
                 }

@@ -15,6 +15,9 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.Stat
         private SidechainPool _sidechainPool;
         private ContractStateTable _contractState;
         private ContractInformationTable _contractInfo;
+
+        private bool _verifyBlockPermissionSet;
+        private bool _historyValidatePermissionSet;
         public ProvidersConnectionState(ILogger logger, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
         {
             _mainchainService = mainchainService;
@@ -29,6 +32,8 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.Stat
             }
             catch
             {
+                //TODO rpinto - is there a better way to do this than doing it in a catch?
+                _verifyBlockPermissionSet = true;
                 _logger.LogDebug($"Already linked authorization {EosMsigConstants.VERIFY_BLOCK_PERMISSION}");
             }
             try
@@ -37,10 +42,15 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.Stat
             }
             catch
             {
+                //TODO rpinto - is there a better way to do this than doing it in a catch?
+                _historyValidatePermissionSet = true;
                 _logger.LogDebug($"Already linked authorization {EosMethodNames.HISTORY_VALIDATE}");
             }
 
-            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechainPool.ClientAccountName);
+            if(_verifyBlockPermissionSet && _historyValidatePermissionSet)
+            {
+                await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechainPool.ClientAccountName);
+            }
         }
 
         protected override Task<bool> HasConditionsToContinue()

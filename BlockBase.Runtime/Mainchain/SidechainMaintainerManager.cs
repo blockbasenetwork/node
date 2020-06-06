@@ -172,11 +172,13 @@ namespace BlockBase.Runtime.Mainchain
                     await UpdateAuthorizations(producerList, sidechainAccountInfo);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechain.ClientAccountName);
                 }
+
                 if (contractStateTable.SecretTime &&
                     contractInfo.SecretEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SEND_TIME, _sidechain.ClientAccountName);
                 }
+                
                 if (contractStateTable.IPSendTime &&
                     contractInfo.SendEndDate * 1000 - _timeToExecuteTrx <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 {
