@@ -3,7 +3,7 @@ using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Requester.StateMachine.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States
+namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
 {
     public class ExecuteSettlementState : AbstractMainchainState<StartState, EndState>
     {

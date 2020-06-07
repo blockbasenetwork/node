@@ -158,6 +158,7 @@ namespace BlockBase.Api
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
 
+                services.AddSingleton<ISidechainMaintainerManager2, SidechainMaintainerManager2>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<SidechainKeeper>();
             });

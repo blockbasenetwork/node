@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
@@ -12,20 +13,21 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
     public class SecretSharingState : AbstractMainchainState<StartState, EndState>
     {
         private IMainchainService _mainchainService;
-        private SidechainPool _sidechainPool;
         private ContractStateTable _contractState;
 
+        private NodeConfigurations _nodeConfigurations;
+
         private ContractInformationTable _contractInfo;
-        public SecretSharingState(ILogger logger, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
+        public SecretSharingState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
-            _sidechainPool = sidechainPool;
+            _nodeConfigurations = nodeConfigurations;
             
         }
 
         protected override async Task DoWork()
         {
-            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _sidechainPool.ClientAccountName);
+            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _nodeConfigurations.AccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -46,8 +48,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override async Task UpdateStatus()
         {
-            _contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
+            _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
+            _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
@@ -16,12 +17,13 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private ContractStateTable _contractState;
         private CurrentProducerTable _currentProducer;
         private IMainchainService _mainchainService;
-        private SidechainPool _sidechainPool;
+    
+        private NodeConfigurations _nodeConfigurations;
 
-        public NextStateRouter(ILogger logger, SidechainPool sidechainPool, IMainchainService mainchainService) : base(logger)
+        public NextStateRouter(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
-            _sidechainPool = sidechainPool;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         protected override Task DoWork()
@@ -46,11 +48,11 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override async Task UpdateStatus()
         {
-            _contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
-            _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
+            _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
+            _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
+            _currentProducer = await _mainchainService.RetrieveCurrentProducer(_nodeConfigurations.AccountName);
 
-            _nextState = GetNextSidechainState(_contractInfo, _contractState, _currentProducer, _sidechainPool);
+            _nextState = GetNextSidechainState(_contractInfo, _contractState, _currentProducer);
 
             if(_nextState == null)
             {
@@ -59,7 +61,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             }
         }
 
-        private string GetNextSidechainState(ContractInformationTable contractInfo, ContractStateTable contractState, CurrentProducerTable currentProducer, SidechainPool sidechainPool)
+        private string GetNextSidechainState(ContractInformationTable contractInfo, ContractStateTable contractState, CurrentProducerTable currentProducer)
         {
             if(contractState.ConfigTime) 
                 return typeof(CandidatureReceivalState).Name;

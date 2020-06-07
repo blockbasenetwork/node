@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BlockBase.Domain;
+using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Enums;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
@@ -17,47 +18,51 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
     public class UpdateAuthorizationsState : AbstractMainchainState<StartState, EndState>
     {
         private bool _inNeedToUpdateAuthorizations;
-        private SidechainPool _sidechainPool;
+        private NodeConfigurations _nodeConfigurations;
         private List<ProducerInTable> _producerList;
         private IMainchainService _mainchainService;
         private EosSharp.Core.Api.v1.GetAccountResponse _sidechainAccountInfo;
-        public UpdateAuthorizationsState(ILogger logger, SidechainPool sidechainPool, IMainchainService mainchainService) : base(logger)
+        public UpdateAuthorizationsState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _inNeedToUpdateAuthorizations = false;
-            _sidechainPool = sidechainPool;
+            _nodeConfigurations = nodeConfigurations;
             _mainchainService = mainchainService;
         }
 
         protected override async Task DoWork()
         {
 
-            var producersInPool = _producerList.Select(m => new ProducerInPool
-            {
-                ProducerInfo = new ProducerInfo
-                {
-                    AccountName = m.Key,
-                    PublicKey = m.PublicKey,
-                    ProducerType = (ProducerTypeEnum)m.ProducerType,
-                    //TODO rpinto - why is this here set to true??
-                    NewlyJoined = true
-                }
-            }).ToList();
+            //TODO rpinto - this is done in the old version - doesn't seem right to me
+            // var producersInPool = _producerList.Select(m => new ProducerInPool
+            // {
+            //     ProducerInfo = new ProducerInfo
+            //     {
+            //         AccountName = m.Key,
+            //         PublicKey = m.PublicKey,
+            //         ProducerType = (ProducerTypeEnum)m.ProducerType,
+            //         //TODO rpinto - why is this here set to true??
+            //         NewlyJoined = true
+            //     }
+            // }).ToList();
 
-            _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
+            // _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
+
+
+
 
             var notValidatorProducers = _producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).ToList();
             
             //TODO rpinto - these are two different authorization assign where if the first is done but the second fails, the second will never go through again because the first will always blow up
             //used try catch to try to solve it
             try {
-                await _mainchainService.AuthorizationAssign(_sidechainPool.ClientAccountName, _producerList, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, _producerList, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
             } catch(Exception ex)
             {
                 _logger.LogError($"Failed in assigning permissions", ex.Message);
             }
             try
             {
-                if (notValidatorProducers.Any()) await _mainchainService.AuthorizationAssign(_sidechainPool.ClientAccountName, notValidatorProducers, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+                if (notValidatorProducers.Any()) await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, notValidatorProducers, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
             } catch(Exception ex)
             {
                 _logger.LogError($"Failed in assigning permissions", ex.Message);
@@ -85,21 +90,23 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override async Task UpdateStatus()
         {
-            _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-            _sidechainAccountInfo = await _mainchainService.GetAccount(_sidechainPool.ClientAccountName);
-            _inNeedToUpdateAuthorizations = DoesItNeedToUpdateAuthorizations(_producerList, _sidechainAccountInfo, _sidechainPool);
+            _producerList = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
+            _sidechainAccountInfo = await _mainchainService.GetAccount(_nodeConfigurations.AccountName);
+            
+            _inNeedToUpdateAuthorizations = DoesItNeedToUpdateAuthorizations(_producerList, _sidechainAccountInfo);
 
             //TODO rpinto - what it needs to do is to get the sidechain account and check if the permissions associated are there!
 
         }
 
-        private bool DoesItNeedToUpdateAuthorizations(List<ProducerInTable> producerList, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo, SidechainPool sidechainPool)
+        private bool DoesItNeedToUpdateAuthorizations(List<ProducerInTable> producerList, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
             //TODO rpinto - these checks here don't seem right to me
-            var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
-            if (!producerList.Any()) return false;
-            if (!producerList.Any(p => !sidechainPool.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) &&
-                producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return false;
+            //commented the old version, didn't seem right to me
+            // var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
+            // if (!producerList.Any()) return false;
+            // if (!producerList.Any(p => !sidechainPool.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) &&
+            //     producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return false;
 
             return true;
         }

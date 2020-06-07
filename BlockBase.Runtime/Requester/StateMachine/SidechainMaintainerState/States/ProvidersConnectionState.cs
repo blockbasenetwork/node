@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
@@ -13,23 +14,23 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
     public class ProvidersConnectionState : AbstractMainchainState<StartState, EndState>
     {
         private IMainchainService _mainchainService;
-        private SidechainPool _sidechainPool;
+        private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractState;
         private ContractInformationTable _contractInfo;
 
         private bool _verifyBlockPermissionSet;
         private bool _historyValidatePermissionSet;
-        public ProvidersConnectionState(ILogger logger, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
+        public ProvidersConnectionState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
-            _sidechainPool = sidechainPool;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         protected async override Task DoWork()
         {
             try
             {
-                await _mainchainService.LinkAuthorization(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _sidechainPool.ClientAccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                await _mainchainService.LinkAuthorization(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _nodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
             }
             catch
             {
@@ -39,7 +40,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             }
             try
             {
-                await _mainchainService.LinkAuthorization(EosMethodNames.HISTORY_VALIDATE, _sidechainPool.ClientAccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+                await _mainchainService.LinkAuthorization(EosMethodNames.HISTORY_VALIDATE, _nodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
             }
             catch
             {
@@ -50,7 +51,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
             if(_verifyBlockPermissionSet && _historyValidatePermissionSet)
             {
-                await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechainPool.ClientAccountName);
+                await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _nodeConfigurations.AccountName);
             }
         }
 
@@ -72,8 +73,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override async Task UpdateStatus()
         {
-            _contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
+            _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
+            _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
         }
     }
 }
