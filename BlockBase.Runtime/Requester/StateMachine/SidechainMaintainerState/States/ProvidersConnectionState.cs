@@ -16,7 +16,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractState;
-        private ContractInformationTable _contractInfo;
 
         private bool _verifyBlockPermissionSet;
         private bool _historyValidatePermissionSet;
@@ -57,7 +56,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.ReceiveEndDate, 0));
+            return Task.FromResult(_contractState != null);
+            //return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.ReceiveEndDate, 0));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
@@ -74,7 +74,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         protected override async Task UpdateStatus()
         {
             _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
-            _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
         }
     }
 }

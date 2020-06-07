@@ -18,6 +18,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private NodeConfigurations _nodeConfigurations;
 
         private ContractInformationTable _contractInfo;
+
+        private bool _triedToExecuteSecretTime;
         public SecretSharingState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
@@ -32,7 +34,11 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.SecretEndDate, 0));
+            if(_contractState.CandidatureTime && !IsTimeUpForSidechainPhase(_contractInfo.CandidatureEndDate, 0))
+                return Task.FromResult(false);
+            return Task.FromResult(true);
+
+            //return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.SecretEndDate, 0));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

@@ -43,6 +43,10 @@ namespace BlockBase.Runtime.Common
                     await UpdateStatus();
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Status updated");
 
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
+                    await Task.Delay(_delay);
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished delay");
+
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has conditions to continue...");
                     if (!await HasConditionsToContinue())
                     {
@@ -73,9 +77,7 @@ namespace BlockBase.Runtime.Common
                     {
                         _logger.LogDebug($"{this.GetType().Name} - No work found to do");
                     }
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
-                    await Task.Delay(_delay);
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished delay");
+                    
                 }
                 catch (Exception ex)
                 {

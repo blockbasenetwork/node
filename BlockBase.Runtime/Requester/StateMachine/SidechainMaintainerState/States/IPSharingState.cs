@@ -30,7 +30,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.SendEndDate, 0));
+            return Task.FromResult(_contractInfo != null);
+            //return Task.FromResult(!IsTimeUpForSidechainPhase(_contractInfo.SendEndDate, 0));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

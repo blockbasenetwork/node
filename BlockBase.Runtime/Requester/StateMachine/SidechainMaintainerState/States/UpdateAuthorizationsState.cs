@@ -101,6 +101,10 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         private bool DoesItNeedToUpdateAuthorizations(List<ProducerInTable> producerList, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
+            var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
+            if (!producerList.Any()) return false;
+            if (producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return false;
+
             //TODO rpinto - these checks here don't seem right to me
             //commented the old version, didn't seem right to me
             // var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();

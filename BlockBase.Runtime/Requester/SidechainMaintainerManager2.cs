@@ -28,7 +28,7 @@ namespace BlockBase.Runtime.Requester
         public TaskContainer TaskContainerConnections { get; private set; }
 
 
-        public SidechainMaintainerManager2(ILogger<SidechainMaintainerManager2> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
+        public SidechainMaintainerManager2(ILogger<ISidechainMaintainerManager2> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
 
             _sidechainMaintainerStateManager = new SidechainMaintainerStateManager(logger, mainchainService, nodeConfigurations.Value);

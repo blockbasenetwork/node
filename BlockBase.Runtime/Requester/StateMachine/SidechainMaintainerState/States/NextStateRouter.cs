@@ -33,12 +33,12 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(true);
+            return Task.FromResult(_contractState != null);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((true, _nextState));
+            return Task.FromResult((_nextState != null, _nextState));
         }
 
         protected override Task<bool> IsWorkDone()
@@ -57,6 +57,10 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             if(_nextState == null)
             {
                 _logger.LogDebug($"{this.GetType().Name} - Nothing to do to maintain...delaying");
+                _delay = TimeSpan.FromSeconds(10);
+            }
+            else
+            {
                 _delay = TimeSpan.FromSeconds(3);
             }
         }

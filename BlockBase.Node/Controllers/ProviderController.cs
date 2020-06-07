@@ -418,7 +418,7 @@ namespace BlockBase.Node.Controllers
 
                 if(chainExistsInPool && !force)
                 {
-                    return BadRequest(new OperationResponse<string>("Producer is still working on producing blocks for sidechain {sidechainName}. Consider requesting to leave the sidechain production first. If you're sure, use force=true on the request."));
+                    return BadRequest(new OperationResponse<string>($"Producer is still working on producing blocks for sidechain {sidechainName}. Consider requesting to leave the sidechain production first. If you're sure, use force=true on the request."));
                 }
 
                 if (chainExistsInPool && force)
