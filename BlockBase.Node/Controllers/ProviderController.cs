@@ -8,7 +8,6 @@ using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Logging;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
-using BlockBase.Runtime.SidechainProducer;
 using System.Text;
 using System.Linq;
 using BlockBase.Utils.Crypto;
@@ -17,6 +16,7 @@ using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain.Enums;
 using BlockBase.DataPersistence.Utils;
 using BlockBase.Domain.Blockchain;
+using BlockBase.Runtime.Provider;
 
 namespace BlockBase.Node.Controllers
 {

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
-using BlockBase.Runtime.SidechainProducer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;

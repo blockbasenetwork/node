@@ -5,7 +5,6 @@ using BlockBase.Network.Connectors;
 using BlockBase.Network.IO;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Network.Sidechain;
-using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
 using BlockBase.Utils.Extensions;
 using BlockBase.Utils.Threading;

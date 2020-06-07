@@ -13,7 +13,6 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using EosSharp.Core.Exceptions;
@@ -22,6 +21,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using static BlockBase.Network.Rounting.MessageForwarder;
 using BlockBase.Runtime.Helpers;
+using BlockBase.Runtime.Provider;
 
 namespace BlockBase.Runtime.Network
 {

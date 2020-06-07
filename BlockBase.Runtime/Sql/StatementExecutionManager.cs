@@ -19,7 +19,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain;
+using BlockBase.Runtime.Provider;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;

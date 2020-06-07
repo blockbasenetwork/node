@@ -1,7 +1,7 @@
 ﻿using BlockBase.Api;
 using BlockBase.Extensions;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.SidechainProducer;
+using BlockBase.Runtime.Provider;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using System.Linq;

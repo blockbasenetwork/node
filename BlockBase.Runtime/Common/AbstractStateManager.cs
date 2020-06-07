@@ -5,7 +5,7 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain;
+using BlockBase.Runtime.Provider;
 using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;

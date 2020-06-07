@@ -14,8 +14,6 @@ using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
 using BlockBase.Runtime.Network;
 using BlockBase.Domain.Configurations;
-using BlockBase.Runtime.SidechainProducer;
-using BlockBase.Runtime.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
 
 namespace BlockBase.Runtime.Sql
