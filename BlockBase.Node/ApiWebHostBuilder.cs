@@ -96,6 +96,7 @@ namespace BlockBase.Api
                 {
                     c.SwaggerDoc("providerApi", new OpenApiInfo { Title = "Service Provider API", Version = "v0.1" });
                     c.SwaggerDoc("requesterApi", new OpenApiInfo { Title = "Service Requester API", Version = "v0.1" });
+                    c.SwaggerDoc("requester2Api", new OpenApiInfo { Title = "Service Requester2 Test API", Version = "v0.1" });
                     c.SwaggerDoc("networkApi", new OpenApiInfo { Title = "Network API", Version = "v0.1" });
                     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);

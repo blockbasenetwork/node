@@ -50,11 +50,11 @@ namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.Stat
             _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
-            var nextState = GetNextSidechainState(_contractInfo, _contractState, _currentProducer, _sidechainPool);
+            _nextState = GetNextSidechainState(_contractInfo, _contractState, _currentProducer, _sidechainPool);
 
-            //TODO this should do a delay
-            if(nextState == null)
+            if(_nextState == null)
             {
+                _logger.LogDebug($"{this.GetType().Name} - Nothing to do to maintain...delaying");
                 _delay = TimeSpan.FromSeconds(3);
             }
         }

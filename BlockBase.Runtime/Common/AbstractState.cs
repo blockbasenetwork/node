@@ -57,7 +57,7 @@ namespace BlockBase.Runtime.Common
                     var jumpStatus = await HasConditionsToJump();
                     if (jumpStatus.inConditionsToJump)
                     {
-                        _logger.LogDebug($"{this.GetType().Name} - Conditions found to jump to {jumpStatus.nextState}");
+                        _logger.LogDebug($"{this.GetType().Name} - Jumping to {jumpStatus.nextState}");
                         return jumpStatus.nextState;
                     }
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - No conditions found to jump");
