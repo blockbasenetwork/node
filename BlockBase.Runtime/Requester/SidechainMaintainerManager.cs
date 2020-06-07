@@ -192,6 +192,7 @@ namespace BlockBase.Runtime.Requester
                     await LinkAuthorizarion(EosMethodNames.HISTORY_VALIDATE, _sidechain.ClientAccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
                     latestTrxTime = await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _sidechain.ClientAccountName);
                     
+                    //TODO rpinto - in the new version of the code, this is done with a state manager for that - PeerConnectionState inside the producer
                     await ConnectToProducers();
                 }
                 if (contractStateTable.ProductionTime && currentProducerTable != null &&

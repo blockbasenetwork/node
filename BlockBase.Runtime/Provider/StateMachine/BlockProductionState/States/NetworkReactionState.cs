@@ -34,7 +34,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            if(_contractStateTable == null || _producerList == null) return Task.FromResult(false);
+            if(_contractStateTable == null || _producerList == null || _currentProducer == null) return Task.FromResult(false);
             //verifies if he is a producer and the sidechain is in production state
             return Task.FromResult(_contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
@@ -66,6 +66,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             //check preconditions to continue update
             if (contractState == null) return;
             if (producerList == null) return;
+            if(currentProducer == null) return;
 
             _contractStateTable = contractState;
             _producerList = producerList;

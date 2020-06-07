@@ -25,7 +25,7 @@ namespace BlockBase.Runtime.Common
         public AbstractState(ILogger logger, bool automatic = false, bool verbose = false)
         {
             _logger = logger;
-            _delay = TimeSpan.FromSeconds(2);
+            _delay = TimeSpan.FromSeconds(5);
             _verbose = verbose;
             _inAutomaticMode = automatic;
         }

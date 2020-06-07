@@ -3,6 +3,7 @@ using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Requester.StateMachine.PeerConnectionsState;
 using BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState;
 using BlockBase.Runtime.Requester.StateMachine.SidechainProductionState;
@@ -28,11 +29,11 @@ namespace BlockBase.Runtime.Requester
         public TaskContainer TaskContainerConnections { get; private set; }
 
 
-        public SidechainMaintainerManager2(ILogger<ISidechainMaintainerManager2> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
+        public SidechainMaintainerManager2(ILogger<ISidechainMaintainerManager2> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, TransactionsHandler transactionsHandler, IMongoDbProducerService mongoDbProducerService)
         {
 
             _sidechainMaintainerStateManager = new SidechainMaintainerStateManager(logger, mainchainService, nodeConfigurations.Value);
-            _sidechainProductionStateManager = new SidechainProductionStateManager(logger);
+            _sidechainProductionStateManager = new SidechainProductionStateManager(logger, mainchainService, nodeConfigurations.Value, transactionsHandler, mongoDbProducerService);
             //_peerConnectionStateManager = new PeerConnectionStateManager()
 
             _mongoDbProducerService = mongoDbProducerService;
@@ -52,7 +53,7 @@ namespace BlockBase.Runtime.Requester
         public Task Start()
         {
             if (!IsMaintainerRunning()) TaskContainerMaintainer = _sidechainMaintainerStateManager.Start();
-            // if (!IsProductionRunning()) TaskContainerProduction = _sidechainProductionStateManager.Start();
+            if (!IsProductionRunning()) TaskContainerProduction = _sidechainProductionStateManager.Start();
 
             return Task.CompletedTask;
         }

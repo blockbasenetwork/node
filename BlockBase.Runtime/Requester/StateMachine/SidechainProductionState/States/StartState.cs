@@ -1,5 +1,7 @@
 using System.Threading.Tasks;
-using BlockBase.Runtime.Common;
+using BlockBase.Domain.Configurations;
+using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Runtime.Requester.StateMachine.Common;
 using Microsoft.Extensions.Logging;
 
@@ -7,33 +9,38 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 {
     public class StartState : AbstractMainchainState<StartState, EndState>
     {
-        public StartState(ILogger logger) : base(logger)
+        private NodeConfigurations _nodeConfigurations;
+        private IMainchainService _mainchainService;
+        private ContractStateTable _contractState;
+        public StartState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
+            _mainchainService = mainchainService;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         protected override Task DoWork()
         {
-            throw new System.NotImplementedException();
+            return Task.CompletedTask;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(_contractState != null);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult((_contractState != null, typeof(NextStateRouter).Name));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(true);
         }
 
-        protected override Task UpdateStatus()
+        protected override async Task UpdateStatus()
         {
-            throw new System.NotImplementedException();
+            _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
         }
     }
 }
