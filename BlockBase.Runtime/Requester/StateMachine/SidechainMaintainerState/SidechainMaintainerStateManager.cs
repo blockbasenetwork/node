@@ -31,6 +31,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState
             if(state == typeof(NextStateRouter).Name) return new NextStateRouter(_logger, _mainchainService, _nodeConfigurations);
             if(state == typeof(UpdateAuthorizationsState).Name) return new UpdateAuthorizationsState(_logger, _mainchainService, _nodeConfigurations);
 
+            if(state == typeof(StartProductionState).Name) return new StartProductionState(_logger, _mainchainService, _nodeConfigurations);
+
             if(state == typeof(EndState).Name) return new EndState(_logger);
             throw new System.NotImplementedException();
         }

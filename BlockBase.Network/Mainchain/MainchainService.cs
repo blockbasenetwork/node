@@ -1049,7 +1049,7 @@ namespace BlockBase.Network.Mainchain
                 {
                     var apiEx = (ApiErrorException)exception;
                     var details = apiEx.error?.details;
-                    if (details != null && details.Any(d => d.method == "eosio_assert"))
+                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth"))
                     {
                         //if it's a message that we may be expecting do a quieter log
                         _logger.LogDebug($"Error sending transaction: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");

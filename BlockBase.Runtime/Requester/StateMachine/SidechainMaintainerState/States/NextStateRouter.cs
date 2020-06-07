@@ -75,6 +75,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
                 return typeof(IPSharingState).Name;
             if(contractState.IPSendTime && IsTimeUpForSidechainPhase(contractInfo.SendEndDate, 0))
                 return typeof(ProvidersConnectionState).Name;
+            if(contractState.IPReceiveTime && IsTimeUpForSidechainPhase(contractInfo.ReceiveEndDate, 0))
+                return typeof(StartProductionState).Name;
             return null;
         }
 
