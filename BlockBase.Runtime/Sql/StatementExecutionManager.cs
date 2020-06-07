@@ -24,7 +24,7 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace BlockBase.Runtime
+namespace BlockBase.Runtime.Sql
 {
     public class StatementExecutionManager
     {

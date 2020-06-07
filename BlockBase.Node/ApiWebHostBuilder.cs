@@ -13,6 +13,7 @@ using BlockBase.Runtime.Mainchain;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sidechain;
 using BlockBase.Runtime.SidechainProducer;
+using BlockBase.Runtime.Sql;
 using BlockBase.Utils;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -157,8 +158,8 @@ namespace BlockBase.Api
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
 
-                services.AddSingleton<ISidechainProducerService2, SidechainProducerService2>();
-                services.AddSingleton<SidechainKeeper2>();
+                services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
+                services.AddSingleton<SidechainKeeper>();
             });
 
             return this;

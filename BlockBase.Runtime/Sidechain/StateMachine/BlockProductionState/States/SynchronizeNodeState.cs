@@ -134,7 +134,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private async Task<OpResult<bool>> SyncChain()
         {
             _logger.LogDebug("Building chain.");
-            var chainBuilder = new ChainBuilder2(_logger, _sidechainPool, _mongoDbProducerService, _nodeConfigurations, _networkService, _mainchainService, _networkConfigurations.GetEndPoint());
+            var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _nodeConfigurations, _networkService, _mainchainService, _networkConfigurations.GetEndPoint());
             var opResult = await chainBuilder.Run();
 
             return opResult;

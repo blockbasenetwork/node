@@ -28,14 +28,14 @@ namespace BlockBase.Runtime.Network
     {
         private INetworkService _networkService;
         private ILogger _logger;
-        private SidechainKeeper2 _sidechainKeeper;
+        private SidechainKeeper _sidechainKeeper;
         private IMongoDbProducerService _mongoDbProducerService;
         private IMainchainService _mainChainService;
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
 
-        public TransactionValidationsHandler(ILogger<TransactionValidationsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper2 sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
+        public TransactionValidationsHandler(ILogger<TransactionValidationsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
         {
             _logger = logger;
             _logger.LogDebug("Creating transaction validator.");

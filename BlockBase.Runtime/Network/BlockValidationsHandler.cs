@@ -32,14 +32,14 @@ namespace BlockBase.Runtime.Network
         private IMongoDbProducerService _mongoDbProducerService;
         private INetworkService _networkService;
         private IMainchainService _mainchainService;
-        private SidechainKeeper2 _sidechainKeeper;
+        private SidechainKeeper _sidechainKeeper;
         private NetworkConfigurations _networkConfigurations;
         private BlockRequestsHandler _blockSender;
         private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
         private string _endPoint;
 
 
-        public BlockValidationsHandler(SystemConfig systemConfig, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, ILogger<BlockValidationsHandler> logger, INetworkService networkService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, SidechainKeeper2 sidechainKeeper, BlockRequestsHandler blockSender)
+        public BlockValidationsHandler(SystemConfig systemConfig, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, ILogger<BlockValidationsHandler> logger, INetworkService networkService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, SidechainKeeper sidechainKeeper, BlockRequestsHandler blockSender)
         {
             _logger = logger;
             _mongoDbProducerService = mongoDbProducerService;

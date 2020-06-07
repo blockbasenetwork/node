@@ -1,25 +1,42 @@
-﻿// using BlockBase.Network.Sidechain;
-// using System.Collections.Concurrent;
+using BlockBase.Network.Sidechain;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 
-// namespace BlockBase.Runtime.SidechainProducer
-// {
-//     public class SidechainKeeper
-//     {
-//         public ConcurrentDictionary<string, SidechainPool> Sidechains { get; }
+namespace BlockBase.Runtime.SidechainProducer
+{
+    public class SidechainKeeper
+    {
+        private ConcurrentDictionary<string, SidechainContext> Sidechains { get; }
 
-//         public SidechainKeeper()
-//         {
-//             Sidechains = new ConcurrentDictionary<string, SidechainPool>();
-//         }
+        public SidechainKeeper()
+        {
+            Sidechains = new ConcurrentDictionary<string, SidechainContext>();
+        }
 
-//         public bool TryAddSidechain(SidechainPool sidechain)
-//         {
-//             return Sidechains.TryAdd(sidechain.ClientAccountName, sidechain);
-//         }
+        public IEnumerable<SidechainContext> GetSidechains()
+        {
+            return Sidechains.Values.ToList();
+        }
 
-//         public bool TryRemoveSidechain(SidechainPool sidechain)
-//         {
-//             return Sidechains.TryRemove(sidechain.ClientAccountName, out sidechain);
-//         }
-//     }
-// }
+        public bool ContainsKey(string sidechainName)
+        {
+            return Sidechains.ContainsKey(sidechainName);
+        }
+
+        public bool TryGet(string sidechainName, out SidechainContext sidechainContext)
+        {
+            return Sidechains.TryGetValue(sidechainName, out sidechainContext);
+        }
+
+        public bool TryAddSidechain(SidechainContext sidechainContext)
+        {
+            return Sidechains.TryAdd(sidechainContext.SidechainPool.ClientAccountName, sidechainContext);
+        }
+
+        public bool TryRemoveSidechain(string sidechainName, out SidechainContext sidechainContext)
+        {
+            return Sidechains.TryRemove(sidechainName, out sidechainContext);
+        }
+    }
+}

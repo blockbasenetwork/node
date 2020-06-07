@@ -25,6 +25,8 @@ using BlockBase.DataProxy;
 using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
 using EosSharp.Core.Exceptions;
+using BlockBase.Runtime.Sql;
+
 namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]

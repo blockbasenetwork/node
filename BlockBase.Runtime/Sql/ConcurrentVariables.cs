@@ -5,7 +5,7 @@ using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Options;
 
-namespace BlockBase.Runtime
+namespace BlockBase.Runtime.Sql
 {
     public class ConcurrentVariables
     {

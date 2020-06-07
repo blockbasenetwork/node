@@ -18,7 +18,7 @@ using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Runtime.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
 
-namespace BlockBase.Runtime
+namespace BlockBase.Runtime.Sql
 {
     public class SqlCommandManager
     {
