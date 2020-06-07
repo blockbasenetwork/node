@@ -34,8 +34,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private bool _isReadyToProduce;
 
 
-        public SynchronizeValidatorNodeState(ILogger logger, IMainchainService mainchainService, 
-            IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool, 
+        public SynchronizeValidatorNodeState(ILogger logger, IMainchainService mainchainService,
+            IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, INetworkService networkService) : base(logger)
         {
             _logger = logger;
@@ -44,7 +44,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
             _networkConfigurations = networkConfigurations;
-            
+
             _networkService = networkService;
             _isNodeSynchronized = false;
             _isReadyToProduce = false;
@@ -59,13 +59,14 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
+            if (_contractStateTable == null || _producerList == null) return Task.FromResult(false);
             //verifies if he is a producer and the sidechain is in production state
             return Task.FromResult(_contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            
+
             //verifies if he is synchronized and ready to produce
             if (_isNodeSynchronized && _isReadyToProduce) return Task.FromResult((true, typeof(NetworkReactionState).Name));
 
@@ -85,15 +86,21 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
-            var lastSubmittedBlockHeader = await WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(
+            //check preconditions to continue update
+            if (contractState == null) return;
+            if (producerList == null) return;
+            if(currentProducer == null) return;
+
+
+            _lastSubmittedBlockHeader = await WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(
                 //TODO rpinto - check if this timespan can be better estimated
                 currentProducer.StartProductionTime, TimeSpan.FromSeconds(5));
 
-            _isReadyToProduce = producerList.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce);
+
+            _isReadyToProduce = producerList?.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce) ?? false;
             _contractStateTable = contractState;
             _producerList = producerList;
             _currentProducer = currentProducer;
-            _lastSubmittedBlockHeader = lastSubmittedBlockHeader;
         }
 
 

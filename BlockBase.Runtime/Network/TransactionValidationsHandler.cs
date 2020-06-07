@@ -28,14 +28,14 @@ namespace BlockBase.Runtime.Network
     {
         private INetworkService _networkService;
         private ILogger _logger;
-        private SidechainKeeper _sidechainKeeper;
+        private SidechainKeeper2 _sidechainKeeper;
         private IMongoDbProducerService _mongoDbProducerService;
         private IMainchainService _mainChainService;
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
 
-        public TransactionValidationsHandler(ILogger<TransactionValidationsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
+        public TransactionValidationsHandler(ILogger<TransactionValidationsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, INetworkService networkService, SidechainKeeper2 sidechainKeeper, IMongoDbProducerService mongoDbProducerService, IMainchainService mainChainService)
         {
             _logger = logger;
             _logger.LogDebug("Creating transaction validator.");
@@ -60,7 +60,7 @@ namespace BlockBase.Runtime.Network
 
             foreach (var transactionProto in transactionsProto)
             {
-                if(receivedValidTransactions.Contains(transactionProto.SequenceNumber)) 
+                if (receivedValidTransactions.Contains(transactionProto.SequenceNumber))
                     continue;
 
                 var sequenceNumbers = await ValidateEachTransaction(transactionProto, args.ClientAccountName, sender);
@@ -93,20 +93,13 @@ namespace BlockBase.Runtime.Network
 
             var confirmedSequenceNumbers = new List<ulong>();
 
-            var transaction = new Transaction().SetValuesFromProto(transactionProto);
-            //_logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
-
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == clientAccountName);
-
-            var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
-
-            if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
+            if (!_sidechainKeeper.TryGet(clientAccountName, out var sidechainContext))
             {
                 _logger.LogDebug($"Transaction received but sidechain {clientAccountName} is unknown.");
                 return confirmedSequenceNumbers;
             }
 
-            var sidechainPool = sidechainPoolValuePair.Value;
+            var sidechainPool = sidechainContext.SidechainPool;
 
             var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.ClientAccountName);
 
@@ -114,6 +107,9 @@ namespace BlockBase.Runtime.Network
 
             try
             {
+                var transaction = new Transaction().SetValuesFromProto(transactionProto);
+                //_logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
+
                 if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
                 {
                     _logger.LogDebug($"Transaction #{transaction.SequenceNumber} hash not valid.");
@@ -139,7 +135,7 @@ namespace BlockBase.Runtime.Network
 
                 await _mongoDbProducerService.SaveTransaction(databaseName, transaction);
 
-                confirmedSequenceNumbers.Add(transaction.SequenceNumber); 
+                confirmedSequenceNumbers.Add(transaction.SequenceNumber);
             }
             catch (Exception e)
             {

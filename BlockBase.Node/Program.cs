@@ -15,12 +15,14 @@ namespace BlockBase.Node
             var webHost = CreateWebHostBuilder(args).Build();
 
             var networkService = webHost.Services.Get<INetworkService>();
-            var sidechainProducerService = webHost.Services.Get<ISidechainProducerService>();
+            var sidechainProducerService = webHost.Services.Get<ISidechainProducerService2>();
 
             var noRecover = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
 
             networkService.Run();
             sidechainProducerService.Run(!noRecover);
+
+
 
             webHost.Run();
         }

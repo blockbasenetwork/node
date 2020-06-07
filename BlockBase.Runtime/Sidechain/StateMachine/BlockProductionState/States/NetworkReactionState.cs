@@ -34,15 +34,16 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
+            if(_contractStateTable == null || _producerList == null) return Task.FromResult(false);
             //verifies if he is a producer and the sidechain is in production state
             return Task.FromResult(_contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if(_currentProducer.Producer == _nodeConfigurations.AccountName) 
+            if (_currentProducer.Producer == _nodeConfigurations.AccountName)
                 return Task.FromResult((true, typeof(ProduceBlockState).Name));
-            
+
             else return Task.FromResult((true, typeof(StartState).Name));
             // else
             //     return Task.FromResult((true, typeof(VoteBlockState).Name));
@@ -57,10 +58,14 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         protected override async Task UpdateStatus()
         {
             //fetches data related to the state of the sidechain, and information about if he needs to produce a block or vote on one
-            
+
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
+
+            //check preconditions to continue update
+            if (contractState == null) return;
+            if (producerList == null) return;
 
             _contractStateTable = contractState;
             _producerList = producerList;

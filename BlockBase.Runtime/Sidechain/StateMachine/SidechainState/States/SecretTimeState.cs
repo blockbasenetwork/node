@@ -49,6 +49,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
+            if(_contractStateTable == null || _contractInfo == null || _candidates == null || _producers == null) return Task.FromResult(false);
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
             var isCandidateInTable = _candidates.Any(c => c.Key == _nodeConfigurations.AccountName);
 
@@ -68,6 +69,12 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var candidates = await _mainchainService.RetrieveCandidates(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+
+            //check preconditions to continue update
+            if(contractInfo == null) return;
+            if(contractState == null) return;
+            if(candidates == null) return;
+            if(producers == null) return;
 
             _contractInfo = contractInfo;
             _contractStateTable = contractState;

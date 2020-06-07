@@ -22,8 +22,8 @@ namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
-    [ApiExplorerSettings(IgnoreApi = false, GroupName = "providerApi")]
-    public class ProducerController2 : ControllerBase
+    [ApiExplorerSettings(GroupName = "providerApi")]
+    public class ProviderController : ControllerBase
     {
         private NodeConfigurations NodeConfigurations;
         private NetworkConfigurations NetworkConfigurations;
@@ -33,7 +33,7 @@ namespace BlockBase.Node.Controllers
         private IMongoDbProducerService _mongoDbProducerService;
         private IConnectionsChecker _connectionsChecker;
 
-        public ProducerController2(ILogger<ProducerController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService2 sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker)
+        public ProviderController(ILogger<ProviderController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService2 sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
@@ -159,11 +159,11 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Sends a transaction to BlockBase Operations Contract that contains the producer application information for producing the sidechain
+        /// Sends a transaction to BlockBase Operations Contract that contains the provider application information for producing the sidechain
         /// </summary>
         /// <param name="chainName">Account name of the sidechain</param>
-        /// <param name="stake">The amount of BBT that the producer want's to stake</param>
-        /// <param name="producerType">The type of producer the node is going to be for this sidechain</param>
+        /// <param name="stake">The amount of BBT that the provider want's to stake</param>
+        /// <param name="providerType">The type of provider the node is going to be for this sidechain</param>
         /// <returns>The success of the task</returns>
         /// <response code="200">Candidature sent with success</response>
         /// <response code="400">Invalid parameters</response>
@@ -171,17 +171,17 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error sending candidature</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a transaction to BlockBase Operations Contract that contains the producer application information for producing the sidechain",
-            Description = "The producer uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
+            Summary = "Sends a transaction to BlockBase Operations Contract that contains the provider application information for producing the sidechain",
+            Description = "The provider uses this service to apply to producing a specific sidechain. With this service, they send information about how much time in seconds they are willing to work on that sidechain",
             OperationId = "RequestToProduceSidechain"
         )]
-        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int producerType, decimal stake = 0)
+        public async Task<ObjectResult> RequestToProduceSidechain(string chainName, int providerType, decimal stake = 0)
         {
             //TODO rpinto - to verify when done. The request to produce a sidechain won't be allowed if there still exists data related to that sidechain on the database
             //The user will have to delete it manually. This only happens if the user registered on the sidechain manually too
 
             if(string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
-            if(producerType < 1 || producerType > 3)  return BadRequest(new OperationResponse<string>("Please provide a valid producer type. (1) Validator, (2) History, (3) Full"));
+            if(providerType < 1 || providerType > 3)  return BadRequest(new OperationResponse<string>("Please provide a valid provider type. (1) Validator, (2) History, (3) Full"));
             if(stake < 0) return BadRequest(new OperationResponse<string>("Please provide a non-negative stake value"));
             
 
@@ -218,7 +218,7 @@ namespace BlockBase.Node.Controllers
                 //if the database exists and he's on the producer table, then nothing should be done
                 if (chainExistsInDb && isProducerInTable) 
                 {
-                    return BadRequest(new OperationResponse<string>($"{NodeConfigurations.AccountName} is a producer in {chainName}"));
+                    return BadRequest(new OperationResponse<string>($"{NodeConfigurations.AccountName} is a provider in {chainName}"));
                 }
                 //if he's not a producer, but is requesting again to be one, and has a database associated, he should delete it first
                 else if(chainExistsInDb)
@@ -238,7 +238,7 @@ namespace BlockBase.Node.Controllers
 
                 //arriving here, there shouldn't be an active state controller associated to this chain
                 //this was checked above
-                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainName, producerType);
+                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainName, providerType);
 
                 return Ok(new OperationResponse<bool>(true, "Candidature successfully added"));
             }
@@ -250,7 +250,7 @@ namespace BlockBase.Node.Controllers
 
 
         /// <summary>
-        /// Sends a transaction to BlockBase Operations Contract stating that the producer wants to leave this sidechain
+        /// Sends a transaction to BlockBase Operations Contract stating that the provider wants to leave this sidechain
         /// </summary>
         /// <param name="sidechainName">Account name of the sidechain</param>
         /// <param name="cleanLocalSidechainData">Indicates if the local data about the sidechain should be removed</param>
@@ -260,8 +260,8 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Error sending request</response>
         [HttpPost]
         [SwaggerOperation(
-            Summary = "Sends a transaction to BlockBase Operations Contract stating that the producer wants to leave this sidechain",
-            Description = "The producer uses this service to state that he wants to stop producing for this sidechain",
+            Summary = "Sends a transaction to BlockBase Operations Contract stating that the provider wants to leave this sidechain",
+            Description = "The provider uses this service to state that he wants to stop producing for this sidechain",
             OperationId = "RequestToLeaveSidechainProduction"
         )]
         public async Task<ObjectResult> RequestToLeaveSidechainProduction(string sidechainName, bool cleanLocalSidechainData = false)
@@ -314,7 +314,7 @@ namespace BlockBase.Node.Controllers
         [HttpPost]
         [SwaggerOperation(
             Summary = "Sends a transaction to BlockBase Token Contract to add stake to a sidechain",
-            Description = "The producer uses this service to add stake to a sidechain",
+            Description = "The provider uses this service to add stake to a sidechain",
             OperationId = "ProducerAddStake"
         )]
         public async Task<ObjectResult> AddStake(string sidechainName, double stake)
@@ -349,7 +349,7 @@ namespace BlockBase.Node.Controllers
         [HttpPost]
         [SwaggerOperation(
             Summary = "Sends a transaction to BlockBase Token Contract to claim stake from a sidechain",
-            Description = "The producer uses this service to claim stake from a sidechain",
+            Description = "The provider uses this service to claim stake from a sidechain",
             OperationId = "ProducerClaimStake"
         )]
         public async Task<ObjectResult> ClaimStake(string sidechainName)
@@ -377,7 +377,7 @@ namespace BlockBase.Node.Controllers
         [HttpGet]
         [SwaggerOperation(
             Summary = "Gets information about all currently producing sidechains",
-            Description = "The producer uses this request to get information about the sidechains this node is producing",
+            Description = "The provider uses this request to get information about the sidechains this node is producing",
             OperationId = "GetProducingSidechains"
         )]
         public ObjectResult GetProducingSidechains()
@@ -405,7 +405,7 @@ namespace BlockBase.Node.Controllers
         [HttpPost]
         [SwaggerOperation(
             Summary = "Deletes sidechain data from the database",
-            Description = "The producer uses this request to delete the sidechain data from the database",
+            Description = "The provider uses this request to delete the sidechain data from the database",
             OperationId = "DeleteSidechainFromDatabase"
         )]
         public async Task<ObjectResult> DeleteSidechainFromDatabase(string sidechainName, bool force = false)

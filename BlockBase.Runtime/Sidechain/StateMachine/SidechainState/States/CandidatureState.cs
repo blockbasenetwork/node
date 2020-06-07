@@ -45,6 +45,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
+            if(_contractStateTable == null) return Task.FromResult(false);
             return Task.FromResult(_contractStateTable.CandidatureTime || _contractStateTable.SecretTime);
         }
 
@@ -60,6 +61,11 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var candidates = await _mainchainService.RetrieveCandidates(_sidechainPool.ClientAccountName);
+
+            //check preconditions to continue update
+            if(contractInfo == null) return;
+            if(contractState == null) return;
+            if(candidates == null) return;
 
             _contractInfo = contractInfo;
             _contractStateTable = contractState;

@@ -20,11 +20,14 @@ namespace BlockBase.Runtime.Common
         protected ILogger _logger;
         protected TimeSpan _delay;
 
-        public AbstractState(ILogger logger, bool verbose = false)
+        protected bool _inAutomaticMode;
+
+        public AbstractState(ILogger logger, bool automatic = false, bool verbose = false)
         {
             _logger = logger;
             _delay = TimeSpan.FromSeconds(2);
             _verbose = verbose;
+            _inAutomaticMode = automatic;
         }
         public virtual async Task<string> Run(CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -44,6 +47,8 @@ namespace BlockBase.Runtime.Common
                     if (!await HasConditionsToContinue())
                     {
                         _logger.LogDebug($"{this.GetType().Name} - No conditions to continue in this state");
+                        //if there are no conditions to continue on the start state, jump to the end state
+                        if(this is TStartState) return typeof(TEndState).Name;
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
                     }
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Conditions to continue verified");

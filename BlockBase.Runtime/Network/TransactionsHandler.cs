@@ -43,7 +43,7 @@ namespace BlockBase.Runtime.Network
 
         private bool _hasBeenSetup = false;
 
-        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _networkService = networkService;
             _logger = logger;

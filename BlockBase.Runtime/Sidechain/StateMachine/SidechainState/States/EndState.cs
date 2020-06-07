@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
@@ -8,53 +9,54 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
     public class EndState : AbstractState<StartState, EndState>
     {
-        public EndState(SidechainPool sidechain, ILogger logger) : base(logger)
+        private bool _chainExistsInDatabase;
+        private SidechainPool _sidechainPool;
+        private IMongoDbProducerService _mongoDbProducerService;
+        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService) : base(logger)
         {
-            
+            _chainExistsInDatabase = false;
+            _sidechainPool = sidechainPool;
+            _mongoDbProducerService = mongoDbProducerService;
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new System.NotImplementedException();
+            if(!_inAutomaticMode) return Task.FromResult(true);
+            if(!_chainExistsInDatabase) return Task.FromResult(true);
+            return Task.FromResult(false);
         }
 
-        protected override Task DoWork()
+        protected override async Task DoWork()
         {
-            
-            throw new NotImplementedException();
-            //TODO check if there is something to be deleted
-            // if(_sidechainProducerService.DoesChainExist(sidechainName))
-            //     {
-            //         //if chain exists in pool and isn't running, remove it
-            //         //this also means that there should be remnants of the database
-            //         _logger.LogDebug($"Removing sidechain {sidechainName} execution engine");
-            //         _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(sidechainName);
-            //     }
-       
-            //     var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(sidechainName);
-                
-            //     //rpinto - if the endchain request is done manually, and the cleanLocalSidechanData is set to true, it should delete the data
-            //     if (chainExistsInDb && cleanLocalSidechainData) 
-            //     {
-            //         _logger.LogDebug($"Removing sidechain {sidechainName} data from database");
-            //         await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(sidechainName);
-            //     }
+            //the sidechain data should only be deleted if the producer is in automatic mode
+            //otherwise, it's never deleted, even if he's not a candidate or producer
+            if (_inAutomaticMode)
+            {
+                _logger.LogDebug($"Removing sidechain {_sidechainPool.ClientAccountName} data from database");
+                    await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(_sidechainPool.ClientAccountName);
+            }
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(_inAutomaticMode);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new System.NotImplementedException();
+            if(!_inAutomaticMode) return Task.FromResult((true, string.Empty));
+            else if(_inAutomaticMode && !_chainExistsInDatabase) return Task.FromResult((true, string.Empty));
+            //it's in automatic mode and the chain still exists
+            else return Task.FromResult((false, string.Empty));
         }
 
-        protected override Task UpdateStatus()
+        protected override async Task UpdateStatus()
         {
-            
-            throw new System.NotImplementedException();
+            //if not in automatic mode, then there is nothing to be done
+            if (!_inAutomaticMode) return;
+
+            _chainExistsInDatabase = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(_sidechainPool.ClientAccountName);
+
         }
     }
 }

@@ -37,7 +37,7 @@ namespace BlockBase.Runtime.SidechainProducer
         private BlockRequestsHandler _blockSender;
 
 
-        public SidechainProducerService2(SidechainKeeper2 sidechainKeeper, PeerConnectionsHandler peerConnectionsHandler, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ILogger<SidechainProducerService> logger, INetworkService networkService,
+        public SidechainProducerService2(SidechainKeeper2 sidechainKeeper, PeerConnectionsHandler peerConnectionsHandler, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ILogger<SidechainProducerService2> logger, INetworkService networkService,
                                         IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockValidationsHandler blockValidator, TransactionValidationsHandler transactionValidator, BlockRequestsHandler blockSender)
         {
             _networkService = networkService;
@@ -60,7 +60,7 @@ namespace BlockBase.Runtime.SidechainProducer
         }
 
         //TODO rpinto - this probably needs to be in a try catch
-        public async Task AddSidechainToProducerAndStartIt(string sidechainName, int producerType = 0)
+        public async Task AddSidechainToProducerAndStartIt(string sidechainName, int producerType = 0, bool automatic = false)
         {
 
             if (_sidechainKeeper.ContainsKey(sidechainName)) throw new Exception("Sidechain already exists");
@@ -104,14 +104,14 @@ namespace BlockBase.Runtime.SidechainProducer
             foreach (var sidechainDB in sidechainsDB)
             {
                 //TODO rpinto - why are these checks here?? doesn't make any sense
-                var contractState = await _mainchainService.RetrieveContractState(sidechainDB.Id);
-                if (contractState == null || (!contractState.ProductionTime && !contractState.CandidatureTime)) continue;
+                // var contractState = await _mainchainService.RetrieveContractState(sidechainDB.Id);
+                // if (contractState == null || (!contractState.ProductionTime && !contractState.CandidatureTime)) continue;
 
-                var producersInChain = await _mainchainService.RetrieveProducersFromTable(sidechainDB.Id);
-                if (!producersInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
+                // var producersInChain = await _mainchainService.RetrieveProducersFromTable(sidechainDB.Id);
+                // if (!producersInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
 
-                var candidatesInChain = await _mainchainService.RetrieveCandidates(sidechainDB.Id);
-                if (candidatesInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
+                // var candidatesInChain = await _mainchainService.RetrieveCandidates(sidechainDB.Id);
+                // if (candidatesInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
 
                 try
                 {

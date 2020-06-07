@@ -599,10 +599,12 @@ namespace BlockBase.DataPersistence.ProducerData
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
+                session.StartTransaction();
                 await MongoClient.DropDatabaseAsync(_dbPrefix + databaseName);
                 var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
                 var sidechainCollection = recoverDatabase.GetCollection<SidechainDB>(collection);
                 await sidechainCollection.DeleteOneAsync(s => s.Id == databaseName);
+                await session.CommitTransactionAsync();
             }
         }
 

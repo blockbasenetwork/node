@@ -37,10 +37,7 @@ namespace BlockBase.Node.Controllers
         private RequesterConfigurations RequesterConfigurations;
         private SidechainPhasesTimesConfigurations SidechainPhasesTimesConfigurations;
         private readonly ILogger _logger;
-        private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
-        private IMongoDbProducerService _mongoDbProducerService;
-        private PeerConnectionsHandler _peerConnectionsHandler;
         private SidechainMaintainerManager _sidechainMaintainerManager;
         private DatabaseKeyManager _databaseKeyManager;
         private SecurityConfigurations _securityConfigurations;
@@ -48,7 +45,7 @@ namespace BlockBase.Node.Controllers
         private SqlCommandManager _sqlCommandManager;
         private IConnector _connector;
 
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender)
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, IMainchainService mainchainService, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbProducerService mongoDbProducerService)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
@@ -56,10 +53,7 @@ namespace BlockBase.Node.Controllers
             SidechainPhasesTimesConfigurations = sidechainPhasesTimesConfigurations?.Value;
 
             _logger = logger;
-            _sidechainProducerService = sidechainProducerService;
             _mainchainService = mainchainService;
-            _mongoDbProducerService = mongoDbProducerService;
-            _peerConnectionsHandler = peerConnectionsHandler;
             _sidechainMaintainerManager = sidechainMaintainerManager;
             _databaseKeyManager = databaseKeyManager;
             _connectionsChecker = connectionsChecker;

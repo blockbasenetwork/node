@@ -123,6 +123,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
+            if(_contractState == null || _currentProducer == null) return Task.FromResult(false);
             return Task.FromResult(
                 _contractState.ProductionTime && _currentProducer.Producer == _nodeConfigurations.AccountName);
 
@@ -152,10 +153,16 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
+            //check preconditions to continue update
+            if (_contractState == null) return;
+            if (_producerList == null) return;
+            if(_currentProducer == null) return;
+
+
             var lastSubmittedBlockHeader = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
             _hasProviderBuiltNewBlock = false;
-            if (lastSubmittedBlockHeader != null 
+            if (lastSubmittedBlockHeader != null
                 && _currentProducer.Producer == _nodeConfigurations.AccountName
                 && _currentProducer.HasProducedBlock
                 && _currentProducer.StartProductionTime <= lastSubmittedBlockHeader.Timestamp)
@@ -180,7 +187,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             }
 
             // _builtBlock and _blockHash are set only once
-            if (!_hasProviderBuiltNewBlock && _builtBlock == null)
+            if (!_hasProviderBuiltNewBlock && (_builtBlock == null || _builtBlock.BlockHeader.Timestamp < (ulong)_currentProducer.StartProductionTime))
             {
                 var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
                 var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);

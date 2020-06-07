@@ -28,15 +28,17 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private TaskContainer _blockProductionTaskContainer;
         private TaskContainer _peerConnectionTaskContainer;
 
-        
+        private bool _inAutomaticMode = false;
+
+
 
         //TODO rpinto - it will be the state manager that besides coordinating state changes also is responsible to start the connectionchecker
         public SidechainStateManager(
-            SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler, 
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, 
-            ILogger logger, INetworkService networkService, 
-            IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, 
-            BlockRequestsHandler blockSender):base(logger)
+            SidechainPool sidechain, PeerConnectionsHandler peerConnectionsHandler,
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
+            ILogger logger, INetworkService networkService,
+            IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService,
+            BlockRequestsHandler blockSender, bool automatic = false) : base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
@@ -47,26 +49,30 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _mongoDbProducerService = mongoDbProducerService;
             _peerConnectionsHandler = peerConnectionsHandler;
             _blockSender = blockSender;
+            _inAutomaticMode = automatic;
         }
 
-        protected override async Task Run() 
+        protected override async Task Run()
         {
             var currentState = BuildState(typeof(StartState).Name);
 
-            while(true)
+            while (true)
             {
                 var nextStateName = await currentState.Run();
                 currentState = BuildState(nextStateName);
 
-                if(currentState.GetType() == typeof(EndState))
+                if (currentState.GetType() == typeof(EndState))
                 {
                     await currentState.Run();
                     _blockProductionTaskContainer.Stop();
                     _peerConnectionTaskContainer.Stop();
-                    break;
+                    this.Stop();
+                    return;
                 }
+                
 
-                if(_peerConnectionTaskContainer == null && (currentState.GetType() == typeof(IPReceiveState) || currentState.GetType() == typeof(ProductionState)))
+                //TODO - rpinto this means we're going to have a peerConnectionStateManager per sidechain, right?
+                if (_peerConnectionTaskContainer == null && (currentState.GetType() == typeof(IPReceiveState) || currentState.GetType() == typeof(ProductionState)))
                 {
                     var peerConnectionStateManager = new PeerConnectionStateManager(_sidechain, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _mainchainService);
                     _peerConnectionTaskContainer = peerConnectionStateManager.Start();
@@ -74,11 +80,11 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
                     _logger.LogDebug("Started peer connection state manager");
                 }
 
-                if(currentState.GetType() == typeof(ProductionState) && _blockProductionTaskContainer == null)
+                if (currentState.GetType() == typeof(ProductionState) && _blockProductionTaskContainer == null)
                 {
                     var blockProductionStateManager = new BlockProductionStateManager(
-                        _logger, _sidechain, _nodeConfigurations, _networkConfigurations, 
-                        _networkService, _peerConnectionsHandler, _mainchainService, 
+                        _logger, _sidechain, _nodeConfigurations, _networkConfigurations,
+                        _networkService, _peerConnectionsHandler, _mainchainService,
                         _mongoDbProducerService, _blockSender);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
 
@@ -89,13 +95,13 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
         protected override IState BuildState(string state)
         {
-            if(state == typeof(StartState).Name) return new StartState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if(state == typeof(CandidatureState).Name) return new CandidatureState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if(state == typeof(SecretTimeState).Name) return new SecretTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if(state == typeof(IPSendTimeState).Name) return new IPSendTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
-            if(state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if(state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if(state == typeof(EndState).Name) return new EndState(_sidechain, _logger);
+            if (state == typeof(StartState).Name) return new StartState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(CandidatureState).Name) return new CandidatureState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(SecretTimeState).Name) return new SecretTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(IPSendTimeState).Name) return new IPSendTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
+            if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService);
 
             return null;
         }

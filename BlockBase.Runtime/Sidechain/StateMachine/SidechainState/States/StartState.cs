@@ -20,7 +20,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private List<CandidateTable> _candidates;
 
         private SidechainPool _sidechainPool;
-        public StartState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations): base(logger)
+        public StartState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -41,7 +41,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         {
             return Task.FromResult(_contractStateTable?.Startchain ?? false);
         }
-        
+
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
@@ -51,16 +51,21 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
             if (isCandidateInTable && _contractStateTable.SecretTime) return Task.FromResult((true, typeof(SecretTimeState).Name));
             if (isProducerInTable && _contractStateTable.IPSendTime) return Task.FromResult((true, typeof(IPSendTimeState).Name));
             if (isProducerInTable && _contractStateTable.ProductionTime) return Task.FromResult((true, typeof(ProductionState).Name));
-            
-            _delay = TimeSpan.FromMinutes(1);
+
+
             return Task.FromResult((!isProducerInTable && !isCandidateInTable && !_contractStateTable.CandidatureTime, typeof(EndState).Name));
         }
 
-        protected override async Task UpdateStatus() 
+        protected override async Task UpdateStatus()
         {
             var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             var candidates = await _mainchainService.RetrieveCandidates(_sidechainPool.ClientAccountName);
             var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+
+            //check preconditions to continue update
+            if (contractState == null) return;
+            if(candidates == null) return;
+            if (producers == null) return;
 
             _contractStateTable = contractState;
             _producers = producers;

@@ -27,7 +27,6 @@ namespace BlockBase.Runtime.Network
     public class PeerConnectionsHandler
     {
         //TODO: Remove
-        private readonly SidechainKeeper _sidechainKeeper;
         private readonly INetworkService _networkService;
         public ThreadSafeList<SidechainPool> KnownSidechains { get; set; }
         public ThreadSafeList<PeerConnection> CurrentPeerConnections { private set; get; }
@@ -47,9 +46,8 @@ namespace BlockBase.Runtime.Network
         private const int RATING_LOST_FOR_CONNECT_FAILURE = 10;
         private bool _tryingConnection;
 
-        public PeerConnectionsHandler(INetworkService networkService, SidechainKeeper sidechainKeeper, SystemConfig systemConfig, ILogger<PeerConnectionsHandler> logger, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations)
+        public PeerConnectionsHandler(INetworkService networkService, SystemConfig systemConfig, ILogger<PeerConnectionsHandler> logger, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations)
         {
-            _sidechainKeeper = sidechainKeeper;
             _networkService = networkService;
             _systemConfig = systemConfig;
             _logger = logger;

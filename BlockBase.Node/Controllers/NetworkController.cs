@@ -26,16 +26,12 @@ namespace BlockBase.Node.Controllers
     public class NetworkController : ControllerBase
     {
         private readonly ILogger _logger;
-        private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
-        private IMongoDbProducerService _mongoDbProducerService;
 
-        public NetworkController(ILogger<NetworkController> logger, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService)
         {
             _logger = logger;
-            _sidechainProducerService = sidechainProducerService;
             _mainchainService = mainchainService;
-            _mongoDbProducerService = mongoDbProducerService;
         }
 
         /// <summary>
