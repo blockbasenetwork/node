@@ -1,12 +1,13 @@
 using System.Threading.Tasks;
 using BlockBase.Runtime.Common;
+using BlockBase.Runtime.Mainchain.StateMachine.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainProductionState.States
 {
-    public class StartProductionState : AbstractMainchainState<StartState, EndState>
+    public class EndState : AbstractMainchainState<StartState, EndState>
     {
-        public StartProductionState(ILogger logger) : base(logger)
+        public EndState(ILogger logger) : base(logger)
         {
         }
 

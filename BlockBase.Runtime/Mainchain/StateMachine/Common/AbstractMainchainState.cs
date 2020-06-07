@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.Common
 {
     public abstract class AbstractMainchainState<TStartState, TEndState> : AbstractState<TStartState, TEndState>
             where TStartState : IState

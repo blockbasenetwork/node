@@ -3,11 +3,11 @@ using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Mainchain.StateMachine.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainProductionState.States
 {
-    public class EndState : AbstractMainchainState<StartState, EndState>
+    public class SwitchProducerTurn : AbstractMainchainState<StartState, EndState>
     {
-        public EndState(ILogger logger) : base(logger)
+        public SwitchProducerTurn(ILogger logger) : base(logger)
         {
         }
 

@@ -1,13 +1,13 @@
 using BlockBase.Runtime.Common;
-using BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState.States;
+using BlockBase.Runtime.Mainchain.StateMachine.SidechainProductionState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainMaintainerState
+namespace BlockBase.Runtime.Mainchain.StateMachine.SidechainProductionState
 {
-    public class SidechainMaintainerStateManager : AbstractStateManager<StartState, EndState>
+    public class SidechainProductionStateManager : AbstractStateManager<StartState, EndState>
     {
         private ILogger _logger;
-        public SidechainMaintainerStateManager(ILogger logger) : base(logger)
+        public SidechainProductionStateManager(ILogger logger) : base(logger)
         {
             _logger = logger;
         }
