@@ -41,8 +41,9 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
             ILogger logger, INetworkService networkService,
             IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService,
+             BlockRequestsHandler blockSender,
             TransactionValidationsHandler transactionValidationsHandler,
-            BlockRequestsHandler blockSender, bool automatic = false) : base(logger)
+            bool automatic = false) : base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
