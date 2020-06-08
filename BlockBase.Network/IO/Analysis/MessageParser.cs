@@ -39,7 +39,7 @@ namespace BlockBase.Network.IO.Analysis
                 networkMessage = null;
                 //RatingManager.Instance.RecordIPEndPointBehavior(BehaviorTypeEnum.SentMalformedMessage, sender);
                 
-                _logger.LogWarning($"Unable to parse network message from {rawNetworkMessage.IPEndPoint.Address.ToString()}");
+                _logger.LogWarning($"Unable to parse network message from {rawNetworkMessage.IPEndPoint.Address.ToString()}:{rawNetworkMessage.IPEndPoint.Port}");
                 return MessageParsingResultEnum.Failure;
             }
 
