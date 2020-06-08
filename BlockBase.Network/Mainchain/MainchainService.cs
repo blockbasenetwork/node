@@ -50,7 +50,8 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName) {
+        public async Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName)
+        {
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(NetworkConfigurations.BlockBaseTokenContract, EosTableNames.TOKEN_LEDGER_TABLE_NAME, accountName), MAX_NUMBER_OF_TRIES);
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result.Where(b => b.Owner == accountName).ToList();
@@ -509,7 +510,7 @@ namespace BlockBase.Network.Mainchain
                 Signatures = signatures.Distinct()
             };
 
-            var opResult = await TryAgain(async () => 
+            var opResult = await TryAgain(async () =>
             await EosStub.BroadcastTransaction(signedTransaction), NetworkConfigurations.MaxNumberOfConnectionRetries);
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result;
@@ -632,9 +633,9 @@ namespace BlockBase.Network.Mainchain
                 proposerAccount)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
-            if(!opResult.Succeeded) throw opResult.Exception;
+            if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result.Where(t => t.ProposalName == proposalName).SingleOrDefault();
-            
+
         }
 
         public async Task<ContractInformationTable> RetrieveContractInformation(string chain)
@@ -645,7 +646,7 @@ namespace BlockBase.Network.Mainchain
                 chain),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
-                if (!opResult.Succeeded) throw opResult.Exception;
+            if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result.SingleOrDefault();
         }
 
@@ -656,7 +657,7 @@ namespace BlockBase.Network.Mainchain
                 EosTableNames.CONTRACT_STATE_TABLE_NAME,
                 chain),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
-            
+
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result.SingleOrDefault();
         }
@@ -682,7 +683,7 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
-            return opResult.Result.SingleOrDefault();    
+            return opResult.Result.SingleOrDefault();
         }
 
         public async Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks)
@@ -725,7 +726,7 @@ namespace BlockBase.Network.Mainchain
         public async Task<List<VerifySignature>> RetrieveVerifySignatures(string account)
         {
             var verifySignaturesList = new List<VerifySignature>();
-            
+
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VerifySignatureTable>(
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.VERIFY_SIGNATURE_TABLE,
@@ -733,7 +734,7 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
-            
+
             foreach (var verifySignature in opResult.Result)
             {
                 var mappedVerifySignature = new VerifySignature()
@@ -1044,12 +1045,16 @@ namespace BlockBase.Network.Mainchain
                     exception = opResult.Exception;
                 }
 
-                if(exception is ApiErrorException)
+                if (exception is ApiErrorException)
                 {
                     var apiEx = (ApiErrorException)exception;
                     var details = apiEx.error?.details;
-                    if(details != null && details.Any(d => d.method == "eosio_assert"))
-                        break;
+                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth"))
+                    {
+                        //if it's a message that we may be expecting do a quieter log
+                        _logger.LogDebug($"Error sending transaction: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");
+                        return new OpResult<T>(exception);
+                    }
                 }
 
                 await Task.Delay(delayInMilliseconds);

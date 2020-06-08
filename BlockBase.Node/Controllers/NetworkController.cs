@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
-using BlockBase.Runtime.SidechainProducer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
@@ -26,16 +25,12 @@ namespace BlockBase.Node.Controllers
     public class NetworkController : ControllerBase
     {
         private readonly ILogger _logger;
-        private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
-        private IMongoDbProducerService _mongoDbProducerService;
 
-        public NetworkController(ILogger<NetworkController> logger, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService)
         {
             _logger = logger;
-            _sidechainProducerService = sidechainProducerService;
             _mainchainService = mainchainService;
-            _mongoDbProducerService = mongoDbProducerService;
         }
 
         /// <summary>

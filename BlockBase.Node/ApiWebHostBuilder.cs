@@ -9,10 +9,10 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
 using BlockBase.Node;
 using BlockBase.Runtime;
-using BlockBase.Runtime.Mainchain;
+using BlockBase.Runtime.Requester;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain;
-using BlockBase.Runtime.SidechainProducer;
+using BlockBase.Runtime.Provider;
+using BlockBase.Runtime.Sql;
 using BlockBase.Utils;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -95,6 +95,7 @@ namespace BlockBase.Api
                 {
                     c.SwaggerDoc("providerApi", new OpenApiInfo { Title = "Service Provider API", Version = "v0.1" });
                     c.SwaggerDoc("requesterApi", new OpenApiInfo { Title = "Service Requester API", Version = "v0.1" });
+                    c.SwaggerDoc("requester2Api", new OpenApiInfo { Title = "Service Requester2 Test API", Version = "v0.1" });
                     c.SwaggerDoc("networkApi", new OpenApiInfo { Title = "Network API", Version = "v0.1" });
                     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -157,11 +158,9 @@ namespace BlockBase.Api
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
 
+                services.AddSingleton<ISidechainMaintainerManager2, SidechainMaintainerManager2>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<SidechainKeeper>();
-
-                services.AddSingleton<ISidechainProducerService2, SidechainProducerService2>();
-                services.AddSingleton<SidechainKeeper2>();
             });
 
             return this;

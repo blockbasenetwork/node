@@ -1,7 +1,7 @@
 
 using System.Collections.Generic;
 
-namespace BlockBase.Runtime.Sidechain
+namespace BlockBase.Runtime.Provider
 {
     public class ResultsAndColumnNamesPoco
     {

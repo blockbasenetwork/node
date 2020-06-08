@@ -10,13 +10,15 @@ using static BlockBase.Network.Rounting.MessageForwarder;
 
 namespace BlockBase.Runtime.Network
 {
-    public interface INetworkService : IService
+    public interface INetworkService : IDisposable
     {
         Task<Peer> ConnectAsync(IPEndPoint endpoint);
         Task SendMessageAsync(NetworkMessage message);
         Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type);
 
         void DisconnectPeer(Peer peer);
+
+        void Run();
 
         void SubscribePeerConnectedEvent(PeerConnectedEventHandler eventHandler);
         void SubscribePeerDisconnectedEvent(PeerDisconnectedEventHandler eventHandler);

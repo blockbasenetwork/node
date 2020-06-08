@@ -13,8 +13,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Rounting;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Sidechain;
-using BlockBase.Runtime.SidechainProducer;
+using BlockBase.Runtime.Provider;
 using BlockBase.Utils;
 using BlockBase.Utils.Threading;
 using Google.Protobuf;
@@ -43,7 +42,7 @@ namespace BlockBase.Runtime.Network
 
         private bool _hasBeenSetup = false;
 
-        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, SidechainKeeper sidechainKeeper, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
         {
             _networkService = networkService;
             _logger = logger;

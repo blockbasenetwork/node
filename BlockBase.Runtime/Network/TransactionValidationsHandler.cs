@@ -12,7 +12,6 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
 using BlockBase.Network.Sidechain;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.Runtime.SidechainProducer;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -22,6 +21,7 @@ using BlockBase.Network.IO.Enums;
 using BlockBase.Utils.Threading;
 using BlockBase.Runtime.Helpers;
 using Google.Protobuf;
+using BlockBase.Runtime.Provider;
 
 namespace BlockBase.Runtime.Network
 {
@@ -53,12 +53,9 @@ namespace BlockBase.Runtime.Network
 
         private async void MessageForwarder_LastIncludedTransactionRequestReceived(MessageForwarder.LastIncludedTransactionRequestReceivedEventArgs args)
         {
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == args.ClientAccountName);
-
-            var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
-
-            if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
+            if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
             {
+
                 _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
             }
 
@@ -68,7 +65,7 @@ namespace BlockBase.Runtime.Network
             {
                 var transaction = await _mongoDbProducerService.GetLastIncludedTransactionInConfirmedBlock(args.ClientAccountName);
                 var message = new NetworkMessage(NetworkMessageTypeEnum.SendLastIncludedTransaction, transaction.ConvertToProto().ToByteArray(),
-                TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, 
+                TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey,
                 _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, args.Sender);
             }
             catch (Exception e)
@@ -128,11 +125,7 @@ namespace BlockBase.Runtime.Network
         public bool ValidateTransaction(Transaction transaction, string clientAccountName)
         {
 
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == clientAccountName);
-
-            var defaultKeyValuePair = default(KeyValuePair<string, SidechainPool>);
-
-            if (sidechainPoolValuePair.Equals(defaultKeyValuePair))
+            if (!_sidechainKeeper.TryGet(clientAccountName, out var sidechainContext))
             {
                 _logger.LogDebug($"Transaction received but sidechain {clientAccountName} is unknown.");
                 return false;
@@ -144,7 +137,7 @@ namespace BlockBase.Runtime.Network
                 return false;
             }
 
-            if (!SignatureHelper.VerifySignature(sidechainPoolValuePair.Value.ClientPublicKey, transaction.Signature, transactionHash))
+            if (!SignatureHelper.VerifySignature(sidechainContext.SidechainPool.ClientPublicKey, transaction.Signature, transactionHash))
             {
                 _logger.LogDebug($"Transaction signature not valid.");
                 return false;
@@ -179,38 +172,38 @@ namespace BlockBase.Runtime.Network
 
             var confirmedSequenceNumbers = new List<ulong>();
 
-            var sidechainPoolValuePair = _sidechainKeeper.Sidechains.FirstOrDefault(s => s.Key == clientAccountName);
-
-            var sidechainPool = sidechainPoolValuePair.Value;
-
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.ClientAccountName);
-
-            await sidechainSemaphore.WaitAsync();
-
-            try
+            if (_sidechainKeeper.TryGet(clientAccountName, out var sidechainContext))
             {
 
-                var databaseName = clientAccountName;
-                if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
+                var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainContext.SidechainPool.ClientAccountName);
+
+                await sidechainSemaphore.WaitAsync();
+
+                try
                 {
-                    //_logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
-                    var afterTransactions = await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_nodeConfigurations.AccountName, transaction.SequenceNumber);
-                    confirmedSequenceNumbers.Add(transaction.SequenceNumber);
-                    confirmedSequenceNumbers.AddRange(afterTransactions.Select(t => t.SequenceNumber));
-                    return confirmedSequenceNumbers;
-                }
+                    var databaseName = clientAccountName;
+                    if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
+                    {
+                        //_logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
+                        var afterTransactions = await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_nodeConfigurations.AccountName, transaction.SequenceNumber);
+                        confirmedSequenceNumbers.Add(transaction.SequenceNumber);
+                        confirmedSequenceNumbers.AddRange(afterTransactions.Select(t => t.SequenceNumber));
+                        return confirmedSequenceNumbers;
+                    }
 
-                confirmedSequenceNumbers.Add(transaction.SequenceNumber);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Transaction validator crashed with exception {e.Message}");
-            }
-            finally
-            {
-                sidechainSemaphore.Release();
+                    confirmedSequenceNumbers.Add(transaction.SequenceNumber);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Transaction validator crashed with exception {e.Message}");
+                }
+                finally
+                {
+                    sidechainSemaphore.Release();
+                }
             }
             return confirmedSequenceNumbers;
+
 
         }
 

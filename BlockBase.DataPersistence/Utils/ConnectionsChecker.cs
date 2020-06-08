@@ -42,7 +42,15 @@ namespace BlockBase.DataPersistence.Utils
 
         public async Task<bool> IsAbleToConnectToPostgres() 
         {
-            return await _connector.TestConnection();
+            try
+            {
+                return await _connector.TestConnection();
+            }
+            catch(Exception e)
+            {
+                _logger.LogWarning(e.Message, "Unable to connect to Postgres");
+                return false;
+            }
         }
     }
 }

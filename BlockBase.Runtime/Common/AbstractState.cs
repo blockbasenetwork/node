@@ -20,11 +20,14 @@ namespace BlockBase.Runtime.Common
         protected ILogger _logger;
         protected TimeSpan _delay;
 
-        public AbstractState(ILogger logger, bool verbose = false)
+        protected bool _inAutomaticMode;
+
+        public AbstractState(ILogger logger, bool automatic = false, bool verbose = false)
         {
             _logger = logger;
-            _delay = TimeSpan.FromSeconds(2);
+            _delay = TimeSpan.FromSeconds(5);
             _verbose = verbose;
+            _inAutomaticMode = automatic;
         }
         public virtual async Task<string> Run(CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -40,10 +43,16 @@ namespace BlockBase.Runtime.Common
                     await UpdateStatus();
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Status updated");
 
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
+                    await Task.Delay(_delay);
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished delay");
+
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has conditions to continue...");
                     if (!await HasConditionsToContinue())
                     {
                         _logger.LogDebug($"{this.GetType().Name} - No conditions to continue in this state");
+                        //if there are no conditions to continue on the start state, jump to the end state
+                        if(this is TStartState) return typeof(TEndState).Name;
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
                     }
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Conditions to continue verified");
@@ -52,7 +61,7 @@ namespace BlockBase.Runtime.Common
                     var jumpStatus = await HasConditionsToJump();
                     if (jumpStatus.inConditionsToJump)
                     {
-                        _logger.LogDebug($"{this.GetType().Name} - Conditions found to jump to {jumpStatus.nextState}");
+                        _logger.LogDebug($"{this.GetType().Name} - Jumping to {jumpStatus.nextState}");
                         return jumpStatus.nextState;
                     }
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - No conditions found to jump");
@@ -68,17 +77,15 @@ namespace BlockBase.Runtime.Common
                     {
                         _logger.LogDebug($"{this.GetType().Name} - No work found to do");
                     }
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
-                    await Task.Delay(_delay);
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished delay");
+                    
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"{this.GetType().Name} crashed {ex.Message}");
-                    _logger.LogDebug($"Trace: {ex}");
+                    _logger.LogError($"{this.GetType().Name} | {ex.Message}");
+                    if(_verbose) _logger.LogDebug($"Trace: {ex}");
 
-                    var crashDelay = TimeSpan.FromSeconds(10);
-                    _logger.LogDebug($"{this.GetType().Name} - Starting after crash delay... {crashDelay.Seconds} seconds");
+                    var crashDelay = TimeSpan.FromSeconds(3);
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting after crash delay... {crashDelay.Seconds} seconds");
                     await Task.Delay(crashDelay);
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished after crash delay");
                 }

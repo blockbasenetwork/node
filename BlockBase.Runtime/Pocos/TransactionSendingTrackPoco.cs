@@ -2,7 +2,7 @@ using BlockBase.Domain.Blockchain;
 using BlockBase.Network;
 using BlockBase.Utils.Threading;
 
-namespace BlockBase.Runtime.Sidechain
+namespace BlockBase.Runtime.Provider
 {
     public class TransactionSendingTrackPoco
     {

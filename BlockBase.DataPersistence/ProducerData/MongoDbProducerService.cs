@@ -474,17 +474,15 @@ namespace BlockBase.DataPersistence.ProducerData
 
                 var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
                 var info = await (await transactionInfoCollection.FindAsync(t => true)).SingleOrDefaultAsync();
+                //TODO rpinto - this assumes that the requester has received the block from the providers - this may not always happen?
                 if (info.BlockHash == lastValidBlockHash) return sequenceNumbers;
 
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
 
                 session.StartTransaction();
                 await transactionCollection.DeleteManyAsync(s => sequenceNumbers.Contains(s.SequenceNumber));
-
-
                 await transactionInfoCollection.DeleteManyAsync(t => true);
                 await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB() { BlockHash = lastValidBlockHash, LastIncludedSequenceNumber = lastIncludedSequenceNumber });
-
                 await session.CommitTransactionAsync();
             }
 
@@ -630,10 +628,12 @@ namespace BlockBase.DataPersistence.ProducerData
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
+                session.StartTransaction();
                 await MongoClient.DropDatabaseAsync(_dbPrefix + databaseName);
                 var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
                 var sidechainCollection = recoverDatabase.GetCollection<SidechainDB>(collection);
                 await sidechainCollection.DeleteOneAsync(s => s.Id == databaseName);
+                await session.CommitTransactionAsync();
             }
         }
 
