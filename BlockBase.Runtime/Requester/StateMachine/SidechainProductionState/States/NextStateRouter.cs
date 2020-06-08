@@ -17,7 +17,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private ContractStateTable _contractState;
         private CurrentProducerTable _currentProducer;
         private object _blocksCount;
-        private BlockheaderTable _lastBlockHeader;
         private IMainchainService _mainchainService;
 
         private NodeConfigurations _nodeConfigurations;
