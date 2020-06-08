@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using BlockBase.Domain;
 using BlockBase.Domain.Configurations;
@@ -15,7 +16,7 @@ using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using static BlockBase.Network.PeerConnection;
 
-namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionsState.States
+namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 {
     public class ConnectToPeersState : AbstractState<StartState, EndState>
     {
@@ -24,7 +25,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionsState.States
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private List<ProducerInTable> _producers;
-        private List<IPAddressTable> _ipAddresses;
+        private IDictionary<string, IPEndPoint> _ipAddresses;
         private SidechainPool _sidechainPool;
         public ConnectToPeersState(ref SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {
@@ -37,60 +38,83 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionsState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new NotImplementedException();
+            var connectedPeersExist = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Any(p => p.ConnectionState == ConnectionStateEnum.Connected);
+
+            return Task.FromResult(connectedPeersExist);
         }
 
         protected override async Task DoWork()
         {
-            throw new NotImplementedException();
+            await _peerConnectionsHandler.ConnectToProducers(_ipAddresses);
+            AddProducersToSidechainPool(_sidechainPool);
+
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new NotImplementedException();
+            return Task.FromResult(_ipAddresses.Any());
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new NotImplementedException();
+            var connectedPeersExist = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Any(p => p.ConnectionState == ConnectionStateEnum.Connected);
+
+            return Task.FromResult((connectedPeersExist, typeof(CheckConnectionState).Name));
         }
 
         protected override async Task UpdateStatus() 
         {
-            throw new NotImplementedException();
+            _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _ipAddresses = await GetProducersIPs();
+            _delay = TimeSpan.FromSeconds(_networkConfigurations.ConnectionExpirationTimeInSeconds);
         }
 
-        // private async Task ConnectToProducers()
-        // {
-        //     var ipAddresses = await GetProducersIPs();
-        //     await _peerConnectionsHandler.ConnectToProducers(ipAddresses);
-        // }
 
-        // private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
-        // {
-        //     var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_sidechain.ClientAccountName);
+        private async Task<IDictionary<string, IPEndPoint>> GetProducersIPs()
+        {
+            var ipAddressesTables = await _mainchainService.RetrieveIPAddresses(_nodeConfigurations.AccountName);
 
-        //     var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
-        //     foreach (var table in ipAddressesTables)
-        //     {
-        //         var producer = table.Key;
-        //         var producerPublicKey = table.PublicKey;
-        //         //TODO rpinto - why a list of IPs and not only one?
-        //         var encryptedIp = table.EncryptedIPs?.LastOrDefault();
-        //         if (encryptedIp == null) continue;
+            var decryptedProducerIPs = new Dictionary<string, IPEndPoint>();
+            foreach (var table in ipAddressesTables)
+            {
+                var producer = table.Key;
+                var producerPublicKey = table.PublicKey;
+                //TODO rpinto - why a list of IPs and not only one?
+                var encryptedIp = table.EncryptedIPs?.LastOrDefault();
+                if (encryptedIp == null) continue;
 
-        //         try
-        //         {
-        //             var decryptedIp = AssymetricEncryption.DecryptIP(encryptedIp, _nodeConfigurations.ActivePrivateKey, producerPublicKey);
-        //             decryptedProducerIPs.Add(producer, decryptedIp);
-        //         }
-        //         catch
-        //         {
-        //             _logger.LogWarning($"Unable to decrypt IP from producer: {producer}.");
-        //         }
-        //     }
-        //     return decryptedProducerIPs;
-        // }
+                try
+                {
+                    var decryptedIp = AssymetricEncryption.DecryptIP(encryptedIp, _nodeConfigurations.ActivePrivateKey, producerPublicKey);
+                    decryptedProducerIPs.Add(producer, decryptedIp);
+                }
+                catch
+                {
+                    _logger.LogWarning($"Unable to decrypt IP from producer: {producer}.");
+                }
+            }
+            return decryptedProducerIPs;
+        }
+
+        private void AddProducersToSidechainPool(SidechainPool sidechainPool)
+        {
+            var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
+
+            var producersInPool = _producers.Select(m => new ProducerInPool
+            {
+                ProducerInfo = new ProducerInfo
+                {
+                    AccountName = m.Key,
+                    PublicKey = m.PublicKey,
+                    NewlyJoined = false,
+                    ProducerType = (ProducerTypeEnum)m.ProducerType,
+                    IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
+                },
+                PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
+            }).ToList();
+
+            sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
+        }
     }
 
 }

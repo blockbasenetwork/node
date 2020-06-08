@@ -24,8 +24,6 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
 
         private NetworkConfigurations _networkConfigurations;
         private BlockRequestsHandler _blockSender;
-        private long _nextTimeToCheckSmartContract;
-        private long _previousTimeToCheck;
         private IMongoDbProducerService _mongoDbProducerService;
 
 
