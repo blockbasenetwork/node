@@ -1,6 +1,7 @@
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Runtime.Common;
+using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState
         private ILogger _logger;
         private IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
+
 
         
         public SidechainMaintainerStateManager(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)

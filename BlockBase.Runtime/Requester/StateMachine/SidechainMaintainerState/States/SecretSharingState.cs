@@ -19,7 +19,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         private ContractInformationTable _contractInfo;
 
-        private bool _triedToExecuteSecretTime;
         public SecretSharingState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;

@@ -48,7 +48,6 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         private bool _hasBlockBeenVerified;
 
-        private int _numOfBlockBroadcasts;
 
         private const int MAX_NUMBER_OF_BLOCK_BROADCASTS = 3;
 

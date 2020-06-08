@@ -34,14 +34,16 @@ namespace BlockBase.Runtime.Common
 
             while (true)
             {
+                var name = this.GetType().FullName;
                 try
                 {
+                    
                     //checks if execution is cancelled
                     if (cancellationToken.IsCancellationRequested) return typeof(TEndState).Name;
 
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
                     await Task.Delay(_delay);
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished delay");
+                    if(_verbose) _logger.LogDebug($"{name} - Finished delay");
 
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to update status...");
                     await UpdateStatus();
@@ -50,44 +52,44 @@ namespace BlockBase.Runtime.Common
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has conditions to continue...");
                     if (!await HasConditionsToContinue())
                     {
-                        _logger.LogDebug($"{this.GetType().Name} - No conditions to continue in this state");
+                        _logger.LogDebug($"{name} - No conditions to continue in this state");
                         //if there are no conditions to continue on the start state, jump to the end state
                         if(this is TStartState) return typeof(TEndState).Name;
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
                     }
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Conditions to continue verified");
+                    if(_verbose) _logger.LogDebug($"{name} - Conditions to continue verified");
 
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has conditions to jump...");
+                    if(_verbose) _logger.LogDebug($"{name} - Starting to verify if has conditions to jump...");
                     var jumpStatus = await HasConditionsToJump();
                     if (jumpStatus.inConditionsToJump)
                     {
-                        _logger.LogDebug($"{this.GetType().Name} - Jumping to {jumpStatus.nextState}");
+                        _logger.LogDebug($"{name} - Jumping to {jumpStatus.nextState}");
                         return jumpStatus.nextState;
                     }
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - No conditions found to jump");
+                    if(_verbose) _logger.LogDebug($"{name} - No conditions found to jump");
 
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has work to be done...");
+                    if(_verbose) _logger.LogDebug($"{name} - Starting to verify if has work to be done...");
                     if (!await IsWorkDone())
                     {
-                        if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to do work...");
+                        if(_verbose) _logger.LogDebug($"{name} - Starting to do work...");
                         await DoWork();
-                        _logger.LogDebug($"{this.GetType().Name} - Work done");
+                        _logger.LogDebug($"{name} - Work done");
                     }
                     else
                     {
-                        _logger.LogDebug($"{this.GetType().Name} - No work found to do");
+                        _logger.LogDebug($"{name} - No work found to do");
                     }
                     
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"{this.GetType().Name} | {ex.Message}");
+                    _logger.LogError($"{name} | {ex.Message}");
                     if(_verbose) _logger.LogDebug($"Trace: {ex}");
 
                     var crashDelay = TimeSpan.FromSeconds(3);
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting after crash delay... {crashDelay.Seconds} seconds");
+                    if(_verbose) _logger.LogDebug($"{name} - Starting after crash delay... {crashDelay.Seconds} seconds");
                     await Task.Delay(crashDelay);
-                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Finished after crash delay");
+                    if(_verbose) _logger.LogDebug($"{name} - Finished after crash delay");
                 }
             }
         }

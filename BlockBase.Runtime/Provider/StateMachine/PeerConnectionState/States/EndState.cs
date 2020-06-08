@@ -31,52 +31,53 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new NotImplementedException();
+            return Task.FromResult(true);
         }
 
-        protected override async Task DoWork()
+        protected override Task DoWork()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new NotImplementedException();
+            return Task.FromResult(true);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new NotImplementedException();
+            return Task.FromResult((true, string.Empty));
         }
 
-        protected override async Task UpdateStatus() 
+        protected override Task UpdateStatus() 
         {
-            throw new NotImplementedException();
+            
+            return Task.CompletedTask;
         }
 
-        private void UpdateIPsInSidechain(List<IPAddressTable> IpsAddressTableEntries)
-        {
-            if (!IpsAddressTableEntries.Any() || IpsAddressTableEntries.Any(t => !t.EncryptedIPs.Any())) return;
-            foreach (var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
+        // private void UpdateIPsInSidechain(List<IPAddressTable> IpsAddressTableEntries)
+        // {
+        //     if (!IpsAddressTableEntries.Any() || IpsAddressTableEntries.Any(t => !t.EncryptedIPs.Any())) return;
+        //     foreach (var ipAddressTable in IpsAddressTableEntries) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
 
-            int numberOfIpsToUpdate = (int)Math.Ceiling(_sidechainPool.ProducersInPool.Count() / 4.0);
-            if (numberOfIpsToUpdate == 0) return;
+        //     int numberOfIpsToUpdate = (int)Math.Ceiling(_sidechainPool.ProducersInPool.Count() / 4.0);
+        //     if (numberOfIpsToUpdate == 0) return;
 
-            var producersInPoolList = _sidechainPool.ProducersInPool.GetEnumerable().ToList();
-            if (!producersInPoolList.Any(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)) return;
-            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToUpdate).ToList();
+        //     var producersInPoolList = _sidechainPool.ProducersInPool.GetEnumerable().ToList();
+        //     if (!producersInPoolList.Any(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)) return;
+        //     var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToUpdate).ToList();
 
-            foreach (var producer in orderedProducersInPool)
-            {
-                var producerIndex = orderedProducersInPool.IndexOf(producer);
-                var producerIps = IpsAddressTableEntries.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
-                if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
+        //     foreach (var producer in orderedProducersInPool)
+        //     {
+        //         var producerIndex = orderedProducersInPool.IndexOf(producer);
+        //         var producerIps = IpsAddressTableEntries.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
+        //         if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
 
-                var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
-                var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
-                producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
-            }
-        }
+        //         var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
+        //         var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
+        //         producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
+        //     }
+        // }
 
     }
 
