@@ -161,7 +161,7 @@ namespace BlockBase.Runtime.Network
                 data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
                 data.AddRange(transactionBytes);
             }
-            var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransaction, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
+            var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
             await _networkService.SendMessageAsync(message);
         }
 

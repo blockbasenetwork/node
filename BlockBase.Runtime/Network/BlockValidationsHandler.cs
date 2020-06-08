@@ -205,7 +205,7 @@ namespace BlockBase.Runtime.Network
 
         private async Task<bool> ValidateBlockTransactions(Block block, SidechainPool sidechain)
         {
-            ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(sidechain.ClientAccountName))?.SequenceNumber ?? 0;
+            ulong lastSequenceNumber = (await _mongoDbProducerService.GetLastIncludedTransaction(sidechain.ClientAccountName))?.SequenceNumber ?? 0;
             foreach (var transaction in block.Transactions)
             {
                 if (transaction.SequenceNumber != ++lastSequenceNumber)

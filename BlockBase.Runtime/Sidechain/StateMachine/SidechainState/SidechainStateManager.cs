@@ -30,6 +30,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
         private TaskContainer _blockProductionTaskContainer;
         private TaskContainer _peerConnectionTaskContainer;
 
+        private TransactionValidationsHandler _transactionValidationsHandler;
         
 
         //TODO rpinto - it will be the state manager that besides coordinating state changes also is responsible to start the connectionchecker
@@ -38,7 +39,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, 
             ILogger logger, INetworkService networkService, 
             IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService, 
-            BlockRequestsHandler blockSender):base(logger)
+            BlockRequestsHandler blockSender, TransactionValidationsHandler transactionValidationsHandler):base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
@@ -49,6 +50,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _mongoDbProducerService = mongoDbProducerService;
             _peerConnectionsHandler = peerConnectionsHandler;
             _blockSender = blockSender;
+            _transactionValidationsHandler = transactionValidationsHandler;
         }
 
         protected override async Task Run() 
@@ -81,7 +83,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
                     var blockProductionStateManager = new BlockProductionStateManager(
                         _logger, _sidechain, _nodeConfigurations, _networkConfigurations, 
                         _networkService, _peerConnectionsHandler, _mainchainService, 
-                        _mongoDbProducerService, _blockSender);
+                        _mongoDbProducerService, _blockSender, _transactionValidationsHandler);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
 
                     _logger.LogDebug($"Started block production");

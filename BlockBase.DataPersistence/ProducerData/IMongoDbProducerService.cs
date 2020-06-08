@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlockBase.Domain.Blockchain;
 using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
+using BlockBase.Domain.Enums;
 
 namespace BlockBase.DataPersistence.ProducerData
 {
@@ -20,7 +21,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber);
         Task RemoveBlockFromDatabaseAsync(string databaseName, string blockHash);
         Task RemoveUnconfirmedBlocks(string databaseName);
-        Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string blockHash, long lastProductionTime);
+        Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string blockHash, long lastProductionTime, ProducerTypeEnum producerType);
         Task<bool> IsBlockConfirmed(string databaseName, string blockHash);
         Task ConfirmBlock(string databaseName, string blockHash);
         Task ClearValidatorNode(string databaseName, string blockHash, uint transactionCount);
@@ -28,7 +29,8 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<bool> IsBlockInDatabase(string databaseName, string blockhash);
         Task SaveTransaction(string databaseName, Transaction transaction);
         Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName);
-        Task<Transaction> LastIncludedTransaction(string databaseName);
+        Task<Transaction> GetLastIncludedTransaction(string databaseName);
+        Task<Transaction> GetLastIncludedTransactionInConfirmedBlock(string databaseName);
         Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash);
         Task<Transaction> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
         Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber);

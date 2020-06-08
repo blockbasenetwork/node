@@ -103,9 +103,12 @@ namespace BlockBase.Network.Rounting
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.RequestBlocks) BlocksRequestReceived?.Invoke(ParseRequestBlocksMessage(message.Payload, message.Sender));
 
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.ConfirmTransactionReception) TransactionConfirmationReceived?.Invoke(ParseTransactionConfirmationMessage(message), message.Sender);
-                
-                else if(message.NetworkMessageType == NetworkMessageTypeEnum.SendTransaction) TransactionReceived?.Invoke(ParseTransactionsMessage(message), message.Sender);
-            }
+
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendTransactions) TransactionsReceived?.Invoke(ParseTransactionsMessage(message), message.Sender);
+
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.RequestLastIncludedTransaction) LastIncludedTransactionRequestReceived?.Invoke(new LastIncludedTransactionRequestReceivedEventArgs() { ClientAccountName = Encoding.UTF8.GetString(message.Payload), Sender = message.Sender });
+
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendLastIncludedTransaction) LastTransactionIncludedReceived?.Invoke(new LastIncludedTransactionReceivedEventArgs() { TransactionBytes = message.Payload, ClientAccountName = message.EosAccount }, message.Sender);            }
         }
 
         private BlockReceivedEventArgs ParseMinedBlockMessage(byte[] payload)
@@ -117,19 +120,19 @@ namespace BlockBase.Network.Rounting
 
         private TransactionsReceivedEventArgs ParseTransactionsMessage(NetworkMessage message)
         {
-            return new TransactionsReceivedEventArgs { TransactionsBytes = message.Payload, ClientAccountName = message.EosAccount};
+            return new TransactionsReceivedEventArgs { TransactionsBytes = message.Payload, ClientAccountName = message.EosAccount };
         }
 
         private TransactionConfirmationReceivedEventArgs ParseTransactionConfirmationMessage(NetworkMessage message)
         {
             var sequenceNumbers = new List<ulong>();
-            for(int i = 0; i < message.Payload.Length; i+=8)
+            for (int i = 0; i < message.Payload.Length; i += 8)
             {
                 byte[] sequenceNumberBytes = new byte[8];
                 Array.Copy(message.Payload, i, sequenceNumberBytes, 0, 8);
                 sequenceNumbers.Add(BitConverter.ToUInt64(sequenceNumberBytes));
             }
-            return new TransactionConfirmationReceivedEventArgs { SenderAccountName = message.EosAccount,  TransactionSequenceNumbers = sequenceNumbers};
+            return new TransactionConfirmationReceivedEventArgs { SenderAccountName = message.EosAccount, TransactionSequenceNumbers = sequenceNumbers };
         }
 
         private Tuple<string, byte[]> ParseClienAccounttName(byte[] payload)
@@ -213,6 +216,16 @@ namespace BlockBase.Network.Rounting
             public IPEndPoint Sender { get; set; }
         }
 
+        public event LastIncludedTransactionRequestReceivedEventHandler LastIncludedTransactionRequestReceived;
+        public delegate void LastIncludedTransactionRequestReceivedEventHandler(LastIncludedTransactionRequestReceivedEventArgs args);
+
+        public class LastIncludedTransactionRequestReceivedEventArgs
+        {
+            public string ClientAccountName { get; set; }
+            public IPEndPoint Sender { get; set; }
+            public byte[] TransactionBytes { get; set;}
+        }
+
         public event IdentificationMessageReceivedEventHandler IdentificationMessageReceived;
         public delegate void IdentificationMessageReceivedEventHandler(IdentificationMessageReceivedEventArgs args);
         public class IdentificationMessageReceivedEventArgs
@@ -229,12 +242,21 @@ namespace BlockBase.Network.Rounting
             public int nonce { get; set; }
         }
 
-        public event TransactionReceivedEventHandler TransactionReceived;
-        public delegate void TransactionReceivedEventHandler(TransactionsReceivedEventArgs args, IPEndPoint sender);
+        public event TransactionsReceivedEventHandler TransactionsReceived;
+        public delegate void TransactionsReceivedEventHandler(TransactionsReceivedEventArgs args, IPEndPoint sender);
 
         public class TransactionsReceivedEventArgs
         {
             public byte[] TransactionsBytes { get; set; }
+            public string ClientAccountName { get; set; }
+        }
+
+        public event LastTransactionReceivedEventHandler LastTransactionIncludedReceived;
+        public delegate void LastTransactionReceivedEventHandler(LastIncludedTransactionReceivedEventArgs args, IPEndPoint sender);
+
+        public class LastIncludedTransactionReceivedEventArgs
+        {
+            public byte[] TransactionBytes { get; set; }
             public string ClientAccountName { get; set; }
         }
 

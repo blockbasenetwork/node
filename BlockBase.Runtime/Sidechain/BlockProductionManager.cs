@@ -104,13 +104,15 @@ namespace BlockBase.Runtime.Sidechain
                                 if (lastValidBlockheaderSmartContract != null)
                                 {
                                     
-                                    if (!await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime) && _sidechainPool.ProducerType != ProducerTypeEnum.Validator)
+                                    if (!await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(databaseName, lastValidBlockheaderSmartContract.BlockHash, currentProducerTable.StartProductionTime, _sidechainPool.ProducerType))
                                     {
                                         _logger.LogDebug("Producer not up to date, building chain.");
 
                                         //TODO rpinto - does the provider have enough time to build the chain before being banned?
                                         await BuildChain();
                                     }
+
+
 
                                     if (!await _mongoDbProducerService.IsBlockConfirmed(databaseName, lastValidBlockheaderSmartContract.BlockHash))
                                     {
@@ -231,7 +233,7 @@ namespace BlockBase.Runtime.Sidechain
         {
             var transactionsDatabaseName = _sidechainPool.ClientAccountName;
             var allLooseTransactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(transactionsDatabaseName);
-            ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
+            ulong lastSequenceNumber = (await _mongoDbProducerService.GetLastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
             uint sizeInBytes = 0;
 
