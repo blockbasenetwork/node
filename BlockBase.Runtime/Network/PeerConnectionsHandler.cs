@@ -155,6 +155,7 @@ namespace BlockBase.Runtime.Network
                     var peer = await ConnectAsync(producer.ProducerInfo.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
                     if (peer != null)
                     {
+                        //something here is creating a infinite loop....
                         await SendIdentificationMessage(producer.ProducerInfo.IPEndPoint);
                     }
                     else
