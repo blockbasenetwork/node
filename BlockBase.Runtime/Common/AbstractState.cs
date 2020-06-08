@@ -41,15 +41,15 @@ namespace BlockBase.Runtime.Common
                     //checks if execution is cancelled
                     if (cancellationToken.IsCancellationRequested) return typeof(TEndState).Name;
 
-                    if(_verbose) _logger.LogDebug($"{name} - Starting to update status...");
-                    await UpdateStatus();
-                    if(_verbose) _logger.LogDebug($"{name} - Status updated");
-
-                    if(_verbose) _logger.LogDebug($"{name} - Starting to delay... {_delay.Seconds} seconds");
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
                     await Task.Delay(_delay);
                     if(_verbose) _logger.LogDebug($"{name} - Finished delay");
 
-                    if(_verbose) _logger.LogDebug($"{name} - Starting to verify if has conditions to continue...");
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to update status...");
+                    await UpdateStatus();
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Status updated");
+
+                    if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has conditions to continue...");
                     if (!await HasConditionsToContinue())
                     {
                         _logger.LogDebug($"{name} - No conditions to continue in this state");
