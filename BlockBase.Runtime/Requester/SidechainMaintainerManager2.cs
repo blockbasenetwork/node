@@ -25,6 +25,8 @@ namespace BlockBase.Runtime.Requester
 
         private SidechainPool _sidechainPool;
 
+        private TransactionsHandler _transactionsHandler;
+
 
         public TaskContainer TaskContainerMaintainer { get; private set; }
         public TaskContainer TaskContainerProduction { get; private set; }
@@ -34,6 +36,7 @@ namespace BlockBase.Runtime.Requester
         public SidechainMaintainerManager2(ILogger<ISidechainMaintainerManager2> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, TransactionsHandler transactionsHandler, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler)
         {
 
+            _transactionsHandler = transactionsHandler;
             _sidechainPool = new SidechainPool(nodeConfigurations.Value.AccountName);
             _sidechainMaintainerStateManager = new SidechainMaintainerStateManager(logger, mainchainService, nodeConfigurations.Value);
             _sidechainProductionStateManager = new SidechainProductionStateManager(logger, mainchainService, nodeConfigurations.Value, transactionsHandler, mongoDbProducerService);
@@ -58,13 +61,13 @@ namespace BlockBase.Runtime.Requester
             return TaskContainerConnections != null && TaskContainerConnections.Task.Status == TaskStatus.Running;
         }
 
-        public Task Start()
+        public async Task Start()
         {
+            await _transactionsHandler.Setup();
+            
             if (!IsMaintainerRunning()) TaskContainerMaintainer = _sidechainMaintainerStateManager.Start();
             if (!IsProductionRunning()) TaskContainerProduction = _sidechainProductionStateManager.Start();
             if (!IsConnectionsManagerRunning()) TaskContainerConnections = _peerConnectionStateManager.Start();
-
-            return Task.CompletedTask;
         }
 
         public Task Pause()

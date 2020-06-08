@@ -15,16 +15,17 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 {
-    public class StartState : AbstractState<StartState, EndState>
+    public class NextStateRouter : AbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
-
+        private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
-        public StartState( ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations): base(logger)
+        public NextStateRouter( ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
+            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         protected override Task<bool> IsWorkDone()
@@ -39,12 +40,12 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractStateTable != null);
+            return Task.FromResult(_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((_contractStateTable != null, typeof(NextStateRouter).Name));
+            return Task.FromResult((_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime, typeof(ConnectToPeersState).Name));
         }
 
         protected override async Task UpdateStatus() 

@@ -4,13 +4,12 @@ namespace BlockBase.Domain.Configurations
 {
     public class NodeConfigurations
     {
-        private string _secretPassword = Guid.NewGuid().ToString();
         public string AccountName { get; set; }
         public string ActivePrivateKey { get; set; }
         public string ActivePublicKey { get; set; }
         public string SecretPassword 
         { 
-            get { return _secretPassword; }
+            get { return ActivePublicKey; }
         }
         public string MongoDbConnectionString { get; set; }
         public string DatabasesPrefix { get; set; }
