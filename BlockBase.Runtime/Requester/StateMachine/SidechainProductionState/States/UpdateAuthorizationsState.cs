@@ -22,6 +22,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private List<ProducerInTable> _producerList;
         private IMainchainService _mainchainService;
         private EosSharp.Core.Api.v1.GetAccountResponse _sidechainAccountInfo;
+
         public UpdateAuthorizationsState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _inNeedToUpdateAuthorizations = false;
@@ -45,7 +46,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             //     }
             // }).ToList();
 
-            // _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
+            //  _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
 
 
 

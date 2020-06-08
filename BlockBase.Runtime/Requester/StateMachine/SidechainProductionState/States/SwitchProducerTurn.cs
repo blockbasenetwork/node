@@ -24,6 +24,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private List<BlockCountTable> _blocksCount;
         private List<ProducerInTable> _producerList;
         private int _roundsUntilSettlement;
+        private bool _needsASettlement;
         private BlockheaderTable _lastBlockHeader;
         private IMainchainService _mainchainService;
         private TransactionsHandler _transactionSender;
@@ -33,6 +34,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private bool _areProducersBlackListed;
         private bool _areProducersPunished;
         private bool _hasHistoryValidationBeenActivated;
+        private bool _hasDoneTheSettlement;
+        private bool _hasSwitchedProducer;
 
         public SwitchProducerTurn(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, TransactionsHandler transactionSender, IMongoDbProducerService mongoDbProducerService) : base(logger)
         {
@@ -55,11 +58,12 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             if (IsTimeUpForProducer(_currentProducer, _contractInfo))
             {
                 await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _nodeConfigurations.AccountName);
+                _hasSwitchedProducer = true;
             }
 
 
             //is this if right?
-            if (_roundsUntilSettlement - 1 <= 0)
+            if (_needsASettlement && !_hasDoneTheSettlement)
             {
                 //TODO rpinto - how do I know if they are already blacklisted
                 var producersToBlackList = _producerList.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).ToList();
@@ -78,6 +82,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
                 await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
                 _hasHistoryValidationBeenActivated = true;
 
+                _hasDoneTheSettlement = true;
+
             }
         }
 
@@ -89,18 +95,14 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
 
-            return Task.FromResult((
-                _areProducersBlackListed
-                && _areProducersPunished
-                && _hasHistoryValidationBeenActivated,
-            typeof(UpdateAuthorizationsState).Name));
+            var settlementDone = _needsASettlement ? _hasDoneTheSettlement : true;
+            return Task.FromResult((_hasSwitchedProducer && settlementDone, typeof(UpdateAuthorizationsState).Name));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_areProducersBlackListed
-                && _areProducersPunished
-                && _hasHistoryValidationBeenActivated);
+            var settlementDone = _needsASettlement ? _hasDoneTheSettlement : true;
+            return Task.FromResult(_hasSwitchedProducer && settlementDone);
         }
 
         protected override async Task UpdateStatus()
@@ -115,6 +117,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
             var numberOfRoundsAlreadyPassed = _blocksCount.Sum(b => b.blocksproduced) + _blocksCount.Sum(b => b.blocksfailed);
             _roundsUntilSettlement = Convert.ToInt32(_contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
+
+            _needsASettlement = _roundsUntilSettlement -1 <= 0;
 
             _lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_nodeConfigurations.AccountName, (int)_contractInfo.BlocksBetweenSettlement);
         }
