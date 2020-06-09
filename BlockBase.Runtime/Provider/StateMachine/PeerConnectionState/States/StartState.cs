@@ -37,7 +37,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task DoWork()
         {
-            _peerConnectionsHandler.AddKnownSidechain(_sidechainPool);
             return Task.CompletedTask;
         }
 

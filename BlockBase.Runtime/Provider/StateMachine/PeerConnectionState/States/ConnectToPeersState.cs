@@ -44,6 +44,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override async Task DoWork()
         {
+            _peerConnectionsHandler.AddKnownSidechain(_sidechainPool);
+
             AddProducersToSidechainPool();
             UpdateIPsInSidechain();
             
