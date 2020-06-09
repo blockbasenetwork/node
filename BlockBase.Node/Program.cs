@@ -17,7 +17,7 @@ namespace BlockBase.Node
 
             var networkService = webHost.Services.Get<INetworkService>();
             
-            var sidechainMaintainerService = webHost.Services.Get<ISidechainMaintainerManager2>();
+            var sidechainMaintainerService = webHost.Services.Get<ISidechainMaintainerManager>();
             var sidechainProducerService = webHost.Services.Get<ISidechainProducerService>();
             
 

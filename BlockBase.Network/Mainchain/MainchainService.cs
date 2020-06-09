@@ -1065,7 +1065,7 @@ namespace BlockBase.Network.Mainchain
                         $"Error sending transaction";
 
             _logger.LogCritical(errorMessage);
-            _logger.LogDebug($"Send Transaction Error Trace: {exception}");
+            //_logger.LogDebug($"Send Transaction Error Trace: {exception}");
 
             return new OpResult<T>(exception);
         }

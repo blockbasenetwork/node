@@ -95,7 +95,6 @@ namespace BlockBase.Api
                 {
                     c.SwaggerDoc("providerApi", new OpenApiInfo { Title = "Service Provider API", Version = "v0.1" });
                     c.SwaggerDoc("requesterApi", new OpenApiInfo { Title = "Service Requester API", Version = "v0.1" });
-                    c.SwaggerDoc("requester2Api", new OpenApiInfo { Title = "Service Requester2 Test API", Version = "v0.1" });
                     c.SwaggerDoc("networkApi", new OpenApiInfo { Title = "Network API", Version = "v0.1" });
                     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -150,7 +149,6 @@ namespace BlockBase.Api
                 services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockRequestsHandler>();
                 services.AddSingleton<TransactionsHandler>();
-                services.AddSingleton<SidechainMaintainerManager>();
                 services.AddSingleton<PeerConnectionsHandler>();
                 services.AddSingleton<BlockValidationsHandler>();
                 services.AddSingleton<TransactionValidationsHandler>();
@@ -158,7 +156,7 @@ namespace BlockBase.Api
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
 
-                services.AddSingleton<ISidechainMaintainerManager2, SidechainMaintainerManager2>();
+                services.AddSingleton<ISidechainMaintainerManager, SidechainMaintainerManager>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<SidechainKeeper>();
             });

@@ -3,7 +3,7 @@ using BlockBase.Utils.Threading;
 
 namespace BlockBase.Runtime.Requester
 {
-    public interface ISidechainMaintainerManager2
+    public interface ISidechainMaintainerManager
     {
         TaskContainer TaskContainerMaintainer { get; }
         TaskContainer TaskContainerProduction { get; }
