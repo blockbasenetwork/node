@@ -65,7 +65,8 @@ namespace BlockBase.Runtime.Network
             try
             {
                 var transaction = await _mongoDbProducerService.GetLastIncludedTransactionInConfirmedBlock(args.ClientAccountName);
-                var message = new NetworkMessage(NetworkMessageTypeEnum.SendLastIncludedTransaction, transaction != null ? transaction.ConvertToProto().ToByteArray() : null,
+                var transactionBytes = transaction != null ? transaction.ConvertToProto().ToByteArray() : null;
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendLastIncludedTransaction, transactionBytes,
                 TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey,
                 _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, args.Sender);
             }

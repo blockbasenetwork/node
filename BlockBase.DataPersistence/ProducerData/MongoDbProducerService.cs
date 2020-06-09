@@ -559,6 +559,8 @@ namespace BlockBase.DataPersistence.ProducerData
         public async Task<Transaction> GetLastIncludedTransactionInConfirmedBlock(string databaseName)
         {
             var lastIncludedTransaction = await GetLastIncludedTransaction(databaseName);
+            if(lastIncludedTransaction == null) return null;
+
             var blockHash = HashHelper.ByteArrayToFormattedHexaString(lastIncludedTransaction.BlockHash);
             if (await IsBlockConfirmed(databaseName, blockHash))
                 return lastIncludedTransaction;
