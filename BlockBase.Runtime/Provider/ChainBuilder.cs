@@ -76,6 +76,7 @@ namespace BlockBase.Runtime.Provider
 
         private async void MessageForwarder_LastIncludedTransactionReceived(LastIncludedTransactionRequestReceivedEventArgs args)
         {
+            // _logger.LogDebug("Received last included transaction.");
             _last_transaction_missing = false;
             if (!args.TransactionBytes.SequenceEqual(new byte[0]))
             {
@@ -99,7 +100,7 @@ namespace BlockBase.Runtime.Provider
 
                 if (!validConnectedProducers.Any())
                 {
-                    _logger.LogDebug("No connected producers to request blocks.");
+                    // _logger.LogDebug("No connected producers to request blocks.");
                     return new OpResult<bool>(new Exception("Unable to synchronize. No connected producers to request blocks."));
                 }
 
@@ -138,7 +139,7 @@ namespace BlockBase.Runtime.Provider
                     {
                         var transactionMessage = BuildRequestLastIncludedTransactionNetworkMessage(_currentSendingProducer, _sidechainPool.ClientAccountName);
                         await _networkService.SendMessageAsync(transactionMessage);
-                        _logger.LogDebug("Sending last included transaction.");
+                        // _logger.LogDebug("Asking for last included transaction.");
                     }
 
                     _lastReceivedDate = DateTime.UtcNow;

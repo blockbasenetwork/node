@@ -64,11 +64,13 @@ namespace BlockBase.Runtime.Network
             await sidechainSemaphore.WaitAsync();
             try
             {
+                
                 var transaction = await _mongoDbProducerService.GetLastIncludedTransactionInConfirmedBlock(args.ClientAccountName);
-                var transactionBytes = transaction != null ? transaction.ConvertToProto().ToByteArray() : null;
+                var transactionBytes = transaction != null ? transaction.ConvertToProto().ToByteArray() : new byte[0];
                 var message = new NetworkMessage(NetworkMessageTypeEnum.SendLastIncludedTransaction, transactionBytes,
                 TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey,
                 _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, args.Sender);
+                // _logger.LogDebug("Sent last included transaction.");
             }
             catch (Exception e)
             {
