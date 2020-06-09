@@ -95,7 +95,6 @@ namespace BlockBase.Runtime.Provider
             try
             {
                 var producerIndex = 0;
-                _last_transaction_missing = true;
                 var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
 
                 if (!validConnectedProducers.Any())
@@ -107,7 +106,10 @@ namespace BlockBase.Runtime.Provider
                 _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
                 if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator)
+                {
+                    _last_transaction_missing = true;
                     _missingBlocksSequenceNumber = new List<ulong>() { _lastSidechainBlockheader.SequenceNumber };
+                }
 
                 else
                     _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks(_lastSidechainBlockheader.SequenceNumber)).ToList();
