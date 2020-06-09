@@ -74,7 +74,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
                 //only after the producers are all blacklisted can they be punished
                 //there should be an if guarding this
-                await _mainchainService.PunishProd(_nodeConfigurations.AccountName);
+                if(blackListedProducers.Count > 0)
+                    await _mainchainService.PunishProd(_nodeConfigurations.AccountName);
                 _areProducersPunished = true;
 
                 //only after the producers are punished should the history validation start
