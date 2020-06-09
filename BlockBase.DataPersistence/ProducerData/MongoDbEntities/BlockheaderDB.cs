@@ -49,6 +49,10 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         [BsonRequired()]
         public ulong BlockSizeInBytes { get; set; }
 
+        [BsonElement("LastTransactionSequenceNumber")]
+        [BsonRequired()]
+        public ulong LastTransactionSequenceNumber { get; set; }
+
         public BlockheaderDB BlockheaderDBFromBlockHeader(BlockHeader blockHeader)
         {
 
@@ -62,13 +66,14 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
             Confirmed = false;
             TransactionCount = blockHeader.TransactionCount;
             BlockSizeInBytes = blockHeader.BlockSizeInBytes;
+            LastTransactionSequenceNumber = blockHeader.LastTransactionSequenceNumber;
             return this;
         }
 
         public BlockHeader BlockHeaderFromBlockHeaderDB()
         {
             return new BlockHeader(HashHelper.FormattedHexaStringToByteArray(BlockHash), BlockSizeInBytes,
-            HashHelper.FormattedHexaStringToByteArray(PreviousBlockhash), Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, Timestamp); 
+            HashHelper.FormattedHexaStringToByteArray(PreviousBlockhash), Producer, ProducerSignature, MerkleRoot, SequenceNumber, TransactionCount, LastTransactionSequenceNumber, Timestamp); 
         }
     }
 }

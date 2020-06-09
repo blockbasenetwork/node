@@ -11,4 +11,5 @@ message BlockHeaderProto {
 	uint64 SequenceNumber = 7;
 	uint32 TransactionCount = 8;
 	uint64 BlockSizeInBytes = 9;
+	uint64 LastTransactionSequenceNumber = 10;
 }
