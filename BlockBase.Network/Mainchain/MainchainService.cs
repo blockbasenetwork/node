@@ -62,7 +62,7 @@ namespace BlockBase.Network.Mainchain
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(
                 NetworkConfigurations.BlockBaseTokenContract,
                 EosTableNames.TOKEN_LEDGER_TABLE_NAME,
-                sidechain),
+                accountName),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;

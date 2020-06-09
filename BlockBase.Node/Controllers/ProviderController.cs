@@ -242,7 +242,7 @@ namespace BlockBase.Node.Controllers
                 var minimumProviderState = Math.Round((decimal)contractInfo.Stake / 10000, 4);
                 if(minimumProviderState > providerStake + stake)
                 {
-                    return BadRequest($"Minimum provider stake is {minimumProviderState}, currently staked {providerStake} and added {stake} which is not enough. Please stake {minimumProviderState - providerStake}");
+                    return BadRequest(new OperationResponse<string>($"Minimum provider stake is {minimumProviderState}, currently staked {providerStake} and added {stake} which is not enough. Please stake {minimumProviderState - providerStake}"));
                 }
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
