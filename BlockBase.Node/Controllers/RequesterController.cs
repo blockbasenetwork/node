@@ -38,7 +38,7 @@ namespace BlockBase.Node.Controllers
         private SidechainPhasesTimesConfigurations SidechainPhasesTimesConfigurations;
         private readonly ILogger _logger;
         private readonly IMainchainService _mainchainService;
-        private ISidechainMaintainerManager2 _sidechainMaintainerManager;
+        private ISidechainMaintainerManager _sidechainMaintainerManager;
         private DatabaseKeyManager _databaseKeyManager;
         private SecurityConfigurations _securityConfigurations;
         private IConnectionsChecker _connectionsChecker;
@@ -46,7 +46,7 @@ namespace BlockBase.Node.Controllers
         private IConnector _connector;
 
         
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager2 sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbProducerService mongoDbProducerService)
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbProducerService mongoDbProducerService)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;

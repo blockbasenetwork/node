@@ -149,7 +149,6 @@ namespace BlockBase.Api
                 services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockRequestsHandler>();
                 services.AddSingleton<TransactionsHandler>();
-                services.AddSingleton<SidechainMaintainerManager>();
                 services.AddSingleton<PeerConnectionsHandler>();
                 services.AddSingleton<BlockValidationsHandler>();
                 services.AddSingleton<TransactionValidationsHandler>();
@@ -157,7 +156,7 @@ namespace BlockBase.Api
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
 
-                services.AddSingleton<ISidechainMaintainerManager2, SidechainMaintainerManager2>();
+                services.AddSingleton<ISidechainMaintainerManager, SidechainMaintainerManager>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<SidechainKeeper>();
             });
