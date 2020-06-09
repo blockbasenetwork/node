@@ -17,14 +17,13 @@ using BlockBase.DataProxy.Encryption;
 using BlockBase.DataPersistence.Utils;
 using System.IO;
 using System.Text;
-using BlockBase.Runtime.Provider;
-using BlockBase.Runtime;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
 using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
 using EosSharp.Core.Exceptions;
 using BlockBase.Runtime.Sql;
+using System.Linq;
 
 namespace BlockBase.Node.Controllers
 {
@@ -39,14 +38,15 @@ namespace BlockBase.Node.Controllers
         private SidechainPhasesTimesConfigurations SidechainPhasesTimesConfigurations;
         private readonly ILogger _logger;
         private readonly IMainchainService _mainchainService;
-        private SidechainMaintainerManager _sidechainMaintainerManager;
+        private ISidechainMaintainerManager2 _sidechainMaintainerManager;
         private DatabaseKeyManager _databaseKeyManager;
         private SecurityConfigurations _securityConfigurations;
         private IConnectionsChecker _connectionsChecker;
         private SqlCommandManager _sqlCommandManager;
         private IConnector _connector;
 
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, IMainchainService mainchainService, SidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbProducerService mongoDbProducerService)
+        
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager2 sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbProducerService mongoDbProducerService)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
@@ -60,7 +60,6 @@ namespace BlockBase.Node.Controllers
             _connectionsChecker = connectionsChecker;
             _securityConfigurations = securityConfigurations.Value;
             _databaseKeyManager = databaseKeyManager;
-            _sidechainMaintainerManager = sidechainMaintainerManager;
             _connector = psqlConnector;
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbProducerService);
         }
@@ -86,10 +85,10 @@ namespace BlockBase.Node.Controllers
                 var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
                 var accountName = NodeConfigurations.AccountName;
-                var publicKey = NodeConfigurations.ActivePublicKey;
+                var activePublicKey = NodeConfigurations.ActivePublicKey;
 
 
-                bool accountDataFetched = false;
+                bool eosAccountDataFetched = false;
                 List<string> currencyBalance = null;
                 long cpuUsed = 0;
                 long cpuLimit = 0;
@@ -97,7 +96,9 @@ namespace BlockBase.Node.Controllers
                 long netLimit = 0;
                 ulong ramUsed = 0;
                 long ramLimit = 0;
-                string sidechainState = null;
+
+                bool activeKeyFoundOnAccount = false;
+                bool activeKeyHasEnoughWeight = false;
 
 
                 try
@@ -105,12 +106,7 @@ namespace BlockBase.Node.Controllers
                     var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
                     currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
 
-                    if (accountInfo == null)
-                    {
-                        _logger.LogError($"Account {NodeConfigurations.AccountName} not found");
-                    }
-
-                    accountDataFetched = true;
+                    eosAccountDataFetched = true;
                     cpuUsed = accountInfo.cpu_limit.used;
                     cpuLimit = accountInfo.cpu_limit.max;
                     netUsed = accountInfo.net_limit.used;
@@ -118,14 +114,26 @@ namespace BlockBase.Node.Controllers
                     ramUsed = accountInfo.ram_usage;
                     ramLimit = accountInfo.ram_quota;
 
-                    sidechainState = _sidechainMaintainerManager._sidechain.State.ToString();
+                    var permission = accountInfo.permissions.SingleOrDefault(p => p.perm_name == "active");
+
+                    if(permission != null)
+                    {
+                        var correspondingActiveKey = permission.required_auth?.keys?.SingleOrDefault(k => k.key == activePublicKey);
+                        if(correspondingActiveKey != null)
+                            activeKeyFoundOnAccount = true;
+                        if(correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
+                            activeKeyHasEnoughWeight = true;
+                        
+                    }
+                    
 
                 }
-                catch
-                {
-                    _logger.LogError("Failed to retrieve account info");
+                catch { }
 
-                }
+
+
+                var publicIpAddress = NetworkConfigurations.PublicIpAddress;
+                var tcpPort = NetworkConfigurations.TcpPort;
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
                 var mongoDbPrefix = NodeConfigurations.DatabasesPrefix;
@@ -137,10 +145,13 @@ namespace BlockBase.Node.Controllers
                 return Ok(new OperationResponse<dynamic>(
                     new
                     {
+                        publicIpAddress,
+                        tcpPort,
                         accountName,
-                        publicKey,
-                        sidechainState,
-                        accountDataFetched,
+                        eosAccountDataFetched,
+                        activePublicKey,
+                        activeKeyFoundOnAccount,
+                        activeKeyHasEnoughWeight,
                         currencyBalance,
                         cpuUsed,
                         cpuLimit,
@@ -148,13 +159,14 @@ namespace BlockBase.Node.Controllers
                         netLimit,
                         ramUsed,
                         ramLimit,
-                        isMongoLive,
-                        isPostgresLive,
+                        
                         mongoDbConnectionString,
                         mongoDbPrefix,
+                        isMongoLive,
                         postgresHost,
                         postgresPort,
-                        postgresUser
+                        postgresUser,
+                        isPostgresLive,
                     }
                     , $"Configuration and connection data retrieved."));
 
@@ -281,25 +293,14 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to start the process for producers to participate and build the sidechain",
             OperationId = "RunSidechainMaintenance"
         )]
-        public ObjectResult RunSidechainMaintenance()
+        public async Task<ObjectResult> RunSidechainMaintenance()
         {
             try
             {
-                string tx = null;
-                //var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-
-                //TODO rpinto - could the contract state be in ConfigTime and CandidatureTime or/and ProductionTime?
-                //TODO rpinto - why is the StartCandidatureTime called from outside the SuperMethod?
-
-                if (_sidechainMaintainerManager.TaskContainer == null
-                || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
-                || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
+                if (!_sidechainMaintainerManager.IsMaintainerRunning() || !_sidechainMaintainerManager.IsProductionRunning())
                 {
-                    _sidechainMaintainerManager.Start();
-
-                    var okMessage = tx != null ? $"Chain maintenance started and start candidature sent: Tx: {tx}" : "Chain maintenance started.";
-
-                    return Ok(new OperationResponse<bool>(true, okMessage));
+                    await _sidechainMaintainerManager.Start();
+                    return Ok(new OperationResponse<bool>(true, "Chain maintenance started."));
                 }
 
                 return BadRequest(new OperationResponse<string>($"Sidechain was already running."));
@@ -323,16 +324,14 @@ namespace BlockBase.Node.Controllers
             Description = "The requester can use this method to temporarely the maintenance of the sidechain while still being able to encrypt and decrypt queries.",
             OperationId = "PauseSidechain"
         )]
-        public ObjectResult PauseSidechain()
+        public async Task<ObjectResult> PauseSidechain()
         {
             try
             {
-                if (_sidechainMaintainerManager.TaskContainer == null
-                || _sidechainMaintainerManager.TaskContainer.Task.IsCanceled
-                || _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.IsCancellationRequested)
+                if (!_sidechainMaintainerManager.IsMaintainerRunning() && !_sidechainMaintainerManager.IsProductionRunning())
                     return BadRequest(new OperationResponse<string>($"Sidechain was already paused."));
 
-                _sidechainMaintainerManager.TaskContainer.CancellationTokenSource.Cancel();
+                await _sidechainMaintainerManager.Pause();
 
                 return Ok(new OperationResponse<bool>(true, $"Sidechain maintenance paused."));
             }
@@ -357,8 +356,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                await _sidechainMaintainerManager.EndSidechain();
+                
+                await _sidechainMaintainerManager.End();
 
+                //TODO rpinto - should all this functionality below be encapsulated inside the sidechainMaintainerManager?
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
                 if (contractSt == null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} not found"));
 
@@ -593,7 +594,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_sidechainMaintainerManager?.TaskContainer?.CancellationTokenSource.IsCancellationRequested ?? false)
+                if (_sidechainMaintainerManager.IsMaintainerRunning() || _sidechainMaintainerManager.IsProductionRunning())
                     return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You need to end sidechain first.")));
                 await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
                 return Ok(new OperationResponse<bool>(true, $"Removed data."));
