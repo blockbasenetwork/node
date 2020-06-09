@@ -77,7 +77,7 @@ namespace BlockBase.Runtime.Provider
         private async void MessageForwarder_LastIncludedTransactionReceived(LastIncludedTransactionRequestReceivedEventArgs args)
         {
             _last_transaction_missing = false;
-            if (args.TransactionBytes != null)
+            if (!args.TransactionBytes.SequenceEqual(new byte[0]))
             {
                 var transactionProto = TransactionProto.Parser.ParseFrom(args.TransactionBytes);
                 var transaction = new Transaction().SetValuesFromProto(transactionProto);
@@ -138,6 +138,7 @@ namespace BlockBase.Runtime.Provider
                     {
                         var transactionMessage = BuildRequestLastIncludedTransactionNetworkMessage(_currentSendingProducer, _sidechainPool.ClientAccountName);
                         await _networkService.SendMessageAsync(transactionMessage);
+                        _logger.LogDebug("Sending last included transaction.");
                     }
 
                     _lastReceivedDate = DateTime.UtcNow;
