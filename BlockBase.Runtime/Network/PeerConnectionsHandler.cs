@@ -94,12 +94,16 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
+        public void AddKnownSidechain(SidechainPool sidechain)
         {
             var sidechainAlreadyKnown = KnownSidechains.GetEnumerable().Where(p => p.ClientAccountName == sidechain.ClientAccountName).SingleOrDefault();
             if (sidechainAlreadyKnown != null) KnownSidechains.Remove(sidechainAlreadyKnown);
-            
+
             KnownSidechains.Add(sidechain);
+        }
+
+        public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
+        {
 
             var producersInPoolList = sidechain.ProducersInPool.GetEnumerable().ToList();
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
@@ -251,7 +255,7 @@ namespace BlockBase.Runtime.Network
 
             if (producer == null)
             {
-                _logger.LogDebug("I do not know this producer.");
+                _logger.LogDebug("I do not know this provider/client.");
                 Disconnect(peer);
             }
 
@@ -282,7 +286,7 @@ namespace BlockBase.Runtime.Network
         {
             var peersConnected = true;
             if (_checkingConnection) return peersConnected;
-            
+
             try
             {
                 _checkingConnection = true;
