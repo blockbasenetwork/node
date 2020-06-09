@@ -29,7 +29,7 @@ namespace BlockBase.Network.Connectors
         public void Start()
         {
             _listener = new TcpListener(_systemConfig.TcpPort);
-            _connectionsManager = new CommunicationManager(_listener);
+            _connectionsManager = new CommunicationManager(_listener, _logger);
             _connectionsManager.ConnectionClosed += OnPeerDisconnected;
             _connectionsManager.PeerConnected += OnPeerConnected;
 
