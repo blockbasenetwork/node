@@ -190,7 +190,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             {
                 var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
                 var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);
-                var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber);
+                var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber, lastValidSubmittedBlockHeader?.LastTransactionSequenceNumber);
                 var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
                 _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 _blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
@@ -218,6 +218,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         {
             blockHeader.TransactionCount = (uint)transactions.Count();
             blockHeader.MerkleRoot = MerkleTreeHelper.CalculateMerkleRootHash(transactions.Select(t => t.TransactionHash).ToList());
+            blockHeader.LastTransactionSequenceNumber = transactions.Any() ? transactions.OrderBy(t => t.SequenceNumber).Last().SequenceNumber : blockHeader.LastTransactionSequenceNumber;
 
             var block = new Block(blockHeader, transactions.ToList());
             var blockBytes = block.ConvertToProto().ToByteArray().Count();
@@ -255,7 +256,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             return transactions;
         }
 
-        private BlockHeader CreateBlockHeader(byte[] previousBlockhash, ulong sequenceNumber)
+        private BlockHeader CreateBlockHeader(byte[] previousBlockhash, ulong sequenceNumber, ulong? lastTransactionSequenceNumber)
         {
             return new BlockHeader()
             {
@@ -266,7 +267,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
                 TransactionCount = 0,
                 ProducerSignature = "",
-                MerkleRoot = new byte[32]
+                MerkleRoot = new byte[32],
+                LastTransactionSequenceNumber = lastTransactionSequenceNumber ?? 0
             };
         }
 

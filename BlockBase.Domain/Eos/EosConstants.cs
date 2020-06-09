@@ -126,6 +126,7 @@ namespace BlockBase.Domain.Eos
         public const string SEQUENCE_NUMBER = "sequence_number";
         public const string TIMESTAMP = "timestamp";
         public const string TRANSACTIONS_COUNT = "transactions_count";
+        public const string LAST_TRANSACTION_SEQUENCE_NUMBER = "last_trx_sequence_number";
         public const string PRODUCER_SIGNATURE = "producer_signature";
         public const string MERKLETREE_ROOT_HASH = "merkletree_root_hash";
         public const string IS_VERIFIED = "is_verified";
@@ -184,5 +185,6 @@ namespace BlockBase.Domain.Eos
         public const string LEVEL = "level";
         public const string BLOCK_BYTE_IN_HEXADECIMAL = "block_byte_in_hex";
         public const string VERIFY_SIGNATURE = "verify_signature";
+        public const string VERIFY_SIGNATURES = "verify_signatures";
     }
 }
