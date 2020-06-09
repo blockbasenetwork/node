@@ -23,6 +23,7 @@ using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
 using EosSharp.Core.Exceptions;
 using BlockBase.Runtime.Sql;
+using System.Linq;
 
 namespace BlockBase.Node.Controllers
 {
@@ -76,7 +77,7 @@ namespace BlockBase.Node.Controllers
             Description = "Before starting a node as a requester, the admin should check if everything is correctly configured",
             OperationId = "CheckRequesterConfig"
         )]
-        public async Task<ObjectResult> CheckRequesterConfig()
+        public async Task<ObjectResult> CheckProducerConfig()
         {
             try
             {
@@ -84,10 +85,10 @@ namespace BlockBase.Node.Controllers
                 var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
                 var accountName = NodeConfigurations.AccountName;
-                var publicKey = NodeConfigurations.ActivePublicKey;
+                var activePublicKey = NodeConfigurations.ActivePublicKey;
 
 
-                bool accountDataFetched = false;
+                bool eosAccountDataFetched = false;
                 List<string> currencyBalance = null;
                 long cpuUsed = 0;
                 long cpuLimit = 0;
@@ -95,7 +96,9 @@ namespace BlockBase.Node.Controllers
                 long netLimit = 0;
                 ulong ramUsed = 0;
                 long ramLimit = 0;
-                string sidechainState = "Stopped";
+
+                bool activeKeyFoundOnAccount = false;
+                bool activeKeyHasEnoughWeight = false;
 
 
                 try
@@ -103,12 +106,7 @@ namespace BlockBase.Node.Controllers
                     var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
                     currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
 
-                    if (accountInfo == null)
-                    {
-                        _logger.LogError($"Account {NodeConfigurations.AccountName} not found");
-                    }
-
-                    accountDataFetched = true;
+                    eosAccountDataFetched = true;
                     cpuUsed = accountInfo.cpu_limit.used;
                     cpuLimit = accountInfo.cpu_limit.max;
                     netUsed = accountInfo.net_limit.used;
@@ -116,14 +114,26 @@ namespace BlockBase.Node.Controllers
                     ramUsed = accountInfo.ram_usage;
                     ramLimit = accountInfo.ram_quota;
 
-                    sidechainState = _sidechainMaintainerManager.TaskContainerMaintainer?.Task?.Status.ToString() ?? "Stopped";
+                    var permission = accountInfo.permissions.SingleOrDefault(p => p.perm_name == "active");
+
+                    if(permission != null)
+                    {
+                        var correspondingActiveKey = permission.required_auth?.keys?.SingleOrDefault(k => k.key == activePublicKey);
+                        if(correspondingActiveKey != null)
+                            activeKeyFoundOnAccount = true;
+                        if(correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
+                            activeKeyHasEnoughWeight = true;
+                        
+                    }
+                    
 
                 }
-                catch
-                {
-                    _logger.LogError("Failed to retrieve account info");
+                catch { }
 
-                }
+
+
+                var publicIpAddress = NetworkConfigurations.PublicIpAddress;
+                var tcpPort = NetworkConfigurations.TcpPort;
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
                 var mongoDbPrefix = NodeConfigurations.DatabasesPrefix;
@@ -135,10 +145,13 @@ namespace BlockBase.Node.Controllers
                 return Ok(new OperationResponse<dynamic>(
                     new
                     {
+                        publicIpAddress,
+                        tcpPort,
                         accountName,
-                        publicKey,
-                        sidechainState,
-                        accountDataFetched,
+                        eosAccountDataFetched,
+                        activePublicKey,
+                        activeKeyFoundOnAccount,
+                        activeKeyHasEnoughWeight,
                         currencyBalance,
                         cpuUsed,
                         cpuLimit,
@@ -146,13 +159,14 @@ namespace BlockBase.Node.Controllers
                         netLimit,
                         ramUsed,
                         ramLimit,
-                        isMongoLive,
-                        isPostgresLive,
+                        
                         mongoDbConnectionString,
                         mongoDbPrefix,
+                        isMongoLive,
                         postgresHost,
                         postgresPort,
-                        postgresUser
+                        postgresUser,
+                        isPostgresLive,
                     }
                     , $"Configuration and connection data retrieved."));
 
