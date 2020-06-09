@@ -149,28 +149,39 @@ namespace BlockBase.Runtime.Network
 
             if (producer.ProducerInfo.IPEndPoint != null)
             {
-                _tryingConnection = true;
-                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
-                var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
+                try
 
-                if (peerConnected == null)
                 {
-                    _logger.LogInformation("     Connect to ip: " + producer.ProducerInfo.IPEndPoint.Address + ":" + producer.ProducerInfo.IPEndPoint.Port);
-                    var peer = await ConnectAsync(producer.ProducerInfo.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
-                    if (peer != null)
+                    _tryingConnection = true;
+
+
+                    producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
+                    var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
+
+                    if (peerConnected == null)
                     {
-                        await SendIdentificationMessage(producer.ProducerInfo.IPEndPoint);
+                        _logger.LogInformation("     Connect to ip: " + producer.ProducerInfo.IPEndPoint.Address + ":" + producer.ProducerInfo.IPEndPoint.Port);
+                        var peer = await ConnectAsync(producer.ProducerInfo.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
+                        if (peer != null)
+                        {
+                            await SendIdentificationMessage(producer.ProducerInfo.IPEndPoint);
+                        }
+                        else
+                        {
+                            CurrentPeerConnections.Remove(producer.PeerConnection);
+                        }
                     }
                     else
                     {
-                        CurrentPeerConnections.Remove(producer.PeerConnection);
+                        Disconnect(producer.PeerConnection);
                     }
                 }
-                else
+                finally
                 {
-                    Disconnect(producer.PeerConnection);
+                    _tryingConnection = false;
                 }
-                _tryingConnection = false;
+
+
             }
             else
             {
@@ -186,25 +197,15 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        private void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
-        {
-            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
-            if (peerConnection != null)
-            {
-                peerConnection.ConnectionState = ConnectionStateEnum.Disconnected;
-                _logger.LogDebug("Peer Connections handler :: Removing peer connection.");
-                CurrentPeerConnections.Remove(peerConnection);
-            }
-
-            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
-            if (peer != null) _waitingForApprovalPeers.Remove(peer);
-        }
-
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
+            int count = 0;
             while (_tryingConnection)
             {
-                Task.Delay(500);
+                //polite wait
+                Task.Delay(2000).Wait();
+                count++;
+                if (count % 10 == 0) _logger.LogDebug($"Looping thread id {Task.CurrentId}");
                 continue;
             }
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
@@ -228,6 +229,20 @@ namespace BlockBase.Runtime.Network
             {
                 _waitingForApprovalPeers.Add(args.Peer);
             }
+        }
+
+        private void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
+        {
+            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
+            if (peerConnection != null)
+            {
+                peerConnection.ConnectionState = ConnectionStateEnum.Disconnected;
+                _logger.LogDebug("Peer Connections handler :: Removing peer connection.");
+                CurrentPeerConnections.Remove(peerConnection);
+            }
+
+            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
+            if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
         private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
