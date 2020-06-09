@@ -193,7 +193,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 _blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
 
-                _logger.LogInformation($"Proposed Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}");
+                _logger.LogInformation($"Proposed Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}, timestamp: {_builtBlock.BlockHeader.Timestamp}");
             }
 
 

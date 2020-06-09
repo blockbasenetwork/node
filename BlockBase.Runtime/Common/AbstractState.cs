@@ -37,7 +37,6 @@ namespace BlockBase.Runtime.Common
                 var name = this.GetType().FullName;
                 try
                 {
-                    _logger.LogDebug($"{this.GetType().Name}");
                     
                     //checks if execution is cancelled
                     if (cancellationToken.IsCancellationRequested) 
