@@ -191,8 +191,9 @@ namespace BlockBase.Node.Controllers
                 if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} not found"));
                 if(!chainContract.CandidatureTime) return BadRequest(new OperationResponse<string>($"Sidechain not in candidature time"));
 
-                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
-                var isProducerInTable = producers.Any(c => c.Key == NodeConfigurations.AccountName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
+                if(contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} contract info not found"));
+
 
                 //if the chain exists in the pool it should mean that he's associated with it
                 var chainExistsInPool = _sidechainProducerService.DoesChainExist(chainName);
@@ -214,6 +215,9 @@ namespace BlockBase.Node.Controllers
                 }
 
 
+                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
+                var isProducerInTable = producers.Any(c => c.Key == NodeConfigurations.AccountName);
+
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
                 //if the database exists and he's on the producer table, then nothing should be done
                 if (chainExistsInDb && isProducerInTable) 
@@ -226,6 +230,20 @@ namespace BlockBase.Node.Controllers
                     return BadRequest(new OperationResponse<string>($"There is a database related to this chain. Please delete it"));
                 }
 
+
+                var accountStake = await _mainchainService.GetAccountStake(chainName, NodeConfigurations.AccountName);
+                decimal providerStake = 0;
+                if(accountStake != null)
+                {
+                    var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                    
+                    decimal.TryParse(stakeString, out providerStake);
+                }
+                var minimumProviderState = Math.Round((decimal)contractInfo.Stake / 10000, 4);
+                if(minimumProviderState > providerStake + stake)
+                {
+                    return BadRequest(new OperationResponse<string>($"Minimum provider stake is {minimumProviderState}, currently staked {providerStake} and added {stake} which is not enough. Please stake {minimumProviderState - providerStake}"));
+                }
 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
 

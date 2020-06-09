@@ -21,6 +21,7 @@
 
 // <summary></summary>
 
+using Microsoft.Extensions.Logging;
 using Open.P2P.BufferManager;
 using Open.P2P.EventArgs;
 using Open.P2P.Streams;
@@ -51,14 +52,17 @@ namespace Open.P2P.IO
 
         public event EventHandler<ConnectionEventArgs> ConnectionClosed;
 
+        private ILogger _logger;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CommunicationManager"/> class.
         /// </summary>
-        public CommunicationManager(TcpListener listener)
+        public CommunicationManager(TcpListener listener, ILogger logger)
             : this()
         {
             _listener = listener;
             _listener.ConnectionRequested += NewPeerConnected;
+            _logger = logger;
         }
 
         public CommunicationManager()
@@ -172,7 +176,7 @@ namespace Open.P2P.IO
         private Peer RegisterPeer(IConnection connection)
         { 
             var endpoint = connection.Endpoint;
-            Console.WriteLine("Registering peer -> " + endpoint.Address + ":" + endpoint.Port);
+            _logger.LogDebug("Registering peer -> " + endpoint.Address + ":" + endpoint.Port);
             var stream = new PeerStream(this, endpoint);
 
             var peer = new Peer(stream, connection);

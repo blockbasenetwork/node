@@ -23,7 +23,7 @@ namespace BlockBase.Runtime.Common
 
         public TaskContainer TaskContainer { get; private set; }
 
-        public TaskContainer Start()
+        public virtual TaskContainer Start()
         {
             if (TaskContainer != null) TaskContainer.Stop();
             TaskContainer = TaskContainer.Create(async () => await Run());
@@ -31,7 +31,7 @@ namespace BlockBase.Runtime.Common
             return TaskContainer;
         }
 
-        public void Stop()
+        public virtual void Stop()
         {
             if (TaskContainer != null) TaskContainer.Stop();
         }
