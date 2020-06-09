@@ -11,6 +11,7 @@ using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Requester.StateMachine.Common;
+using EosSharp.Core.Api.v1;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
@@ -95,25 +96,27 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             _sidechainAccountInfo = await _mainchainService.GetAccount(_nodeConfigurations.AccountName);
             
             _inNeedToUpdateAuthorizations = DoesItNeedToUpdateAuthorizations(_producerList, _sidechainAccountInfo);
-
-            //TODO rpinto - what it needs to do is to get the sidechain account and check if the permissions associated are there!
-
         }
 
         private bool DoesItNeedToUpdateAuthorizations(List<ProducerInTable> producerList, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
-            var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
+            var verifyBlockPermission = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
+            //TODO rpinto - remove old version of verifyhistori
+            var verifyHistoryPermisson = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION || p.perm_name == "verifyhistori").FirstOrDefault();
             if (!producerList.Any()) return false;
-            if (producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return false;
+            foreach(var producer in producerList)
+            {
+                if(!DoesProducerHavePermission(producer, verifyBlockPermission)) return true;
+                if((producer.ProducerType == 2 || producer.ProducerType == 3) && !DoesProducerHavePermission(producer, verifyHistoryPermisson)) return true;
+            }
+            return false;
+        }
 
-            //TODO rpinto - these checks here don't seem right to me
-            //commented the old version, didn't seem right to me
-            // var verifyPermissionAccounts = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
-            // if (!producerList.Any()) return false;
-            // if (!producerList.Any(p => !sidechainPool.ProducersInPool.GetEnumerable().Any(l => l.ProducerInfo.AccountName == p.Key)) &&
-            //     producerList.Count() == verifyPermissionAccounts?.required_auth?.accounts?.Count()) return false;
+        private bool DoesProducerHavePermission(ProducerInTable producer, Permission permission)
+        {
+            if(permission == null) return false;
 
-            return true;
+            return permission.required_auth.accounts.Any(a => a.permission.actor == producer.Key && a.permission.permission == "active" && a.weight == 1);
         }
 
     }

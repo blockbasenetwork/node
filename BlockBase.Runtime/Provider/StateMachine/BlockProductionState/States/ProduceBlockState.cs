@@ -178,7 +178,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             {
                 if (_builtBlock != null && _builtBlock.BlockHeader != null)
                 {
-                    _logger.LogInformation($"Produced Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}");
+                    _logger.LogInformation($"Successfully produced Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}");
                 }
                 return;
             }
@@ -192,6 +192,8 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
                 _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 _blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
+
+                _logger.LogInformation($"Proposed Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}");
             }
 
 
