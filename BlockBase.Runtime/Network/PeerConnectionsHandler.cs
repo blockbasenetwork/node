@@ -205,7 +205,7 @@ namespace BlockBase.Runtime.Network
         {
             while (_tryingConnection)
             {
-                Task.Delay(100);
+                Task.Delay(500);
                 continue;
             }
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
