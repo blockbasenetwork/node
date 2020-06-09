@@ -32,11 +32,13 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private INetworkService _networkService;
         private bool _isNodeSynchronized;
         private bool _isReadyToProduce;
+        private TransactionValidationsHandler _transactionValidationsHandler;
 
 
         public SynchronizeValidatorNodeState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, INetworkService networkService) : base(logger)
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, INetworkService networkService,
+            TransactionValidationsHandler transactionValidationsHandler) : base(logger)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -44,17 +46,46 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             _sidechainPool = sidechainPool;
             _nodeConfigurations = nodeConfigurations;
             _networkConfigurations = networkConfigurations;
+            _transactionValidationsHandler = transactionValidationsHandler;
+
 
             _networkService = networkService;
             _isNodeSynchronized = false;
             _isReadyToProduce = false;
         }
 
-        protected override Task DoWork()
+        protected override async Task DoWork()
         {
-            //needs to sync all previous blocks until he finds one with a transaction
-            //needs to delete all blocks except that one
-            throw new NotImplementedException();
+            OpResult<bool> opResult = null;
+
+            if (!_isNodeSynchronized)
+            {
+                var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime, _sidechainPool.ProducerType);
+
+                if (!syncResult)
+                {
+                    _logger.LogDebug("Producer not up to date, building chain.");
+                    opResult = await SyncChain();
+                    _isNodeSynchronized = opResult.Succeeded;
+                }
+                else
+                {
+                    _isNodeSynchronized = true;
+                }
+
+                if (!await _mongoDbProducerService.IsBlockConfirmed(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash))
+                {
+                    await _mongoDbProducerService.ConfirmBlock(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash);
+                    await _mongoDbProducerService.ClearValidatorNode(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _lastSubmittedBlockHeader.TransactionCount);
+                }
+            }
+
+            if (_isNodeSynchronized && !_isReadyToProduce)
+            {
+                await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
+            }
+
+
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -86,10 +117,11 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
             var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
+
             //check preconditions to continue update
             if (contractState == null) return;
             if (producerList == null) return;
-            if(currentProducer == null) return;
+            if (currentProducer == null) return;
 
 
             _lastSubmittedBlockHeader = await WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(
@@ -117,7 +149,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private async Task<OpResult<bool>> SyncChain()
         {
             _logger.LogDebug("Building chain.");
-            var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _nodeConfigurations, _networkService, _mainchainService, _networkConfigurations.GetEndPoint());
+            var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _nodeConfigurations, _networkService, _mainchainService, _networkConfigurations.GetEndPoint(), _transactionValidationsHandler);
             var opResult = await chainBuilder.Run();
 
             return opResult;

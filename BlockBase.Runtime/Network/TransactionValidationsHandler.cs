@@ -20,6 +20,7 @@ using static BlockBase.Domain.Protos.NetworkMessageProto.Types;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Utils.Threading;
 using BlockBase.Runtime.Helpers;
+using Google.Protobuf;
 using BlockBase.Runtime.Provider;
 
 namespace BlockBase.Runtime.Network
@@ -40,7 +41,8 @@ namespace BlockBase.Runtime.Network
             _logger = logger;
             _logger.LogDebug("Creating transaction validator.");
             _networkService = networkService;
-            _networkService.SubscribeTransactionReceivedEvent(MessageForwarder_TransactionsReceived);
+            _networkService.SubscribeTransactionsReceivedEvent(MessageForwarder_TransactionsReceived);
+            _networkService.SubscribeLastIncludedTransactionRequestReceivedEvent(MessageForwarder_LastIncludedTransactionRequestReceived);
             _sidechainKeeper = sidechainKeeper;
             _mongoDbProducerService = mongoDbProducerService;
             _mainChainService = mainChainService;
@@ -49,6 +51,38 @@ namespace BlockBase.Runtime.Network
             _networkConfigurations = networkConfigurations.Value;
         }
 
+        private async void MessageForwarder_LastIncludedTransactionRequestReceived(MessageForwarder.LastIncludedTransactionRequestReceivedEventArgs args)
+        {
+            if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
+            {
+
+                _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
+            }
+
+            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(args.ClientAccountName);
+
+            await sidechainSemaphore.WaitAsync();
+            try
+            {
+                
+                var transaction = await _mongoDbProducerService.GetLastIncludedTransactionInConfirmedBlock(args.ClientAccountName);
+                var transactionBytes = transaction != null ? transaction.ConvertToProto().ToByteArray() : new byte[0];
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendLastIncludedTransaction, transactionBytes,
+                TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey,
+                _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, args.Sender);
+                // _logger.LogDebug("Sent last included transaction.");
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Sending last included transaction crashed {e.Message}");
+            }
+            finally
+            {
+                sidechainSemaphore.Release();
+            }
+
+
+        }
         private async void MessageForwarder_TransactionsReceived(MessageForwarder.TransactionsReceivedEventArgs args, IPEndPoint sender)
         {
             var transactionsProto = SerializationHelper.DeserializeTransactions(args.TransactionsBytes, _logger);
@@ -63,10 +97,15 @@ namespace BlockBase.Runtime.Network
                 if (receivedValidTransactions.Contains(transactionProto.SequenceNumber))
                     continue;
 
-                var sequenceNumbers = await ValidateEachTransaction(transactionProto, args.ClientAccountName, sender);
-                foreach (var sequenceNumber in sequenceNumbers)
-                    if (sequenceNumber != 0 && !receivedValidTransactions.Contains(sequenceNumber))
-                        receivedValidTransactions.Add(sequenceNumber);
+                var transaction = new Transaction().SetValuesFromProto(transactionProto);
+                if (ValidateTransaction(transaction, args.ClientAccountName))
+                {
+                    await SaveTransaction(args.ClientAccountName, transaction);
+                    var sequenceNumbers = await GetConfirmedTransactionsSequeceNumber(transaction, args.ClientAccountName, sender);
+                    foreach (var sequenceNumber in sequenceNumbers)
+                        if (sequenceNumber != 0 && !receivedValidTransactions.Contains(sequenceNumber))
+                            receivedValidTransactions.Add(sequenceNumber);
+                }
             }
 
             var data = new List<byte>();
@@ -83,69 +122,92 @@ namespace BlockBase.Runtime.Network
                     _nodeConfigurations.ActivePublicKey,
                     _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort,
                     _nodeConfigurations.AccountName, sender);
-
             _logger.LogDebug("Sending confirmation transaction.");
             await _networkService.SendMessageAsync(message);
         }
 
-        private async Task<IList<ulong>> ValidateEachTransaction(TransactionProto transactionProto, string clientAccountName, IPEndPoint sender)
+        public bool ValidateTransaction(Transaction transaction, string clientAccountName)
         {
-
-            var confirmedSequenceNumbers = new List<ulong>();
 
             if (!_sidechainKeeper.TryGet(clientAccountName, out var sidechainContext))
             {
                 _logger.LogDebug($"Transaction received but sidechain {clientAccountName} is unknown.");
-                return confirmedSequenceNumbers;
+                return false;
             }
 
-            var sidechainPool = sidechainContext.SidechainPool;
+            if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
+            {
+                _logger.LogDebug($"Transaction #{transaction.SequenceNumber} hash not valid.");
+                return false;
+            }
 
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.ClientAccountName);
+            if (!SignatureHelper.VerifySignature(sidechainContext.SidechainPool.ClientPublicKey, transaction.Signature, transactionHash))
+            {
+                _logger.LogDebug($"Transaction signature not valid.");
+                return false;
+            }
+            return true;
+        }
+
+        public async Task SaveTransaction(string clientAccountName, Transaction transaction)
+        {
+            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(clientAccountName);
 
             await sidechainSemaphore.WaitAsync();
-
             try
             {
-                var transaction = new Transaction().SetValuesFromProto(transactionProto);
-                //_logger.LogDebug($"TRANSACTION {transaction.SequenceNumber} RECEIVED");
-
-                if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
-                {
-                    _logger.LogDebug($"Transaction #{transaction.SequenceNumber} hash not valid.");
-                    return confirmedSequenceNumbers;
-                }
                 var databaseName = clientAccountName;
-                if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
+                if (!await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
                 {
-                    //_logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
-                    var afterTransactions = await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_nodeConfigurations.AccountName, transaction.SequenceNumber);
-                    confirmedSequenceNumbers.Add(transaction.SequenceNumber);
-                    confirmedSequenceNumbers.AddRange(afterTransactions.Select(t => t.SequenceNumber));
-                    return confirmedSequenceNumbers;
+                    await _mongoDbProducerService.SaveTransaction(databaseName, transaction);
                 }
-
-                if (!SignatureHelper.VerifySignature(sidechainPool.ClientPublicKey, transaction.Signature, transactionHash))
-                {
-                    _logger.LogDebug($"Transaction signature not valid.");
-                    return confirmedSequenceNumbers;
-                }
-
-                //_logger.LogDebug($"Saving transaction.");
-
-                await _mongoDbProducerService.SaveTransaction(databaseName, transaction);
-
-                confirmedSequenceNumbers.Add(transaction.SequenceNumber);
             }
             catch (Exception e)
             {
-                _logger.LogError($"Transaction validator crashed with exception {e.Message}");
+                _logger.LogError($"Saving transaction crashed {e.Message}");
             }
             finally
             {
                 sidechainSemaphore.Release();
             }
+        }
+        private async Task<IList<ulong>> GetConfirmedTransactionsSequeceNumber(Transaction transaction, string clientAccountName, IPEndPoint sender)
+        {
+
+            var confirmedSequenceNumbers = new List<ulong>();
+
+            if (_sidechainKeeper.TryGet(clientAccountName, out var sidechainContext))
+            {
+
+                var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainContext.SidechainPool.ClientAccountName);
+
+                await sidechainSemaphore.WaitAsync();
+
+                try
+                {
+                    var databaseName = clientAccountName;
+                    if (await _mongoDbProducerService.IsTransactionInDB(databaseName, transaction))
+                    {
+                        //_logger.LogDebug($"Already have transaction with same transaction hash or same sequence number.");
+                        var afterTransactions = await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_nodeConfigurations.AccountName, transaction.SequenceNumber);
+                        confirmedSequenceNumbers.Add(transaction.SequenceNumber);
+                        confirmedSequenceNumbers.AddRange(afterTransactions.Select(t => t.SequenceNumber));
+                        return confirmedSequenceNumbers;
+                    }
+
+                    confirmedSequenceNumbers.Add(transaction.SequenceNumber);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Transaction validator crashed with exception {e.Message}");
+                }
+                finally
+                {
+                    sidechainSemaphore.Release();
+                }
+            }
             return confirmedSequenceNumbers;
+
 
         }
 
@@ -167,8 +229,7 @@ namespace BlockBase.Runtime.Network
 
             return semaphoreKeyPair.Value;
         }
-        private void AddTransactionSequenceNumber()
-        { }
+
         #endregion
     }
 }

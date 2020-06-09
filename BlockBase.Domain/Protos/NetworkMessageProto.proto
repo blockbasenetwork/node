@@ -11,7 +11,7 @@ message NetworkMessageProto {
     RequestNodesInfo = 3;
     RequestBlocks = 4;
     RequestBlockHeaders = 5;
-    RequestTransactions = 6;
+    RequestLastIncludedTransaction = 6;
     RequestCurrentHeight = 7;
     RequestMaxBlockSize = 8;
     RequestProducers = 9;
@@ -25,7 +25,7 @@ message NetworkMessageProto {
     SendMinedBlock = 16;
     SendBlocks = 17;
     SendBlockHeaders = 18;
-    SendTransaction = 19;
+    SendLastIncludedTransaction = 19;
     SendTransactions = 20;
     SendCurrentHeight = 21;
     SendCurrentMaxBlockSize = 22;

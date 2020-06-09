@@ -88,16 +88,19 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.IdentificationMessageReceived += eventHandler;
         }
 
-        public void SubscribeTransactionReceivedEvent(TransactionReceivedEventHandler eventHandler)
+        public void SubscribeTransactionsReceivedEvent(TransactionsReceivedEventHandler eventHandler)
         {
-            MessageForwarder.TransactionReceived += eventHandler;
+            MessageForwarder.TransactionsReceived += eventHandler;
         }
 
         public void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler)
         {
             MessageForwarder.BlocksRequestReceived += eventHandler;
         }
-
+        public void SubscribeLastIncludedTransactionRequestReceivedEvent(LastIncludedTransactionRequestReceivedEventHandler eventHandler)
+        { 
+            MessageForwarder.LastIncludedTransactionRequestReceived += eventHandler;
+        }
         public void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler)
         {
             MessageForwarder.PingReceived += eventHandler;

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.Sidechain;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
@@ -14,7 +13,6 @@ using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Provider;
 using BlockBase.Utils.Crypto;
-using EosSharp.Core.Exceptions;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -238,7 +236,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         {
             var transactionsDatabaseName = _sidechainPool.ClientAccountName;
             var allLooseTransactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(transactionsDatabaseName);
-            ulong lastSequenceNumber = (await _mongoDbProducerService.LastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
+            ulong lastSequenceNumber = (await _mongoDbProducerService.GetLastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
             uint sizeInBytes = 0;
 

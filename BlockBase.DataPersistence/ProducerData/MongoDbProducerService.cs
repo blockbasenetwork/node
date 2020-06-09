@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
 using MongoDB.Bson;
 using Microsoft.Extensions.Logging;
+using BlockBase.Domain.Enums;
 
 namespace BlockBase.DataPersistence.ProducerData
 {
@@ -251,7 +252,7 @@ namespace BlockBase.DataPersistence.ProducerData
         }
 
         //TODO rpinto - all this should be done inside a transaction
-        public async Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime)
+        public async Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime, ProducerTypeEnum producerType)
         {
 
             //gets the latest confirmed block
@@ -291,10 +292,12 @@ namespace BlockBase.DataPersistence.ProducerData
                     {
                         return true;
                     }
+                    if (producerType == ProducerTypeEnum.Validator) return true;
                 }
             }
             return false;
         }
+
         public async Task<bool> IsBlockConfirmed(string databaseName, string blockHash)
         {
             var blockHeader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockHash);
@@ -332,7 +335,7 @@ namespace BlockBase.DataPersistence.ProducerData
 
                 if (transactionCount != 0)
                 {
-                    var lastConfirmedTransaction = (await  GetTransactionsByBlockSequenceNumberAsync(databaseName, blockHeader.SequenceNumber)).OrderByDescending(t => t.SequenceNumber).First();
+                    var lastConfirmedTransaction = (await GetTransactionsByBlockSequenceNumberAsync(databaseName, blockHeader.SequenceNumber)).OrderByDescending(t => t.SequenceNumber).First();
                     var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
                     await transactionCollection.DeleteManyAsync(t => t.SequenceNumber < lastConfirmedTransaction.SequenceNumber);
                 }
@@ -535,7 +538,7 @@ namespace BlockBase.DataPersistence.ProducerData
                 return transactionDBList.Select(t => t.TransactionFromTransactionDB()).ToList();
             }
         }
-        public async Task<Transaction> LastIncludedTransaction(string databaseName)
+        public async Task<Transaction> GetLastIncludedTransaction(string databaseName)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
@@ -553,6 +556,33 @@ namespace BlockBase.DataPersistence.ProducerData
             }
         }
 
+        public async Task<Transaction> GetLastIncludedTransactionInConfirmedBlock(string databaseName)
+        {
+            var lastIncludedTransaction = await GetLastIncludedTransaction(databaseName);
+            if(lastIncludedTransaction == null) return null;
+
+            var blockHash = HashHelper.ByteArrayToFormattedHexaString(lastIncludedTransaction.BlockHash);
+            if (await IsBlockConfirmed(databaseName, blockHash))
+                return lastIncludedTransaction;
+
+            else
+            {
+                using (IClientSession session = await MongoClient.StartSessionAsync())
+                {
+                    var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+
+                    var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+
+                    var transactionQuery = from t in transactionCollection.AsQueryable()
+                                           where t.BlockHash != "" && t.BlockHash != blockHash
+                                           orderby t.SequenceNumber
+                                           select t;
+                    var transactionDB = (await transactionQuery.ToListAsync()).LastOrDefault();
+
+                    return transactionDB?.TransactionFromTransactionDB();
+                }
+            }
+        }
         #region Recover DB
 
         public async Task AddProducingSidechainToDatabaseAsync(string sidechain) =>

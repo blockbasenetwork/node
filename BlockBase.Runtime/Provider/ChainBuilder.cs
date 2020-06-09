@@ -24,6 +24,8 @@ using static BlockBase.Network.Rounting.MessageForwarder;
 using EosSharp.Core.Exceptions;
 using BlockBase.Utils.Operation;
 using BlockBase.Runtime.Helpers;
+using BlockBase.Domain.Enums;
+using BlockBase.Domain.Protos;
 
 namespace BlockBase.Runtime.Provider
 {
@@ -47,12 +49,15 @@ namespace BlockBase.Runtime.Provider
         private bool _receiving;
         private DateTime _lastReceivedDate;
         private ProducerInPool _currentSendingProducer;
+        private bool _last_transaction_missing;
+        TransactionValidationsHandler _transactionValidationsHandler;
 
         private static readonly int MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS = 10;
         private static readonly int SLICE_SIZE = 40;
         private object locker = new object();
 
-        public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint)
+
+        public ChainBuilder(ILogger logger, SidechainPool sidechainPool, IMongoDbProducerService mongoDbProducerService, NodeConfigurations nodeConfigurations, INetworkService networkService, IMainchainService mainchainService, string endPoint, TransactionValidationsHandler transactionValidationsHandler)
         {
             _logger = logger;
             _sidechainPool = sidechainPool;
@@ -62,8 +67,27 @@ namespace BlockBase.Runtime.Provider
             _mainchainService = mainchainService;
             _endPoint = endPoint;
             _networkService.SubscribeRecoverBlockReceivedEvent(MessageForwarder_RecoverBlockReceived);
+            _networkService.SubscribeLastIncludedTransactionRequestReceivedEvent(MessageForwarder_LastIncludedTransactionReceived);
             _blocksApproved = new List<Block>();
             _orphanBlocks = new List<Block>();
+
+            _transactionValidationsHandler = transactionValidationsHandler;
+        }
+
+        private async void MessageForwarder_LastIncludedTransactionReceived(LastIncludedTransactionRequestReceivedEventArgs args)
+        {
+            // _logger.LogDebug("Received last included transaction.");
+            _last_transaction_missing = false;
+            if (!args.TransactionBytes.SequenceEqual(new byte[0]))
+            {
+                var transactionProto = TransactionProto.Parser.ParseFrom(args.TransactionBytes);
+                var transaction = new Transaction().SetValuesFromProto(transactionProto);
+                if (_transactionValidationsHandler.ValidateTransaction(transaction, args.ClientAccountName))
+                {
+                    await _transactionValidationsHandler.SaveTransaction(args.ClientAccountName, transaction);
+                }
+                else _last_transaction_missing = true;
+            }
         }
 
         public async Task<OpResult<bool>> Run()
@@ -71,21 +95,29 @@ namespace BlockBase.Runtime.Provider
             try
             {
                 var producerIndex = 0;
+                _last_transaction_missing = true;
                 var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
 
                 if (!validConnectedProducers.Any())
                 {
-                    _logger.LogDebug("No connected producers to request blocks.");
+                    // _logger.LogDebug("No connected producers to request blocks.");
                     return new OpResult<bool>(new Exception("Unable to synchronize. No connected producers to request blocks."));
                 }
 
-                _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks()).ToList();
+                _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+
+                if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator)
+                    _missingBlocksSequenceNumber = new List<ulong>() { _lastSidechainBlockheader.SequenceNumber };
+
+                else
+                    _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks(_lastSidechainBlockheader.SequenceNumber)).ToList();
+
 
                 while (true)
                 {
                     _currentSendingProducer = validConnectedProducers.ElementAt(producerIndex);
 
-                    if (_missingBlocksSequenceNumber.Count() == 0)
+                    if (_missingBlocksSequenceNumber.Count() == 0 && !_last_transaction_missing)
                     {
                         _logger.LogDebug("No more missing blocks.");
                         return new OpResult<bool>(true);
@@ -100,8 +132,15 @@ namespace BlockBase.Runtime.Provider
                     _logger.LogDebug($"Asking for blocks:");
                     foreach (var missingSequenceNumber in _currentlyGettingBlocks) _logger.LogDebug(missingSequenceNumber + "");
 
-                    var message = BuildRequestBlocksNetworkMessage(_currentSendingProducer, _currentlyGettingBlocks, _sidechainPool.ClientAccountName);
-                    await _networkService.SendMessageAsync(message);
+                    var blockMessage = BuildRequestBlocksNetworkMessage(_currentSendingProducer, _currentlyGettingBlocks, _sidechainPool.ClientAccountName);
+                    await _networkService.SendMessageAsync(blockMessage);
+
+                    if (_last_transaction_missing)
+                    {
+                        var transactionMessage = BuildRequestLastIncludedTransactionNetworkMessage(_currentSendingProducer, _sidechainPool.ClientAccountName);
+                        await _networkService.SendMessageAsync(transactionMessage);
+                        // _logger.LogDebug("Asking for last included transaction.");
+                    }
 
                     _lastReceivedDate = DateTime.UtcNow;
                     while (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
@@ -144,6 +183,11 @@ namespace BlockBase.Runtime.Provider
 
             return new NetworkMessage(NetworkMessageTypeEnum.RequestBlocks, payload.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
         }
+        private NetworkMessage BuildRequestLastIncludedTransactionNetworkMessage(ProducerInPool producer, string sidechainPoolName)
+        {
+            return new NetworkMessage(NetworkMessageTypeEnum.RequestLastIncludedTransaction, Encoding.UTF8.GetBytes(sidechainPoolName), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _endPoint, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
+        }
+
 
         private async void MessageForwarder_RecoverBlockReceived(BlockReceivedEventArgs args, IPEndPoint sender)
         {
@@ -276,11 +320,11 @@ namespace BlockBase.Runtime.Provider
 
 
 
-        private async Task<IEnumerable<ulong>> GetSequenceNumberOfMissingBlocks()
+        private async Task<IEnumerable<ulong>> GetSequenceNumberOfMissingBlocks(uint lastSidechainBlockheaderSequenceNumber)
         {
-            _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-
-            return await _mongoDbProducerService.GetMissingBlockNumbers(_sidechainPool.ClientAccountName, _lastSidechainBlockheader.SequenceNumber);
+            return await _mongoDbProducerService.GetMissingBlockNumbers(_sidechainPool.ClientAccountName, lastSidechainBlockheaderSequenceNumber);
         }
+
+
     }
 }

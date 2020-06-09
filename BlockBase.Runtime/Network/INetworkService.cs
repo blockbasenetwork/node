@@ -25,8 +25,9 @@ namespace BlockBase.Runtime.Network
         void SubscribeMinedBlockReceivedEvent(MinedBlockReceivedEventHandler eventHandler);
         void SubscribeRecoverBlockReceivedEvent(RecoverBlockReceivedEventHandler eventHandler);
         void SubscribeIdentificationMessageReceivedEvent(IdentificationMessageReceivedEventHandler eventHandler);
-        void SubscribeTransactionReceivedEvent(TransactionReceivedEventHandler eventHandler);
-        void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler);        
+        void SubscribeTransactionsReceivedEvent(TransactionsReceivedEventHandler eventHandler);
+        void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler);
+        void SubscribeLastIncludedTransactionRequestReceivedEvent(LastIncludedTransactionRequestReceivedEventHandler eventHandler);        
         void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler);
         void SubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler);
     }
