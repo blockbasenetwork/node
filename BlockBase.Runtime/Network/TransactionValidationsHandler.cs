@@ -61,6 +61,7 @@ namespace BlockBase.Runtime.Network
 
             var sidechainSemaphore = TryGetAndAddSidechainSemaphore(args.ClientAccountName);
 
+            await sidechainSemaphore.WaitAsync();
             try
             {
                 var transaction = await _mongoDbProducerService.GetLastIncludedTransactionInConfirmedBlock(args.ClientAccountName);
@@ -225,8 +226,7 @@ namespace BlockBase.Runtime.Network
 
             return semaphoreKeyPair.Value;
         }
-        private void AddTransactionSequenceNumber()
-        { }
+
         #endregion
     }
 }
