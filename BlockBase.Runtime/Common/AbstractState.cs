@@ -37,9 +37,14 @@ namespace BlockBase.Runtime.Common
                 var name = this.GetType().FullName;
                 try
                 {
+                    _logger.LogDebug($"{this.GetType().Name}");
                     
                     //checks if execution is cancelled
-                    if (cancellationToken.IsCancellationRequested) return typeof(TEndState).Name;
+                    if (cancellationToken.IsCancellationRequested) 
+                    {
+                        _logger.LogDebug($"{this.GetType().Name} - Jumping to {typeof(TEndState).Name}");
+                        return typeof(TEndState).Name;
+                    }
 
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
                     await Task.Delay(_delay);
@@ -52,7 +57,7 @@ namespace BlockBase.Runtime.Common
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to verify if has conditions to continue...");
                     if (!await HasConditionsToContinue())
                     {
-                        _logger.LogDebug($"{name} - No conditions to continue in this state");
+                        if(_verbose) _logger.LogDebug($"{name} - No conditions to continue in this state");
                         //if there are no conditions to continue on the start state, jump to the end state
                         if(this is TStartState) return typeof(TEndState).Name;
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
@@ -63,7 +68,7 @@ namespace BlockBase.Runtime.Common
                     var jumpStatus = await HasConditionsToJump();
                     if (jumpStatus.inConditionsToJump)
                     {
-                        _logger.LogDebug($"{name} - Jumping to {jumpStatus.nextState}");
+                        if(_verbose) _logger.LogDebug($"{name} - Jumping to {jumpStatus.nextState}");
                         return jumpStatus.nextState;
                     }
                     if(_verbose) _logger.LogDebug($"{name} - No conditions found to jump");
