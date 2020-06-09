@@ -40,6 +40,9 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty(EosAtributeNames.BLOCK_SIZE_IN_BYTES)]
         public ulong BlockSizeInBytes { get; set; }
 
+        [JsonProperty(EosAtributeNames.LAST_TRANSACTION_SEQUENCE_NUMBER)]
+        public ulong LastTransactionSequenceNumber { get; set; }
+
 
         public BlockHeader ConvertToBlockHeader()
         {
@@ -47,7 +50,7 @@ namespace BlockBase.Network.Mainchain.Pocos
                     HashHelper.FormattedHexaStringToByteArray(PreviousBlockHash), 
                     Producer, ProducerSignature, 
                     HashHelper.FormattedHexaStringToByteArray(MerkleTreeRootHash), 
-                    SequenceNumber, TransactionCount, Timestamp);
+                    SequenceNumber, TransactionCount, LastTransactionSequenceNumber, Timestamp);
         }
     }
 }
