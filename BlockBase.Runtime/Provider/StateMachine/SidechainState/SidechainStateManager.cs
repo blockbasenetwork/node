@@ -52,6 +52,13 @@ namespace BlockBase.Runtime.StateMachine.SidechainState
             _inAutomaticMode = automatic;
         }
 
+        public override void Stop()
+        {
+            if(TaskContainer != null) TaskContainer.Stop();
+            if(_blockProductionTaskContainer != null) _blockProductionTaskContainer.Stop();
+            if(_peerConnectionTaskContainer != null) _peerConnectionTaskContainer.Stop();
+        }
+
         protected override async Task Run()
         {
             var currentState = BuildState(typeof(StartState).Name);
