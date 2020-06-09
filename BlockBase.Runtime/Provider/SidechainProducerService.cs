@@ -69,7 +69,7 @@ namespace BlockBase.Runtime.Provider
 
             //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
-            sidechainPool.ProducerType = (ProducerTypeEnum)producerType;
+            sidechainPool.ProducerType = producerType != 0 ? (ProducerTypeEnum)producerType : sidechainPool.ProducerType;
 
             var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _transactionValidationsHandler, automatic);
 
