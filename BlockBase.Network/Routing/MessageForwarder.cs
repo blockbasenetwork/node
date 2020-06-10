@@ -113,7 +113,7 @@ namespace BlockBase.Network.Rounting
 
         private BlockReceivedEventArgs ParseMinedBlockMessage(byte[] payload)
         {
-            var clientAccountNameAndBlockBytes = ParseClienAccounttName(payload);
+            var clientAccountNameAndBlockBytes = ParseClientAccountName(payload);
 
             return new BlockReceivedEventArgs { ClientAccountName = clientAccountNameAndBlockBytes.Item1, BlockBytes = clientAccountNameAndBlockBytes.Item2 };
         }
@@ -135,7 +135,7 @@ namespace BlockBase.Network.Rounting
             return new TransactionConfirmationReceivedEventArgs { SenderAccountName = message.EosAccount, TransactionSequenceNumbers = sequenceNumbers };
         }
 
-        private Tuple<string, byte[]> ParseClienAccounttName(byte[] payload)
+        private Tuple<string, byte[]> ParseClientAccountName(byte[] payload)
         {
             //int16 is transformed to an array of 2 bytes
             //max size of sidechain name is 12 chars/24 bytes

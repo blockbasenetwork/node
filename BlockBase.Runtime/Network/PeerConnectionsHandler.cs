@@ -120,28 +120,28 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        public void RemovePoolConnections(SidechainPool sidechain)
-        {
+        // public void RemovePoolConnections(SidechainPool sidechain)
+        // {
 
-            foreach (ProducerInPool producerInPool in sidechain.ProducersInPool)
-            {
-                TryToRemoveConnection(producerInPool.PeerConnection);
-            }
+        //     foreach (ProducerInPool producerInPool in sidechain.ProducersInPool)
+        //     {
+        //         TryToRemoveConnection(producerInPool.PeerConnection);
+        //     }
 
-            var clientConnection = CurrentPeerConnections.GetEnumerable().Where(c => c.ConnectionAccountName == sidechain.ClientAccountName).SingleOrDefault();
-            TryToRemoveConnection(clientConnection);
-        }
+        //     var clientConnection = CurrentPeerConnections.GetEnumerable().Where(c => c.ConnectionAccountName == sidechain.ClientAccountName).SingleOrDefault();
+        //     TryToRemoveConnection(clientConnection);
+        // }
 
-        public void TryToRemoveConnection(PeerConnection peerConnection)
-        {
-            if (peerConnection != null && peerConnection.ConnectionState == ConnectionStateEnum.Connected)
-            {
-                if (CanDeleteConnection(peerConnection))
-                {
-                    Disconnect(peerConnection);
-                }
-            }
-        }
+        // public void TryToRemoveConnection(PeerConnection peerConnection)
+        // {
+        //     if (peerConnection != null && peerConnection.ConnectionState == ConnectionStateEnum.Connected)
+        //     {
+        //         if (CanDeleteConnection(peerConnection))
+        //         {
+        //             Disconnect(peerConnection);
+        //         }
+        //     }
+        // }
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
         {
@@ -197,15 +197,20 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
+        private async void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
             int count = 0;
             while (_tryingConnection)
             {
                 //polite wait
-                Task.Delay(2000).Wait();
+                await Task.Delay(2000);
                 count++;
-                if (count % 10 == 0) _logger.LogDebug($"Looping thread id {Task.CurrentId}");
+                _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
+                if(count > 2)
+                {
+                    _tryingConnection = false;
+                    break;
+                }
                 continue;
             }
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
