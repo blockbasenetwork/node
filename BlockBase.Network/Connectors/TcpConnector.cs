@@ -114,8 +114,8 @@ namespace BlockBase.Network.Connectors
             }
             catch(EndOfStreamException exception)
             {
-                _logger.LogError(exception.Message, $"Peer disconnected: {e.Peer.EndPoint} -- but we won't disconnect it forcibly!");
-                //Disconnect(e.Peer);
+                _logger.LogError(exception.Message, $"Peer disconnected: {e.Peer.EndPoint}");
+                Disconnect(e.Peer);
             }
             catch (Exception exception)
             {
