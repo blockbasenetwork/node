@@ -16,6 +16,7 @@ using BlockBase.Utils;
 using Newtonsoft.Json;
 using BlockBase.Domain.Results;
 using BlockBase.Domain.Enums;
+using BlockBase.Network.Connectors;
 
 namespace BlockBase.Node.Controllers
 {
@@ -27,10 +28,13 @@ namespace BlockBase.Node.Controllers
         private readonly ILogger _logger;
         private readonly IMainchainService _mainchainService;
 
-        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService)
+        private readonly TcpConnectionTester _tcpConnectionTester;
+
+        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService, TcpConnectionTester tcpConnectionTester)
         {
             _logger = logger;
             _mainchainService = mainchainService;
+            _tcpConnectionTester = tcpConnectionTester;
         }
 
         /// <summary>
@@ -298,6 +302,41 @@ namespace BlockBase.Node.Controllers
                 return NotFound(new OperationResponse<string>("Unable to retrieve the list of sidechains"));
             }
             catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
+        /// Tries to establish a connection to another node. Lasts for 20 seconds
+        /// </summary>
+        /// <param name="ipAddress">The public IP address of the other node</param>
+        /// <param name="port">The port of the other node</param>
+        /// <returns>Check the console for results</returns>
+        /// <response code="200">Connection was requested succesfully</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Internal error</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Tries to establish a connection to another node. Lasts for 20 seconds",
+            Description = "Tries to establish a connection to another node. The other node has to do the same thing in less than 20 seconds. Use this to test tcp connections between nodes.",
+            OperationId = "TestConnectionToPeer"
+        )]
+        public async Task<ObjectResult> TestConnectionToPeer(string ipAddress, int port)
+        {
+            try
+            {
+                if(!IPAddress.TryParse(ipAddress, out var ipAddr)) return BadRequest("Unable to parse the ipAddress");
+
+                var ipEndPoint = new IPEndPoint(ipAddr, port);
+                var peer = await _tcpConnectionTester.TestListen(ipEndPoint);
+                if(peer != null)
+                    return Ok($"Tried to establish connection to peer. Check the console for results.");
+                else
+                    return Ok($"Unable to connect to peer");
+
+            }
+            catch(Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
             }

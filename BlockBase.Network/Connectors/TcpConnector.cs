@@ -36,6 +36,18 @@ namespace BlockBase.Network.Connectors
             _listener.Start();
         }
 
+        public void Stop()
+        {
+            _connectionsManager.ConnectionClosed -= OnPeerDisconnected;
+            _connectionsManager.PeerConnected -= OnPeerConnected;
+            _listener.Stop();
+        }
+
+        public ListenerStatus GetListenerStatus()
+        {
+            return _listener != null ? _listener.Status : ListenerStatus.Unknown;
+        }
+
         public async Task<Peer> ConnectAsync(IPEndPoint remoteEndPoint, EndPoint localEndPoint = null)
         {
             //TODO - rpinto

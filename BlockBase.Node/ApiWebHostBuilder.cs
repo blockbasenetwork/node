@@ -136,6 +136,7 @@ namespace BlockBase.Api
                  services.AddSingleton<MessageForwarder>();
                  services.AddSingleton<TcpConnector>();
                  services.AddSingleton<UdpConnector>();
+                 services.AddSingleton<TcpConnectionTester>();
              });
 
             return this;

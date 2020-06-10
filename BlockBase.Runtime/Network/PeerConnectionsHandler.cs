@@ -203,7 +203,7 @@ namespace BlockBase.Runtime.Network
             while (_tryingConnection)
             {
                 //polite wait
-                await Task.Delay(2000);
+                await Task.Delay(1000);
                 count++;
                 _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
                 if(count > 2)

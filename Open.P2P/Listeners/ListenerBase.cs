@@ -30,7 +30,8 @@ namespace Open.P2P.Listeners
     public enum ListenerStatus
     {
         Listening,
-        Stopped
+        Stopped,
+        Unknown
     }
 
     public abstract class ListenerBase
