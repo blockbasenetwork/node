@@ -219,14 +219,14 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (await _connector.DoesDefaultDatabaseExist())
-                    return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix.")));
+                    return BadRequest(new OperationResponse<string>("You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
 
                 _connector.Setup().Wait();
 
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
                 if (contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
 
-                var configuration = GetSidechainConfigurations();
+                
 
                 if (stake > 0)
                 {
@@ -240,6 +240,8 @@ namespace BlockBase.Node.Controllers
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
                 var i = 0;
 
+
+                var configuration = GetSidechainConfigurations();
                 //TODO rpinto - review this while loop
                 while (i < 3)
                 {
@@ -345,7 +347,7 @@ namespace BlockBase.Node.Controllers
         [HttpPost]
         [SwaggerOperation(
             Summary = "Pauses all sidechain state updates",
-            Description = "The requester can use this method to temporarely the maintenance of the sidechain while still being able to encrypt and decrypt queries.",
+            Description = "The requester can use this method to temporarily pause the maintenance of the sidechain while still being able to execute queries.",
             OperationId = "PauseSidechain"
         )]
         public async Task<ObjectResult> PauseSidechain()
@@ -353,7 +355,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (!_sidechainMaintainerManager.IsMaintainerRunning() && !_sidechainMaintainerManager.IsProductionRunning())
-                    return BadRequest(new OperationResponse<string>($"Sidechain was already paused."));
+                    return BadRequest(new OperationResponse<string>($"The sidechain isn't running."));
 
                 await _sidechainMaintainerManager.Pause();
 
@@ -417,7 +419,7 @@ namespace BlockBase.Node.Controllers
         {
             if (stake <= 0)
             {
-                return BadRequest(new OperationResponse<bool>(new ArgumentException()));
+                return BadRequest(new OperationResponse<string>("The stake must be positive"));
             }
             try
             {
@@ -532,7 +534,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_databaseKeyManager.DataSynced) throw new Exception("Passwords and main key not set.");
+                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>("Passwords and main key not set."));
                 var queryResults = await _sqlCommandManager.Execute(queryScript);
 
                 return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
@@ -560,7 +562,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_databaseKeyManager.DataSynced) throw new Exception("Passwords and main key not set.");
+                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>("Passwords and main key not set."));
                 var query = $"USE {sidebarQueryInfo.DatabaseName}; SELECT {sidebarQueryInfo.TableName}.* FROM {sidebarQueryInfo.TableName}";
                 if (sidebarQueryInfo.Encrypted) query += " ENCRYPTED";
                 query += ";";
@@ -592,7 +594,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_databaseKeyManager.DataSynced) throw new Exception("Passwords and main key not set.");
+                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>("Passwords and main key not set."));
                 var structure = _sqlCommandManager.GetStructure();
                 return Ok(new OperationResponse<IList<DatabasePoco>>(structure));
             }
@@ -619,9 +621,9 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (_sidechainMaintainerManager.IsMaintainerRunning() || _sidechainMaintainerManager.IsProductionRunning())
-                    return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(new OperationCanceledException("You need to end sidechain first.")));
+                    return BadRequest(new OperationResponse<string>("The sidechain maintenance is running."));
                 await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
-                return Ok(new OperationResponse<bool>(true, $"Removed data."));
+                return Ok(new OperationResponse<bool>(true, $"Deleted databases and cleared all data."));
             }
             catch (Exception e)
             {

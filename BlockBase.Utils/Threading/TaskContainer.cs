@@ -8,23 +8,23 @@ namespace BlockBase.Utils.Threading
     {
         public string TaskIdentifier { get; set; }
         public Task Task { get; set; }
-        public Action Action { get; set; }
+        public Func<Task> Func { get; set; }
         public CancellationTokenSource CancellationTokenSource { get; set; }
 
-        public static TaskContainer Create(Action task, string taskIdentifier = null)
+        public static TaskContainer Create(Func<Task> func, string taskIdentifier = null)
         {
             var cancellationTokenSource = new CancellationTokenSource();
             return new TaskContainer
             {
                 TaskIdentifier = taskIdentifier,
                 CancellationTokenSource = cancellationTokenSource,
-                Action = task
+                Func = func
             };
         }
 
         public void Start()
         {
-            Task = Task.Run(Action, CancellationTokenSource.Token);
+            Task = Task.Run(Func, CancellationTokenSource.Token);
         }
 
         //TODO rpinto - consider doing an assynchronous version

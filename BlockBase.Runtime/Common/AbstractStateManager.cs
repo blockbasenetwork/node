@@ -19,7 +19,8 @@ namespace BlockBase.Runtime.Common
         public virtual TaskContainer Start()
         {
             if (TaskContainer != null) TaskContainer.Stop();
-            TaskContainer = TaskContainer.Create(async () => await Run());
+            
+            TaskContainer = TaskContainer.Create(Run);
             TaskContainer.Start();
             return TaskContainer;
         }
