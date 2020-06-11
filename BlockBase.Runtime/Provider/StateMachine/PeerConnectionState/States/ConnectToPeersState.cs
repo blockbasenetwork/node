@@ -66,11 +66,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override async Task UpdateStatus() 
         {
-            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-            var ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
-
-            _producers = producers;
-            _ipAddresses = ipAddresses;
+            _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
+            
             _delay = TimeSpan.FromSeconds(_networkConfigurations.ConnectionExpirationTimeInSeconds);
         }
 

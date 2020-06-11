@@ -61,22 +61,14 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         protected override async Task UpdateStatus()
         {
-            var contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
-            var producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            var blockHeaders = await _mainchainService.RetrieveBlockheaderList(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+            _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
+            _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _blockHeaders = await _mainchainService.RetrieveBlockheaderList(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             
 
             //check preconditions to continue update
-            if(contractInfo == null) return;
-            if(contractState == null) return;
-            if(blockHeaders == null) return;
-            if(producers == null) return;
-
-            _contractInfo = contractInfo;
-            _producers = producers;
-            _contractStateTable = contractState;
-            _blockHeaders = blockHeaders;
+            if(_contractInfo == null) return;
 
             var timeDiff = _contractInfo.ReceiveEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 

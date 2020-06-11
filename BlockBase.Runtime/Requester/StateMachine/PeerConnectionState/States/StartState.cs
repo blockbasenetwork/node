@@ -49,9 +49,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 
         protected override async Task UpdateStatus() 
         {
-            var contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
-
-            _contractStateTable = contractState;
+            _contractStateTable = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
         }
     }
 }

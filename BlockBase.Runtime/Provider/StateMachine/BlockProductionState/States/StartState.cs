@@ -60,16 +60,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override async Task UpdateStatus()
         {
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
 
-            //check preconditions to continue update
-            if(contractState == null) return;
-            if(producerList == null) return;
-
-            _contractStateTable = contractState;
-            _producerList = producerList;
-            
         }
     }
 }

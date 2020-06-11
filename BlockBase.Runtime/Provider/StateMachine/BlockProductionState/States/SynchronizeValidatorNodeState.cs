@@ -113,26 +113,20 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         protected override async Task UpdateStatus()
         {
 
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-            var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
-
-
+            _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
+            
             //check preconditions to continue update
-            if (contractState == null) return;
-            if (producerList == null) return;
-            if (currentProducer == null) return;
-
+            if (_contractStateTable == null) return;
+            if (_producerList == null) return;
+            if (_currentProducer == null) return;
 
             _lastSubmittedBlockHeader = await WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(
                 //TODO rpinto - check if this timespan can be better estimated
-                currentProducer.StartProductionTime, TimeSpan.FromSeconds(5));
+                _currentProducer.StartProductionTime, TimeSpan.FromSeconds(5));
 
-
-            _isReadyToProduce = producerList?.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce) ?? false;
-            _contractStateTable = contractState;
-            _producerList = producerList;
-            _currentProducer = currentProducer;
+            _isReadyToProduce = _producerList?.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce) ?? false;
         }
 
 

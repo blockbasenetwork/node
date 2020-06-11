@@ -59,18 +59,11 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         {
             //fetches data related to the state of the sidechain, and information about if he needs to produce a block or vote on one
 
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-            var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
+            _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
-            //check preconditions to continue update
-            if (contractState == null) return;
-            if (producerList == null) return;
-            if(currentProducer == null) return;
 
-            _contractStateTable = contractState;
-            _producerList = producerList;
-            _currentProducer = currentProducer;
         }
     }
 }

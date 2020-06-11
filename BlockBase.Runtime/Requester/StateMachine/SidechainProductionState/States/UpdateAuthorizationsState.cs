@@ -94,7 +94,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         {
             _producerList = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
             _sidechainAccountInfo = await _mainchainService.GetAccount(_nodeConfigurations.AccountName);
-            
             _inNeedToUpdateAuthorizations = DoesItNeedToUpdateAuthorizations(_producerList, _sidechainAccountInfo);
         }
 

@@ -113,25 +113,23 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         protected override async Task UpdateStatus()
         {
-            var contractState = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            var producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-            var currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
+            _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _currentProducer = await _mainchainService.RetrieveCurrentProducer(_sidechainPool.ClientAccountName);
 
             //check preconditions to continue update
             //check preconditions to continue update
-            if(contractState == null) return;
-            if(producerList == null) return;
+            if(_contractStateTable == null) return;
+            if(_producerList == null) return;
 
-            var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+            _lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
-            _isReadyToProduce = producerList.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce);
-            _contractStateTable = contractState;
-            _producerList = producerList;
-            _currentProducer = currentProducer;
-            _lastValidSubmittedBlockHeader = lastValidSubmittedBlockHeader;
-
-            if (lastValidSubmittedBlockHeader == null)
+            if (_lastValidSubmittedBlockHeader == null)
                 _isNodeSynchronized = true;
+
+            _isReadyToProduce = _producerList.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce);
+
+            
 
         }
 
