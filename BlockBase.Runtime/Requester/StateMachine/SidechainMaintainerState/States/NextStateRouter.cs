@@ -15,7 +15,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private string _nextState;
         private ContractInformationTable _contractInfo;
         private ContractStateTable _contractState;
-        private CurrentProducerTable _currentProducer;
         private IMainchainService _mainchainService;
     
         private NodeConfigurations _nodeConfigurations;
@@ -50,11 +49,10 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         {
             _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
             _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
-            _currentProducer = await _mainchainService.RetrieveCurrentProducer(_nodeConfigurations.AccountName);
 
             if(_contractState == null || _contractInfo == null) return;
 
-            _nextState = GetNextSidechainState(_contractInfo, _contractState, _currentProducer);
+            _nextState = GetNextSidechainState(_contractInfo, _contractState);
 
             if(_nextState == null)
             {
@@ -67,7 +65,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             }
         }
 
-        private string GetNextSidechainState(ContractInformationTable contractInfo, ContractStateTable contractState, CurrentProducerTable currentProducer)
+        private string GetNextSidechainState(ContractInformationTable contractInfo, ContractStateTable contractState)
         {
             if(contractState.ConfigTime) 
                 return typeof(CandidatureReceivalState).Name;

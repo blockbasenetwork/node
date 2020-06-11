@@ -77,7 +77,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         {
             //TODO rpinto - how do we determine if it has conditions to continue without using only _iNeedToUpdateAuthoriations
             //without a good check here this could result in an infinite loop if permissions are unable to be set!
-            return Task.FromResult(true);
+            return Task.FromResult(_producerList != null && _sidechainAccountInfo != null);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

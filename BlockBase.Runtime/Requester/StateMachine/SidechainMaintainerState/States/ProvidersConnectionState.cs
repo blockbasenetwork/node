@@ -30,7 +30,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            if(_contractState == null) return Task.FromResult(false);
+            if(_contractState == null || _contractInfo == null) return Task.FromResult(false);
             if(_contractState.CandidatureTime || !IsTimeUpForSidechainPhase(_contractInfo.SecretEndDate, 0))
                 return Task.FromResult(false);
             return Task.FromResult(true);

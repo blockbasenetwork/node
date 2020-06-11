@@ -42,7 +42,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime);
+            return Task.FromResult(_contractStateTable != null && (_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

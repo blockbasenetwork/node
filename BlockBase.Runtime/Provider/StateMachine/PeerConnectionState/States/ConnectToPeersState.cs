@@ -54,7 +54,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_ipAddresses.Any());
+            return Task.FromResult(_producers != null && _ipAddresses != null && _ipAddresses.Any());
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

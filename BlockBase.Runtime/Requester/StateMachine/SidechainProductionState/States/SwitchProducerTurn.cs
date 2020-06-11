@@ -90,7 +90,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractState != null && _contractState.ProductionTime);
+            return Task.FromResult(_contractState != null && _contractInfo != null && _currentProducer != null && _blocksCount != null && _contractState.ProductionTime);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
