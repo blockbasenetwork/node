@@ -52,6 +52,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_nodeConfigurations.AccountName);
 
+            if(_contractState == null || _contractInfo == null) return;
+
             _nextState = GetNextSidechainState(_contractInfo, _contractState, _currentProducer);
 
             if(_nextState == null)

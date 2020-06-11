@@ -417,7 +417,7 @@ namespace BlockBase.Node.Controllers
         [HttpGet]
         [SwaggerOperation(
             Summary = "Gets information about all currently producing sidechains",
-            Description = "The provider uses this request to get information about the sidechains this node is producing",
+            Description = "The provider uses this request to get information about the sidechains the node is producing",
             OperationId = "GetProducingSidechains"
         )]
         public ObjectResult GetProducingSidechains()

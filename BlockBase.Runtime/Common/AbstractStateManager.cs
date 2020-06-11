@@ -1,12 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
-using BlockBase.Domain.Configurations;
-using BlockBase.Network.Mainchain;
-using BlockBase.Network.Sidechain;
-using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Provider;
-using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -43,7 +36,7 @@ namespace BlockBase.Runtime.Common
 
         protected virtual async Task Run()
         {
-            var nextStateName = typeof(StartState).Name;
+            var nextStateName = typeof(TStartState).Name;
 
             while (true)
             {
@@ -52,7 +45,7 @@ namespace BlockBase.Runtime.Common
                     var currentState = BuildState(nextStateName);
                     nextStateName = await currentState.Run(TaskContainer.CancellationTokenSource.Token);
 
-                    if (currentState.GetType() == typeof(EndState))
+                    if (currentState.GetType() == typeof(TEndState))
                     {
                         await currentState.Run();
                         //TODO rpinto - is this dangerous? should the stop mechanism be delegated to an upper level?

@@ -47,6 +47,8 @@ namespace BlockBase.Runtime.Common
 
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to delay... {_delay.Seconds} seconds");
                     await Task.Delay(_delay);
+                    //resetting delay every time after it has been done to avoid a situation where a very short delay gets set and no condition resets it to a higher value
+                    _delay = TimeSpan.FromSeconds(5);
                     if(_verbose) _logger.LogDebug($"{name} - Finished delay");
 
                     if(_verbose) _logger.LogDebug($"{this.GetType().Name} - Starting to update status...");

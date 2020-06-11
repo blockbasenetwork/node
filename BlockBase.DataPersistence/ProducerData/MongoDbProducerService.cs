@@ -146,7 +146,7 @@ namespace BlockBase.DataPersistence.ProducerData
 
         public async Task<Block> GetSidechainBlockAsync(string databaseName, string blockhash)
         {
-            var blockheader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockhash);
+            var blockheader = await GetBlockHeaderByBlockHashAsync(databaseName, blockhash);
 
             if (blockheader == null) return null;
 
@@ -157,7 +157,7 @@ namespace BlockBase.DataPersistence.ProducerData
 
         public async Task<bool> IsBlockInDatabase(string databaseName, string blockhash)
         {
-            var blockheader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockhash);
+            var blockheader = await GetBlockHeaderByBlockHashAsync(databaseName, blockhash);
             return blockheader != null;
         }
 
@@ -251,12 +251,18 @@ namespace BlockBase.DataPersistence.ProducerData
             }
         }
 
+        //TODO rpinto - there could be a problem here. If there is a new block that is about to be confirmed but
+        //hasn't yet, this method will destroy the relation of all transactions related to that block
+        //but the block may still be accepted and then there would be transactions doubled
+        //If the smart contract validates the last transaction sequence number this problem may be prevented
+        //The provider would just produce a wrong block, but even so he would have to recover the missing transactions,
+        //or reassociate them. I don't think this method is doing that
         //TODO rpinto - all this should be done inside a transaction
         public async Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime, ProducerTypeEnum producerType)
         {
 
             //gets the latest confirmed block
-            var blockheaderDB = await GetBlockHeaderDByBlockHashAsync(databaseName, lastConfirmedSmartContractBlockHash);
+            var blockheaderDB = await GetBlockHeaderByBlockHashAsync(databaseName, lastConfirmedSmartContractBlockHash);
             if (blockheaderDB != null)
             {
                 using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -268,7 +274,7 @@ namespace BlockBase.DataPersistence.ProducerData
 
 
 
-                    //TODO rpinto - this seems to be searching for local forks? 
+                    
                     //marciak - this is checking if there's unconfirmed blocks
                     var blockHeaderQuery = from b in blockHeaderCollection.AsQueryable()
                                            where
@@ -278,7 +284,7 @@ namespace BlockBase.DataPersistence.ProducerData
                                            && b.Timestamp > blockheaderDB.Timestamp
                                            select b;
 
-                    //TODO rpinto - why are block header hashes nulled here 
+                    
                     //marciak - this is disassociating the transactions from the unconfirmed blocks, so that they can be associated to new blocks
                     foreach (var blockHeaderDBToRemove in blockHeaderQuery.AsEnumerable())
                     {
@@ -288,7 +294,12 @@ namespace BlockBase.DataPersistence.ProducerData
 
                     await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
-                    if (Convert.ToInt64(blockheaderDB.SequenceNumber) == numberOfBlocks)
+                    
+                    
+                    //TODO rpinto changed it to be bigger or equal to the number of blocks
+                    //old version - if (Convert.ToInt64(blockheaderDB.SequenceNumber) == numberOfBlocks)
+                    
+                    if (numberOfBlocks >= Convert.ToInt64(blockheaderDB.SequenceNumber))
                     {
                         return true;
                     }
@@ -300,12 +311,12 @@ namespace BlockBase.DataPersistence.ProducerData
 
         public async Task<bool> IsBlockConfirmed(string databaseName, string blockHash)
         {
-            var blockHeader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockHash);
+            var blockHeader = await GetBlockHeaderByBlockHashAsync(databaseName, blockHash);
             return blockHeader != null ? blockHeader.Confirmed : false;
         }
         public async Task ConfirmBlock(string databaseName, string blockHash)
         {
-            var blockHeader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockHash);
+            var blockHeader = await GetBlockHeaderByBlockHashAsync(databaseName, blockHash);
             if (blockHeader == null) return;
 
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -320,7 +331,7 @@ namespace BlockBase.DataPersistence.ProducerData
 
         public async Task ClearValidatorNode(string databaseName, string blockHash, uint transactionCount)
         {
-            var blockHeader = await GetBlockHeaderDByBlockHashAsync(databaseName, blockHash);
+            var blockHeader = await GetBlockHeaderByBlockHashAsync(databaseName, blockHash);
             if (blockHeader == null) return;
 
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -343,7 +354,7 @@ namespace BlockBase.DataPersistence.ProducerData
         }
 
 
-        private async Task<BlockheaderDB> GetBlockHeaderDByBlockHashAsync(string databaseName, string blockHash)
+        private async Task<BlockheaderDB> GetBlockHeaderByBlockHashAsync(string databaseName, string blockHash)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
