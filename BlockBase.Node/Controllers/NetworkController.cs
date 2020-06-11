@@ -318,7 +318,7 @@ namespace BlockBase.Node.Controllers
         [HttpGet]
         [SwaggerOperation(
             Summary = "Tries to establish a connection to another node. Lasts for 20 seconds",
-            Description = "Tries to establish a connection to another node. The other node has to do the same thing in less than 20 seconds. Use this to test tcp connections between nodes.",
+            Description = "Tries to establish a connection to another node. Sends ping messages and expects pong responses. Use this to test tcp connections between nodes.",
             OperationId = "TestConnectionToPeer"
         )]
         public async Task<ObjectResult> TestConnectionToPeer(string ipAddress, int port)
