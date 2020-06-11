@@ -106,6 +106,11 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.PingReceived += eventHandler;
         }
 
+        public void SubscribePongReceivedEvent(PongReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.PongReceived += eventHandler;
+        }
+
         public void SubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler)
         {
             MessageForwarder.TransactionConfirmationReceived += eventHandler;

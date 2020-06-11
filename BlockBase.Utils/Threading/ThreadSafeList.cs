@@ -78,6 +78,14 @@ namespace BlockBase.Utils.Threading
             }
         }
 
+        public bool Contains(Func<T, bool> whereClause)
+        {
+            lock(Locker)
+            {
+                return _list.Any(whereClause);
+            }
+        }
+
         public IEnumerable<T> GetEnumerable()
         {
             lock (Locker)

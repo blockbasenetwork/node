@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +15,7 @@ using BlockBase.Utils;
 using Newtonsoft.Json;
 using BlockBase.Domain.Results;
 using BlockBase.Domain.Enums;
-using BlockBase.Network.Connectors;
+using BlockBase.Runtime.Network;
 
 namespace BlockBase.Node.Controllers
 {

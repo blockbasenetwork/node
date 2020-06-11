@@ -29,6 +29,7 @@ namespace BlockBase.Runtime.Network
         void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler);
         void SubscribeLastIncludedTransactionRequestReceivedEvent(LastIncludedTransactionRequestReceivedEventHandler eventHandler);        
         void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler);
+        void SubscribePongReceivedEvent(PongReceivedEventHandler eventHandler);
         void SubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler);
     }
 }
