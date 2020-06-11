@@ -62,6 +62,26 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
+
+                string configuredPublicIp = NetworkConfigurations.PublicIpAddress.Trim();
+                string fetchedPublicIp = null;
+                bool fetchedPublicIpSuccessfully = false;
+                bool isConfiguredIPEqualToPublicIP = false;
+                
+
+                try
+                {
+                    var webClient = new WebClient();
+                    var result = webClient.DownloadString(new Uri("https://api.ipify.org"));
+                    fetchedPublicIpSuccessfully = !string.IsNullOrWhiteSpace(result.Trim());
+                    fetchedPublicIp = result.Trim();
+                    isConfiguredIPEqualToPublicIP = configuredPublicIp == fetchedPublicIp;
+                }
+                catch
+                {
+
+                }
+                
                 var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
                 var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
@@ -112,8 +132,6 @@ namespace BlockBase.Node.Controllers
                 catch { }
 
 
-
-                var publicIpAddress = NetworkConfigurations.PublicIpAddress;
                 var tcpPort = NetworkConfigurations.TcpPort;
 
                 var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
@@ -126,7 +144,11 @@ namespace BlockBase.Node.Controllers
                 return Ok(new OperationResponse<dynamic>(
                     new
                     {
-                        publicIpAddress,
+                        configuredPublicIp,
+                        fetchedPublicIpSuccessfully,
+                        fetchedPublicIp,
+                        isConfiguredIPEqualToPublicIP,
+
                         tcpPort,
                         accountName,
                         eosAccountDataFetched,
