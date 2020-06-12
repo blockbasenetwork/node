@@ -13,10 +13,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BlockBase.Runtime.StateMachine.SidechainState;
 using BlockBase.Domain.Enums;
 using BlockBase.Domain;
 using BlockBase.DataPersistence.Sidechain;
+using BlockBase.Runtime.Provider.StateMachine.SidechainState;
 
 namespace BlockBase.Runtime.Provider
 {

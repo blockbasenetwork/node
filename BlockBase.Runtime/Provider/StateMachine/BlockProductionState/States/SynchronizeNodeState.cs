@@ -3,22 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.Sidechain;
 using BlockBase.Domain.Configurations;
-using BlockBase.Domain.Enums;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Provider;
-using BlockBase.Runtime.StateMachine.SidechainState;
-using BlockBase.Runtime.StateMachine.SidechainState.States;
 using BlockBase.Utils.Operation;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
+namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
     public class SynchronizeNodeState : ProviderAbstractState<StartState, EndState>
     {

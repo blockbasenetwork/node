@@ -9,7 +9,7 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using BlockBase.Domain.Enums;
 
-namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
+namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
     public class StartState : ProviderAbstractState<StartState, EndState>
     {

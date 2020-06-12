@@ -1,6 +1,5 @@
 using BlockBase.Network.Sidechain;
-using BlockBase.Runtime.StateMachine.SidechainState;
-using System.Collections.Concurrent;
+using BlockBase.Runtime.Provider.StateMachine.SidechainState;
 
 namespace BlockBase.Runtime.Provider
 {
