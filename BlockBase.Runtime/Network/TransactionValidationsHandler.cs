@@ -42,46 +42,12 @@ namespace BlockBase.Runtime.Network
             _logger.LogDebug("Creating transaction validator.");
             _networkService = networkService;
             _networkService.SubscribeTransactionsReceivedEvent(MessageForwarder_TransactionsReceived);
-            _networkService.SubscribeLastIncludedTransactionRequestReceivedEvent(MessageForwarder_LastIncludedTransactionRequestReceived);
             _sidechainKeeper = sidechainKeeper;
             _mongoDbProducerService = mongoDbProducerService;
             _mainChainService = mainChainService;
             _nodeConfigurations = nodeConfigurations.Value;
             _validatorSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
             _networkConfigurations = networkConfigurations.Value;
-        }
-
-        private async void MessageForwarder_LastIncludedTransactionRequestReceived(MessageForwarder.LastIncludedTransactionRequestReceivedEventArgs args)
-        {
-            if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
-            {
-
-                _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
-            }
-
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(args.ClientAccountName);
-
-            await sidechainSemaphore.WaitAsync();
-            try
-            {
-                
-                var transaction = await _mongoDbProducerService.GetLastIncludedTransactionInConfirmedBlock(args.ClientAccountName);
-                var transactionBytes = transaction != null ? transaction.ConvertToProto().ToByteArray() : new byte[0];
-                var message = new NetworkMessage(NetworkMessageTypeEnum.SendLastIncludedTransaction, transactionBytes,
-                TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey,
-                _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, args.Sender);
-                // _logger.LogDebug("Sent last included transaction.");
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Sending last included transaction crashed {e.Message}");
-            }
-            finally
-            {
-                sidechainSemaphore.Release();
-            }
-
-
         }
         private async void MessageForwarder_TransactionsReceived(MessageForwarder.TransactionsReceivedEventArgs args, IPEndPoint sender)
         {

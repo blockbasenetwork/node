@@ -107,10 +107,7 @@ namespace BlockBase.Network.Rounting
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.ConfirmTransactionReception) TransactionConfirmationReceived?.Invoke(ParseTransactionConfirmationMessage(message), message.Sender);
 
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendTransactions) TransactionsReceived?.Invoke(ParseTransactionsMessage(message), message.Sender);
-
-                else if (message.NetworkMessageType == NetworkMessageTypeEnum.RequestLastIncludedTransaction) LastIncludedTransactionRequestReceived?.Invoke(new LastIncludedTransactionRequestReceivedEventArgs() { ClientAccountName = Encoding.UTF8.GetString(message.Payload), Sender = message.Sender });
-
-                else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendLastIncludedTransaction) LastTransactionIncludedReceived?.Invoke(new LastIncludedTransactionReceivedEventArgs() { TransactionBytes = message.Payload, ClientAccountName = message.EosAccount }, message.Sender);            }
+            }
         }
 
         private BlockReceivedEventArgs ParseMinedBlockMessage(byte[] payload)
@@ -225,16 +222,6 @@ namespace BlockBase.Network.Rounting
             public IPEndPoint Sender { get; set; }
         }
 
-        public event LastIncludedTransactionRequestReceivedEventHandler LastIncludedTransactionRequestReceived;
-        public delegate void LastIncludedTransactionRequestReceivedEventHandler(LastIncludedTransactionRequestReceivedEventArgs args);
-
-        public class LastIncludedTransactionRequestReceivedEventArgs
-        {
-            public string ClientAccountName { get; set; }
-            public IPEndPoint Sender { get; set; }
-            public byte[] TransactionBytes { get; set;}
-        }
-
         public event IdentificationMessageReceivedEventHandler IdentificationMessageReceived;
         public delegate void IdentificationMessageReceivedEventHandler(IdentificationMessageReceivedEventArgs args);
         public class IdentificationMessageReceivedEventArgs
@@ -264,15 +251,6 @@ namespace BlockBase.Network.Rounting
         public class TransactionsReceivedEventArgs
         {
             public byte[] TransactionsBytes { get; set; }
-            public string ClientAccountName { get; set; }
-        }
-
-        public event LastTransactionReceivedEventHandler LastTransactionIncludedReceived;
-        public delegate void LastTransactionReceivedEventHandler(LastIncludedTransactionReceivedEventArgs args, IPEndPoint sender);
-
-        public class LastIncludedTransactionReceivedEventArgs
-        {
-            public byte[] TransactionBytes { get; set; }
             public string ClientAccountName { get; set; }
         }
 

@@ -273,8 +273,6 @@ namespace BlockBase.DataPersistence.ProducerData
                     var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
 
 
-
-                    
                     //marciak - this is checking if there's unconfirmed blocks
                     var blockHeaderQuery = from b in blockHeaderCollection.AsQueryable()
                                            where
@@ -284,7 +282,7 @@ namespace BlockBase.DataPersistence.ProducerData
                                            && b.Timestamp > blockheaderDB.Timestamp
                                            select b;
 
-                    
+
                     //marciak - this is disassociating the transactions from the unconfirmed blocks, so that they can be associated to new blocks
                     foreach (var blockHeaderDBToRemove in blockHeaderQuery.AsEnumerable())
                     {
@@ -293,12 +291,12 @@ namespace BlockBase.DataPersistence.ProducerData
                     }
 
                     await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
+                    
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
-                    
-                    
+
                     //TODO rpinto changed it to be bigger or equal to the number of blocks
                     //old version - if (Convert.ToInt64(blockheaderDB.SequenceNumber) == numberOfBlocks)
-                    
+
                     if (numberOfBlocks >= Convert.ToInt64(blockheaderDB.SequenceNumber))
                     {
                         return true;
@@ -567,33 +565,37 @@ namespace BlockBase.DataPersistence.ProducerData
             }
         }
 
-        public async Task<Transaction> GetLastIncludedTransactionInConfirmedBlock(string databaseName)
+        public async Task UpdateLastSearchedForTransactionsBlockHeader(string databaseName, BlockHeader blockHeader)
         {
-            var lastIncludedTransaction = await GetLastIncludedTransaction(databaseName);
-            if(lastIncludedTransaction == null) return null;
-
-            var blockHash = HashHelper.ByteArrayToFormattedHexaString(lastIncludedTransaction.BlockHash);
-            if (await IsBlockConfirmed(databaseName, blockHash))
-                return lastIncludedTransaction;
-
-            else
+            using (IClientSession session = await MongoClient.StartSessionAsync())
             {
-                using (IClientSession session = await MongoClient.StartSessionAsync())
-                {
-                    var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
 
-                    var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+                var lastSearchedForTransactionsBlockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
 
-                    var transactionQuery = from t in transactionCollection.AsQueryable()
-                                           where t.BlockHash != "" && t.BlockHash != blockHash
-                                           orderby t.SequenceNumber
-                                           select t;
-                    var transactionDB = (await transactionQuery.ToListAsync()).LastOrDefault();
+                session.StartTransaction();
 
-                    return transactionDB?.TransactionFromTransactionDB();
-                }
+                await lastSearchedForTransactionsBlockHeaderCollection.DeleteManyAsync(t => true);
+
+                await lastSearchedForTransactionsBlockHeaderCollection.InsertOneAsync(new BlockheaderDB().BlockheaderDBFromBlockHeader(blockHeader));
+
+                await session.CommitTransactionAsync();
             }
         }
+        public async Task<BlockHeader> GetLastSearchedForTransactionsBlockHeader(string databaseName)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+
+                var lastSearchedForTransactionsBlockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
+
+                var blockHeaderDB = await (await lastSearchedForTransactionsBlockHeaderCollection.FindAsync(b => true)).SingleOrDefaultAsync();
+                
+                return blockHeaderDB.BlockHeaderFromBlockHeaderDB();
+            }
+        }
+
         #region Recover DB
 
         public async Task AddProducingSidechainToDatabaseAsync(string sidechain) =>

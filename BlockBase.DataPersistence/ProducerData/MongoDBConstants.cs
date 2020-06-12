@@ -5,6 +5,7 @@ namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
         public static readonly string CONNECTION_STRING = "mongodb://localhost";
         public static readonly string RECOVER_DATABASE_NAME = "recoverDb";
         public static readonly string BLOCKHEADERS_COLLECTION_NAME = "Blockheaders";
+        public static readonly string LAST_SEARCHED_FOR_TRANSACTIONS_BLOCKHEADER_COLLECTION_NAME = "LastSearchedForTransactionsBlockHeader";
         public static readonly string TRANSACTIONS_COLLECTION_NAME = "Transactions";
         public static readonly string TRANSACTIONS_INFO_COLLECTION_NAME = "TransactionsInfo";
         public static readonly string PRODUCING_SIDECHAINS_COLLECTION_NAME = "ProducingSidechains";

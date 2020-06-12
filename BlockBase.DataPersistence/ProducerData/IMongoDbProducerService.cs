@@ -30,7 +30,6 @@ namespace BlockBase.DataPersistence.ProducerData
         Task SaveTransaction(string databaseName, Transaction transaction);
         Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName);
         Task<Transaction> GetLastIncludedTransaction(string databaseName);
-        Task<Transaction> GetLastIncludedTransactionInConfirmedBlock(string databaseName);
         Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash);
         Task<Transaction> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
         Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber);
@@ -46,5 +45,7 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<bool> CheckIfMaintainedSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllMaintainedSidechainsAsync();
         Task DropRequesterDatabase(string sidechain);
+        Task UpdateLastSearchedForTransactionsBlockHeader(string sidechain, BlockHeader blockHeader);
+        Task<BlockHeader> GetLastSearchedForTransactionsBlockHeader(string sidechain);
     }
 }
