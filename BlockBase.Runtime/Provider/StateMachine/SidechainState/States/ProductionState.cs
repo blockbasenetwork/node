@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class ProductionState : AbstractState<StartState, EndState>
+    public class ProductionState : ProviderAbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
@@ -20,7 +20,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private ContractInformationTable _contractInfo;
 
         private SidechainPool _sidechainPool;
-        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
+        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

@@ -16,13 +16,11 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
-        Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader, int limit);
         Task<string> AddEncryptedIps(string chain, string accountName, List<string> encryptedIps);
         Task<string> NotifyReady(string chain, string accountName);
         Task<string> ProposeBlockVerification(string chain, string accountName, List<string> requestedApprovals, string blockHash);
         Task<string> ApproveTransaction(string proposerName, string proposedTransactionName, string accountName, string proposalHash, string permission = "active");
         Task<string> ExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, string permission = "active");
-        Task<string> SafeExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, int limit, string permission = "active");
         Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active");
         Task<string> StartChain(string owner, string publicKey, string permission = "active");
         Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, string permission = "active");

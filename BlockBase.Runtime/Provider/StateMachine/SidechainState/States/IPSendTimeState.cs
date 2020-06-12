@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class IPSendTimeState : AbstractState<StartState, EndState>
+    public class IPSendTimeState : ProviderAbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
@@ -24,7 +24,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private List<ProducerInTable> _producers;
 
         private SidechainPool _sidechainPool;
-        public IPSendTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger)
+        public IPSendTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class IPReceiveState : AbstractState<StartState, EndState>
+    public class IPReceiveState : ProviderAbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
@@ -23,7 +23,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private List<BlockheaderTable> _blockHeaders;
 
         private SidechainPool _sidechainPool;
-        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
+        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

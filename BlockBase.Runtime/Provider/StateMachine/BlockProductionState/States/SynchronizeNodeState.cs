@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class SynchronizeNodeState : AbstractState<StartState, EndState>
+    public class SynchronizeNodeState : ProviderAbstractState<StartState, EndState>
     {
 
         private IMainchainService _mainchainService;
@@ -42,7 +42,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
-            INetworkService networkService, TransactionValidationsHandler transactionValidationsHandler) : base(logger)
+            INetworkService networkService, TransactionValidationsHandler transactionValidationsHandler) : base(logger, sidechainPool)
         {
             _logger = logger;
             _mainchainService = mainchainService;

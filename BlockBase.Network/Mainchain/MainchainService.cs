@@ -123,19 +123,6 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> SafeAddBlock(string chain, string accountName, Dictionary<string, object> blockHeader, int limit) =>
-            await EosStub.SendSafeTransaction<string>(async () => await EosStub.SendTransaction(
-                EosMethodNames.ADD_BLOCK,
-                NetworkConfigurations.BlockBaseOperationsContract,
-                accountName,
-                CreateDataForAddBlock(chain, accountName, blockHeader)),
-                NetworkConfigurations.BlockBaseOperationsContract,
-                EosTableNames.BLOCKHEADERS_TABLE_NAME,
-                EosAtributeNames.BLOCK_HASH,
-                chain,
-                limit
-            );
-
         public async Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader)
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
@@ -220,19 +207,6 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> SafeExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, int limit, string permission = "active") =>
-            await EosStub.SendSafeTransaction<long>(async () => await EosStub.SendTransaction(
-                EosMsigConstants.EOSIO_MSIG_EXEC_ACTION,
-                EosMsigConstants.EOSIO_MSIG_ACCOUNT_NAME,
-                accountName,
-                CreateDataForExecTransaction(proposerName, proposedTransactionName, accountName),
-                permission),
-                NetworkConfigurations.BlockBaseOperationsContract,
-                EosTableNames.BLOCKHEADERS_TABLE_NAME,
-                EosAtributeNames.IS_VERIFIED,
-                proposedTransactionName,
-                limit
-            );
 
         public async Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active")
         {
@@ -1049,7 +1023,7 @@ namespace BlockBase.Network.Mainchain
                 {
                     var apiEx = (ApiErrorException)exception;
                     var details = apiEx.error?.details;
-                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth"))
+                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth" || d.method == "tx_duplicate"))
                     {
                         //if it's a message that we may be expecting do a quieter log
                         _logger.LogDebug($"Error sending transaction: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");

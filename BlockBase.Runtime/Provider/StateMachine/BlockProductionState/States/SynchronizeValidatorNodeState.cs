@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class SynchronizeValidatorNodeState : AbstractState<StartState, EndState>
+    public class SynchronizeValidatorNodeState : ProviderAbstractState<StartState, EndState>
     {
 
         private IMainchainService _mainchainService;
@@ -38,7 +38,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         public SynchronizeValidatorNodeState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, INetworkService networkService,
-            TransactionValidationsHandler transactionValidationsHandler) : base(logger)
+            TransactionValidationsHandler transactionValidationsHandler) : base(logger, sidechainPool)
         {
             _logger = logger;
             _mainchainService = mainchainService;

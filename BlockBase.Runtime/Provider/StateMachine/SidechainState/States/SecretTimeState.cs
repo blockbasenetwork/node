@@ -13,7 +13,7 @@ using System;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class SecretTimeState : AbstractState<StartState, EndState>
+    public class SecretTimeState : ProviderAbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
@@ -24,7 +24,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
         private const string _emptySecretString = "0000000000000000000000000000000000000000000000000000000000000000";
 
         private SidechainPool _sidechainPool;
-        public SecretTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
+        public SecretTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

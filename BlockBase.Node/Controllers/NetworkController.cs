@@ -237,6 +237,35 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
+        /// All the stake information for each given sidechain the node has stake
+        /// </summary>
+        /// <returns>Stake information</returns>
+        /// <response code="200">Stake information retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving stake information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets all stake information of the node account",
+            Description = "Gets all the node account staked tokens and on witch sidechain the tokens are staked.",
+            OperationId = "GetStakedSidechains"
+        )]
+        public async Task<ObjectResult> GetAccountStakeRecords(string accountName)
+        {
+            try
+            {
+                if(string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
+
+                var stakeTable = await _mainchainService.RetrieveAccountStakedSidechains(accountName);
+
+                return Ok(stakeTable);
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
         /// Gets the top producers in the EOS Mainnet and their endpoints
         /// </summary>
         /// <returns>The top producers info and endpoints</returns>

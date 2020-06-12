@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
     //TODO rpinto - before starting to produce a block some time should be given to make sure all other nodes catch up
-    public class ProduceBlockState : AbstractState<StartState, EndState>
+    public class ProduceBlockState : ProviderAbstractState<StartState, EndState>
     {
 
         private IMainchainService _mainchainService;
@@ -54,7 +54,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         public ProduceBlockState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, BlockRequestsHandler blockSender) : base(logger)
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, BlockRequestsHandler blockSender) : base(logger, sidechainPool)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -192,6 +192,9 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
                 var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
                 _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 _blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
+
+                _hasCheckedDbForOldBlock = false;
+                _hasStoredBlockLocally = false;
 
                 _logger.LogInformation($"Proposed Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}, timestamp: {_builtBlock.BlockHeader.Timestamp}");
             }

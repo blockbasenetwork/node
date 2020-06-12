@@ -7,12 +7,12 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class EndState : AbstractState<StartState, EndState>
+    public class EndState : ProviderAbstractState<StartState, EndState>
     {
         private bool _chainExistsInDatabase;
         private SidechainPool _sidechainPool;
         private IMongoDbProducerService _mongoDbProducerService;
-        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService) : base(logger)
+        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService) : base(logger, sidechainPool)
         {
             _chainExistsInDatabase = false;
             _sidechainPool = sidechainPool;

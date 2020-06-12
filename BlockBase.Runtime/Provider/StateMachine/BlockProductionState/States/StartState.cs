@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
-using BlockBase.Runtime.StateMachine.SidechainState;
-using BlockBase.Runtime.StateMachine.SidechainState.States;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using BlockBase.Domain.Configurations;
@@ -13,7 +11,7 @@ using BlockBase.Domain.Enums;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class StartState : AbstractState<StartState, EndState>
+    public class StartState : ProviderAbstractState<StartState, EndState>
     {
         private IMainchainService _mainchainService;
         private ContractStateTable _contractStateTable;
@@ -22,7 +20,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 
         private NodeConfigurations _nodeConfigurations;
 
-        public StartState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, SidechainPool sidechainPool) : base(logger)
+        public StartState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, SidechainPool sidechainPool) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

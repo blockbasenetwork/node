@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
 {
-    public class NetworkReactionState : AbstractState<StartState, EndState>
+    public class NetworkReactionState : ProviderAbstractState<StartState, EndState>
     {
         private IMainchainService _mainchainService;
         private ContractStateTable _contractStateTable;
@@ -20,7 +20,7 @@ namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
         private SidechainPool _sidechainPool;
 
         //TODO rpinto - this state has to be fast in jumping to block validation to not miss the connection
-        public NetworkReactionState(ILogger logger, NodeConfigurations nodeConfigurations, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger)
+        public NetworkReactionState(ILogger logger, NodeConfigurations nodeConfigurations, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger, sidechainPool)
         {
             _nodeConfigurations = nodeConfigurations;
             _mainchainService = mainchainService;

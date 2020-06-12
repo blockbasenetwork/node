@@ -13,7 +13,7 @@ using System;
 
 namespace BlockBase.Runtime.StateMachine.SidechainState.States
 {
-    public class CandidatureState : AbstractState<StartState, EndState>
+    public class CandidatureState : ProviderAbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
@@ -23,7 +23,7 @@ namespace BlockBase.Runtime.StateMachine.SidechainState.States
 
         private SidechainPool _sidechainPool;
         
-        public CandidatureState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
+        public CandidatureState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
