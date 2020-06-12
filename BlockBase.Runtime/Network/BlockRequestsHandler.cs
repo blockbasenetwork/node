@@ -8,7 +8,7 @@ using BlockBase.Domain.Protos;
 using BlockBase.Network.IO;
 using BlockBase.Network.IO.Enums;
 using BlockBase.Network.Sidechain;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Utils;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;

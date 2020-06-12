@@ -14,7 +14,7 @@ using BlockBase.Domain.Results;
 using BlockBase.Domain.Pocos;
 using BlockBase.Runtime.Network;
 using BlockBase.Domain.Configurations;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 
 namespace BlockBase.Runtime.Sql
 {
@@ -29,11 +29,11 @@ namespace BlockBase.Runtime.Sql
         private ConcurrentVariables _concurrentVariables;
         private TransactionsHandler _transactionSender;
         private NodeConfigurations _nodeConfigurations;
-        private IMongoDbProducerService _mongoDbProducerService;
+        private IMongoDbRequesterService _mongoDbRequesterService;
         private MiddleMan _middleMan;
 
 
-        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
+        public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, NodeConfigurations nodeConfigurations, IMongoDbRequesterService mongoDbRequesterService)
         {
             _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
@@ -46,7 +46,7 @@ namespace BlockBase.Runtime.Sql
             _logger = logger;
             _transactionSender = transactionSender;
             _nodeConfigurations = nodeConfigurations;
-            _mongoDbProducerService = mongoDbProducerService;
+            _mongoDbRequesterService = mongoDbRequesterService;
         }
 
         public async Task<IList<QueryResult>> Execute(string sqlString)
@@ -63,7 +63,7 @@ namespace BlockBase.Runtime.Sql
                 BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
                 var context = parser.sql_stmt_list();
                 var builder = (Builder)_visitor.Visit(context);
-                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _concurrentVariables, _transactionSender, _nodeConfigurations, _mongoDbProducerService);
+                var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _concurrentVariables, _transactionSender, _nodeConfigurations, _mongoDbRequesterService);
                 results = await executioner.ExecuteBuilder(builder, CreateQueryResult);
             }
             catch (Exception e)

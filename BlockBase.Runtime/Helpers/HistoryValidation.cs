@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Enums;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
@@ -18,7 +18,7 @@ namespace BlockBase.Runtime.Helpers
 {
     public class HistoryValidation
     {
-        private static Random _rnd = new Random();
+        
         public TaskContainer TaskContainer { get; private set; }
 
         private IMongoDbProducerService _mongoDbProducerService;
@@ -30,28 +30,6 @@ namespace BlockBase.Runtime.Helpers
             _logger = logger;
             _mongoDbProducerService = mongoDbProducerService;
             _mainchainService = mainchainService;
-        }
-
-        public async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
-        {
-            var lastValidBlockheaderTable = await _mainchainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)contractInfo.BlocksBetweenSettlement);
-            if (lastValidBlockheaderTable != null)
-            {
-                var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
-                if (!validProducers.Any()) return;
-                var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
-                int r = _rnd.Next(validProducers.Count);
-                var chosenProducerAccountName = validProducers[r].Key;
-                try
-                {
-                    await _mainchainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
-                    _logger.LogDebug("Updated history validation table.");
-                }
-                catch (ApiErrorException apiException)
-                {
-                    _logger.LogWarning($"Unable to request history validation with error: {apiException?.error?.name}");
-                }
-            }
         }
 
         public TaskContainer StartHistoryValidationTask(string accountName, string blockhash, SidechainPool sidechainPool)

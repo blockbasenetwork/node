@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;

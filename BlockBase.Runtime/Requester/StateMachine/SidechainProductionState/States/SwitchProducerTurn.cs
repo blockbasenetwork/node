@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
@@ -12,12 +12,15 @@ using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Helpers;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Requester.StateMachine.Common;
+using BlockBase.Utils.Crypto;
+using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
 {
     public class SwitchProducerTurn : AbstractMainchainState<StartState, EndState>
     {
+        private static Random _rnd = new Random();
         private ContractInformationTable _contractInfo;
         private ContractStateTable _contractState;
         private CurrentProducerTable _currentProducer;
@@ -30,19 +33,17 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private TransactionsHandler _transactionSender;
         private NodeConfigurations _nodeConfigurations;
         private bool _removedIncludedTransactions;
-        private HistoryValidation _historyValidation;
         private bool _areProducersBlackListed;
         private bool _areProducersPunished;
         private bool _hasHistoryValidationBeenActivated;
         private bool _hasDoneTheSettlement;
         private bool _hasSwitchedProducer;
 
-        public SwitchProducerTurn(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, TransactionsHandler transactionSender, IMongoDbProducerService mongoDbProducerService) : base(logger)
+        public SwitchProducerTurn(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, TransactionsHandler transactionSender) : base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
             _transactionSender = transactionSender;
-            _historyValidation = new HistoryValidation(_logger, mongoDbProducerService, _mainchainService);
         }
 
         //TODO rpinto - this isn't finished yet
@@ -80,7 +81,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
                 //only after the producers are punished should the history validation start
                 //there sould be an if guarding this
-                await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
+                await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
                 _hasHistoryValidationBeenActivated = true;
 
                 _hasDoneTheSettlement = true;
@@ -122,6 +123,28 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             _needsASettlement = _roundsUntilSettlement -1 <= 0;
 
             _lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_nodeConfigurations.AccountName, (int)_contractInfo.BlocksBetweenSettlement);
+        }
+
+        private async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
+        {
+            var lastValidBlockheaderTable = await _mainchainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)contractInfo.BlocksBetweenSettlement);
+            if (lastValidBlockheaderTable != null)
+            {
+                var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
+                if (!validProducers.Any()) return;
+                var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
+                int r = _rnd.Next(validProducers.Count);
+                var chosenProducerAccountName = validProducers[r].Key;
+                try
+                {
+                    await _mainchainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
+                    _logger.LogDebug("Updated history validation table.");
+                }
+                catch (ApiErrorException apiException)
+                {
+                    _logger.LogWarning($"Unable to request history validation with error: {apiException?.error?.name}");
+                }
+            }
         }
 
         private async Task<List<ProducerInTable>> BlackListProducers(NodeConfigurations nodeConfigurations, List<ProducerInTable> producers)

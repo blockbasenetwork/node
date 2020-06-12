@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
+using BlockBase.DataPersistence.Data;
+using BlockBase.DataPersistence.Data.MongoDbEntities;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Blockchain;
@@ -38,9 +38,9 @@ namespace BlockBase.Runtime.Sql
         private TransactionsHandler _transactionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private IList<Transaction> _transactionsToSendToProducers;
-        private IMongoDbProducerService _mongoDbProducerService;
+        private IMongoDbRequesterService _mongoDbRequesterService;
 
-        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionsHandler transactionsHandler, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
+        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionsHandler transactionsHandler, NodeConfigurations nodeConfigurations, IMongoDbRequesterService mongoDbRequesterService)
         {
             _transformer = transformer;
             _generator = generator;
@@ -50,7 +50,7 @@ namespace BlockBase.Runtime.Sql
             _concurrentVariables = concurrentVariables;
             _nodeConfigurations = nodeConfigurations;
             _transactionsHandler = transactionsHandler;
-            _mongoDbProducerService = mongoDbProducerService;
+            _mongoDbRequesterService = mongoDbRequesterService;
             _transactionsToSendToProducers = new List<Transaction>();
         }
 
@@ -242,7 +242,7 @@ namespace BlockBase.Runtime.Sql
         }
         private void SendTransactionsToProducers()
         {
-            _mongoDbProducerService.AddTransactionsToSidechainDatabaseAsync(_nodeConfigurations.AccountName,
+            _mongoDbRequesterService.AddTransactionsToSidechainDatabaseAsync(_nodeConfigurations.AccountName,
             _transactionsToSendToProducers.Select(t => new TransactionDB().TransactionDBFromTransaction(t)));
 
             foreach (var transactionToSend in _transactionsToSendToProducers)

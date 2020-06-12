@@ -89,7 +89,7 @@ namespace BlockBase.Runtime.Network
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError("Couldn't connect to producer.", e);
+                    _logger.LogError("Couldn't connect to peer.", e);
                 }
             }
         }
@@ -119,29 +119,6 @@ namespace BlockBase.Runtime.Network
                 await ConnectToProducer(sidechain, producer);
             }
         }
-
-        // public void RemovePoolConnections(SidechainPool sidechain)
-        // {
-
-        //     foreach (ProducerInPool producerInPool in sidechain.ProducersInPool)
-        //     {
-        //         TryToRemoveConnection(producerInPool.PeerConnection);
-        //     }
-
-        //     var clientConnection = CurrentPeerConnections.GetEnumerable().Where(c => c.ConnectionAccountName == sidechain.ClientAccountName).SingleOrDefault();
-        //     TryToRemoveConnection(clientConnection);
-        // }
-
-        // public void TryToRemoveConnection(PeerConnection peerConnection)
-        // {
-        //     if (peerConnection != null && peerConnection.ConnectionState == ConnectionStateEnum.Connected)
-        //     {
-        //         if (CanDeleteConnection(peerConnection))
-        //         {
-        //             Disconnect(peerConnection);
-        //         }
-        //     }
-        // }
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
         {
@@ -280,7 +257,7 @@ namespace BlockBase.Runtime.Network
 
             else if (producer.PeerConnection == null || (producer.PeerConnection.ConnectionState != ConnectionStateEnum.Connected && producer.PeerConnection.Rating > MINIMUM_RATING))
             {
-                _logger.LogDebug("Acceptable producer.");
+                _logger.LogDebug("Acceptable peer.");
                 producer.ProducerInfo.IPEndPoint = peer.EndPoint;
                 producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                 producer.PeerConnection.ConnectionState = ConnectionStateEnum.Connected;
@@ -289,7 +266,7 @@ namespace BlockBase.Runtime.Network
 
             else
             {
-                if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected) _logger.LogDebug("I already have another connection with this producer");
+                if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected) _logger.LogDebug($"Existing connection found with peer {producer.ProducerInfo.AccountName}");
                 else if (producer.PeerConnection.Rating > MINIMUM_RATING) _logger.LogDebug("Other producer connection reached below the rating threshold.");
                 Disconnect(peer);
             }
@@ -407,7 +384,7 @@ namespace BlockBase.Runtime.Network
             }
             catch (Exception ex)
             {
-                _logger.LogError("Could not connect to producer: " + ex.Message);
+                _logger.LogError("Could not connect to peer: " + ex.Message);
                 return null;
             }
         }

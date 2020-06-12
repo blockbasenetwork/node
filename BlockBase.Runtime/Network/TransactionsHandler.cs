@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network;
@@ -37,12 +37,12 @@ namespace BlockBase.Runtime.Network
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
         private IList<ProducerInTable> _currentProducers;
-        private IMongoDbProducerService _mongoDbProducerService;
+        private IMongoDbRequesterService _mongoDbRequesterService;
         private int _numberOfConsecutiveEmptyBlocks;
 
         private bool _hasBeenSetup = false;
 
-        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService)
+        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, IMainchainService mainchainService, IMongoDbRequesterService mongoDbRequesterService)
         {
             _networkService = networkService;
             _logger = logger;
@@ -51,17 +51,16 @@ namespace BlockBase.Runtime.Network
             _networkConfigurations = networkConfigurations.Value;
             _transactionsToSend = new ThreadSafeList<TransactionSendingTrackPoco>();
             _mainchainService = mainchainService;
-            _mongoDbProducerService = mongoDbProducerService;
+            _mongoDbRequesterService = mongoDbRequesterService;
             _networkService.SubscribeTransactionConfirmationReceivedEvent(MessageForwarder_TransactionConfirmationReceived);
-            //rpinto commented this code and instead it's called on the setup method
-            //LoadTransactionsFromDatabase().Wait();
+
             _numberOfConsecutiveEmptyBlocks = 0;
 
         }
 
         public async Task Setup()
         {
-            if(!_hasBeenSetup)
+            if (!_hasBeenSetup)
             {
                 await LoadTransactionsFromDatabase();
                 _hasBeenSetup = true;
@@ -95,7 +94,7 @@ namespace BlockBase.Runtime.Network
             if (numberOfIncludedTransactions == 0) _numberOfConsecutiveEmptyBlocks++;
             else _numberOfConsecutiveEmptyBlocks = 0;
 
-            var transactionsRemovedSequenceNumbers = await _mongoDbProducerService.RemoveAlreadyIncludedTransactionsDBAsync(_nodeConfigurations.AccountName, numberOfIncludedTransactions, lastValidBlockHash);
+            var transactionsRemovedSequenceNumbers = await _mongoDbRequesterService.RemoveAlreadyIncludedTransactionsDBAsync(_nodeConfigurations.AccountName, numberOfIncludedTransactions, lastValidBlockHash);
 
             foreach (var sequenceNumber in transactionsRemovedSequenceNumbers)
             {
@@ -144,7 +143,7 @@ namespace BlockBase.Runtime.Network
                             transactionsSendingTrackPocos.Remove(transactionSendingTrack);
                         }
                     }
-                    if(transactionsSendingTrackPocos.Count != 0)
+                    if (transactionsSendingTrackPocos.Count != 0)
                         await SendScriptTransactionsToProducer(transactionsSendingTrackPocos.Select(p => p.Transaction), peerConnection);
                 }
             }
@@ -168,12 +167,12 @@ namespace BlockBase.Runtime.Network
         {
             try
             {
-            await _mongoDbProducerService.CreateTransactionInfoIfNotExists(_nodeConfigurations.AccountName);
-            var transactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(_nodeConfigurations.AccountName);
-            foreach (var transaction in transactions)
-                AddScriptTransactionToSend(transaction);  
+                await _mongoDbRequesterService.CreateTransactionInfoIfNotExists(_nodeConfigurations.AccountName);
+                var transactions = await _mongoDbRequesterService.RetrieveTransactionsInMempool(_nodeConfigurations.AccountName);
+                foreach (var transaction in transactions)
+                    AddScriptTransactionToSend(transaction);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogWarning(e.Message, "Unable to connect to mongodb database");
             }

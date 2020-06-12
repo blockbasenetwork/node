@@ -12,7 +12,7 @@ using BlockBase.Domain.Protos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using EosSharp.Core.Exceptions;
@@ -25,6 +25,7 @@ using BlockBase.Runtime.Provider;
 
 namespace BlockBase.Runtime.Network
 {
+    //TODO rpinto - this whole class can be done better
     public class BlockValidationsHandler
     {
         private NodeConfigurations _nodeConfigurations;
@@ -51,11 +52,12 @@ namespace BlockBase.Runtime.Network
             _endPoint = systemConfig.IPAddress + ":" + systemConfig.TcpPort;
 
             _validatorSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
-            _networkService.SubscribeMinedBlockReceivedEvent(MessageForwarder_MinedBlockReceived);
+            _networkService.SubscribeMinedBlockReceivedEvent(MessageForwarder_ProducedBlockReceived);
             _blockSender = blockSender;
         }
 
-        public async Task HandleReceivedBlock(SidechainPool sidechainPool, BlockProto blockProtoReceived)
+        //TODO rpinto - this code may fail and needs to be refactored
+        private async Task HandleReceivedBlock(SidechainPool sidechainPool, BlockProto blockProtoReceived)
         {
             // var sidechainName = sidechainPool.SmartContractAccount;
             var databaseName = sidechainPool.ClientAccountName;
@@ -136,7 +138,7 @@ namespace BlockBase.Runtime.Network
             return false;
         }
 
-        private async void MessageForwarder_MinedBlockReceived(BlockReceivedEventArgs args)
+        private async void MessageForwarder_ProducedBlockReceived(BlockReceivedEventArgs args)
         {
             try
             {
@@ -156,7 +158,7 @@ namespace BlockBase.Runtime.Network
 
                 if (!isProductionTime)
                 {
-                    _logger.LogDebug($"Mined block received but it's not mining time.");
+                    _logger.LogDebug($"Mined block received but it's not production time.");
                     return;
                 }
 

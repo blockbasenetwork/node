@@ -1,4 +1,4 @@
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataPersistence.Utils;
 using BlockBase.DataProxy.Encryption;
@@ -155,6 +155,7 @@ namespace BlockBase.Api
                 services.AddSingleton<TransactionValidationsHandler>();
                 services.AddSingleton<DatabaseKeyManager>();                
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
+                services.AddSingleton<IMongoDbRequesterService, MongoDbRequesterService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
 
                 services.AddSingleton<ISidechainMaintainerManager, SidechainMaintainerManager>();
