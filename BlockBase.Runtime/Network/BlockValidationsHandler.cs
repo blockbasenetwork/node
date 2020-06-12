@@ -77,9 +77,10 @@ namespace BlockBase.Runtime.Network
                 {
                     try
                     {
+                        var blockBefore = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement);
                         BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement)).ConvertToBlockHeader();
 
-                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool))
+                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && ValidateBlockTransactions(blockReceived, sidechainPool, blockBefore.LastTransactionSequenceNumber))
                         {
                            
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
@@ -203,14 +204,13 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        private async Task<bool> ValidateBlockTransactions(Block block, SidechainPool sidechain)
+        private bool ValidateBlockTransactions(Block block, SidechainPool sidechain, ulong lastIncludedTransactionSequenceNumber)
         {
-            ulong lastSequenceNumber = (await _mongoDbProducerService.GetLastIncludedTransaction(sidechain.ClientAccountName))?.SequenceNumber ?? 0;
             foreach (var transaction in block.Transactions)
             {
-                if (transaction.SequenceNumber != ++lastSequenceNumber)
+                if (transaction.SequenceNumber != ++lastIncludedTransactionSequenceNumber)
                 {
-                    _logger.LogDebug($"Block #{block.BlockHeader.SequenceNumber} Transaction #{transaction.SequenceNumber} doesn't follow order from last sequence number #{lastSequenceNumber}");
+                    _logger.LogDebug($"Block #{block.BlockHeader.SequenceNumber} Transaction #{transaction.SequenceNumber} doesn't follow order from last sequence number #{lastIncludedTransactionSequenceNumber}");
                     return false;
                 }
                 if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
