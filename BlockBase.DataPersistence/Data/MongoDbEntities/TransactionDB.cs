@@ -4,7 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 
-namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
+namespace BlockBase.DataPersistence.Data.MongoDbEntities
 {
     public class TransactionDB
     {

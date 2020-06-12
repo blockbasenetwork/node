@@ -11,7 +11,7 @@ using BlockBase.Network.Sidechain;
 using System.Text;
 using System.Linq;
 using BlockBase.Utils.Crypto;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using Swashbuckle.AspNetCore.Annotations;
 using BlockBase.Domain.Enums;
 using BlockBase.DataPersistence.Utils;

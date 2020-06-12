@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
@@ -19,7 +19,7 @@ namespace BlockBase.Runtime.Requester
         private SidechainProductionStateManager _sidechainProductionStateManager;
         private PeerConnectionStateManager _peerConnectionStateManager;
 
-        private IMongoDbProducerService _mongoDbProducerService;
+        private IMongoDbRequesterService _mongoDbRequesterService;
 
         private NodeConfigurations _nodeConfigurations;
 
@@ -33,16 +33,16 @@ namespace BlockBase.Runtime.Requester
         public TaskContainer TaskContainerConnections { get; private set; }
 
 
-        public SidechainMaintainerManager(ILogger<ISidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, TransactionsHandler transactionsHandler, IMongoDbProducerService mongoDbProducerService, PeerConnectionsHandler peerConnectionsHandler)
+        public SidechainMaintainerManager(ILogger<ISidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, TransactionsHandler transactionsHandler, IMongoDbRequesterService mongoDbRequesterService, PeerConnectionsHandler peerConnectionsHandler)
         {
 
             _transactionsHandler = transactionsHandler;
             _sidechainPool = new SidechainPool(nodeConfigurations.Value.AccountName);
             _sidechainMaintainerStateManager = new SidechainMaintainerStateManager(logger, mainchainService, nodeConfigurations.Value);
-            _sidechainProductionStateManager = new SidechainProductionStateManager(logger, mainchainService, nodeConfigurations.Value, transactionsHandler, mongoDbProducerService);
+            _sidechainProductionStateManager = new SidechainProductionStateManager(logger, mainchainService, nodeConfigurations.Value, transactionsHandler);
             _peerConnectionStateManager = new PeerConnectionStateManager(_sidechainPool, peerConnectionsHandler, nodeConfigurations.Value, networkConfigurations.Value, logger, mainchainService);
 
-            _mongoDbProducerService = mongoDbProducerService;
+            _mongoDbRequesterService = mongoDbRequesterService;
             _nodeConfigurations = nodeConfigurations.Value;
         }
 
@@ -82,7 +82,7 @@ namespace BlockBase.Runtime.Requester
             if (IsMaintainerRunning()) TaskContainerMaintainer.CancellationTokenSource.Cancel();
             if(IsProductionRunning()) TaskContainerProduction.CancellationTokenSource.Cancel();
             if(IsConnectionsManagerRunning()) TaskContainerConnections.CancellationTokenSource.Cancel();
-            await _mongoDbProducerService.DropRequesterDatabase(_nodeConfigurations.AccountName);
+            await _mongoDbRequesterService.DropRequesterDatabase(_nodeConfigurations.AccountName);
 
         }
     }

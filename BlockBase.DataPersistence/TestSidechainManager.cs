@@ -1,5 +1,5 @@
 ﻿
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
+using BlockBase.DataPersistence.Data.MongoDbEntities;
 using BlockBase.Utils;
 using MongoDB.Driver;
 using System;

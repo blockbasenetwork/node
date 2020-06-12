@@ -11,7 +11,7 @@ using BlockBase.Domain.Protos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Rounting;
 using BlockBase.Network.Sidechain;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

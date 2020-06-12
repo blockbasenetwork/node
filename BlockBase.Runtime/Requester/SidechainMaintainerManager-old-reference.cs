@@ -17,7 +17,7 @@ using BlockBase.Domain;
 using System.Net.Http;
 using static BlockBase.Network.PeerConnection;
 using Microsoft.Extensions.Options;
-using BlockBase.DataPersistence.ProducerData;
+using BlockBase.DataPersistence.Data;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Runtime.Helpers;
@@ -358,7 +358,8 @@ namespace BlockBase.Runtime.Requester
                 await _mainchainService.PunishProd(_sidechain.ClientAccountName);
             }
 
-            await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, contractInfo, producers);
+            //commented this, not used this way anymore, but this is old code anyway
+            //await _historyValidation.SendRequestHistoryValidation(_nodeConfigurations.AccountName, contractInfo, producers);
             _roundsUntilSettlement = (int)_sidechain.BlocksBetweenSettlement;
 
             await UpdateAuthorizations(producers, sidechainAccountInfo);
@@ -399,7 +400,8 @@ namespace BlockBase.Runtime.Requester
         public async Task EndSidechain()
         {
             if(TaskContainer != null) TaskContainer.CancellationTokenSource.Cancel();
-            await _mongoDbProducerService.DropRequesterDatabase(_sidechain.ClientAccountName);
+            //commented this because it isn't used this way anymore, but this is old code anyway
+            //await _mongoDbProducerService.DropRequesterDatabase(_sidechain.ClientAccountName);
         }
        
       

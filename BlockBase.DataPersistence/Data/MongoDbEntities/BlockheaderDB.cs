@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace BlockBase.DataPersistence.ProducerData.MongoDbEntities
+namespace BlockBase.DataPersistence.Data.MongoDbEntities
 {
     public class BlockheaderDB
     {

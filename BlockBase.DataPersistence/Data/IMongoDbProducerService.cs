@@ -2,18 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlockBase.Domain.Blockchain;
-using BlockBase.DataPersistence.ProducerData.MongoDbEntities;
+using BlockBase.DataPersistence.Data.MongoDbEntities;
 using BlockBase.Domain.Enums;
 
-namespace BlockBase.DataPersistence.ProducerData
+namespace BlockBase.DataPersistence.Data
 {
     public interface IMongoDbProducerService
     {
         Task CreateDatabasesAndIndexes(string databaseName);
-        Task CreateTransactionInfoIfNotExists(string databaseName);
         Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence);
-        Task AddTransactionsToSidechainDatabaseAsync(string databaseName, TransactionDB transaction);
-        Task AddTransactionsToSidechainDatabaseAsync(string databaseName, IEnumerable<TransactionDB> transactions);
         Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName);
         Task<Block> GetLastValidSidechainBlockAsync(string databaseName);
         Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
@@ -33,17 +30,12 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<Transaction> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
         Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber);
         Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash);
-        Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName);
-        Task<IList<ulong>> RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, uint numberOfIncludedTransactions, string lastValidBlockHash);
+        
         Task AddProducingSidechainToDatabaseAsync(string sidechain);
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllProducingSidechainsAsync();
         Task AddMaintainedSidechainToDatabaseAsync(string sidechain);
-        Task RemoveMaintainedSidechainFromDatabaseAsync(string sidechain);
-        Task<bool> CheckIfMaintainedSidechainAlreadyExists(string sidechain);
-        Task<IList<SidechainDB>> GetAllMaintainedSidechainsAsync();
-        Task DropRequesterDatabase(string sidechain);
         Task UpdateLastSearchedForTransactionsBlockHeader(string sidechain, BlockHeader blockHeader);
         Task<BlockHeader> GetLastSearchedForTransactionsBlockHeader(string sidechain);
     }
