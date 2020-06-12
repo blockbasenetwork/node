@@ -11,7 +11,7 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using System;
 
-namespace BlockBase.Runtime.StateMachine.SidechainState.States
+namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
     public class CandidatureState : ProviderAbstractState<StartState, EndState>
     {

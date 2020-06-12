@@ -3,7 +3,7 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
+namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
     public class EndState : ProviderAbstractState<StartState, EndState>
     {

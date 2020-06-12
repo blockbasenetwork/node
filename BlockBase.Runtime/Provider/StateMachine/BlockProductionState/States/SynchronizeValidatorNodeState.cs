@@ -15,7 +15,7 @@ using BlockBase.Runtime.Provider;
 using BlockBase.Utils.Operation;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
+namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
     public class SynchronizeValidatorNodeState : ProviderAbstractState<StartState, EndState>
     {

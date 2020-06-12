@@ -35,12 +35,12 @@ namespace BlockBase.Runtime.Sql
         private IConnector _connector;
         private InfoPostProcessing _infoPostProcessing;
         private ConcurrentVariables _concurrentVariables;
-        private TransactionsHandler _transactionSender;
+        private TransactionsHandler _transactionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private IList<Transaction> _transactionsToSendToProducers;
         private IMongoDbProducerService _mongoDbProducerService;
 
-        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
+        public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionsHandler transactionsHandler, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _transformer = transformer;
             _generator = generator;
@@ -49,7 +49,7 @@ namespace BlockBase.Runtime.Sql
             _infoPostProcessing = infoPostProcessing;
             _concurrentVariables = concurrentVariables;
             _nodeConfigurations = nodeConfigurations;
-            _transactionSender = transactionSender;
+            _transactionsHandler = transactionsHandler;
             _mongoDbProducerService = mongoDbProducerService;
             _transactionsToSendToProducers = new List<Transaction>();
         }
@@ -246,10 +246,10 @@ namespace BlockBase.Runtime.Sql
             _transactionsToSendToProducers.Select(t => new TransactionDB().TransactionDBFromTransaction(t)));
 
             foreach (var transactionToSend in _transactionsToSendToProducers)
-                _transactionSender.AddScriptTransactionToSend(transactionToSend);
+                _transactionsHandler.AddScriptTransactionToSend(transactionToSend);
 
-            if (_transactionSender.Task == null || _transactionSender.Task.Status.Equals(TaskStatus.RanToCompletion))
-                _transactionSender.Start();
+            if (_transactionsHandler.Task == null || _transactionsHandler.Task.Status.Equals(TaskStatus.RanToCompletion))
+                _transactionsHandler.Start();
         }
 
         private Transaction CreateTransaction(string json, ulong sequenceNumber, string databaseName, string senderPrivateKey)

@@ -17,7 +17,7 @@ using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace BlockBase.Runtime.StateMachine.BlockProductionState.States
+namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
     //TODO rpinto - before starting to produce a block some time should be given to make sure all other nodes catch up
     public class ProduceBlockState : ProviderAbstractState<StartState, EndState>

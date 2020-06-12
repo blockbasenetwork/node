@@ -1,17 +1,13 @@
-using System.Threading.Tasks;
 using BlockBase.DataPersistence.ProducerData;
-using BlockBase.DataPersistence.Sidechain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Network;
-using BlockBase.Runtime.Provider;
-using BlockBase.Runtime.StateMachine.BlockProductionState.States;
-using BlockBase.Utils.Threading;
+using BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.StateMachine.SidechainState
+namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
 {
     public class BlockProductionStateManager : AbstractStateManager<StartState, EndState>
     {

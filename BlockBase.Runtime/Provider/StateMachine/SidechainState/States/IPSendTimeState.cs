@@ -11,7 +11,7 @@ using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.StateMachine.SidechainState.States
+namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
     public class IPSendTimeState : ProviderAbstractState<StartState, EndState>
     {
