@@ -29,7 +29,6 @@ namespace BlockBase.DataPersistence.ProducerData
         Task<bool> IsBlockInDatabase(string databaseName, string blockhash);
         Task SaveTransaction(string databaseName, Transaction transaction);
         Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName);
-        Task<Transaction> GetLastIncludedTransaction(string databaseName);
         Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash);
         Task<Transaction> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber);
         Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber);

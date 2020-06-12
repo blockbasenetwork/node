@@ -291,7 +291,7 @@ namespace BlockBase.DataPersistence.ProducerData
                     }
 
                     await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
-                    
+
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
 
                     //TODO rpinto changed it to be bigger or equal to the number of blocks
@@ -301,7 +301,13 @@ namespace BlockBase.DataPersistence.ProducerData
                     {
                         return true;
                     }
-                    if (producerType == ProducerTypeEnum.Validator) return true;
+
+                    if (producerType == ProducerTypeEnum.Validator)
+                    {
+                        var lastSearchedForTransactionsBlockHeader = await GetLastSearchedForTransactionsBlockHeader(databaseName);
+                        if (lastSearchedForTransactionsBlockHeader.SequenceNumber >= blockheaderDB.SequenceNumber - 1)
+                            return true;
+                    }
                 }
             }
             return false;
@@ -337,17 +343,10 @@ namespace BlockBase.DataPersistence.ProducerData
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
 
-                blockHeader.Confirmed = true;
-                await blockHeaderCollection.ReplaceOneAsync(b => b.BlockHash == blockHash, blockHeader);
-
                 await blockHeaderCollection.DeleteManyAsync(b => b.SequenceNumber < blockHeader.SequenceNumber);
 
-                if (transactionCount != 0)
-                {
-                    var lastConfirmedTransaction = (await GetTransactionsByBlockSequenceNumberAsync(databaseName, blockHeader.SequenceNumber)).OrderByDescending(t => t.SequenceNumber).First();
-                    var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
-                    await transactionCollection.DeleteManyAsync(t => t.SequenceNumber < lastConfirmedTransaction.SequenceNumber);
-                }
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
+                await transactionCollection.DeleteManyAsync(t => t.SequenceNumber <= blockHeader.LastTransactionSequenceNumber);
             }
         }
 
@@ -547,24 +546,6 @@ namespace BlockBase.DataPersistence.ProducerData
                 return transactionDBList.Select(t => t.TransactionFromTransactionDB()).ToList();
             }
         }
-        public async Task<Transaction> GetLastIncludedTransaction(string databaseName)
-        {
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.TRANSACTIONS_COLLECTION_NAME);
-
-                var transactionQuery = from t in transactionCollection.AsQueryable()
-                                       where t.BlockHash != ""
-                                       orderby t.SequenceNumber
-                                       select t;
-                var transactionDB = (await transactionQuery.ToListAsync()).LastOrDefault();
-
-                return transactionDB?.TransactionFromTransactionDB();
-            }
-        }
-
         public async Task UpdateLastSearchedForTransactionsBlockHeader(string databaseName, BlockHeader blockHeader)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -591,7 +572,7 @@ namespace BlockBase.DataPersistence.ProducerData
                 var lastSearchedForTransactionsBlockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
 
                 var blockHeaderDB = await (await lastSearchedForTransactionsBlockHeaderCollection.FindAsync(b => true)).SingleOrDefaultAsync();
-                
+
                 return blockHeaderDB.BlockHeaderFromBlockHeaderDB();
             }
         }

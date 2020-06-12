@@ -87,9 +87,16 @@ namespace BlockBase.Runtime.Provider
 
                 _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
+                if (_sidechainPool.ProducerType != ProducerTypeEnum.Validator)
+                    _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks(_lastSidechainBlockheader.SequenceNumber)).ToList();
 
-                _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks(_lastSidechainBlockheader.SequenceNumber)).ToList();
-
+                else
+                {
+                    var lastSearchedForTransactionsBlockHeader = await _mongoDbProducerService.GetLastSearchedForTransactionsBlockHeader(_sidechainPool.ClientAccountName);
+                    _missingBlocksSequenceNumber = new List<ulong>();
+                    for (ulong i = _lastSidechainBlockheader.SequenceNumber; i > lastSearchedForTransactionsBlockHeader.SequenceNumber; i--)
+                        _missingBlocksSequenceNumber.Add(i);
+                }
 
                 while (true)
                 {
