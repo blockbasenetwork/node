@@ -189,7 +189,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                 var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
                 var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);
                 var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber, lastValidSubmittedBlockHeader?.LastTransactionSequenceNumber);
-                var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count(), lastValidSubmittedBlockHeader.LastTransactionSequenceNumber);
+                var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count(), lastValidSubmittedBlockHeader?.LastTransactionSequenceNumber ?? 0);
                 _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 _blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
 

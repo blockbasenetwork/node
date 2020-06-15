@@ -82,7 +82,7 @@ namespace BlockBase.Runtime.Network
                         var blockBefore = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement);
                         BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement)).ConvertToBlockHeader();
 
-                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && ValidateBlockTransactions(blockReceived, sidechainPool, blockBefore.LastTransactionSequenceNumber))
+                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && ValidateBlockTransactions(blockReceived, sidechainPool, blockBefore?.LastTransactionSequenceNumber ?? 0))
                         {
                            
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
