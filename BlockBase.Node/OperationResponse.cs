@@ -22,6 +22,13 @@ namespace BlockBase.Node
             ResponseMessage = message;
         }
 
+        public OperationResponse(string message, bool success)
+        {
+            Succeeded = success;
+            Response = default(T);
+            ResponseMessage = message;
+        }
+
         public OperationResponse(T response, string message = null)
         {
             Succeeded = true;

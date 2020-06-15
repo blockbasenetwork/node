@@ -10,6 +10,7 @@ namespace BlockBase.Domain.Eos
         public const string CANDIDATES_TABLE_NAME = "candidates";
         public const string PRODUCERS_TABLE_NAME = "producers";
         public const string CONTRACT_INFO_TABLE_NAME = "contractinfo";
+        public const string VERSION_TABLE_NAME = "version";
         public const string BLOCKHEADERS_TABLE_NAME = "blockheaders";
         public const string BLOCKCOUNT_TABLE_NAME = "blockscount";
         public const string CURRENT_PRODUCER_TABLE_NAME = "currentprod";
@@ -113,6 +114,7 @@ namespace BlockBase.Domain.Eos
         public const string BYTE_IN_HEXADECIMAL = "byteInHex";
         public const string PACKED_TRANSACTION = "packedTransaction";
         public const string VERIFY_SIGNATURE = "verifySignature";
+        public const string SOFTWARE_VERSION = "softwareVersion";
     }
 
     public class EosAtributeNames
@@ -122,6 +124,7 @@ namespace BlockBase.Domain.Eos
         public const string BLOCKS_FAILED = "num_blocks_failed";
         public const string BLOCKS_PRODUCED = "num_blocks_produced";
         public const string BLOCK_HASH = "block_hash";
+        public const string SOFTWARE_VERSION = "software_version";
         public const string PREVIOUS_BLOCK_HASH = "previous_block_hash";
         public const string SEQUENCE_NUMBER = "sequence_number";
         public const string TIMESTAMP = "timestamp";

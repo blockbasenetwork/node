@@ -10,6 +10,8 @@ using System.Text;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using System;
+using System.Reflection;
+using BlockBase.Utils;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
@@ -38,7 +40,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         protected override async Task DoWork()
         {
             var secretHash = HashHelper.Sha256Data(HashHelper.Sha256Data(Encoding.ASCII.GetBytes(_nodeConfigurations.SecretPassword)));
-            var addCandidateTransaction = await _mainchainService.AddCandidature(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), (int)_sidechainPool.ProducerType);
+            var softwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
+            var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
+            var addCandidateTransaction = await _mainchainService.AddCandidature(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), (int)_sidechainPool.ProducerType, softwareVersion);
             
             _logger.LogDebug($"Sent candidature to chain {_sidechainPool.ClientAccountName} Tx: {addCandidateTransaction}");
         }

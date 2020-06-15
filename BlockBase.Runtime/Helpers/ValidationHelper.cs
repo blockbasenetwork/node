@@ -45,7 +45,6 @@ namespace BlockBase.Runtime.Helpers
 
             auxBlockHeader.BlockHash = new byte[0];
             auxBlockHeader.ProducerSignature = "";
-            auxBlockHeader.BlockSizeInBytes = 0;
 
             var serializedBlockHeader = JsonConvert.SerializeObject(auxBlockHeader);
             blockHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedBlockHeader));

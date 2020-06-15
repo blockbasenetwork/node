@@ -97,13 +97,13 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType)
+        public async Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType, int softwareVersion)
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_CANDIDATE,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountName,
-                CreateDataForAddCandidate(chain, accountName, publicKey, secretHash, producerType)),
+                CreateDataForAddCandidate(chain, accountName, publicKey, secretHash, producerType, softwareVersion)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
             if (!opResult.Succeeded) throw opResult.Exception;
@@ -250,13 +250,13 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, string permission = "active")
+        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, int minimumSoftwareVersion = 1, string permission = "active")
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.CONFIG_CHAIN,
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
-                CreateDataForConfigurations(owner, contractInformation, reservedSeats),
+                CreateDataForConfigurations(owner, contractInformation, reservedSeats, minimumSoftwareVersion),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -624,6 +624,18 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result.SingleOrDefault();
         }
 
+        public async Task<VersionTable> RetrieveSidechainNodeVersion(string chain)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VersionTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.VERSION_TABLE_NAME,
+                chain),
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result.SingleOrDefault();
+        }
+
         public async Task<ContractStateTable> RetrieveContractState(string chain)
         {
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractStateTable>(
@@ -761,7 +773,7 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, string publicKey, string secretHash, int producerType)
+        private Dictionary<string, object> CreateDataForAddCandidate(string chain, string name, string publicKey, string secretHash, int producerType, int softwareVersion)
         {
             return new Dictionary<string, object>()
             {
@@ -769,7 +781,8 @@ namespace BlockBase.Network.Mainchain
                 {EosParameterNames.CANDIDATE, name},
                 {EosParameterNames.PUBLIC_KEY, publicKey},
                 {EosParameterNames.SECRET_HASH, secretHash},
-                {EosParameterNames.PRODUCER_TYPE, producerType}
+                {EosParameterNames.PRODUCER_TYPE, producerType},
+                {EosParameterNames.SOFTWARE_VERSION, softwareVersion}
             };
         }
 
@@ -913,14 +926,15 @@ namespace BlockBase.Network.Mainchain
         }
 
 
-        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats)
+        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats, int minimumSoftwareVersion)
         {
             reservedSeats = reservedSeats ?? new List<string>();
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.CONFIG_INFO_JSON, contractInformation },
-                { EosParameterNames.RESERVED_SEATS, reservedSeats}
+                { EosParameterNames.RESERVED_SEATS, reservedSeats },
+                { EosParameterNames.SOFTWARE_VERSION, minimumSoftwareVersion }
             };
         }
 

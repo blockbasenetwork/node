@@ -66,9 +66,6 @@ namespace BlockBase.Runtime.Network
             await sidechainSemaphore.WaitAsync();
             try
             {
-                if(!ValidateBlockSize(blockProtoReceived))
-                    throw new Exception("Block size incorrect.");
-            
                 var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
                 
                 var blockHashString = HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash);
@@ -121,16 +118,6 @@ namespace BlockBase.Runtime.Network
                 sidechainSemaphore.Release();
             }
 
-        }
-
-        private bool ValidateBlockSize(BlockProto blockProtoReceived)
-        {
-            var declaredBlockSize =  blockProtoReceived.BlockHeader.BlockSizeInBytes;
-            blockProtoReceived.BlockHeader.BlockSizeInBytes = 0;
-            var blockSize = (ulong) blockProtoReceived.ToByteArray().Count();
-            blockProtoReceived.BlockHeader.BlockSizeInBytes = declaredBlockSize;
-
-            return declaredBlockSize == blockSize;
         }
 
         private async Task<bool> AlreadyProcessedThisBlock(string sidechain, string blockhash)

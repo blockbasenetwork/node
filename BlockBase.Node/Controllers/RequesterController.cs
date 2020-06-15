@@ -27,6 +27,8 @@ using System.Linq;
 using System.Globalization;
 using BlockBase.Node.Filters;
 using BlockBase.Utils.Crypto;
+using System.Reflection;
+using BlockBase.Utils;
 
 namespace BlockBase.Node.Controllers
 {
@@ -289,7 +291,9 @@ namespace BlockBase.Node.Controllers
 
                     try
                     {
-                        var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats);
+                        var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
+                        var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
+                        var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
                         return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
                     }
                     catch (ApiErrorException)
