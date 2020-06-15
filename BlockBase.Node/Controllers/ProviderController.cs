@@ -17,6 +17,7 @@ using BlockBase.Domain.Enums;
 using BlockBase.DataPersistence.Utils;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Runtime.Provider;
+using BlockBase.Utils;
 
 namespace BlockBase.Node.Controllers
 {
@@ -597,6 +598,67 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// Gets the decrypted node ips this node has access to in a given sidechain
+        /// </summary>
+        /// <returns>Decrypted node ips</returns>
+        /// <response code="200">Decrypted ips retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="401">No Ips found in table</response>
+        /// <response code="402">Producer not found in table</response>
+        /// <response code="500">Error retrieving ips</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the decrypted node ips this node has access to in a given sidechain",
+            Description = "Gets all the node account staked tokens and on witch sidechain the tokens are staked.",
+            OperationId = "GetDecryptedNodeIps"
+        )]
+        public async Task<ObjectResult> GetDecryptedNodeIps(string sidechainName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
+
+                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(sidechainName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
+                var ipAddresses = await _mainchainService.RetrieveIPAddresses(sidechainName);
+
+                if (contractState == null) return BadRequest(new OperationResponse<string>($"Contract state not found for {sidechainName}"));
+                if (producers == null) return BadRequest(new OperationResponse<string>($"Producer table not found for {sidechainName}"));
+                if (contractInfo == null) return BadRequest(new OperationResponse<string>($"Contract info not found for {sidechainName}"));
+                if (ipAddresses == null) return BadRequest(new OperationResponse<string>($"IP Addresses table not found for {sidechainName}"));
+
+                if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any())) 
+                    return StatusCode(401, new OperationResponse<string>($"IP Addresses table doesn't have any IPs for {sidechainName}"));
+                
+                if (!producers.Any(m => m.Key == NodeConfigurations.AccountName))
+                    return StatusCode(402, new OperationResponse<string>($"Producer {NodeConfigurations.AccountName} not found in producers table for {sidechainName}"));
+                
+                var ipsToReturn = new Dictionary<string, string>();
+
+                foreach (var ipAddressTable in ipAddresses) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
+                
+                int numberOfIpsToTake = (int)Math.Ceiling(producers.Count() / 4.0);
+                var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producers, producers.FindIndex(m => m.Key == NodeConfigurations.AccountName)).Take(numberOfIpsToTake).ToList();
+
+                foreach (var producer in orderedProducersInPool)
+                {
+                    var producerIndex = orderedProducersInPool.IndexOf(producer);
+                    var producerIps = ipAddresses.Where(p => p.Key == producer.Key).FirstOrDefault();
+
+                    var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
+                    var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
+                    var producerIp = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, NodeConfigurations.ActivePrivateKey, producer.PublicKey);
+                    ipsToReturn.Add(producer.Key, producerIp.ToString());
+                }
+
+                return Ok(ipsToReturn);
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
     }
 }
