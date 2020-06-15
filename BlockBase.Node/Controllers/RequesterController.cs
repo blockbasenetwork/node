@@ -24,6 +24,7 @@ using BlockBase.Domain.Pocos;
 using EosSharp.Core.Exceptions;
 using BlockBase.Runtime.Sql;
 using System.Linq;
+using System.Globalization;
 
 namespace BlockBase.Node.Controllers
 {
@@ -82,11 +83,47 @@ namespace BlockBase.Node.Controllers
             try
             {
 
+                bool fetchedExternalUtcTimeReference = false;
+                TimeSpan timeDifference = TimeSpan.FromSeconds(0);
+                
+                DateTime machineUtcDateTime = DateTime.UtcNow;
+                DateTime externalUtcDateTime = DateTime.MinValue;
+
+
+
+                try
+                {
+                    var webClient = new WebClient();
+                    var result = webClient.DownloadString(new Uri("http://worldtimeapi.org/api/timezone/Etc/UTC"));
+                    machineUtcDateTime = DateTime.UtcNow;
+
+
+
+                    if(string.IsNullOrWhiteSpace(result))
+                        fetchedExternalUtcTimeReference = false;
+
+                    var obj = new { datetime = string.Empty };
+
+                    var jsonResult = JsonConvert.DeserializeObject(result, obj.GetType());
+
+                    string dateTimeToParse = ((dynamic)jsonResult).datetime;
+                    DateTime parsedTime;
+                    if(!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
+                        fetchedExternalUtcTimeReference = false;
+
+                    fetchedExternalUtcTimeReference = true;
+                    externalUtcDateTime = parsedTime;
+                    timeDifference = machineUtcDateTime - externalUtcDateTime;
+                }
+                catch
+                {
+
+                }
+
                 string configuredPublicIp = NetworkConfigurations.PublicIpAddress.Trim();
                 string fetchedPublicIp = null;
                 bool fetchedPublicIpSuccessfully = false;
                 bool isConfiguredIPEqualToPublicIP = false;
-                
 
                 try
                 {
@@ -164,11 +201,15 @@ namespace BlockBase.Node.Controllers
                 return Ok(new OperationResponse<dynamic>(
                     new
                     {
+                        fetchedExternalUtcTimeReference,
+                        machineUtcDateTime,
+                        externalUtcDateTime,
+                        timeDifference,
+
                         configuredPublicIp,
                         fetchedPublicIpSuccessfully,
                         fetchedPublicIp,
                         isConfiguredIPEqualToPublicIP,
-
 
                         tcpPort,
                         accountName,
