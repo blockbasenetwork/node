@@ -19,26 +19,30 @@ using BlockBase.Domain.Blockchain;
 using BlockBase.Runtime.Provider;
 using Newtonsoft.Json;
 using System.Globalization;
+using BlockBase.Node.Filters;
 
 namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "providerApi")]
+    [ServiceFilter(typeof(ApiKeyAttribute))]
     public class ProviderController : ControllerBase
     {
         private NodeConfigurations NodeConfigurations;
         private NetworkConfigurations NetworkConfigurations;
+        private ApiSecurityConfigurations ApiSecurityConfigurations;
         private readonly ILogger _logger;
         private readonly ISidechainProducerService _sidechainProducerService;
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
         private IConnectionsChecker _connectionsChecker;
 
-        public ProviderController(ILogger<ProviderController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker)
+        public ProviderController(ILogger<ProviderController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
+            ApiSecurityConfigurations = apiSecurityConfigurations?.Value;
 
             _logger = logger;
             _sidechainProducerService = sidechainProducerService;

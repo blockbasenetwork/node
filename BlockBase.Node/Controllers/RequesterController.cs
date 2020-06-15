@@ -25,41 +25,41 @@ using EosSharp.Core.Exceptions;
 using BlockBase.Runtime.Sql;
 using System.Linq;
 using System.Globalization;
+using BlockBase.Node.Filters;
 
 namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "requesterApi")]
+    [ServiceFilter(typeof(ApiKeyAttribute))]
     public class RequesterController : ControllerBase
     {
         private NodeConfigurations NodeConfigurations;
         private NetworkConfigurations NetworkConfigurations;
         private RequesterConfigurations RequesterConfigurations;
-        private SidechainPhasesTimesConfigurations SidechainPhasesTimesConfigurations;
+        private ApiSecurityConfigurations ApiSecurityConfigurations;
         private readonly ILogger _logger;
         private readonly IMainchainService _mainchainService;
         private ISidechainMaintainerManager _sidechainMaintainerManager;
         private DatabaseKeyManager _databaseKeyManager;
-        private SecurityConfigurations _securityConfigurations;
         private IConnectionsChecker _connectionsChecker;
         private SqlCommandManager _sqlCommandManager;
         private IConnector _connector;
 
         
-        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<SidechainPhasesTimesConfigurations> sidechainPhasesTimesConfigurations, IOptions<SecurityConfigurations> securityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbRequesterService mongoDbRequesterService)
+        public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbRequesterService mongoDbRequesterService)
         {
             NodeConfigurations = nodeConfigurations?.Value;
             NetworkConfigurations = networkConfigurations?.Value;
             RequesterConfigurations = requesterConfigurations?.Value;
-            SidechainPhasesTimesConfigurations = sidechainPhasesTimesConfigurations?.Value;
+            ApiSecurityConfigurations = apiSecurityConfigurations?.Value;
 
             _logger = logger;
             _mainchainService = mainchainService;
             _sidechainMaintainerManager = sidechainMaintainerManager;
             _databaseKeyManager = databaseKeyManager;
             _connectionsChecker = connectionsChecker;
-            _securityConfigurations = securityConfigurations.Value;
             _databaseKeyManager = databaseKeyManager;
             _connector = psqlConnector;
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbRequesterService);
@@ -88,9 +88,6 @@ namespace BlockBase.Node.Controllers
                 
                 DateTime machineUtcDateTime = DateTime.UtcNow;
                 DateTime externalUtcDateTime = DateTime.MinValue;
-
-
-
                 try
                 {
                     var webClient = new WebClient();
@@ -322,12 +319,12 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> SetSecret()
         {
-            SecurityConfigurations config;
+            DatabaseSecurityConfigurations config;
             try
             {
-                if (_securityConfigurations.UseSecurityConfigurations)
+                if (RequesterConfigurations.DatabaseSecurityConfigurations.Use)
                 {
-                    _databaseKeyManager.SetInitialSecrets(_securityConfigurations);
+                    _databaseKeyManager.SetInitialSecrets(RequesterConfigurations.DatabaseSecurityConfigurations);
                 }
 
                 else
@@ -335,7 +332,7 @@ namespace BlockBase.Node.Controllers
                     using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
                     {
                         var json = await reader.ReadToEndAsync();
-                        config = JsonConvert.DeserializeObject<SecurityConfigurations>(json);
+                        config = JsonConvert.DeserializeObject<DatabaseSecurityConfigurations>(json);
                     }
                     _databaseKeyManager.SetInitialSecrets(config);
                 }
@@ -548,10 +545,10 @@ namespace BlockBase.Node.Controllers
             configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.ValidatorNodes.MinPaymentPerBlock);
             configurations.Stake = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumProducerStake);
 
-            configurations.CandidatureTime = SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
-            configurations.SendSecretTime = SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;
-            configurations.SendTime = SidechainPhasesTimesConfigurations.IpSendingPhaseDurationInSeconds;
-            configurations.ReceiveTime = SidechainPhasesTimesConfigurations.IpRetrievalPhaseDurationInSeconds;
+            configurations.CandidatureTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
+            configurations.SendSecretTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;
+            configurations.SendTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.IpSendingPhaseDurationInSeconds;
+            configurations.ReceiveTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.IpRetrievalPhaseDurationInSeconds;
 
             var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
 

@@ -43,6 +43,7 @@ namespace BlockBase.Node
                     .ConfigureMainSettings(args)
                     .ConfigureNetworkService()
                     .ConfigureSidechainService()
+                    .ConfigureApiSecurity()
                     .GetBuilder();
 
             return builder;

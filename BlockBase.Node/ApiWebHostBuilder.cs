@@ -26,6 +26,7 @@ using Serilog.Sinks.SystemConsole.Themes;
 using System;
 using System.IO;
 using System.Net;
+using BlockBase.Node.Filters;
 
 namespace BlockBase.Api
 {
@@ -67,16 +68,16 @@ namespace BlockBase.Api
                 services.Configure<NetworkConfigurations>(configuration.GetSection("NetworkConfigurations"));
                 services.Configure<NodeConfigurations>(configuration.GetSection("NodeConfigurations"));
                 services.Configure<RequesterConfigurations>(configuration.GetSection("RequesterConfigurations"));
-                services.Configure<SidechainPhasesTimesConfigurations>(configuration.GetSection("SidechainPhasesTimesConfigurations"));
-                services.Configure<SecurityConfigurations>(configuration.GetSection("SecurityConfigurations"));
+                services.Configure<ApiSecurityConfigurations>(configuration.GetSection("ApiSecurityConfigurations"));
                 services.AddOptions();
 
-                Func<string, IPAddress> simpleParse = (ipAddressString) => {
+                Func<string, IPAddress> simpleParse = (ipAddressString) =>
+                {
                     IPAddress ipAddress;
-                    if (!IPAddress.TryParse (ipAddressString, out ipAddress))
+                    if (!IPAddress.TryParse(ipAddressString, out ipAddress))
                     {
                         var addressList = Dns.GetHostEntry(ipAddressString)?.AddressList;
-                        if(addressList != null && addressList.Length > 0) ipAddress = addressList[0];
+                        if (addressList != null && addressList.Length > 0) ipAddress = addressList[0];
                     }
                     return ipAddress;
                 };
@@ -100,6 +101,32 @@ namespace BlockBase.Api
                     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                     c.IncludeXmlComments(xmlPath);
                     c.EnableAnnotations();
+
+                    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+                    {
+                        Description = "Api key needed to access the endpoints. X-Api-Key: My_API_Key",
+                        In = ParameterLocation.Header,
+                        Name = "ApiKey",
+                        Type = SecuritySchemeType.ApiKey
+                    });
+
+                    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                    {
+                        {
+                            new OpenApiSecurityScheme
+                            {
+                                Name = "ApiKey",
+                                Type = SecuritySchemeType.ApiKey,
+                                In = ParameterLocation.Header,
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "ApiKey"
+                                },
+                            },
+                            new string[] {}
+                        }
+                    });
                 });
             });
 
@@ -117,7 +144,7 @@ namespace BlockBase.Api
                     .WriteTo.Console(theme: AnsiConsoleTheme.Code)
                     .WriteTo.File($"logs/ProducerD_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
                     .CreateLogger();
-                    
+
                 logging.AddSerilog();
             });
 
@@ -153,7 +180,7 @@ namespace BlockBase.Api
                 services.AddSingleton<PeerConnectionsHandler>();
                 services.AddSingleton<BlockValidationsHandler>();
                 services.AddSingleton<TransactionValidationsHandler>();
-                services.AddSingleton<DatabaseKeyManager>();                
+                services.AddSingleton<DatabaseKeyManager>();
                 services.AddSingleton<IMongoDbProducerService, MongoDbProducerService>();
                 services.AddSingleton<IMongoDbRequesterService, MongoDbRequesterService>();
                 services.AddSingleton<IConnectionsChecker, ConnectionsChecker>();
@@ -161,6 +188,16 @@ namespace BlockBase.Api
                 services.AddSingleton<ISidechainMaintainerManager, SidechainMaintainerManager>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<SidechainKeeper>();
+            });
+
+            return this;
+        }
+
+        public ApiWebHostBuilder ConfigureApiSecurity()
+        {
+            _webHostBuider.ConfigureServices((hostContext, services) =>
+            {
+                services.AddScoped<ApiKeyAttribute>();
             });
 
             return this;

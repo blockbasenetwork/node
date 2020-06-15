@@ -16,12 +16,14 @@ using Newtonsoft.Json;
 using BlockBase.Domain.Results;
 using BlockBase.Domain.Enums;
 using BlockBase.Runtime.Network;
+using BlockBase.Node.Filters;
 
 namespace BlockBase.Node.Controllers
 {
     [Route("api/[controller]/[action]")]
     [ApiController]
     [ApiExplorerSettings(GroupName = "networkApi")]
+    [ServiceFilter(typeof(ApiKeyAttribute))]
     public class NetworkController : ControllerBase
     {
         private readonly ILogger _logger;

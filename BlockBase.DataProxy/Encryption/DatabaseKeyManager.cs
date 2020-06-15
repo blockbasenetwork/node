@@ -36,7 +36,7 @@ namespace BlockBase.DataProxy.Encryption
         {
             _infoRecordManager = new InfoRecordManager();
         }
-        public void SetInitialSecrets(SecurityConfigurations config)
+        public void SetInitialSecrets(DatabaseSecurityConfigurations config)
         {
             var filePassword = "";
             var encryptionMasterKey = "";
