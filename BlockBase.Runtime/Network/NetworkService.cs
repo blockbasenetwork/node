@@ -97,10 +97,6 @@ namespace BlockBase.Runtime.Network
         {
             MessageForwarder.BlocksRequestReceived += eventHandler;
         }
-        public void SubscribeLastIncludedTransactionRequestReceivedEvent(LastIncludedTransactionRequestReceivedEventHandler eventHandler)
-        { 
-            MessageForwarder.LastIncludedTransactionRequestReceived += eventHandler;
-        }
         public void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler)
         {
             MessageForwarder.PingReceived += eventHandler;

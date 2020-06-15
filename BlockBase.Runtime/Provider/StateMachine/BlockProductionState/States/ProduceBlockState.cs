@@ -189,7 +189,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                 var lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
                 var blockHashAndSequenceNumber = CalculatePreviousBlockHashAndSequenceNumber(lastValidSubmittedBlockHeader);
                 var blockHeader = CreateBlockHeader(blockHashAndSequenceNumber.previousBlockhash, blockHashAndSequenceNumber.sequenceNumber, lastValidSubmittedBlockHeader?.LastTransactionSequenceNumber);
-                var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count());
+                var transactionsToIncludeInBlock = await GetTransactionsToIncludeInBlock(blockHeader.ConvertToProto().ToByteArray().Count(), lastValidSubmittedBlockHeader?.LastTransactionSequenceNumber ?? 0);
                 _builtBlock = BuildBlock(blockHeader, transactionsToIncludeInBlock);
                 _blockHash = HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash);
 
@@ -235,24 +235,23 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         }
 
 
-        private async Task<IList<Transaction>> GetTransactionsToIncludeInBlock(int blockHeaderSizeInBytes)
+        private async Task<IList<Transaction>> GetTransactionsToIncludeInBlock(int blockHeaderSizeInBytes, ulong lastIncludedTransactionSequenceNumber)
         {
             var transactionsDatabaseName = _sidechainPool.ClientAccountName;
             var allLooseTransactions = await _mongoDbProducerService.RetrieveTransactionsInMempool(transactionsDatabaseName);
-            ulong lastSequenceNumber = (await _mongoDbProducerService.GetLastIncludedTransaction(transactionsDatabaseName))?.SequenceNumber ?? 0;
             var transactions = new List<Transaction>();
             uint sizeInBytes = 0;
 
             foreach (var looseTransaction in allLooseTransactions)
             {
-                if (looseTransaction.SequenceNumber != lastSequenceNumber + 1) break;
+                if (looseTransaction.SequenceNumber != lastIncludedTransactionSequenceNumber + 1) break;
                 var transactionSize = looseTransaction.ConvertToProto().ToByteArray().Count();
                 _logger.LogDebug("transaction size in bytes " + _sidechainPool.BlockSizeInBytes);
                 if ((sizeInBytes + blockHeaderSizeInBytes + transactionSize) > _sidechainPool.BlockSizeInBytes) break;
                 sizeInBytes += (uint)(transactionSize);
-                lastSequenceNumber = looseTransaction.SequenceNumber;
+                lastIncludedTransactionSequenceNumber = looseTransaction.SequenceNumber;
                 transactions.Add(looseTransaction);
-                _logger.LogDebug($"Including transaction {lastSequenceNumber}");
+                _logger.LogDebug($"Including transaction {lastIncludedTransactionSequenceNumber}");
             }
             return transactions;
         }

@@ -49,7 +49,6 @@ namespace BlockBase.Runtime.Provider
         private bool _receiving;
         private DateTime _lastReceivedDate;
         private ProducerInPool _currentSendingProducer;
-        private bool _last_transaction_missing;
         TransactionValidationsHandler _transactionValidationsHandler;
 
         private static readonly int MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS = 10;
@@ -67,27 +66,10 @@ namespace BlockBase.Runtime.Provider
             _mainchainService = mainchainService;
             _endPoint = endPoint;
             _networkService.SubscribeRecoverBlockReceivedEvent(MessageForwarder_RecoverBlockReceived);
-            _networkService.SubscribeLastIncludedTransactionRequestReceivedEvent(MessageForwarder_LastIncludedTransactionReceived);
             _blocksApproved = new List<Block>();
             _orphanBlocks = new List<Block>();
 
             _transactionValidationsHandler = transactionValidationsHandler;
-        }
-
-        private async void MessageForwarder_LastIncludedTransactionReceived(LastIncludedTransactionRequestReceivedEventArgs args)
-        {
-            // _logger.LogDebug("Received last included transaction.");
-            _last_transaction_missing = false;
-            if (!args.TransactionBytes.SequenceEqual(new byte[0]))
-            {
-                var transactionProto = TransactionProto.Parser.ParseFrom(args.TransactionBytes);
-                var transaction = new Transaction().SetValuesFromProto(transactionProto);
-                if (_transactionValidationsHandler.ValidateTransaction(transaction, args.ClientAccountName))
-                {
-                    await _transactionValidationsHandler.SaveTransaction(args.ClientAccountName, transaction);
-                }
-                else _last_transaction_missing = true;
-            }
         }
 
         public async Task<OpResult<bool>> Run()
@@ -105,21 +87,22 @@ namespace BlockBase.Runtime.Provider
 
                 _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
-                if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator)
-                {
-                    _last_transaction_missing = true;
-                    _missingBlocksSequenceNumber = new List<ulong>() { _lastSidechainBlockheader.SequenceNumber };
-                }
-
-                else
+                if (_sidechainPool.ProducerType != ProducerTypeEnum.Validator)
                     _missingBlocksSequenceNumber = (await GetSequenceNumberOfMissingBlocks(_lastSidechainBlockheader.SequenceNumber)).ToList();
 
+                else
+                {
+                    var lastSearchedForTransactionsBlockHeader = await _mongoDbProducerService.GetLastSearchedForTransactionsBlockHeader(_sidechainPool.ClientAccountName);
+                    _missingBlocksSequenceNumber = new List<ulong>();
+                    for (ulong i = _lastSidechainBlockheader.SequenceNumber; i > lastSearchedForTransactionsBlockHeader.SequenceNumber; i--)
+                        _missingBlocksSequenceNumber.Add(i);
+                }
 
                 while (true)
                 {
                     _currentSendingProducer = validConnectedProducers.ElementAt(producerIndex);
 
-                    if (_missingBlocksSequenceNumber.Count() == 0 && !_last_transaction_missing)
+                    if (_missingBlocksSequenceNumber.Count() == 0)
                     {
                         _logger.LogDebug("No more missing blocks.");
                         return new OpResult<bool>(true);
@@ -136,13 +119,6 @@ namespace BlockBase.Runtime.Provider
 
                     var blockMessage = BuildRequestBlocksNetworkMessage(_currentSendingProducer, _currentlyGettingBlocks, _sidechainPool.ClientAccountName);
                     await _networkService.SendMessageAsync(blockMessage);
-
-                    if (_last_transaction_missing)
-                    {
-                        var transactionMessage = BuildRequestLastIncludedTransactionNetworkMessage(_currentSendingProducer, _sidechainPool.ClientAccountName);
-                        await _networkService.SendMessageAsync(transactionMessage);
-                        // _logger.LogDebug("Asking for last included transaction.");
-                    }
 
                     _lastReceivedDate = DateTime.UtcNow;
                     while (_receiving && DateTime.UtcNow.Subtract(_lastReceivedDate).TotalSeconds <= MAX_TIME_BETWEEN_MESSAGES_IN_SECONDS)
