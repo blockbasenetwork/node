@@ -44,6 +44,7 @@ namespace BlockBase.Domain.Blockchain
 
         public Dictionary<string, object> ConvertToEosObject()
         {
+            
             return new Dictionary<string, object>()
             {
                 { EosAtributeNames.PRODUCER, Producer },

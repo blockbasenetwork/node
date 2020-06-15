@@ -15,8 +15,6 @@ namespace BlockBase.Runtime.Helpers
 
          public static bool ValidateBlockAndBlockheader(Block blockReceived, SidechainPool sidechainPool, BlockHeader blockheaderFromSmartContract, ILogger logger, out byte[] trueBlockHash)
         {
-            var receivedBlockHash = (byte[])blockReceived.BlockHeader.BlockHash.Clone();
-            var receivedSignature = (string)blockReceived.BlockHeader.ProducerSignature.Clone();
 
             if (!IsBlockHashValid(blockReceived.BlockHeader, out trueBlockHash))
             {
@@ -33,7 +31,7 @@ namespace BlockBase.Runtime.Helpers
 
             var producerPublicKey = sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == blockReceived.BlockHeader.Producer).Select(n => n.ProducerInfo.PublicKey).SingleOrDefault();
 
-            if (!SignatureHelper.VerifySignature(producerPublicKey, receivedSignature, receivedBlockHash))
+            if (!SignatureHelper.VerifySignature(producerPublicKey, blockReceived.BlockHeader.ProducerSignature, blockReceived.BlockHeader.BlockHash))
             {
                 logger.LogDebug("Invalid signature.");
                 return false;
@@ -47,6 +45,7 @@ namespace BlockBase.Runtime.Helpers
 
             auxBlockHeader.BlockHash = new byte[0];
             auxBlockHeader.ProducerSignature = "";
+            auxBlockHeader.BlockSizeInBytes = 0;
 
             var serializedBlockHeader = JsonConvert.SerializeObject(auxBlockHeader);
             blockHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedBlockHeader));

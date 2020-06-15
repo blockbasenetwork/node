@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BlockBase.Domain.Blockchain;
@@ -18,7 +17,7 @@ using BlockBase.Utils.Crypto;
 using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
+using Google.Protobuf;
 using static BlockBase.Network.Rounting.MessageForwarder;
 using BlockBase.Runtime.Helpers;
 using BlockBase.Runtime.Provider;
@@ -67,8 +66,11 @@ namespace BlockBase.Runtime.Network
             await sidechainSemaphore.WaitAsync();
             try
             {
+                if(!ValidateBlockSize(blockProtoReceived))
+                    throw new Exception("Block size incorrect.");
+            
                 var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
-
+                
                 var blockHashString = HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash);
 
                 if (await AlreadyProcessedThisBlock(databaseName, blockHashString)) return;
@@ -118,6 +120,16 @@ namespace BlockBase.Runtime.Network
                 sidechainSemaphore.Release();
             }
 
+        }
+
+        private bool ValidateBlockSize(BlockProto blockProtoReceived)
+        {
+            var declaredBlockSize =  blockProtoReceived.BlockHeader.BlockSizeInBytes;
+            blockProtoReceived.BlockHeader.BlockSizeInBytes = 0;
+            var blockSize = (ulong) blockProtoReceived.ToByteArray().Count();
+            blockProtoReceived.BlockHeader.BlockSizeInBytes = declaredBlockSize;
+
+            return declaredBlockSize == blockSize;
         }
 
         private async Task<bool> AlreadyProcessedThisBlock(string sidechain, string blockhash)
