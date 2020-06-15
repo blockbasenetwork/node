@@ -73,6 +73,9 @@ namespace BlockBase.Domain.Eos
         public const string HISTORY_VALIDATE = "histvalidate";
         public const string ADD_BLOCK_BYTE = "addblckbyte";
         public const string ADD_VERIFY_SIGNATURE = "addversig";
+        public const string UNLINK_AUTH = "unlinkauth";
+        public const string DELETE_AUTH = "deleteauth";
+
     }
 
     public class EosParameterNames

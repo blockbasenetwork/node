@@ -504,6 +504,34 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<string> UnlinkAction(string owner, string actionToUnlink, string permission = "active")
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.UNLINK_AUTH,
+                EosAtributeNames.EOSIO,
+                owner,
+                CreateDataForUnlinkAuthorization(owner, actionToUnlink),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> DeletePermission(string owner, string permissionToDelete, string permission = "active")
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.DELETE_AUTH,
+                EosAtributeNames.EOSIO,
+                owner,
+                CreateDataForDeleteAuthorization(owner, permissionToDelete),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         #endregion
 
         #region Table Retrievers
@@ -958,6 +986,15 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
+        private Dictionary<string, object> CreateDataForDeleteAuthorization(string owner, string permissionToDelete)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.ACCOUNT, owner },
+                { EosParameterNames.PERMISSION, permissionToDelete }
+            };
+        }
+
         private Dictionary<string, object> CreateDataForLinkAuthorization(string owner, string action, string requirement)
         {
             return new Dictionary<string, object>()
@@ -966,6 +1003,16 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.CODE, NetworkConfigurations.BlockBaseOperationsContract },
                 { EosParameterNames.TYPE, action },
                 { EosParameterNames.REQUIREMENT, requirement },
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForUnlinkAuthorization(string owner, string action)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.ACCOUNT, owner },
+                { EosParameterNames.CODE, NetworkConfigurations.BlockBaseOperationsContract },
+                { EosParameterNames.TYPE, action }
             };
         }
 
