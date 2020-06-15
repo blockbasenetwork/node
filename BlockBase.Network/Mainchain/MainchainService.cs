@@ -974,16 +974,6 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForAddStake(string owner, string sidechainName, string stake)
-        {
-            return new Dictionary<string, object>()
-            {
-                { EosParameterNames.OWNER, owner },
-                { EosParameterNames.SIDECHAIN, sidechainName },
-                { EosParameterNames.STAKE, stake}
-            };
-        }
-
         private Dictionary<string, object> CreateDataForAddBlockByte(string owner, string producerName, string byteInHexadecimal)
         {
             return new Dictionary<string, object>()
