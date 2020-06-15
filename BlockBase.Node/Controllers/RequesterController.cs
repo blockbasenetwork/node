@@ -26,6 +26,7 @@ using BlockBase.Runtime.Sql;
 using System.Linq;
 using System.Globalization;
 using BlockBase.Node.Filters;
+using BlockBase.Utils.Crypto;
 
 namespace BlockBase.Node.Controllers
 {
@@ -170,16 +171,16 @@ namespace BlockBase.Node.Controllers
 
                     var permission = accountInfo.permissions.SingleOrDefault(p => p.perm_name == "active");
 
-                    if(permission != null)
+                    if (permission != null)
                     {
                         var correspondingActiveKey = permission.required_auth?.keys?.SingleOrDefault(k => k.key == activePublicKey);
-                        if(correspondingActiveKey != null)
+                        if (correspondingActiveKey != null)
                             activeKeyFoundOnAccount = true;
-                        if(correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
+                        if (correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
                             activeKeyHasEnoughWeight = true;
-                        
+
                     }
-                    
+
 
                 }
                 catch { }
@@ -221,7 +222,7 @@ namespace BlockBase.Node.Controllers
                         netLimit,
                         ramUsed,
                         ramLimit,
-                        
+
                         mongoDbConnectionString,
                         mongoDbPrefix,
                         isMongoLive,
@@ -264,7 +265,7 @@ namespace BlockBase.Node.Controllers
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
                 if (contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
 
-                
+
 
                 if (stake > 0)
                 {
@@ -420,7 +421,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                
+
                 await _sidechainMaintainerManager.End();
 
                 //TODO rpinto - should all this functionality below be encapsulated inside the sidechainMaintainerManager?
@@ -666,6 +667,54 @@ namespace BlockBase.Node.Controllers
             catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets the decrypted node ips in the requester sidechain
+        /// </summary>
+        /// <returns>Decrypted node ips</returns>
+        /// <response code="200">Decrypted ips retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="401">No Ips found in table</response>
+        /// <response code="500">Error retrieving ips</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the decrypted node ips in the requester sidechain",
+            Description = "Gets all the decrypted node ips that are stored in encrypted form in the smart contract tables",
+            OperationId = "GetDecryptedNodeIps"
+        )]
+        public async Task<ObjectResult> GetDecryptedNodeIps()
+        {
+            try
+            {
+                var sidechainName = NodeConfigurations.AccountName;
+
+                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
+                var ipAddresses = await _mainchainService.RetrieveIPAddresses(sidechainName);
+
+                if (contractState == null) return BadRequest(new OperationResponse<string>($"Contract state not found for {sidechainName}"));
+                if (contractInfo == null) return BadRequest(new OperationResponse<string>($"Contract info not found for {sidechainName}"));
+                if (ipAddresses == null) return BadRequest(new OperationResponse<string>($"IP Addresses table not found for {sidechainName}"));
+
+                if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any()))
+                    return StatusCode(401, new OperationResponse<string>($"IP Addresses table doesn't have any IPs for {sidechainName}"));
+
+                var ipsToReturn = new Dictionary<string, string>();
+
+                foreach (var ipAddressTable in ipAddresses)
+                {
+                    var encryptedIp = ipAddressTable.EncryptedIPs?.LastOrDefault();
+                    var decryptedIp = AssymetricEncryption.DecryptIP(encryptedIp, NodeConfigurations.ActivePrivateKey, ipAddressTable.PublicKey);
+                    ipsToReturn.Add(ipAddressTable.Key, decryptedIp.ToString());
+                }
+
+                return Ok(ipsToReturn);
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
             }
         }
 

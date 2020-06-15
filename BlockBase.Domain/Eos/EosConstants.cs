@@ -40,7 +40,7 @@ namespace BlockBase.Domain.Eos
         public const string EOSIO_MSIG_PROPOSAL_TABLE_NAME = "proposal";
         public const string ADD_BLOCK_PROPOSAL_NAME = "bbaddblock";
         public const string VERIFY_BLOCK_PERMISSION = "verifyblock";
-        public const string VERIFY_HISTORY_PERMISSION = "verifyhistory";
+        public const string VERIFY_HISTORY_PERMISSION = "verifyhist";
     }
 
     public class EosMethodNames
