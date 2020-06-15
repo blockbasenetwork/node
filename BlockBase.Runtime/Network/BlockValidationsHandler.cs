@@ -126,6 +126,8 @@ namespace BlockBase.Runtime.Network
         {
             var declaredBlockSize =  blockProtoReceived.BlockHeader.BlockSizeInBytes;
             blockProtoReceived.BlockHeader.BlockSizeInBytes = 0;
+            blockProtoReceived.BlockHeader.BlockHash = null;
+            blockProtoReceived.BlockHeader.ProducerSignature = null;
             var blockSize = (ulong) blockProtoReceived.ToByteArray().Count();
             blockProtoReceived.BlockHeader.BlockSizeInBytes = declaredBlockSize;
 
