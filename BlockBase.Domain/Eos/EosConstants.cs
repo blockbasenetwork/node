@@ -113,6 +113,7 @@ namespace BlockBase.Domain.Eos
         public const string BYTE_IN_HEXADECIMAL = "byteInHex";
         public const string PACKED_TRANSACTION = "packedTransaction";
         public const string VERIFY_SIGNATURE = "verifySignature";
+        public const string SOFTWARE_VERSION = "softwareVersion";
     }
 
     public class EosAtributeNames
