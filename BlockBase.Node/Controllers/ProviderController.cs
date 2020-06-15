@@ -610,7 +610,7 @@ namespace BlockBase.Node.Controllers
         [HttpGet]
         [SwaggerOperation(
             Summary = "Gets the decrypted node ips this node has access to in a given sidechain",
-            Description = "Gets all the node account staked tokens and on witch sidechain the tokens are staked.",
+            Description = "Gets all the decrypted node ips that are stored in encrypted form in the smart contract tables.",
             OperationId = "GetDecryptedNodeIps"
         )]
         public async Task<ObjectResult> GetDecryptedNodeIps(string sidechainName)

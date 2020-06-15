@@ -633,18 +633,17 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the decrypted node ips this node has access to in a given sidechain
+        /// Gets the decrypted node ips in the requester sidechain
         /// </summary>
         /// <returns>Decrypted node ips</returns>
         /// <response code="200">Decrypted ips retrieved with success</response>
         /// <response code="400">Invalid parameters</response>
         /// <response code="401">No Ips found in table</response>
-        /// <response code="402">Producer not found in table</response>
         /// <response code="500">Error retrieving ips</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the decrypted node ips this node has access to in a given sidechain",
-            Description = "Gets all the node account staked tokens and on witch sidechain the tokens are staked.",
+            Summary = "Gets the decrypted node ips in the requester sidechain",
+            Description = "Gets all the decrypted node ips that are stored in encrypted form in the smart contract tables",
             OperationId = "GetDecryptedNodeIps"
         )]
         public async Task<ObjectResult> GetDecryptedNodeIps()
