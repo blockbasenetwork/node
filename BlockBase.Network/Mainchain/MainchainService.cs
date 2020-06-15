@@ -624,6 +624,18 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result.SingleOrDefault();
         }
 
+        public async Task<VersionTable> RetrieveSidechainNodeVersion(string chain)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<VersionTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.VERSION_TABLE_NAME,
+                chain),
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result.SingleOrDefault();
+        }
+
         public async Task<ContractStateTable> RetrieveContractState(string chain)
         {
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ContractStateTable>(

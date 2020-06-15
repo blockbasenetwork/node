@@ -51,6 +51,7 @@ namespace BlockBase.Network.Mainchain
         Task<TransactionProposalApprovalsTable> RetrieveApprovals(string proposerAccount, string proposalName);
         Task<List<RewardTable>> RetrieveRewardTable(string account);
         Task<ContractInformationTable> RetrieveContractInformation(string chain);
+        Task<VersionTable> RetrieveSidechainNodeVersion(string chain);
         Task<ContractStateTable> RetrieveContractState(string chain);
         Task<BlockheaderTable> RetrieveLastBlockFromLastSettlement(string chain, int numberOfBlocks);
         Task<HistoryValidationTable> RetrieveHistoryValidationTable(string chain);

@@ -18,6 +18,7 @@ using BlockBase.DataPersistence.Utils;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Runtime.Provider;
 using BlockBase.Utils;
+using System.Reflection;
 
 namespace BlockBase.Node.Controllers
 {
@@ -217,6 +218,11 @@ namespace BlockBase.Node.Controllers
                 var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
                 if(contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} contract info not found"));
 
+                var softwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
+                var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
+                var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(chainName);
+                if (versionInContract.SoftwareVersion > softwareVersion) 
+                    return BadRequest(new OperationResponse<string>($"Sidechain is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)} which is superior to Node version {softwareVersionString}"));
 
                 //if the chain exists in the pool it should mean that he's associated with it
                 var chainExistsInPool = _sidechainProducerService.DoesChainExist(chainName);
