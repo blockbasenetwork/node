@@ -222,7 +222,7 @@ namespace BlockBase.Node.Controllers
                 var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
                 var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(chainName);
                 if (versionInContract.SoftwareVersion > softwareVersion) 
-                    return BadRequest(new OperationResponse<string>($"Sidechain is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)} which is superior to Node version {softwareVersionString}"));
+                    return BadRequest(new OperationResponse<string>($"Sidechain is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)} while current node is running version {softwareVersionString}"));
 
                 //if the chain exists in the pool it should mean that he's associated with it
                 var chainExistsInPool = _sidechainProducerService.DoesChainExist(chainName);
