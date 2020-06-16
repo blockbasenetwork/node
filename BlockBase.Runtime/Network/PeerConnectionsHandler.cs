@@ -149,6 +149,7 @@ namespace BlockBase.Runtime.Network
                     }
                     else
                     {
+                        _waitingForApprovalPeers.Remove(peerConnected);
                         Disconnect(producer.PeerConnection);
                     }
                 }
