@@ -270,13 +270,6 @@ namespace BlockBase.DataPersistence.Data
                     {
                         return true;
                     }
-
-                    if (producerType == ProducerTypeEnum.Validator)
-                    {
-                        var lastSearchedForTransactionsBlockHeader = await GetLastSearchedForTransactionsBlockHeader(databaseName);
-                        if (lastSearchedForTransactionsBlockHeader.SequenceNumber >= blockheaderDB.SequenceNumber - 1)
-                            return true;
-                    }
                 }
             }
             return false;
@@ -315,7 +308,7 @@ namespace BlockBase.DataPersistence.Data
                 await blockHeaderCollection.DeleteManyAsync(b => b.SequenceNumber < blockHeader.SequenceNumber);
 
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
-                await transactionCollection.DeleteManyAsync(t => t.SequenceNumber <= blockHeader.LastTransactionSequenceNumber);
+                await transactionCollection.DeleteManyAsync(t => t.BlockHash != blockHash);
             }
         }
 
@@ -440,37 +433,7 @@ namespace BlockBase.DataPersistence.Data
         {
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
         }
-        public async Task UpdateLastSearchedForTransactionsBlockHeader(string databaseName, BlockHeader blockHeader)
-        {
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-
-                var lastSearchedForTransactionsBlockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
-
-                session.StartTransaction();
-
-                await lastSearchedForTransactionsBlockHeaderCollection.DeleteManyAsync(t => true);
-
-                await lastSearchedForTransactionsBlockHeaderCollection.InsertOneAsync(new BlockheaderDB().BlockheaderDBFromBlockHeader(blockHeader));
-
-                await session.CommitTransactionAsync();
-            }
-        }
-        public async Task<BlockHeader> GetLastSearchedForTransactionsBlockHeader(string databaseName)
-        {
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-
-                var lastSearchedForTransactionsBlockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
-
-                var blockHeaderDB = await (await lastSearchedForTransactionsBlockHeaderCollection.FindAsync(b => true)).SingleOrDefaultAsync();
-
-                return blockHeaderDB.BlockHeaderFromBlockHeaderDB();
-            }
-        }
-
+       
         #region Recover DB
 
         public async Task AddProducingSidechainToDatabaseAsync(string sidechain)
@@ -541,7 +504,7 @@ namespace BlockBase.DataPersistence.Data
             }
         }
 
-        
+
 
 
         #endregion
