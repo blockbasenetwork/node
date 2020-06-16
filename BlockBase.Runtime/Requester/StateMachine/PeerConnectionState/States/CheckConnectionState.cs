@@ -66,12 +66,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
             UpdateProducersInSidechainPool();
             UpdateIPsInSidechain();
 
-            var producersInPoolList = _sidechainPool.ProducersInPool.GetEnumerable().ToList();
-            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
-            var numberOfConnections = (int)Math.Ceiling(producersInPoolList.Count / 4.0);
-            var producersWhoIAmSupposedToBeConnected = orderedProducersInPool.Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState != ConnectionStateEnum.Connected).ToList();
-
-            if (producersWhoIAmSupposedToBeConnected.Any())
+            if (_sidechainPool.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection == null || p.PeerConnection?.ConnectionState != ConnectionStateEnum.Connected))
             {
                 _peersConnected = false;
                 _delay = TimeSpan.FromSeconds(0);
