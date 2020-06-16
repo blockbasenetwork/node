@@ -71,13 +71,13 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if(_contractState.ProductionTime) return Task.FromResult((true, typeof(NextStateRouter).Name));
+            if(!_contractState.IPReceiveTime && _contractState.ProductionTime) return Task.FromResult((true, typeof(NextStateRouter).Name));
             return Task.FromResult((false, string.Empty));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_contractState.ProductionTime);
+            return Task.FromResult(!_contractState.IPReceiveTime && _contractState.ProductionTime);
         }
 
         protected override async Task UpdateStatus()
