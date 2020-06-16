@@ -26,7 +26,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
         private SidechainPool _sidechainPool;
-        public ConnectToPeersState(ref SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool)
+        public ConnectToPeersState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
