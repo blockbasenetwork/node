@@ -52,6 +52,9 @@ namespace Open.P2P.IO
 
         public event EventHandler<ConnectionEventArgs> ConnectionClosed;
 
+        private static object DisconnectLock = new object();
+        private static object ConnectLock = new object();
+
         private ILogger _logger;
 
         /// <summary>
@@ -174,16 +177,19 @@ namespace Open.P2P.IO
         }
 
         private Peer RegisterPeer(IConnection connection)
-        { 
-            var endpoint = connection.Endpoint;
-            _logger.LogDebug("Registering peer -> " + endpoint.Address + ":" + endpoint.Port);
-            var stream = new PeerStream(this, endpoint);
+        {
+            lock (ConnectLock)
+            {
+                var endpoint = connection.Endpoint;
+                _logger.LogDebug("Registering peer -> " + endpoint.Address + ":" + endpoint.Port);
+                var stream = new PeerStream(this, endpoint);
 
-            var peer = new Peer(stream, connection);
-            _peers.TryAdd(endpoint, peer);
+                var peer = new Peer(stream, connection);
+                _peers.TryAdd(endpoint, peer);
 
-            Events.RaiseAsync(PeerConnected, this, new PeerEventArgs(peer));
-            return peer;
+                Events.RaiseAsync(PeerConnected, this, new PeerEventArgs(peer));
+                return peer;
+            }
         }
 
         private void CalculateSpeed()
@@ -202,19 +208,27 @@ namespace Open.P2P.IO
 
         public void DisconnectPeer(Peer peer)
         {
-            peer.Disconnect();
-            Events.RaiseAsync(ConnectionClosed, this, new ConnectionEventArgs(peer.EndPoint));
-            Console.WriteLine("Communication Manager:: removing peer.");
-            _peers.TryRemove(peer.EndPoint, out peer);
+            lock (DisconnectLock)
+            {
+                peer.Disconnect();
+
+                Console.WriteLine("Communication Manager:: removing peer.");
+                _peers.TryRemove(peer.EndPoint, out peer);
+
+                Events.RaiseAsync(ConnectionClosed, this, new ConnectionEventArgs(peer.EndPoint));
+            }
         }
 
         public void DisconnectAllPeers()
         {
-            foreach(var registeredPeer in _peers)
+            lock (DisconnectLock)
             {
-                var peer = registeredPeer.Value;
-                peer.Disconnect();
-                _peers.TryRemove(peer.EndPoint, out peer);
+                foreach (var registeredPeer in _peers)
+                {
+                    var peer = registeredPeer.Value;
+                    peer.Disconnect();
+                    _peers.TryRemove(peer.EndPoint, out peer);
+                }
             }
         }
     }
