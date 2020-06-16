@@ -35,7 +35,5 @@ namespace BlockBase.DataPersistence.Data
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllProducingSidechainsAsync();
-        Task UpdateLastSearchedForTransactionsBlockHeader(string sidechain, BlockHeader blockHeader);
-        Task<BlockHeader> GetLastSearchedForTransactionsBlockHeader(string sidechain);
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
 using BlockBase.DataPersistence.Sidechain;
+using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Enums;
 using BlockBase.Network.Mainchain;
@@ -60,11 +61,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
             if (!_isNodeSynchronized)
             {
-                var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime, _sidechainPool.ProducerType);
+                var syncResult = await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash);
 
                 if (!syncResult)
                 {
-                    _logger.LogDebug("Producer not up to date, building chain.");
+                    _logger.LogDebug("Validator producer doesn't have the last valid block.");
                     opResult = await SyncChain();
                     _isNodeSynchronized = opResult.Succeeded;
                 }
