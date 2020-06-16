@@ -98,8 +98,6 @@ namespace BlockBase.Node.Controllers
                     var result = webClient.DownloadString(new Uri("http://worldtimeapi.org/api/timezone/Etc/UTC"));
                     machineUtcDateTime = DateTime.UtcNow;
 
-
-
                     if(string.IsNullOrWhiteSpace(result))
                         fetchedExternalUtcTimeReference = false;
 
