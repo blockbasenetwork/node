@@ -64,7 +64,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
             _ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
 
             UpdateProducersInSidechainPool();
-            UpdateIPsInSidechain();
 
             if (_sidechainPool.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection == null || p.PeerConnection?.ConnectionState != ConnectionStateEnum.Connected))
             {
@@ -96,30 +95,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
             }).ToList();
 
             _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
-        }
-
-        private void UpdateIPsInSidechain()
-        {
-            if (!_ipAddresses.Any() || _ipAddresses.Any(t => !t.EncryptedIPs.Any())) return;
-            foreach (var ipAddressTable in _ipAddresses) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
-
-            int numberOfIpsToUpdate = (int)Math.Ceiling(_sidechainPool.ProducersInPool.Count() / 4.0);
-            if (numberOfIpsToUpdate == 0) return;
-
-            var producersInPoolList = _sidechainPool.ProducersInPool.GetEnumerable().ToList();
-            if (!producersInPoolList.Any(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)) return;
-            var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName)).Take(numberOfIpsToUpdate).ToList();
-
-            foreach (var producer in orderedProducersInPool)
-            {
-                var producerIndex = orderedProducersInPool.IndexOf(producer);
-                var producerIps = _ipAddresses.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
-                if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
-
-                var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
-                var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
-                producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
-            }
         }
     }
 }
