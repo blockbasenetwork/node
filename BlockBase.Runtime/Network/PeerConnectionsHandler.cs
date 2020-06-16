@@ -306,12 +306,13 @@ namespace BlockBase.Runtime.Network
                         peersConnected = false;
                     }
                 }
-                _checkingConnection = false;
             }
             catch (Exception e)
             {
                 _logger.LogCritical($"Check connection failed with exception: {e}");
             }
+
+            _checkingConnection = false;
 
             return peersConnected;
         }
