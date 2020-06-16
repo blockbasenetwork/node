@@ -73,7 +73,7 @@ namespace BlockBase.Node.Controllers
 
                 bool fetchedExternalUtcTimeReference = false;
                 TimeSpan timeDifference = TimeSpan.FromSeconds(0);
-                
+
                 DateTime machineUtcDateTime = DateTime.UtcNow;
                 DateTime externalUtcDateTime = DateTime.MinValue;
 
@@ -85,7 +85,7 @@ namespace BlockBase.Node.Controllers
                     var result = webClient.DownloadString(new Uri("http://worldtimeapi.org/api/timezone/Etc/UTC"));
                     machineUtcDateTime = DateTime.UtcNow;
 
-                    if(string.IsNullOrWhiteSpace(result))
+                    if (string.IsNullOrWhiteSpace(result))
                         fetchedExternalUtcTimeReference = false;
 
                     var obj = new { datetime = string.Empty };
@@ -94,7 +94,7 @@ namespace BlockBase.Node.Controllers
 
                     string dateTimeToParse = ((dynamic)jsonResult).datetime;
                     DateTime parsedTime;
-                    if(!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
+                    if (!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
                         fetchedExternalUtcTimeReference = false;
 
                     fetchedExternalUtcTimeReference = true;
@@ -111,7 +111,7 @@ namespace BlockBase.Node.Controllers
                 string fetchedPublicIp = null;
                 bool fetchedPublicIpSuccessfully = false;
                 bool isConfiguredIPEqualToPublicIP = false;
-                
+
 
                 try
                 {
@@ -125,7 +125,7 @@ namespace BlockBase.Node.Controllers
                 {
 
                 }
-                
+
                 var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
                 var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
 
@@ -161,16 +161,16 @@ namespace BlockBase.Node.Controllers
 
                     var permission = accountInfo.permissions.SingleOrDefault(p => p.perm_name == "active");
 
-                    if(permission != null)
+                    if (permission != null)
                     {
                         var correspondingActiveKey = permission.required_auth?.keys?.SingleOrDefault(k => k.key == activePublicKey);
-                        if(correspondingActiveKey != null)
+                        if (correspondingActiveKey != null)
                             activeKeyFoundOnAccount = true;
-                        if(correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
+                        if (correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
                             activeKeyHasEnoughWeight = true;
-                        
+
                     }
-                    
+
 
                 }
                 catch { }
@@ -211,7 +211,7 @@ namespace BlockBase.Node.Controllers
                         netLimit,
                         ramUsed,
                         ramLimit,
-                        
+
                         mongoDbConnectionString,
                         mongoDbPrefix,
                         isMongoLive,
@@ -251,24 +251,24 @@ namespace BlockBase.Node.Controllers
             //TODO rpinto - to verify when done. The request to produce a sidechain won't be allowed if there still exists data related to that sidechain on the database
             //The user will have to delete it manually. This only happens if the user registered on the sidechain manually too
 
-            if(string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
-            if(providerType < 1 || providerType > 3)  return BadRequest(new OperationResponse<string>("Please provide a valid provider type. (1) Validator, (2) History, (3) Full"));
-            if(stake < 0) return BadRequest(new OperationResponse<string>("Please provide a non-negative stake value"));
-            
+            if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+            if (providerType < 1 || providerType > 3) return BadRequest(new OperationResponse<string>("Please provide a valid provider type. (1) Validator, (2) History, (3) Full"));
+            if (stake < 0) return BadRequest(new OperationResponse<string>("Please provide a non-negative stake value"));
+
 
             try
             {
                 var chainContract = await _mainchainService.RetrieveContractState(chainName);
-                if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} not found"));
-                if(!chainContract.CandidatureTime) return BadRequest(new OperationResponse<string>($"Sidechain not in candidature time"));
+                if (chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} not found"));
+                if (!chainContract.CandidatureTime) return BadRequest(new OperationResponse<string>($"Sidechain not in candidature time"));
 
                 var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
-                if(contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} contract info not found"));
+                if (contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {chainName} contract info not found"));
 
                 var softwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
                 var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
                 var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(chainName);
-                if (versionInContract.SoftwareVersion > softwareVersion) 
+                if (versionInContract.SoftwareVersion > softwareVersion)
                     return BadRequest(new OperationResponse<string>($"Sidechain is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)} while current node is running version {softwareVersionString}"));
 
                 //if the chain exists in the pool it should mean that he's associated with it
@@ -278,7 +278,7 @@ namespace BlockBase.Node.Controllers
                     var sidechainContext = _sidechainProducerService.GetSidechainContext(chainName);
 
                     //if it's running he should need to do anything because the state manager will decide what to do
-                    if(sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
+                    if (sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
                         return BadRequest(new OperationResponse<string>($"Request to produce sidechain {chainName} previously sent."));
                     //if it's not running, there was a problem and it should be removed from the pool list
                     else
@@ -296,12 +296,12 @@ namespace BlockBase.Node.Controllers
 
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
                 //if the database exists and he's on the producer table, then nothing should be done
-                if (chainExistsInDb && isProducerInTable) 
+                if (chainExistsInDb && isProducerInTable)
                 {
                     return BadRequest(new OperationResponse<string>($"{NodeConfigurations.AccountName} is a provider in {chainName}"));
                 }
                 //if he's not a producer, but is requesting again to be one, and has a database associated, he should delete it first
-                else if(chainExistsInDb)
+                else if (chainExistsInDb)
                 {
                     return BadRequest(new OperationResponse<string>($"There is a database related to this chain. Please delete it"));
                 }
@@ -309,14 +309,14 @@ namespace BlockBase.Node.Controllers
 
                 var accountStake = await _mainchainService.GetAccountStake(chainName, NodeConfigurations.AccountName);
                 decimal providerStake = 0;
-                if(accountStake != null)
+                if (accountStake != null)
                 {
                     var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                    
+
                     decimal.TryParse(stakeString, out providerStake);
                 }
                 var minimumProviderState = Math.Round((decimal)contractInfo.Stake / 10000, 4);
-                if(minimumProviderState > providerStake + stake)
+                if (minimumProviderState > providerStake + stake)
                 {
                     return BadRequest(new OperationResponse<string>($"Minimum provider stake is {minimumProviderState}, currently staked {providerStake} and added {stake} which is not enough. Please stake {minimumProviderState - providerStake}"));
                 }
@@ -362,7 +362,7 @@ namespace BlockBase.Node.Controllers
         {
             //TODO rpinto - to verify that a manual request to leave a sidechain shouldn't delete the database. That has to be done independently
 
-            if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+            if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
 
             try
             {
@@ -370,15 +370,15 @@ namespace BlockBase.Node.Controllers
                 var chainContract = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
                 var producersTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
-                if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
-                if(candidatureTable == null) return NotFound(new OperationResponse<string>($"Unable to retrieve {sidechainName} candidature table"));
+                if (chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
+                if (candidatureTable == null) return NotFound(new OperationResponse<string>($"Unable to retrieve {sidechainName} candidature table"));
 
                 var isProducerInCandidature = candidatureTable.Where(m => m.Key == NodeConfigurations.AccountName).Any();
                 var isProducerAnActiveProducer = producersTable.Where(m => m.Key == NodeConfigurations.AccountName).Any();
 
-                if(!isProducerInCandidature && !isProducerAnActiveProducer)
+                if (!isProducerInCandidature && !isProducerAnActiveProducer)
                     return BadRequest(new OperationResponse<string>($"Producer {NodeConfigurations.AccountName} not found in sidechain {sidechainName}"));
-                
+
                 _logger.LogDebug($"Sending sidechain exit request for {sidechainName}");
                 var trx = await _mainchainService.SidechainExitRequest(sidechainName);
 
@@ -386,7 +386,7 @@ namespace BlockBase.Node.Controllers
                 //TODO rpinto - needs to verify if exist request has been sent successfully
 
 
-                
+
                 return Ok(new OperationResponse<bool>(true, $"Exit successfully requested for {sidechainName}"));
 
             }
@@ -413,13 +413,13 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> AddStake(string sidechainName, double stake)
         {
-            if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>($"Please provide a valid sidechain name"));
-            if(stake <= 0) return BadRequest(new OperationResponse<string>($"Please provide a positive stake value"));
+            if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>($"Please provide a valid sidechain name"));
+            if (stake <= 0) return BadRequest(new OperationResponse<string>($"Please provide a positive stake value"));
 
             try
             {
                 var chainContract = await _mainchainService.RetrieveContractState(sidechainName);
-                if(chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
+                if (chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
 
                 var stakeString = $"{stake.ToString("F4")} BBT";
                 var trx = await _mainchainService.AddStake(sidechainName, NodeConfigurations.AccountName, stakeString);
@@ -448,7 +448,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> ClaimStake(string sidechainName)
         {
-            if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>($"Please provide a valid sidechain name"));
+            if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>($"Please provide a valid sidechain name"));
 
             try
             {
@@ -504,13 +504,13 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> DeleteSidechainFromDatabase(string sidechainName, bool force = false)
         {
-            if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+            if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
             try
             {
 
                 var chainExistsInPool = _sidechainProducerService.DoesChainExist(sidechainName);
 
-                if(chainExistsInPool && !force)
+                if (chainExistsInPool && !force)
                 {
                     return BadRequest(new OperationResponse<string>($"Producer is still working on producing blocks for sidechain {sidechainName}. Consider requesting to leave the sidechain production first. If you're sure, use force=true on the request."));
                 }
@@ -522,11 +522,11 @@ namespace BlockBase.Node.Controllers
                     _logger.LogDebug($"Removing sidechain {sidechainName} execution engine");
                     _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(sidechainName);
                 }
-                
-                
+
+
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(sidechainName);
                 //TODO rpinto - this deletes the whole database - what if a producer leaves production and joins further ahead...?
-                if (chainExistsInDb) 
+                if (chainExistsInDb)
                 {
                     _logger.LogDebug($"Removing sidechain {sidechainName} data from database");
                     await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(sidechainName);
@@ -562,12 +562,12 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetBlock(string chainName, ulong blockNumber)
         {
-            if(string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+            if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
             try
             {
                 var doesSidechainExist = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
 
-                if(!doesSidechainExist) return NotFound(new OperationResponse<string>("Sidechain not found"));
+                if (!doesSidechainExist) return NotFound(new OperationResponse<string>("Sidechain not found"));
 
                 var blockResponse = await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(chainName, blockNumber, blockNumber);
                 var block = blockResponse.SingleOrDefault();
@@ -599,12 +599,12 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetTransaction(string chainName, ulong transactionNumber)
         {
-            if(string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+            if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
             try
             {
                 var doesSidechainExist = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
 
-                if(!doesSidechainExist) return NotFound(new OperationResponse<string>("Sidechain not found"));
+                if (!doesSidechainExist) return NotFound(new OperationResponse<string>("Sidechain not found"));
 
                 var transaction = await _mongoDbProducerService.GetTransactionBySequenceNumber(chainName, transactionNumber);
 
@@ -634,16 +634,45 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetTransactionsInMempool(string chainName)
         {
-            if(string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+            if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
             try
             {
                 var doesSidechainExist = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
-                if(!doesSidechainExist) return NotFound(new OperationResponse<string>("Sidechain not found"));
+                if (!doesSidechainExist) return NotFound(new OperationResponse<string>("Sidechain not found"));
                 var transactionsInMempool = await _mongoDbProducerService.RetrieveTransactionsInMempool(chainName);
-                
+
                 if (transactionsInMempool == null) return NotFound(new OperationResponse<string>("Sidechain not found."));
 
                 return Ok(new OperationResponse<IEnumerable<BlockBase.Domain.Blockchain.Transaction>>(transactionsInMempool));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets the sidechain node software version
+        /// </summary>
+        /// <param name="chainName">Name of the Sidechain</param>
+        /// <returns>Sidechain node software version</returns>
+        /// <response code="200">Node software version retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving node software version</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the sidechain node software version",
+            Description = "Gets the version the sidechain node software is running. Useful for knowing which version the node should be running in order to send candidature",
+            OperationId = "GetSidechainNodeSoftwareVersion"
+        )]
+        public async Task<ObjectResult> GetSidechainNodeSoftwareVersion(string chainName)
+        {
+            if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+            try
+            {
+                var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(chainName);
+                
+                return Ok(new OperationResponse<string>($"Sidechain {chainName} is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)}"));
             }
             catch (Exception e)
             {
@@ -682,16 +711,16 @@ namespace BlockBase.Node.Controllers
                 if (contractInfo == null) return BadRequest(new OperationResponse<string>($"Contract info not found for {sidechainName}"));
                 if (ipAddresses == null) return BadRequest(new OperationResponse<string>($"IP Addresses table not found for {sidechainName}"));
 
-                if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any())) 
+                if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any()))
                     return StatusCode(401, new OperationResponse<string>($"IP Addresses table doesn't have any IPs for {sidechainName}"));
-                
+
                 if (!producers.Any(m => m.Key == NodeConfigurations.AccountName))
                     return StatusCode(402, new OperationResponse<string>($"Producer {NodeConfigurations.AccountName} not found in producers table for {sidechainName}"));
-                
+
                 var ipsToReturn = new Dictionary<string, string>();
 
                 foreach (var ipAddressTable in ipAddresses) ipAddressTable.EncryptedIPs.RemoveAt(ipAddressTable.EncryptedIPs.Count - 1);
-                
+
                 int numberOfIpsToTake = (int)Math.Ceiling(producers.Count() / 4.0);
                 var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producers, producers.FindIndex(m => m.Key == NodeConfigurations.AccountName)).Take(numberOfIpsToTake).ToList();
 
