@@ -44,7 +44,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             var secret = HashHelper.Sha256Data(Encoding.ASCII.GetBytes(_nodeConfigurations.SecretPassword));
             var addSecretTransaction = await _mainchainService.AddSecret(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, HashHelper.ByteArrayToFormattedHexaString(secret));
         
-            _logger.LogDebug($"Sent secret {secret} Tx: {addSecretTransaction}");
+            _logger.LogDebug($"Sent secret {HashHelper.ByteArrayToFormattedHexaString(secret)} Tx: {addSecretTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()
