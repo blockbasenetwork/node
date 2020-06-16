@@ -321,7 +321,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var request = HttpHelper.ComposeWebRequestGet($"https://127.0.0.1:5031/api/NodeSupport/GetAllTrackerSidechains?network={network.ToString()}");
+                var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetAllTrackerSidechains?network={network.ToString()}");
                 var json = await HttpHelper.CallWebRequest(request);
                 var trackerSidechains = JsonConvert.DeserializeObject<List<TrackerSidechain>>(json);
 

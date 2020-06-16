@@ -29,6 +29,7 @@ using BlockBase.Node.Filters;
 using BlockBase.Utils.Crypto;
 using System.Reflection;
 using BlockBase.Utils;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Node.Controllers
 {
@@ -425,13 +426,28 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-
                 await _sidechainMaintainerManager.End();
 
                 //TODO rpinto - should all this functionality below be encapsulated inside the sidechainMaintainerManager?
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
                 if (contractSt == null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} not found"));
 
+                var account = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
+                var verifyBlockPermission = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
+                var verifyHistoryPermisson = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
+                
+                if (verifyBlockPermission != null)
+                { 
+                    await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                    await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                }
+
+                if (verifyHistoryPermisson != null)
+                { 
+                    await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
+                    await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+                }
+            
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
 
                 return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));

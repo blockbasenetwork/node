@@ -81,8 +81,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
                 //only after the producers are punished should the history validation start
                 //there sould be an if guarding this
-                await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
-                _hasHistoryValidationBeenActivated = true;
+                //await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
+                //_hasHistoryValidationBeenActivated = true;
 
                 _hasDoneTheSettlement = true;
 
