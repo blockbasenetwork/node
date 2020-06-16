@@ -212,10 +212,12 @@ namespace Open.P2P.IO
             {
                 peer.Disconnect();
 
+                var endpoint = peer.EndPoint;
+
                 Console.WriteLine("Communication Manager:: removing peer.");
                 _peers.TryRemove(peer.EndPoint, out peer);
 
-                Events.RaiseAsync(ConnectionClosed, this, new ConnectionEventArgs(peer.EndPoint));
+                Events.RaiseAsync(ConnectionClosed, this, new ConnectionEventArgs(endpoint));
             }
         }
 

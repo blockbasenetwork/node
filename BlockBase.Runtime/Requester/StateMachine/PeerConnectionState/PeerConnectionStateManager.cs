@@ -36,7 +36,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState
         {
             if(state == typeof(StartState).Name) return new StartState(_logger, _mainchainService, _nodeConfigurations);
             if(state == typeof(NextStateRouter).Name) return new NextStateRouter(_logger, _mainchainService, _nodeConfigurations,_peerConnectionsHandler);
-            if(state == typeof(ConnectToPeersState).Name) return new ConnectToPeersState(ref _sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations,_peerConnectionsHandler);
+            if(state == typeof(ConnectToPeersState).Name) return new ConnectToPeersState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations,_peerConnectionsHandler);
             if(state == typeof(CheckConnectionState).Name) return new CheckConnectionState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler);
             if(state == typeof(EndState).Name) return new EndState(_logger);
             throw new System.NotImplementedException();
