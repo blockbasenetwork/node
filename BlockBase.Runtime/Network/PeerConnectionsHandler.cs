@@ -134,7 +134,7 @@ namespace BlockBase.Runtime.Network
                     producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                     var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
-                    if (peerConnected == null)
+                    if (peerConnected == null || ((Open.P2P.IO.IConnection)peerConnected).IsConnected)
                     {
                         _logger.LogInformation("     Connect to ip: " + producer.ProducerInfo.IPEndPoint.Address + ":" + producer.ProducerInfo.IPEndPoint.Port);
                         var peer = await ConnectAsync(producer.ProducerInfo.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Open.P2P.IO
 {
-    interface IConnection
+    public interface IConnection
     {
         IPEndPoint Endpoint { get; }
         bool IsConnected { get; }
