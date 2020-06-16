@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
@@ -48,7 +49,7 @@ namespace BlockBase.Runtime.Common
 
                     if (currentState.GetType() == typeof(TEndState))
                     {
-                        await currentState.Run();
+                        await currentState.Run(default(CancellationToken));
                         //TODO rpinto - is this dangerous? should the stop mechanism be delegated to an upper level?
                         this.Stop();
                         return;

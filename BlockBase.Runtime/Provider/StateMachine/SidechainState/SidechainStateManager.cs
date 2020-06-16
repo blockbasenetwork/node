@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Provider.StateMachine.PeerConectionState;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.States;
+using System.Threading;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
 {
@@ -71,12 +72,12 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
 
             while (true)
             {
-                var nextStateName = await currentState.Run();
+                var nextStateName = await currentState.Run(TaskContainer.CancellationTokenSource.Token);
                 currentState = BuildState(nextStateName);
 
                 if (currentState.GetType() == typeof(EndState))
                 {
-                    await currentState.Run();
+                    await currentState.Run(default(CancellationToken));
                     _blockProductionTaskContainer.Stop();
                     _peerConnectionTaskContainer.Stop();
                     this.Stop();

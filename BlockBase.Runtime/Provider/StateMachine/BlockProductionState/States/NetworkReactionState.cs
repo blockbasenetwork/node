@@ -45,8 +45,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                 return Task.FromResult((true, typeof(ProduceBlockState).Name));
 
             else return Task.FromResult((true, typeof(StartState).Name));
-            // else
-            //     return Task.FromResult((true, typeof(VoteBlockState).Name));
         }
 
         protected override Task<bool> IsWorkDone()

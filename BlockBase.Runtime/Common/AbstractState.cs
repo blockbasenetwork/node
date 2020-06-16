@@ -9,7 +9,7 @@ namespace BlockBase.Runtime.Common
 {
     public interface IState
     {
-        Task<string> Run(CancellationToken cancellationToken = default(CancellationToken));
+        Task<string> Run(CancellationToken cancellationToken);
     }
     public abstract class AbstractState<TStartState, TEndState> : IState
             where TStartState : IState
@@ -32,7 +32,7 @@ namespace BlockBase.Runtime.Common
             _inAutomaticMode = automatic;
             Path = this.GetType().FullName;
         }
-        public virtual async Task<string> Run(CancellationToken cancellationToken = default(CancellationToken))
+        public virtual async Task<string> Run(CancellationToken cancellationToken)
         {
 
             while (true)

@@ -337,6 +337,41 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+
+        /// <summary>
+        /// Gets the current list of unclaimed rewards to pay to providers
+        /// </summary>
+        /// <param name="sidechainName">The name of the sidechain</param>
+        /// <returns>The current list of unclaimed rewards per provider</returns>
+        /// <response code="200">Information was retrieved successfully</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Internal error</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the current list of unclaimed rewards to pay to providers",
+            Description = "Gets the current list of rewards to the providers of the sidechain for their work. These are the rewards they haven't claimed yet.",
+            OperationId = "GetCurrentUnclaimedRewards"
+        )]
+        public async Task<ObjectResult> GetCurrentUnclaimedRewards(string sidechainName)
+        {
+            try
+            {
+                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+
+                var rewardTable = await _mainchainService.RetrieveRewardTable(sidechainName);
+                if(rewardTable == null) return NotFound(new OperationResponse<string>($"The reward table for {sidechainName} was not found"));
+
+                
+
+                return Ok(new OperationResponse<List<(string provider, string reward)>>(rewardTable.Select(r => (r.Key, $"{10000*r.Reward} BBT")).ToList()));
+            }
+            catch(Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+
         /// <summary>
         /// Tries to establish a connection to another node. Lasts for 20 seconds
         /// </summary>

@@ -131,9 +131,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
             if (_hasBlockBeenVerified)
-                return Task.FromResult((true, typeof(StartState).Name));
+                return Task.FromResult((true, typeof(ClaimRewardState).Name));
 
-            else return Task.FromResult((false, typeof(StartState).Name));
+            else return Task.FromResult((false, typeof(ClaimRewardState).Name));
         }
 
         protected override Task<bool> IsWorkDone()
@@ -195,6 +195,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
                 _hasCheckedDbForOldBlock = false;
                 _hasStoredBlockLocally = false;
+                _hasEnoughSignatures = false;
 
                 _logger.LogInformation($"Proposed Block -> sequence number: {_builtBlock.BlockHeader.SequenceNumber}, blockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.BlockHash)}, previousBlockhash: {HashHelper.ByteArrayToFormattedHexaString(_builtBlock.BlockHeader.PreviousBlockHash)}, timestamp: {_builtBlock.BlockHeader.Timestamp}");
             }
