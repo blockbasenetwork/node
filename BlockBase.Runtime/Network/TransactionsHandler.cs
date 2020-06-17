@@ -40,6 +40,7 @@ namespace BlockBase.Runtime.Network
         private IMongoDbRequesterService _mongoDbRequesterService;
         private int _numberOfConsecutiveEmptyBlocks;
 
+        private bool _sendingTransactions = false;
         private bool _hasBeenSetup = false;
 
         public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, IMainchainService mainchainService, IMongoDbRequesterService mongoDbRequesterService)
@@ -117,11 +118,25 @@ namespace BlockBase.Runtime.Network
 
         private async Task Execute()
         {
-            while (_transactionsToSend.Count() != 0)
+            if (_sendingTransactions) return;
+            
+            try
             {
-                _currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
-                await TryToSendTransactions();
-                await Task.Delay(WAIT_TIME_IN_SECONDS * 1000);
+                _sendingTransactions = true;
+                while (_transactionsToSend.Count() != 0)
+                {
+                    _currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
+                    await TryToSendTransactions();
+                    await Task.Delay(WAIT_TIME_IN_SECONDS * 1000);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical($"Send transactions failed with: {e}");
+            }
+            finally
+            {  
+                _sendingTransactions = false;
             }
         }
 
