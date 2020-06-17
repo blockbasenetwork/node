@@ -20,15 +20,15 @@ Here you can find all the steps to run a node as a [service requester](#Running-
 Each node has to have an EOS account associated to it. We recommend using a new EOS account just for that purpose. This account must have enough RAM, CPU, and NET to work properly. We recommend the following steps to prepare your EOS account:
 1. Create the EOS account: An EOS account can be easily created on bloks.io [here](https://bloks.io/wallet/create-account).
 
-2. Buy RAM: Buy 10k of RAM for the EOS account you created.
+2. Buy RAM: Buy 10k of RAM for the EOS account you created. This will allow you to participate as a SR or as a SP in modest sidechain networks.
 
 3. Get CPU and NET: A BlockBase node uses a lot of EOS CPU and a good amount of EOS NET. We recommend renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
 
-4. Ensure the EOS account has always enough CPU and NET: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend it.
+4. Ensure the EOS account has always enough CPU, NET and RAM: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend it. You can also use it to buy more RAM automatically, which may be needed if you're planning in servicing multiple sidechains as a provider, or if you're planning in requesting a sidechain for you with many providers.
 
 5. Transfer BBT (The BlockBase token) to the EOS account. You will need BBT as a SR or as a SP. SRs use BBT to pay to SPs for running their sidechain. And SPs pledge BBT as collateral that they will lose if they fail to provide the service accordingly. In both cases BBT has to be staked.
 
-**Note: If you wish to run more than one instance of the node, you will need a different EOS account for every one of those instances.**
+**Note: If you wish to run more than one instance of the node, you will need a different EOS account for every one of those instances with a different private/public key pair.**
 
 ## Software Prerequisites
 The BlockBase node software is built with C# and runs on the .NET Core Platform, and uses MongoBD and PostgreSQL to store its data. Before running the node, you should install:
@@ -53,8 +53,8 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
     "AccountName": "", // The EOS account name you configured
     "ActivePrivateKey": "", // The private key for the active permission key of the node account
     "ActivePublicKey": "", // The public key for the active permission key
+    "DatabasesPrefix": "blockbase", // Caution(!): If you're running multiple instance of the BlockBase node attached to the same mongodb and postgres you need to have a different prefix per node instance!
     "MongoDbConnectionString": "mongodb://localhost", // The MongoDB connection string
-    "MongoDbPrefix": "blockbase", // Caution(!): If you're running multiple instance of the BlockBase node attached to the same mongodb you need to have a different prefix per node instance!
     "PostgresHost": "localhost", // The postgresql host address
     "PostgresUser": "postgres", // The postgresql user name to use for the connection
     "PostgresPort": 5432, // The port to use in the postgresql connection
@@ -76,15 +76,21 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
 The first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
 1. Navigate to the folder node/BlockBase.Node
 
-2. Run the code with the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Run the code with the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
-3. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+3. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear. If you can't access the web page, make sure the port 5000 is open, and don't forget to check the firewall too.
 
 4. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
 5. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
 
-6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with your configuration.
+6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with your configuration. 
+
+7. Inspect the machine clock. Check if `fetchedExternalUtcTimeReference:true` and if `timeDifference` is around or less than at the most a few seconds. This is checking if the machine clock is configured correctly.
+
+8. Inspect the public IP you configured. Check if `fetchedPublicIpSuccessfully:true` and if `isConfiguredIPEqualToPublicIP:true`. Those will tell you if the IP you configured matches the public IP of the machine.
+
+9. Inspect the account you configured. Check if `eosAccountDataFetched:true`, `activeKeyFoundOnAccount:true` and `activeKeyHasEnoughWeight:true`. Those will tell you if the account you configured exists and if it's public key is associated to the active permission.
 
 # Running a Node as a Service Requester
 Running a node as a SR allows you to store your data on the BlockBase Network. To do this, you have to follow the steps below.
