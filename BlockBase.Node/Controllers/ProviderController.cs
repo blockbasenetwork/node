@@ -290,8 +290,12 @@ namespace BlockBase.Node.Controllers
                     }
                 }
 
-
                 var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
+                var candidates = await _mainchainService.RetrieveCandidates(chainName);
+                
+                var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == NodeConfigurations.ActivePublicKey) || candidates.Any(c => c.PublicKey == NodeConfigurations.ActivePublicKey);
+                if (isPublicKeyAlreadyUsed) return BadRequest(new OperationResponse<string>($"Key {NodeConfigurations.ActivePublicKey} is already being used by another producer or candidate"));
+
                 var isProducerInTable = producers.Any(c => c.Key == NodeConfigurations.AccountName);
 
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
