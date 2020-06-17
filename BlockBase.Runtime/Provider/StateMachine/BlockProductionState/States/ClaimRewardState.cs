@@ -32,7 +32,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         {
             try
             {
-                var rewardToClaim = _rewardList.SingleOrDefault(p => p.Key == _nodeConfigurations.AccountName);
+                var rewardToClaim = _rewardList.SingleOrDefault(p => p.Key == _sidechainPool.ClientAccountName);
                 if(rewardToClaim != null)
                 {
                     await _mainchainService.ClaimReward(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
@@ -69,7 +69,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         protected override async Task UpdateStatus()
         {
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
-            _rewardList = await _mainchainService.RetrieveRewardTable(_sidechainPool.ClientAccountName);
+            _rewardList = await _mainchainService.RetrieveRewardTable(_nodeConfigurations.AccountName);
         }
     }
 }
