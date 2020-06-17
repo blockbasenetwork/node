@@ -248,8 +248,7 @@ namespace BlockBase.Runtime.Sql
             foreach (var transactionToSend in _transactionsToSendToProducers)
                 _transactionsHandler.AddScriptTransactionToSend(transactionToSend);
 
-            if (_transactionsHandler.Task == null || _transactionsHandler.Task.Status.Equals(TaskStatus.RanToCompletion))
-                _transactionsHandler.Start();
+            _transactionsHandler.Start();
         }
 
         private Transaction CreateTransaction(string json, ulong sequenceNumber, string databaseName, string senderPrivateKey)
