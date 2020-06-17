@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
 {
+    #pragma warning disable
     public class SwitchProducerTurn : AbstractMainchainState<StartState, EndState>
     {
         private static Random _rnd = new Random();
