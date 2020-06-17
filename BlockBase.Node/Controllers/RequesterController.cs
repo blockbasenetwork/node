@@ -51,6 +51,8 @@ namespace BlockBase.Node.Controllers
         private SqlCommandManager _sqlCommandManager;
         private IConnector _connector;
 
+        private ConcurrentVariables _concurrentVariables;
+
         
         public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbRequesterService mongoDbRequesterService)
         {
@@ -66,6 +68,7 @@ namespace BlockBase.Node.Controllers
             _connectionsChecker = connectionsChecker;
             _databaseKeyManager = databaseKeyManager;
             _connector = psqlConnector;
+            _concurrentVariables = concurrentVariables;
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbRequesterService);
         }
 
@@ -463,6 +466,8 @@ namespace BlockBase.Node.Controllers
                 }
             
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
+
+                _concurrentVariables.Reset();
 
                 return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
             }
