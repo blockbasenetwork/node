@@ -437,14 +437,28 @@ namespace BlockBase.Node.Controllers
                 var verifyHistoryPermisson = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
                 
                 if (verifyBlockPermission != null)
-                { 
-                    await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                {
+                    try
+                    {
+                        await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                    }
+                    catch (ApiErrorException) 
+                    {
+                        _logger.LogDebug($"Unlink failed because link does not exist");
+                    }
                     await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
                 }
 
                 if (verifyHistoryPermisson != null)
-                { 
-                    await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
+                {
+                    try
+                    {
+                        await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
+                    }
+                    catch (ApiErrorException) 
+                    {
+                        _logger.LogDebug($"Unlink failed because link does not exist");
+                    }
                     await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
                 }
             
