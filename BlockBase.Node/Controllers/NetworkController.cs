@@ -339,31 +339,31 @@ namespace BlockBase.Node.Controllers
 
 
         /// <summary>
-        /// Gets the current list of unclaimed rewards to pay to providers
+        /// Gets the current list of unclaimed rewards for a given provider
         /// </summary>
-        /// <param name="sidechainName">The name of the sidechain</param>
-        /// <returns>The current list of unclaimed rewards per provider</returns>
+        /// <param name="accountName">The name of the provider</param>
+        /// <returns>The current list of unclaimed rewards</returns>
         /// <response code="200">Information was retrieved successfully</response>
         /// <response code="400">Invalid parameters</response>
         /// <response code="500">Internal error</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the current list of unclaimed rewards to pay to providers",
-            Description = "Gets the current list of rewards to the providers of the sidechain for their work. These are the rewards they haven't claimed yet.",
+            Summary = "Gets the current list of unclaimed rewards for a given provider",
+            Description = "Gets the current list of rewards for a given provider.",
             OperationId = "GetCurrentUnclaimedRewards"
         )]
-        public async Task<ObjectResult> GetCurrentUnclaimedRewards(string sidechainName)
+        public async Task<ObjectResult> GetCurrentUnclaimedRewards(string accountName)
         {
             try
             {
-                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+                if(string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
 
-                var rewardTable = await _mainchainService.RetrieveRewardTable(sidechainName);
-                if(rewardTable == null) return NotFound(new OperationResponse<string>($"The reward table for {sidechainName} was not found"));
+                var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
+                if(rewardTable == null) return NotFound(new OperationResponse<string>($"The reward table for {accountName} was not found"));
 
                 
 
-                return Ok(new OperationResponse<List<(string provider, string reward)>>(rewardTable.Select(r => (r.Key, $"{10000*r.Reward} BBT")).ToList()));
+                return Ok(new OperationResponse<List<(string provider, string reward)>>(rewardTable.Select(r => (r.Key, $"{Math.Round((double)r.Reward/10000, 4)} BBT")).ToList()));
             }
             catch(Exception e)
             {

@@ -466,6 +466,55 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+
+        /// <summary>
+        /// Claims all the rewards that the account of the provider is entitled to
+        /// </summary>
+        /// <returns>The success of the task</returns>
+        /// <response code="200">Rewards claimed with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error claiming rewards</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Claims all the rewards that the account of the provider is entitled to",
+            Description = "The provider uses this service to claim all rewards he's entitled to",
+            OperationId = "ClaimAllRewards"
+        )]
+        public async Task<ObjectResult> ClaimAllRewards()
+        {
+
+            try
+            {
+                var accountName = NodeConfigurations.AccountName;
+                var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
+                if (rewardTable == null) return NotFound(new OperationResponse<string>($"The reward table for {accountName} was not found"));
+
+
+                long totalClaimed = 0;
+                foreach (var rewardToClaim in rewardTable)
+                {
+                    if (rewardToClaim.Reward > 0)
+                    {
+                        try
+                        {
+                            await _mainchainService.ClaimReward(rewardToClaim.Key, accountName);
+                            _logger.LogInformation($"Claimed {Math.Round((double)rewardToClaim.Reward / 10000, 4)} BBT from {rewardToClaim.Key}");
+                            totalClaimed += rewardToClaim.Reward;
+                        }
+                        catch { }
+                    }
+                }
+
+
+                return Ok(new OperationResponse<bool>(true, $"Successfully claimed {Math.Round((double)totalClaimed / 10000, 4)} BBT"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
+
         /// <summary>
         /// Gets information about all currently producing sidechains
         /// </summary>
@@ -675,7 +724,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(chainName);
-                
+
                 return Ok(new OperationResponse<string>($"Sidechain {chainName} is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)}"));
             }
             catch (Exception e)

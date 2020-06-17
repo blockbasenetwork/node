@@ -33,10 +33,10 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             try
             {
                 var rewardToClaim = _rewardList.SingleOrDefault(p => p.Key == _sidechainPool.ClientAccountName);
-                if(rewardToClaim != null)
+                if(rewardToClaim != null && rewardToClaim.Reward > 0)
                 {
                     await _mainchainService.ClaimReward(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
-                    _logger.LogInformation($"Claimed {10000*rewardToClaim.Reward} BBT");
+                    _logger.LogInformation($"Claimed {Math.Round((double)rewardToClaim.Reward / 10000,4)} BBT");
                 }
             }
             catch(Exception ex)
