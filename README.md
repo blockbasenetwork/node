@@ -93,7 +93,7 @@ The first thing you should check is if everything is correctly configured. Follo
 9. Inspect the account you configured. Check if `eosAccountDataFetched:true`, `activeKeyFoundOnAccount:true` and `activeKeyHasEnoughWeight:true`. Those will tell you if the account you configured exists and if it's public key is associated to the active permission.
 
 ## Protecting your web interface
-The swagger UI interface may be accessible from the outside, that's probably how you plan to access it yourself. To make sure no one but you has access to the web interface, go to the `appsettings.json` file and edit the section below.
+The swagger UI interface may be accessible from the outside of the machine, that's probably how you plan to access it yourself. To make sure no one but you has access to the web interface, go to the `appsettings.json` file and edit the section below.
 
 ```js
 {
@@ -188,7 +188,7 @@ The `encryptionMasterKey` has to be encoded in a zbase32 format. We use this for
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
 **Generating a master key**
 1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
@@ -214,7 +214,7 @@ After you've configured your sidechain, you can request it to the network. This 
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
 **Requesting the sidechain**
 1. Open a browser and navigate to the link you set as parameter for urls.
@@ -280,7 +280,7 @@ To participate on a sidechain manually the first thing you need to do is to find
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
 **Find a sidechain**
 Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and find a sidechain that is in a candidature phase and take note of the sidechain account name.
