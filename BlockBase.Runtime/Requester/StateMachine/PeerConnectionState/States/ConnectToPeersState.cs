@@ -38,9 +38,9 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            var connectedPeersExist = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Any(p => p.ConnectionState == ConnectionStateEnum.Connected);
+            var disconnectedPeersExist = _sidechainPool.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection == null || p.PeerConnection.ConnectionState != ConnectionStateEnum.Connected);
 
-            return Task.FromResult(connectedPeersExist);
+            return Task.FromResult(!disconnectedPeersExist);
         }
 
         protected override async Task DoWork()
