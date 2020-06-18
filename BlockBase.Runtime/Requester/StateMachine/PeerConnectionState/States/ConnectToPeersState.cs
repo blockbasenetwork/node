@@ -55,9 +55,9 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            var connectedPeersExist = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Any(p => p.ConnectionState == ConnectionStateEnum.Connected);
+            var disconnectedPeersExist = _sidechainPool.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection == null || p.PeerConnection.ConnectionState != ConnectionStateEnum.Connected);
 
-            return Task.FromResult((connectedPeersExist, typeof(CheckConnectionState).Name));
+            return Task.FromResult((!disconnectedPeersExist, typeof(CheckConnectionState).Name));
         }
 
         protected override async Task UpdateStatus() 
