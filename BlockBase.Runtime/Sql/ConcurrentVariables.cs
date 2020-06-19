@@ -12,6 +12,8 @@ namespace BlockBase.Runtime.Sql
         public ConcurrentDictionary<string, SemaphoreSlim> DatabasesSemaphores;
         private ulong _transactionNumber;
         private readonly object locker = new object();
+
+        private bool _hasLoadedData = false;
         private IMongoDbRequesterService _mongoDbRequesterService;
         private NodeConfigurations _nodeConfigurations;
 
@@ -20,13 +22,23 @@ namespace BlockBase.Runtime.Sql
             DatabasesSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
             _mongoDbRequesterService = mongoDbRequesterService;
             _nodeConfigurations = nodeConfigurations.Value;
-            LoadTransactionNumberFromDB().Wait();
         }
+
+        public void Reset()
+        {
+            _hasLoadedData = false;
+        }
+
 
         public ulong GetNextTransactionNumber()
         {
             lock (locker)
             {
+                if(!_hasLoadedData)
+                {
+                    LoadTransactionNumberFromDB().Wait();
+                    _hasLoadedData = true;
+                }
                 _transactionNumber++;
                 return _transactionNumber;
             }

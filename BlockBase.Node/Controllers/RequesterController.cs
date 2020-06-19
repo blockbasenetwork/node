@@ -51,6 +51,8 @@ namespace BlockBase.Node.Controllers
         private SqlCommandManager _sqlCommandManager;
         private IConnector _connector;
 
+        private ConcurrentVariables _concurrentVariables;
+
         
         public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsHandler transactionSender, IMongoDbRequesterService mongoDbRequesterService)
         {
@@ -66,6 +68,7 @@ namespace BlockBase.Node.Controllers
             _connectionsChecker = connectionsChecker;
             _databaseKeyManager = databaseKeyManager;
             _connector = psqlConnector;
+            _concurrentVariables = concurrentVariables;
             _sqlCommandManager = new SqlCommandManager(new MiddleMan(databaseKeyManager), logger, psqlConnector, concurrentVariables, transactionSender, nodeConfigurations.Value, mongoDbRequesterService);
         }
 
@@ -435,18 +438,34 @@ namespace BlockBase.Node.Controllers
                 var verifyHistoryPermisson = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
                 
                 if (verifyBlockPermission != null)
-                { 
-                    await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                {
+                    try
+                    {
+                        await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                    }
+                    catch (ApiErrorException) 
+                    {
+                        _logger.LogDebug($"Unlink failed because link does not exist");
+                    }
                     await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
                 }
 
                 if (verifyHistoryPermisson != null)
-                { 
-                    await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
+                {
+                    try
+                    {
+                        await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
+                    }
+                    catch (ApiErrorException) 
+                    {
+                        _logger.LogDebug($"Unlink failed because link does not exist");
+                    }
                     await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
                 }
             
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
+
+                _concurrentVariables.Reset();
 
                 return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
             }

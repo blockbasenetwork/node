@@ -20,23 +20,23 @@ Here you can find all the steps to run a node as a [service requester](#Running-
 Each node has to have an EOS account associated to it. We recommend using a new EOS account just for that purpose. This account must have enough RAM, CPU, and NET to work properly. We recommend the following steps to prepare your EOS account:
 1. Create the EOS account: An EOS account can be easily created on bloks.io [here](https://bloks.io/wallet/create-account).
 
-2. Buy RAM: Buy 10k of RAM for the EOS account you created.
+2. Buy RAM: Buy 10k of RAM for the EOS account you created. This will allow you to participate as a SR or as a SP in modest sidechain networks.
 
 3. Get CPU and NET: A BlockBase node uses a lot of EOS CPU and a good amount of EOS NET. We recommend renting the required CPU and NET through REX. To learn more about REX click [here](https://eosauthority.com/rex_history/).
 
-4. Ensure the EOS account has always enough CPU and NET: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend it.
+4. Ensure the EOS account has always enough CPU, NET and RAM: Renting CPU and NET through REX lasts for one month only, so this could pose a future problem for your node because it may run out of resources. To ensure your node has always enough resources, we recommend the [Charm service by Chintai](https://arm.chintai.io/). You can very easily configure this service to always buy REX for your account when you need the resources. We use it on our nodes and we highly recommend it. You can also use it to buy more RAM automatically, which may be needed if you're planning in servicing multiple sidechains as a provider, or if you're planning in requesting a sidechain for you with many providers.
 
 5. Transfer BBT (The BlockBase token) to the EOS account. You will need BBT as a SR or as a SP. SRs use BBT to pay to SPs for running their sidechain. And SPs pledge BBT as collateral that they will lose if they fail to provide the service accordingly. In both cases BBT has to be staked.
 
-**Note: If you wish to run more than one instance of the node, you will need a different EOS account for every one of those instances.**
+**Note: If you wish to run more than one instance of the node, you will need a different EOS account for every one of those instances with a different private/public key pair.**
 
 ## Software Prerequisites
 The BlockBase node software is built with C# and runs on the .NET Core Platform, and uses MongoBD and PostgreSQL to store its data. Before running the node, you should install:
 1. .NET Core SDK 2.1 (The current version of BlockBase doesn't run on 3.1)
 
-2. The latest version of MongoDB Server (It should work fine with previous versions too)
+2. The latest version of MongoDB Server (It should work fine with versions equal or after 4.2)
 
-3. The latest version of PostgreSQL (It should work fine with previous versions too)
+3. The latest version of PostgreSQL (It should work fine with versions equal or after 12)
 
 ## Downloading the code
 To download the code follow these steps:
@@ -53,8 +53,8 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
     "AccountName": "", // The EOS account name you configured
     "ActivePrivateKey": "", // The private key for the active permission key of the node account
     "ActivePublicKey": "", // The public key for the active permission key
+    "DatabasesPrefix": "blockbase", // Caution(!): If you're running multiple instance of the BlockBase node attached to the same mongodb and postgres you need to have a different prefix per node instance!
     "MongoDbConnectionString": "mongodb://localhost", // The MongoDB connection string
-    "MongoDbPrefix": "blockbase", // Caution(!): If you're running multiple instance of the BlockBase node attached to the same mongodb you need to have a different prefix per node instance!
     "PostgresHost": "localhost", // The postgresql host address
     "PostgresUser": "postgres", // The postgresql user name to use for the connection
     "PostgresPort": 5432, // The port to use in the postgresql connection
@@ -76,15 +76,33 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
 The first thing you should check is if everything is correctly configured. Follow these steps to check if the node is correctly configured:
 1. Navigate to the folder node/BlockBase.Node
 
-2. Run the code with the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Run the code with the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
-3. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear.
+3. Open a browser and navigate to the link you set as parameter for urls. A swagger UI interface should appear. If you can't access the web page, make sure the port 5000 is open, and don't forget to check the firewall too.
 
 4. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
 5. Click on `/api/Requester/CheckRequesterConfig` then on `Try it out` and then on `Execute`.
 
-6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with your configuration.
+6. Inspect the response. It should have a code `200`. Inside the details of the response, check if `"succeeded":true`, `"accountDataFetched":true`, `"isMongoLive":true` and `"isPostgresLive":true`. All these values should be set to true. If not, there is a problem with your configuration. 
+
+7. Inspect the machine clock. Check if `fetchedExternalUtcTimeReference:true` and if `timeDifference` is around or less than at the most a few seconds. This is checking if the machine clock is configured correctly.
+
+8. Inspect the public IP you configured. Check if `fetchedPublicIpSuccessfully:true` and if `isConfiguredIPEqualToPublicIP:true`. Those will tell you if the IP you configured matches the public IP of the machine.
+
+9. Inspect the account you configured. Check if `eosAccountDataFetched:true`, `activeKeyFoundOnAccount:true` and `activeKeyHasEnoughWeight:true`. Those will tell you if the account you configured exists and if it's public key is associated to the active permission.
+
+## Protecting your web interface
+The swagger UI interface may be accessible from the outside of the machine, that's probably how you plan to access it yourself. To make sure no one but you has access to the web interface, go to the `appsettings.json` file and edit the section below.
+
+```js
+{
+"ApiSecurityConfigurations": {
+    "Use": false, // If you want to make your web interface secure, set this to true
+    "ApiKey": "" // Configure here the api key you will use to authenticate on the web interface
+  }
+} 
+```
 
 # Running a Node as a Service Requester
 Running a node as a SR allows you to store your data on the BlockBase Network. To do this, you have to follow the steps below.
@@ -95,6 +113,18 @@ Before you can request the network for a new sidechain, you have to configure th
 ```js
 {
   "RequesterConfigurations": {
+  "DatabaseSecurityConfigurations": { // This section will be explained further ahead
+      "Use": false,
+      "FilePassword": "",
+      "EncryptionMasterKey": "",
+      "EncryptionPassword": ""
+    },
+    "SidechainPhasesTimesConfigurations": { // Leave this section as is. Each one of these phases is crucial for the bootstrap of a sidechain network, and each should be at least one minute long.
+      "CandidaturePhaseDurationInSeconds": 60,
+      "SecretSendingPhaseDurationInSeconds": 60,
+      "IpSendingPhaseDurationInSeconds": 60,
+      "IpRetrievalPhaseDurationInSeconds": 60
+    },
     "ValidatorNodes": {
       "RequiredNumber": 0, // The required number of validator nodes
       "MaxPaymentPerBlock": 0, // The payment in BBT each validator node will receive when he produces a block filled to the max with transactions
@@ -118,6 +148,7 @@ Before you can request the network for a new sidechain, you have to configure th
   }
 }
 ```
+
 ### Understanding the costs
 The way you configure your sidechain request is very important. You need to understand the costs involved for you and for the service providers. If the sidechain you request demands too much from a SP and you pay too little, no SP you will want to participate in your sidechain. Inversely, if you pay too much to a SP and demand too little from him, you will be squandering resources. To get an idea of how much your sidechain will cost, [visit our sidechain costs calculator](https://blockbase.network/costs-calculator).
 
@@ -131,11 +162,11 @@ In some cases, it may make sense to have a preselected list of accounts that wil
 BlockBase has an encryption layer built in that allows you to encrypt all your data before it is sent to the providers. You can configure the security on the appsettings file. Before you do that though, you have to consider the implications of doing so.
 
 Storing all your encryption passwords on your appsettings file poses a security problem. Furthermore, the owner of the data may not be the requester of the sidechain, and may want to keep the encryption passwords on his side. For that reason, you may choose to leave this section unconfigured. If you choose to do so, you have to consider the following consequences:
-1. That security configuration will need to be provided further ahead when you *"Start the sidechain maintenance"* and that information will be stored only in memory.
+1. That security configuration will need to be provided further ahead when you *"Set the Secret"* and that information will be stored only in memory.
 
 2. The owner of the data will have to safely store the security configuration on another medium. **If the configuration is lost all access to all encrypted data will be lost**!
 
-3. If the node or the machine its running on crash for some reason, when you restart the node you will have to go through the *"Start the sidechain maintenance"* step again and provide the configuration information again.
+3. If the node or the machine its running on crash for some reason, when you restart the node you will have to go through the *"Set the Secret"* step again and provide the configuration information again.
 
 4. If you choose to leave the data security on your appsettings file, when the node is restarted it can automatically *"Start the sidechain maintenance"* step because it has all the data it needs.
 
@@ -143,13 +174,12 @@ If you wish to keep the data security configuration on your appsettings file her
 
 ```js
 {
-  "securityConfigurations":
-  {
-  "useSecurityConfigurations": true, // indicates if the security configurations here should be used or ignored
-  "filePassword": "string", // encrypts the contents of the file where the keys are going to get stored
-  "encryptionMasterKey": "string", // a master key for generation of all encryption keys of all databases - you can generate one yourself with the GenerateMasterKey service
-  "encryptionPassword": "string", // initial passphrase to generate the master IV
-  }
+  "DatabaseSecurityConfigurations": {
+      "Use": false, // Indicates if the security configurations here should be used or ignored
+      "FilePassword": "", // Encrypts the contents of the file where the keys are going to get stored
+      "EncryptionMasterKey": "", // A master key for generation of all encryption keys of all databases - you can generate one yourself with the GenerateMasterKey service
+      "EncryptionPassword": "" // A initial passphrase to generate the master IV
+    }
 }
 ```
 
@@ -158,7 +188,7 @@ The `encryptionMasterKey` has to be encoded in a zbase32 format. We use this for
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
 **Generating a master key**
 1. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
@@ -184,7 +214,7 @@ After you've configured your sidechain, you can request it to the network. This 
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
 **Requesting the sidechain**
 1. Open a browser and navigate to the link you set as parameter for urls.
@@ -203,7 +233,9 @@ Starting the maintenance of the sidechain is a fundamental step for your network
 
 2. On the upper right side of the swagger page choose the "Service Requester" API from the list of available APIs.
 
-3. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out` and then `Execute`
+3. Click on `/api/Requester/SetSecret` then on `Try it out` and then `Execute`
+
+4. Click on `/api/Requester/RunSidechainMaintenance` then on `Try it out` and then `Execute`
 
 ### Start the sidechain maintenance without the security on the appsettings file
 If you didn't store your data security configuration on the BlockBase.Node/appsettings.json file, you will have to pass that configuration on the body of the request.
@@ -211,20 +243,22 @@ If you didn't store your data security configuration on the BlockBase.Node/appse
 Unfortunately, for technical reasons you won't be able to do this through swagger so you will have to use an alternative method. We recommend you to use [Postman](https://www.postman.com/) for that. Follow these steps:
 1. Download Postman.
 
-2. Prepare a Post request to _`your_api_endpoint`_`/api/Requester/RunSidechainMaintenance/`
+2. Prepare a Post request to _`your_api_endpoint`_`/api/Requester/SetSecret/`
    
 3. Copy the json content below and fill the parameters accordingly, and paste it on the body of the request. **Remember that these configurations won't be stored by the node and will have to be provided everytime the node is started. Store them safely or all your encrypted data won't be recoverable!**
 
 ```js
 {
   {
-  "filePassword": "string", // encrypts the contents of the file where the keys are going to get stored
-  "encryptionMasterKey": "string", // master key for generation of all encryption keys of all databases
-  "encryptionPassword": "string", // initial passphrase to generate master IV
+  "FilePassword": "", // Encrypts the contents of the file where the keys are going to get stored
+  "EncryptionMasterKey": "", // A master key for generation of all encryption keys of all databases - you can generate one yourself with the GenerateMasterKey service
+   "EncryptionPassword": "" // A initial passphrase to generate the master IV
   }
 ```
 
 4. Click `Send`.
+
+5. Back on the swagger interface click on `/api/Requester/RunSidechainMaintenance` then on `Try it out` and then `Execute`
 
 ## Your node is configured and running
 Your node is up and running, your sidechain has been requested to the network, and the maintenance of the sidechain is running too. Visit our [Network Explorer](https://blockbase.network/Tracker) and find your sidechain request there. Sometimes it takes a while to appear there.
@@ -246,7 +280,7 @@ To participate on a sidechain manually the first thing you need to do is to find
 **Start the node** (If it's not running)
 1. Navigate to the folder node/BlockBase.Node
 
-2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs)
+2. Open a terminal there and run the command `dotnet run --urls=http://localhost:5000` (this is just an example url, change it accordingly to your needs. For example, if you want to access it from outside the machine, you should use `dotnet run --urls=http://*:5000`)
 
 **Find a sidechain**
 Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and find a sidechain that is in a candidature phase and take note of the sidechain account name.
@@ -261,8 +295,8 @@ Go to our [Network Tracker](https://www.blockbase.network/Tracker) online and fi
 4. Fill the fields
 
 	4.1. `chainName`: the name of the sidechain
-	4.2. `stake`: the amount of stake in BBT you want to put as collateral
-	4.3. `producerType`: the type of provider your node is going to be. *ProducerType may assume one of three numbers: 1, 2 and 3, which states the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also builds the sidechain, and 3 is a node that builds the sidechain and executes the operations on a local database.*
+	4.2. `producerType`: the type of provider your node is going to be. *ProducerType may assume one of three numbers: 1, 2 and 3, which states the level of the producer. 1 is only a node that validates blocks and doesn't build the sidechain, 2 is a node that also builds the sidechain, and 3 is a node that builds the sidechain and executes the operations on a local database.*
+	4.3. `stake`: the amount of stake in BBT you want to put as collateral
   
 5. Click `Execute`.
 
@@ -306,6 +340,15 @@ A service requester or service provider may manually add or remove stake to and 
 It does make sense though, for the SR to regularly add stake to the sidechain to make sure he has enough BBT to pay to the SPs. In order to add more stake to the sidechain, the EOS account associated to the SR sidechain has to have the required amount of BBT to stake.
 
 After following all the above steps you won't have difficulties in finding the corresponding APIs on the "Service Requester" and "Service Provider" APIs. To add stake use the `addStake` service, and to remove stake use the `claimStake` method.
+
+# Manually Claiming BBT Rewards
+A service provider will get rewarded in BBT for providing sidechains. These rewards are collected automatically by the node while providing the sidechain, but you can do it manually to if you wish. To do that, follow these steps:
+
+1. Open a browser and navigate to the link you set as parameter for urls.
+
+2. On the upper right side of the swagger page choose the "Service Provider" API from the list of available APIs.
+
+3. Click on `/api/Provider/ClaimAllRewards` then on `Try it out`.
 
 
 # Querying BlockBase sidechains

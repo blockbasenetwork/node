@@ -36,8 +36,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         protected override Task<bool> HasConditionsToContinue()
         {
             if(_contractStateTable == null || _producerList == null) return Task.FromResult(false);
-            //TODO verifies if he is a producer and the sidechain is in production state
-            return Task.FromResult(_contractStateTable.ProductionTime && _producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
+            //TODO verifies if he is a producer
+            return Task.FromResult(_producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

@@ -1084,9 +1084,9 @@ namespace BlockBase.Network.Mainchain
                 {
                     var apiEx = (ApiErrorException)exception;
                     var details = apiEx.error?.details;
-                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth" || d.method == "tx_duplicate"))
+                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth" || d.method == "tx_duplicate" || d.method == "unsatisfied_authorization"))
                     {
-                        //if it's a message that we may be expecting do a quieter log
+                        //if it's a message that we may be expecting do a quieter log and stop the loop
                         _logger.LogDebug($"Error sending transaction: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");
                         return new OpResult<T>(exception);
                     }

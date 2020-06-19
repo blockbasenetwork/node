@@ -24,6 +24,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private List<ProducerInTable> _producers;
 
         private SidechainPool _sidechainPool;
+        private bool _hasUpdatedIps;
         public IPSendTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
@@ -34,7 +35,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_ipAddressTable.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.EncryptedIPs.Any() ?? false);
+            return Task.FromResult(_hasUpdatedIps && (_ipAddressTable.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.EncryptedIPs.Any() ?? false));
         }
 
         protected override async Task DoWork()
@@ -52,6 +53,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
             var addIpsTransaction = await _mainchainService.AddEncryptedIps(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, listEncryptedIps);
 
+            _hasUpdatedIps = true;
             _logger.LogDebug($"Sent encrypted ips. Tx: {addIpsTransaction}");
         }
 

@@ -77,7 +77,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             if (ipSendTimediff > 0) return Convert.ToInt32(ipSendTimediff);
             if (ipReceiveTimediff > 0) return Convert.ToInt32(ipReceiveTimediff);
 
-            return Convert.ToInt32(_sidechainPool.BlockTimeDuration);
+            return Convert.ToInt32(15);
         }
     }
 
