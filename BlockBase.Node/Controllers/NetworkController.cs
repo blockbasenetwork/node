@@ -442,7 +442,7 @@ namespace BlockBase.Node.Controllers
                     requests.Add(infoRequest);
                 }
 
-                var requestResults = requests.Select(r => HttpHelper.MeasureWebRequest(r.RequestUri.Host, r)).ToList();
+                var requestResults = requests.Select(r => HttpHelper.MeasureWebRequest(r.RequestUri.GetLeftPart(System.UriPartial.Authority), r)).ToList();
                 await Task.WhenAll(requestResults);
                 var results = requestResults.Select(r => r.Result);
 
