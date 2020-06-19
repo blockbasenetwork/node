@@ -57,12 +57,13 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a sidechain name."));
+                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a sidechain name."));
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-                
-                if(contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} configuration not found"));
 
-                var result = new GetSidechainConfigurationModel {
+                if (contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} configuration not found"));
+
+                var result = new GetSidechainConfigurationModel
+                {
                     account_name = contractInfo.Key,
                     BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement,
                     BlockTimeDuration = contractInfo.BlockTimeDuration,
@@ -116,7 +117,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if(string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(sidechainName))
+                if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(sidechainName))
                 {
                     return BadRequest($"Please provide and producer account name and a sidechain name");
                 }
@@ -125,13 +126,13 @@ namespace BlockBase.Node.Controllers
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
                 var producerTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
 
-                if(contractState == null) return NotFound($"Unable to retrieve {sidechainName} contract state");
-                if(candidatureTable == null && producerTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature and production table");
+                if (contractState == null) return NotFound($"Unable to retrieve {sidechainName} contract state");
+                if (candidatureTable == null && producerTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature and production table");
 
-                if(candidatureTable != null && candidatureTable.Where(m=>m.Key == accountName).Any())
+                if (candidatureTable != null && candidatureTable.Where(m => m.Key == accountName).Any())
                     return Ok(new OperationResponse<bool>(false, $"Account {accountName} has applied for {sidechainName}"));
 
-                if(producerTable != null && producerTable.Where(m => m.Key == accountName).Any())
+                if (producerTable != null && producerTable.Where(m => m.Key == accountName).Any())
                     return Ok(new OperationResponse<bool>(false, $"Account {accountName} is producing for {sidechainName}"));
 
                 return Ok(new OperationResponse<bool>(false, $"Producer {accountName} not found"));
@@ -161,7 +162,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if(string.IsNullOrWhiteSpace(sidechainName)) return BadRequest("Please provide a valid sidechain name");
+                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest("Please provide a valid sidechain name");
 
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
@@ -170,12 +171,12 @@ namespace BlockBase.Node.Controllers
                 var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
                 var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
 
-                if(contractState == null) return BadRequest($"Contract state not found for {sidechainName}");
-                if(candidates == null) return BadRequest($"Candidate table not found for {sidechainName}");
-                if(tokenLedger == null) return BadRequest($"Token ledger table not found for {sidechainName}");
-                if(producers == null) return BadRequest($"Producer table not found for {sidechainName}");
-                if(contractInfo == null) return BadRequest($"Contract info not found for {sidechainName}");
-                if(reservedSeats == null) return BadRequest($"Reserved seats table not found for {sidechainName}");
+                if (contractState == null) return BadRequest($"Contract state not found for {sidechainName}");
+                if (candidates == null) return BadRequest($"Candidate table not found for {sidechainName}");
+                if (tokenLedger == null) return BadRequest($"Token ledger table not found for {sidechainName}");
+                if (producers == null) return BadRequest($"Producer table not found for {sidechainName}");
+                if (contractInfo == null) return BadRequest($"Contract info not found for {sidechainName}");
+                if (reservedSeats == null) return BadRequest($"Reserved seats table not found for {sidechainName}");
 
                 var slotsTakenByReservedSeats = 0;
                 var fullNumberOfSlotsTakenByReservedSeats = 0;
@@ -255,7 +256,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if(string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
+                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
 
                 var stakeTable = await _mainchainService.RetrieveAccountStakedSidechains(accountName);
 
@@ -293,7 +294,7 @@ namespace BlockBase.Node.Controllers
 
                 return Ok(new OperationResponse<List<TopProducerEndpointResponse>>(topProducersEndpointResponse));
             }
-            catch(Newtonsoft.Json.JsonReaderException)
+            catch (Newtonsoft.Json.JsonReaderException)
             {
                 return NotFound(new OperationResponse<string>("Unable to retrieve the list of producers"));
             }
@@ -327,7 +328,7 @@ namespace BlockBase.Node.Controllers
 
                 return Ok(new OperationResponse<List<TrackerSidechain>>(trackerSidechains));
             }
-            catch(Newtonsoft.Json.JsonReaderException)
+            catch (Newtonsoft.Json.JsonReaderException)
             {
                 return NotFound(new OperationResponse<string>("Unable to retrieve the list of sidechains"));
             }
@@ -356,16 +357,16 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if(string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
+                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
 
                 var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
-                if(rewardTable == null) return NotFound(new OperationResponse<string>($"The reward table for {accountName} was not found"));
+                if (rewardTable == null) return NotFound(new OperationResponse<string>($"The reward table for {accountName} was not found"));
 
-                
 
-                return Ok(new OperationResponse<List<(string provider, string reward)>>(rewardTable.Select(r => (r.Key, $"{Math.Round((double)r.Reward/10000, 4)} BBT")).ToList()));
+
+                return Ok(new OperationResponse<List<(string provider, string reward)>>(rewardTable.Select(r => (r.Key, $"{Math.Round((double)r.Reward / 10000, 4)} BBT")).ToList()));
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
             }
@@ -391,17 +392,17 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if(!IPAddress.TryParse(ipAddress, out var ipAddr)) return BadRequest("Unable to parse the ipAddress");
+                if (!IPAddress.TryParse(ipAddress, out var ipAddr)) return BadRequest("Unable to parse the ipAddress");
 
                 var ipEndPoint = new IPEndPoint(ipAddr, port);
                 var peer = await _tcpConnectionTester.TestListen(ipEndPoint);
-                if(peer != null)
+                if (peer != null)
                     return Ok($"Tried to establish connection to peer. Check the console for results.");
                 else
                     return Ok($"Unable to connect to peer");
 
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
             }
@@ -431,26 +432,25 @@ namespace BlockBase.Node.Controllers
                 var producerEndpointResponse = new TopProducerEndpointResponse();
                 producerEndpointResponse.ProducerInfo = producer.ProducerInfo;
                 producerEndpointResponse.Endpoints = new List<EndpointResponse>();
+                var requests = new List<HttpWebRequest>();
 
                 foreach (var endpoint in producer.Endpoints)
                 {
                     if (!endpoint.Contains("http")) continue;
-                    var endpointResponse = new EndpointResponse();
+
                     var infoRequest = HttpHelper.ComposeWebRequestGet($"{endpoint}/v1/chain/get_info");
-                    long measuredRequest = 0;
+                    requests.Add(infoRequest);
+                }
 
-                    try
-                    {
-                        measuredRequest = await HttpHelper.MeasureWebRequest(infoRequest);
-                    }
-                    catch (Exception)
-                    {
-                        continue;
-                    }
+                var requestResults = requests.Select(r => HttpHelper.MeasureWebRequest(r.RequestUri.Host, r)).ToList();
+                await Task.WhenAll(requestResults);
+                var results = requestResults.Select(r => r.Result);
 
-                    endpointResponse.Endpoint = endpoint;
-                    endpointResponse.ResponseTimeInMs = measuredRequest;
-
+                foreach (var result in results)
+                {
+                    var endpointResponse = new EndpointResponse();
+                    endpointResponse.Endpoint = result.Item1;
+                    endpointResponse.ResponseTimeInMs = result.Item2;
                     producerEndpointResponse.Endpoints.Add(endpointResponse);
                 }
 
@@ -458,7 +458,7 @@ namespace BlockBase.Node.Controllers
                 topProducersEndpointResponse.Add(producerEndpointResponse);
             }
 
-            return topProducersEndpointResponse.OrderBy(p => p.Endpoints.FirstOrDefault()?.ResponseTimeInMs).ToList();
+            return topProducersEndpointResponse.ToList();
         }
     }
 }
