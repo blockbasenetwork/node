@@ -20,6 +20,6 @@ namespace BlockBase.Domain.Results
     public class EndpointResponse
     {
         public string Endpoint { get; set; }
-        public long ResponseTimeInMs { get; set; }
+        public string ResponseTimeInMs { get; set; }
     }
 }
