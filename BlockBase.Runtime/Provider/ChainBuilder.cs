@@ -87,6 +87,12 @@ namespace BlockBase.Runtime.Provider
 
                 _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
+                if (_lastSidechainBlockheader == null)
+                {
+                    return new OpResult<bool>(new Exception("No blockheaders in smart contract."));
+                }
+
+
                 if (_sidechainPool.ProducerType == ProducerTypeEnum.Validator)
                     _missingBlocksSequenceNumber = new List<ulong> { _lastSidechainBlockheader.SequenceNumber };
 
@@ -130,6 +136,12 @@ namespace BlockBase.Runtime.Provider
                             _logger.LogDebug("Tried all producers and didn't manage to build chain, trying again later...");
                             return new OpResult<bool>(new Exception("Tried all producers and didn't manage to build chain, trying again later"));
                         }
+                    }
+
+                    if (TaskContainer.CancellationTokenSource.IsCancellationRequested) 
+                    {
+                        
+                        return new OpResult<bool>(new Exception("Operation cancelled."));
                     }
                 }
             }
@@ -178,6 +190,12 @@ namespace BlockBase.Runtime.Provider
             if (!blockProtos.Any() || blockProtos == null) return;
 
             _lastSidechainBlockheader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+
+            if (_lastSidechainBlockheader == null)
+            {
+                TaskContainer.CancellationTokenSource.Cancel();
+                return;
+            }
             var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
             var firstBlockProto = blockProtos.FirstOrDefault();
             var blockAfter = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(_sidechainPool.ClientAccountName, firstBlockProto.BlockHeader.SequenceNumber + 1, firstBlockProto.BlockHeader.SequenceNumber + 1)).SingleOrDefault();

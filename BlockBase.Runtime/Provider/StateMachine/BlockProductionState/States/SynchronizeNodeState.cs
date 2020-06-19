@@ -10,7 +10,6 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Network;
 using BlockBase.Utils.Operation;
-using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
