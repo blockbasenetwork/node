@@ -108,7 +108,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
                 if(!DoesProducerHavePermission(producer, verifyBlockPermission)) return true;
                 if((producer.ProducerType == 2 || producer.ProducerType == 3) && !DoesProducerHavePermission(producer, verifyHistoryPermisson)) return true;
             }
-            if (producerList.Count() < verifyBlockPermission.required_auth?.accounts?.Count() || producerList.Count() < verifyHistoryPermisson.required_auth?.accounts?.Count()) return true;
+            if (producerList.Count() < verifyBlockPermission.required_auth?.accounts?.Count()) return true;
+            if (producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).Count() < verifyHistoryPermisson.required_auth?.accounts?.Count()) return true;
             return false;
         }
 
