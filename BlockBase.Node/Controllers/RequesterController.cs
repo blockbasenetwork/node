@@ -571,7 +571,6 @@ namespace BlockBase.Node.Controllers
 
             configurations.Key = NodeConfigurations.AccountName;
 
-            configurations.BlocksBetweenSettlement = RequesterConfigurations.NumberOfBlocksBetweenSettlements;
             configurations.BlockTimeDuration = RequesterConfigurations.BlockTimeInSeconds;
             configurations.SizeOfBlockInBytes = RequesterConfigurations.MaxBlockSizeInBytes;
             configurations.NumberOfFullProducersRequired = RequesterConfigurations.FullNodes.RequiredNumber;

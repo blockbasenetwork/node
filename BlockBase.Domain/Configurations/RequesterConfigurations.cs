@@ -14,7 +14,6 @@ namespace BlockBase.Domain.Configurations
         public double RequesterStake { get; set; }
         public double MinimumProducerStake { get; set; }
         public uint BlockTimeInSeconds { get; set; }
-        public uint NumberOfBlocksBetweenSettlements { get; set; }
         public uint MaxBlockSizeInBytes { get; set; }
         public List<string> ReservedProducerSeats { get; set; }
 
