@@ -290,6 +290,10 @@ namespace BlockBase.Node.Controllers
                     }
                 }
 
+                if((contractInfo.NumberOfFullProducersRequired == 0 && providerType == 3) || (contractInfo.NumberOfHistoryProducersRequired == 0 && providerType == 2) || (contractInfo.NumberOfValidatorProducersRequired == 0 && providerType == 1)) {
+                    return BadRequest(new OperationResponse<string>($"Producer type inserted is not needed in the given sidechain configuration"));
+                }
+
                 var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
                 var candidates = await _mainchainService.RetrieveCandidates(chainName);
                 
