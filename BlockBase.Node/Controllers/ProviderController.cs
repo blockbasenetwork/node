@@ -811,10 +811,10 @@ namespace BlockBase.Node.Controllers
                 if (ipAddresses == null) return BadRequest(new OperationResponse<string>(false, $"IP Addresses table not found for {sidechainName}"));
 
                 if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any()))
-                    return StatusCode(401, new OperationResponse<string>($"IP Addresses table doesn't have any IPs for {sidechainName}"));
+                    return StatusCode(401, new OperationResponse<string>(false, $"IP Addresses table doesn't have any IPs for {sidechainName}"));
 
                 if (!producers.Any(m => m.Key == NodeConfigurations.AccountName))
-                    return StatusCode(402, new OperationResponse<string>($"Producer {NodeConfigurations.AccountName} not found in producers table for {sidechainName}"));
+                    return StatusCode(402, new OperationResponse<string>(false, $"Producer {NodeConfigurations.AccountName} not found in producers table for {sidechainName}"));
 
                 var ipsToReturn = new Dictionary<string, string>();
 
@@ -834,7 +834,7 @@ namespace BlockBase.Node.Controllers
                     ipsToReturn.Add(producer.Key, producerIp.ToString());
                 }
 
-                return Ok(ipsToReturn);
+                return Ok(new OperationResponse<Dictionary<string, string>>(ipsToReturn));
             }
             catch (Exception e)
             {

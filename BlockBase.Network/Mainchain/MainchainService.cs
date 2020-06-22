@@ -334,6 +334,20 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<string> RemoveBlacklistedProducer(string owner, string producerToRemove, string permission = "active")
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.REMOVE_BLACKLISTED,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForBlackListProd(owner, producerToRemove),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         public async Task<string> PunishProd(string owner, string permission = "active")
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
@@ -788,6 +802,17 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result.SingleOrDefault();
+        }
+
+        public async Task<List<BlackListTable>> RetrieveBlacklistTable(string chain)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlackListTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.BLACKLIST_TABLE,
+                chain),
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
         }
 
 
