@@ -264,12 +264,12 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (await _connector.DoesDefaultDatabaseExist())
-                    return BadRequest(new OperationResponse<string>("You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
+                    return BadRequest(new OperationResponse<string>(false, "You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
 
                 _connector.Setup().Wait();
 
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-                if (contractSt != null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} already exists"));
+                if (contractSt != null) return BadRequest(new OperationResponse<string>(false, $"Sidechain {NodeConfigurations.AccountName} already exists"));
 
 
 
@@ -298,7 +298,7 @@ namespace BlockBase.Node.Controllers
                         var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
                         var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
                         var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
-                        return Ok(new OperationResponse<bool>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
+                        return Ok(new OperationResponse<string>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
                     }
                     catch (ApiErrorException)
                     {
@@ -346,7 +346,7 @@ namespace BlockBase.Node.Controllers
                     _databaseKeyManager.SetInitialSecrets(config);
                 }
 
-                return Ok(new OperationResponse<bool>(true, "Secret set with success"));
+                return Ok(new OperationResponse<string>(true, "Secret set with success"));
             }
             catch (Exception e)
             {
@@ -373,10 +373,10 @@ namespace BlockBase.Node.Controllers
                 if (!_sidechainMaintainerManager.IsMaintainerRunning() || !_sidechainMaintainerManager.IsProductionRunning())
                 {
                     await _sidechainMaintainerManager.Start();
-                    return Ok(new OperationResponse<bool>(true, "Chain maintenance started."));
+                    return Ok(new OperationResponse<string>(true, "Chain maintenance started."));
                 }
 
-                return BadRequest(new OperationResponse<string>($"Sidechain was already running."));
+                return BadRequest(new OperationResponse<string>(false, $"Sidechain was already running."));
             }
             catch (Exception e)
             {
@@ -402,11 +402,11 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (!_sidechainMaintainerManager.IsMaintainerRunning() && !_sidechainMaintainerManager.IsProductionRunning())
-                    return BadRequest(new OperationResponse<string>($"The sidechain isn't running."));
+                    return BadRequest(new OperationResponse<string>(false, $"The sidechain isn't running."));
 
                 await _sidechainMaintainerManager.Pause();
 
-                return Ok(new OperationResponse<bool>(true, $"Sidechain maintenance paused."));
+                return Ok(new OperationResponse<string>(true, $"Sidechain maintenance paused."));
             }
             catch (Exception e)
             {
@@ -433,7 +433,7 @@ namespace BlockBase.Node.Controllers
 
                 //TODO rpinto - should all this functionality below be encapsulated inside the sidechainMaintainerManager?
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-                if (contractSt == null) return BadRequest(new OperationResponse<string>($"Sidechain {NodeConfigurations.AccountName} not found"));
+                if (contractSt == null) return BadRequest(new OperationResponse<string>(false, $"Sidechain {NodeConfigurations.AccountName} not found"));
 
                 var account = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
                 var verifyBlockPermission = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
@@ -469,7 +469,7 @@ namespace BlockBase.Node.Controllers
 
                 _concurrentVariables.Reset();
 
-                return Ok(new OperationResponse<bool>(true, $"Ended sidechain. Tx: {tx}"));
+                return Ok(new OperationResponse<string>(true, $"Ended sidechain. Tx: {tx}"));
             }
             catch (Exception e)
             {
@@ -497,14 +497,14 @@ namespace BlockBase.Node.Controllers
         {
             if (stake <= 0)
             {
-                return BadRequest(new OperationResponse<string>("The stake must be positive"));
+                return BadRequest(new OperationResponse<string>(false, "The stake must be positive"));
             }
             try
             {
                 var stakeString = $"{stake.ToString("F4")} BBT";
                 var trx = await _mainchainService.AddStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName, stakeString);
 
-                return Ok(new OperationResponse<bool>(true, $"Stake successfully added. Tx = {trx}"));
+                return Ok(new OperationResponse<string>(true, $"Stake successfully added. Tx = {trx}"));
             }
             catch (Exception e)
             {
@@ -530,7 +530,7 @@ namespace BlockBase.Node.Controllers
             {
                 var trx = await _mainchainService.ClaimStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
 
-                return Ok(new OperationResponse<bool>(true, $"Stake successfully claimed. Tx = {trx}"));
+                return Ok(new OperationResponse<string>(true, $"Stake successfully claimed. Tx = {trx}"));
             }
             catch (Exception e)
             {
@@ -611,7 +611,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>("Passwords and main key not set."));
+                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>(false, "Passwords and main key not set."));
                 var queryResults = await _sqlCommandManager.Execute(queryScript);
 
                 return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
@@ -639,7 +639,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>("Passwords and main key not set."));
+                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>(false, "Passwords and main key not set."));
                 var query = $"USE {sidebarQueryInfo.DatabaseName}; SELECT {sidebarQueryInfo.TableName}.* FROM {sidebarQueryInfo.TableName}";
                 if (sidebarQueryInfo.Encrypted) query += " ENCRYPTED";
                 query += ";";
@@ -671,7 +671,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>("Passwords and main key not set."));
+                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>(false, "Passwords and main key not set."));
                 var structure = _sqlCommandManager.GetStructure();
                 return Ok(new OperationResponse<IList<DatabasePoco>>(structure));
             }
@@ -698,9 +698,9 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (_sidechainMaintainerManager.IsMaintainerRunning() || _sidechainMaintainerManager.IsProductionRunning())
-                    return BadRequest(new OperationResponse<string>("The sidechain maintenance is running."));
+                    return BadRequest(new OperationResponse<string>(false, "The sidechain maintenance is running."));
                 await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
-                return Ok(new OperationResponse<bool>(true, $"Deleted databases and cleared all data."));
+                return Ok(new OperationResponse<string>(true, $"Deleted databases and cleared all data."));
             }
             catch (Exception e)
             {
@@ -732,9 +732,9 @@ namespace BlockBase.Node.Controllers
                 var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
                 var ipAddresses = await _mainchainService.RetrieveIPAddresses(sidechainName);
 
-                if (contractState == null) return BadRequest(new OperationResponse<string>($"Contract state not found for {sidechainName}"));
-                if (contractInfo == null) return BadRequest(new OperationResponse<string>($"Contract info not found for {sidechainName}"));
-                if (ipAddresses == null) return BadRequest(new OperationResponse<string>($"IP Addresses table not found for {sidechainName}"));
+                if (contractState == null) return BadRequest(new OperationResponse<string>(false, $"Contract state not found for {sidechainName}"));
+                if (contractInfo == null) return BadRequest(new OperationResponse<string>(false, $"Contract info not found for {sidechainName}"));
+                if (ipAddresses == null) return BadRequest(new OperationResponse<string>(false, $"IP Addresses table not found for {sidechainName}"));
 
                 if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any()))
                     return StatusCode(401, new OperationResponse<string>($"IP Addresses table doesn't have any IPs for {sidechainName}"));
