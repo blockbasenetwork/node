@@ -14,6 +14,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddStake(string sidechain, string accountName, string stake);
         Task<string> ClaimStake(string sidechain, string accountName);
         Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType, int softwareVersion);
+        Task<string> RemoveCandidature(string chain, string accountName);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
         Task<string> AddEncryptedIps(string chain, string accountName, List<string> encryptedIps);
@@ -28,6 +29,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> StartCandidatureTime(string owner, string permission = "active");
         Task<string> PunishProd(string owner, string permission = "active");
         Task<string> BlacklistProducer(string owner, string producerToPunish, string permission = "active");
+        Task<string> RemoveBlacklistedProducer(string owner, string producerToRemove, string permission = "active");
         Task<string> SidechainExitRequest(string sidechainName, string permission = "active");
         Task<int> ExecuteChainMaintainerAction(string actionname, string accountname, string permission = "active");
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string authorizationToAssign, string permission = "active", string accountPermission = "active");
@@ -63,5 +65,6 @@ namespace BlockBase.Network.Mainchain
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<List<VerifySignature>> RetrieveVerifySignatures(string account);
         Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName);
+        Task<List<BlackListTable>> RetrieveBlacklistTable(string chain);
     }
 }
