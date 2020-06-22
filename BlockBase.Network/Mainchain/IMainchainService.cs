@@ -14,6 +14,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddStake(string sidechain, string accountName, string stake);
         Task<string> ClaimStake(string sidechain, string accountName);
         Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType, int softwareVersion);
+        Task<string> RemoveCandidature(string chain, string accountName);
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
         Task<string> AddEncryptedIps(string chain, string accountName, List<string> encryptedIps);

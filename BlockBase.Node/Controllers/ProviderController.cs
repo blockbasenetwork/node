@@ -346,6 +346,52 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Removes an active candidature to a sidechain production
+        /// </summary>
+        /// <param name="sidechainName">Account name of the sidechain</param>
+        /// <returns>The success of the task</returns>
+        /// <response code="200">Request to leave sent with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error sending request</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Removes an active candidature to a sidechain production",
+            Description = "If a sidechain is still in the candidature phase and if this node is a candidate to it, this method removes the existing candidature",
+            OperationId = "RemoveCandidature"
+        )]
+        public async Task<ObjectResult> RemoveCandidature(string sidechainName)
+        {
+            if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a valid sidechain name"));
+
+            try
+            {
+
+                var chainContract = await _mainchainService.RetrieveContractState(sidechainName);
+                var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
+                if (chainContract == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} not found"));
+                if (candidatureTable == null) return NotFound(new OperationResponse<string>($"Unable to retrieve {sidechainName} candidature table"));
+
+                var isProducerInCandidature = candidatureTable.Where(m => m.Key == NodeConfigurations.AccountName).Any();
+
+                if (!isProducerInCandidature)
+                    return BadRequest(new OperationResponse<string>($"Producer {NodeConfigurations.AccountName} not found in sidechain {sidechainName}"));
+
+                if (!chainContract.CandidatureTime)
+                    return BadRequest(new OperationResponse<string>($"Sidechain is not in candidature time so candidature can't be removed"));
+
+                var trx = await _mainchainService.RemoveCandidature(sidechainName, NodeConfigurations.AccountName);
+                _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(sidechainName);
+
+                return Ok(new OperationResponse<bool>(true, $"Candidature succesfully removed from {sidechainName}. Tx: {trx}"));
+
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+            }
+        }
+
 
         /// <summary>
         /// Sends a transaction to BlockBase Operations Contract stating that the provider wants to leave this sidechain

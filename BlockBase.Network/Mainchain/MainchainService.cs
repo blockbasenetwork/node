@@ -110,6 +110,19 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<string> RemoveCandidature(string chain, string accountName)
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.REMOVE_CANDIDATE,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                accountName,
+                CreateDataForRemoveCandidate(chain, accountName)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         public async Task<string> AddSecret(string chain, string accountName, string hash)
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
@@ -1042,6 +1055,15 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.PRODUCER, producerName },
                 { EosParameterNames.BYTE_IN_HEXADECIMAL, byteInHexadecimal }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForRemoveCandidate(string owner, string producerName)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.NAME, producerName }
             };
         }
 

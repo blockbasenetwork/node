@@ -75,6 +75,7 @@ namespace BlockBase.Domain.Eos
         public const string ADD_VERIFY_SIGNATURE = "addversig";
         public const string UNLINK_AUTH = "unlinkauth";
         public const string DELETE_AUTH = "deleteauth";
+        public const string REMOVE_CANDIDATE = "rcandidate";
 
     }
 
