@@ -27,6 +27,7 @@ using System;
 using System.IO;
 using System.Net;
 using BlockBase.Node.Filters;
+using BlockBase.Runtime.Provider.AutomaticProduction;
 
 namespace BlockBase.Api
 {
@@ -68,6 +69,7 @@ namespace BlockBase.Api
                 services.Configure<NetworkConfigurations>(configuration.GetSection("NetworkConfigurations"));
                 services.Configure<NodeConfigurations>(configuration.GetSection("NodeConfigurations"));
                 services.Configure<RequesterConfigurations>(configuration.GetSection("RequesterConfigurations"));
+                services.Configure<ProviderConfigurations>(configuration.GetSection("ProviderConfigurations"));
                 services.Configure<ApiSecurityConfigurations>(configuration.GetSection("ApiSecurityConfigurations"));
                 services.AddOptions();
 
@@ -142,7 +144,7 @@ namespace BlockBase.Api
                     .ReadFrom.Configuration(configuration.GetSection("Logging"))
                     .Enrich.FromLogContext()
                     .WriteTo.Console(theme: AnsiConsoleTheme.Code)
-                    .WriteTo.File($"logs/ProducerD_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
+                    .WriteTo.File($"logs/BlockBaseNode_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
                     .CreateLogger();
 
                 logging.AddSerilog();
@@ -188,6 +190,8 @@ namespace BlockBase.Api
                 services.AddSingleton<ISidechainMaintainerManager, SidechainMaintainerManager>();
                 services.AddSingleton<ISidechainProducerService, SidechainProducerService>();
                 services.AddSingleton<SidechainKeeper>();
+
+                services.AddSingleton<IAutomaticProductionManager, AutomaticProductionManager>();
             });
 
             return this;
