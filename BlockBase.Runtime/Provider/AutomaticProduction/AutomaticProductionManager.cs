@@ -145,7 +145,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return (false, 0, 0);
 
-            var totalMaximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
+            var maximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
+            var totalMaximumMonthlyGrowth = maximumMonthlyGrowth;
             
             foreach(var runningSidechain in _sidechainKeeper.GetSidechains().ToList())
             {
