@@ -61,6 +61,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 !_providerConfigurations.AutomaticProduction.FullNode.IsActive)
                 return;
 
+            _logger.LogInformation("Automatic Production running. Node will automatically send candidatures to sidechains that clear the required conditions");
+
             while (true)
             {
                 try
@@ -76,6 +78,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                             var checkResult = await CheckIfSidechainFitsRules(s);
                             if (checkResult.Item1 && await DoesVersionCheckOut(s.Name) && IsSidechainNotRunning(s.Name))
                             {
+                                _logger.LogInformation($"Found sidechain {s.Name} eligible for automatic production");
+
                                 await DeleteSidechainIfExistsInDb(s.Name);
                                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(s.Name);
                                 await _mainchainService.AddStake(s.Name, _nodeConfigurations.AccountName, checkResult.Item3.ToString("F4") + " BBT");
@@ -124,6 +128,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockFullProducers, contractInfo.MaxPaymentPerBlockFullProducers, (int)contractInfo.BlockTimeDuration);
                 if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
                     Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio &&
+                    contractInfo.MinPaymentPerBlockFullProducers > _providerConfigurations.AutomaticProduction.FullNode.MinBBTPerBlock &&
                     _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB > maximumMonthlyGrowth)
                 {
                     lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
@@ -136,6 +141,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockHistoryProducers, contractInfo.MaxPaymentPerBlockHistoryProducers, (int)contractInfo.BlockTimeDuration);
                 if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
                     Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio &&
+                    contractInfo.MinPaymentPerBlockHistoryProducers > _providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerBlock &&
                     _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB > maximumMonthlyGrowth)
                 {
                     lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
@@ -147,6 +153,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             {
                 var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockValidatorProducers, contractInfo.MaxPaymentPerBlockValidatorProducers, (int)contractInfo.BlockTimeDuration);
                 if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
+                    contractInfo.MinPaymentPerBlockValidatorProducers > _providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerBlock &&
                     Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio)
                 {
                     lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
