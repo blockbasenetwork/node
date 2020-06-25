@@ -737,7 +737,7 @@ namespace BlockBase.Node.Controllers
                 if (ipAddresses == null) return BadRequest(new OperationResponse<string>(false, $"IP Addresses table not found for {sidechainName}"));
 
                 if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any()))
-                    return StatusCode(401, new OperationResponse<string>($"IP Addresses table doesn't have any IPs for {sidechainName}"));
+                    return StatusCode(401, new OperationResponse<string>(false, $"IP Addresses table doesn't have any IPs for {sidechainName}"));
 
                 var ipsToReturn = new Dictionary<string, string>();
 
@@ -748,7 +748,43 @@ namespace BlockBase.Node.Controllers
                     ipsToReturn.Add(ipAddressTable.Key, decryptedIp.ToString());
                 }
 
-                return Ok(ipsToReturn);
+                return Ok(new OperationResponse<Dictionary<string, string>>(ipsToReturn));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
+        /// Removes the given accoutn from the sidechain blacklist
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="account">Account name to remove from blacklist</param>
+        /// <response code="200">Accoutn removed from blacklist with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error removing accoutn from blacklist</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Removes the given accoutn from the sidechain blacklist",
+            Description = "Used to remove from the sidechain blacklist an account that has been previously banned",
+            OperationId = "RemoveAccountFromBlacklist"
+        )]
+        public async Task<ObjectResult> RemoveAccountFromBlacklist(string account)
+        {
+            if (string.IsNullOrWhiteSpace(account)) return BadRequest(new OperationResponse<string>(false, "Please provide a valid account name"));
+            try
+            {
+                var sidechainName = NodeConfigurations.AccountName;
+
+                var blacklist = await _mainchainService.RetrieveBlacklistTable(sidechainName);
+
+                if (!blacklist.Any(p => p.Key == account))
+                    return BadRequest(new OperationResponse<string>(false, $"Producer {account} isn't in the blacklist for sidechain {sidechainName}"));
+
+                var trx = await _mainchainService.RemoveBlacklistedProducer(sidechainName, account);
+
+                return Ok(new OperationResponse<string>(true, $"Account {account} successfully removed from blacklist"));
             }
             catch (Exception e)
             {

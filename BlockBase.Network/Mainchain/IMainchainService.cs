@@ -8,6 +8,7 @@ namespace BlockBase.Network.Mainchain
 {
     public interface IMainchainService
     {
+        Task<GetInfoResponse> GetInfo();
         Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null);
         Task<GetAccountResponse> GetAccount(string accountName);
         Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName);
@@ -29,6 +30,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> StartCandidatureTime(string owner, string permission = "active");
         Task<string> PunishProd(string owner, string permission = "active");
         Task<string> BlacklistProducer(string owner, string producerToPunish, string permission = "active");
+        Task<string> RemoveBlacklistedProducer(string owner, string producerToRemove, string permission = "active");
         Task<string> SidechainExitRequest(string sidechainName, string permission = "active");
         Task<int> ExecuteChainMaintainerAction(string actionname, string accountname, string permission = "active");
         Task<string> AuthorizationAssign(string accountname, List<ProducerInTable> producersNames, string authorizationToAssign, string permission = "active", string accountPermission = "active");
@@ -65,5 +67,6 @@ namespace BlockBase.Network.Mainchain
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<List<VerifySignature>> RetrieveVerifySignatures(string account);
         Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName);
+        Task<List<BlackListTable>> RetrieveBlacklistTable(string chain);
     }
 }

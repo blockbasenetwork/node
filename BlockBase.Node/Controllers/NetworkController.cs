@@ -17,6 +17,7 @@ using BlockBase.Domain.Results;
 using BlockBase.Domain.Enums;
 using BlockBase.Runtime.Network;
 using BlockBase.Node.Filters;
+using BlockBase.Domain.Endpoints;
 
 namespace BlockBase.Node.Controllers
 {
@@ -285,7 +286,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetTop21ProducersAndEndpoints/");
+                var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_TOP_21_PRODUCERS_ENDPOINTS);
                 var json = await HttpHelper.CallWebRequest(request);
                 var topProducers = JsonConvert.DeserializeObject<List<TopProducerEndpoint>>(json);
 
@@ -322,7 +323,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetAllTrackerSidechains?network={network.ToString()}");
+                var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_ALL_TRACKER_SIDECHAINS + $"?network={network.ToString()}");
                 var json = await HttpHelper.CallWebRequest(request);
                 var trackerSidechains = JsonConvert.DeserializeObject<List<TrackerSidechain>>(json);
 

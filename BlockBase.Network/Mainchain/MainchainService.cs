@@ -34,6 +34,14 @@ namespace BlockBase.Network.Mainchain
             EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
         }
 
+        public async Task<GetInfoResponse> GetInfo()
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetInfo(),
+            NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         public async Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null)
         {
             var opResult = await TryAgain(async () => await EosStub.GetCurrencyBalance(smartContractName, accountName, symbol),
@@ -327,6 +335,20 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
                 CreateDataForBlackListProd(owner, producerToBlacklist),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> RemoveBlacklistedProducer(string owner, string producerToRemove, string permission = "active")
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.REMOVE_BLACKLISTED,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForBlackListProd(owner, producerToRemove),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -840,6 +862,17 @@ namespace BlockBase.Network.Mainchain
             }
 
             return historyValidationList;
+        }
+
+        public async Task<List<BlackListTable>> RetrieveBlacklistTable(string chain)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlackListTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.BLACKLIST_TABLE,
+                chain),
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
         }
 
 

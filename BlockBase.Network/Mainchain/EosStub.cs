@@ -97,6 +97,9 @@ namespace BlockBase.Network.Mainchain
         public async Task<OpResult<GetAccountResponse>> GetAccount(string accountName)
             => await Op.RunAsync(async () => (await _eosConnection.GetAccount(accountName)));
 
+        public async Task<OpResult<GetInfoResponse>> GetInfo()
+            => await Op.RunAsync(async () => (await _eosConnection.GetInfo()));
+
         #region Multi Signature Transactions
 
         public async Task<OpResult<string>> ProposeTransaction(string actionName, string smartContractAccountName, string signerAccountName, string proposerAccountName, object data, List<string> requestedApprovals, string proposalName, string proposePermission = "active", string permission = "active") =>
