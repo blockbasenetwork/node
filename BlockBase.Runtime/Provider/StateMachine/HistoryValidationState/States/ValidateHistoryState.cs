@@ -32,8 +32,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
         private IList<MappedHistoryValidation> _historyValidations;
         private SidechainPool _sidechainPool;
         private string _blockByteInHex;
+        private EosSharp.Core.Api.v1.Transaction _transaction;
+        private MappedHistoryValidation _currentProducerHistoryEntry;
 
         private bool _hasSubmittedBlockByte;
+        private bool _hasSignedBlockByte;
         private bool _hasEnoughSignatures;
         private bool _hasToSubmitBlockByte;
         private IDictionary<string, string> _blockBytesPerValidationEntryAccount;
@@ -57,14 +60,14 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
         protected override async Task DoWork()
         {
 
-            if (!_hasSubmittedBlockByte && _hasToSubmitBlockByte)
+            if (_hasToSubmitBlockByte && !_hasSubmittedBlockByte)
                 await TryAddBlockByte(_blockByteInHex);
 
+            if (_hasToSubmitBlockByte && _hasSubmittedBlockByte && !_hasSignedBlockByte)
+                await TryAddHistorySignature(_nodeConfigurations.AccountName, _blockByteInHex, _transaction);
 
-            if (_hasSubmittedBlockByte && _hasEnoughSignatures)
-            {
+            if (_hasToSubmitBlockByte && _hasSubmittedBlockByte && _hasEnoughSignatures)
                 await TryBroadcastVerifyTransaction(_packedTransactionAndSignatures.packedTransaction, _packedTransactionAndSignatures.signatures);
-            }
 
             foreach (var blockBytePerValidationEntryAccount in _blockBytesPerValidationEntryAccount)
             {
@@ -86,7 +89,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (!_historyValidations.Any(t => !t.SignedProducers.Contains(_nodeConfigurations.AccountName)))
+            if (!_historyValidations.Any(t => !t.SignedProducers.Contains(_nodeConfigurations.AccountName)) && _currentProducerHistoryEntry == null)
                 return Task.FromResult((true, typeof(EndState).Name));
 
             else return Task.FromResult((false, typeof(EndState).Name));
@@ -95,7 +98,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
         protected override Task<bool> IsWorkDone()
         {
             if (_historyValidations.Any(t => !t.SignedProducers.Contains(_nodeConfigurations.AccountName))) return Task.FromResult(false);
-            return Task.FromResult(true);
+            return Task.FromResult(_currentProducerHistoryEntry == null);
         }
 
         protected override async Task UpdateStatus()
@@ -111,28 +114,31 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             if (_producerList == null) return;
             if (_historyValidations == null || !_historyValidations.Any()) return;
 
-            var currentProducerHistoryEntry = _historyValidations.Where(e => e.Account == _nodeConfigurations.AccountName).SingleOrDefault();
+            _currentProducerHistoryEntry = _historyValidations.Where(e => e.Account == _nodeConfigurations.AccountName).SingleOrDefault();
 
-            _hasToSubmitBlockByte = currentProducerHistoryEntry != null ? true : false;
+            _hasToSubmitBlockByte = _currentProducerHistoryEntry != null ? true : false;
 
             if (_hasToSubmitBlockByte && _blockByteInHex == null)
             {
-                _blockByteInHex = await GetBlockByte(currentProducerHistoryEntry.BlockHash, _sidechainPool.ClientAccountName);
+                _blockByteInHex = await GetBlockByte(_currentProducerHistoryEntry.BlockHash, _sidechainPool.ClientAccountName);
                 _logger.LogInformation($"Calculated my validation block byte: {_blockByteInHex}.");
             }
 
-            _hasSubmittedBlockByte = currentProducerHistoryEntry?.BlockByteInHexadecimal != "" && currentProducerHistoryEntry?.BlockByteInHexadecimal != null ;
+            _hasSubmittedBlockByte = _currentProducerHistoryEntry?.BlockByteInHexadecimal != "" && _currentProducerHistoryEntry?.BlockByteInHexadecimal != null ;
 
             if (_hasSubmittedBlockByte && !_hasEnoughSignatures)
             {
+                _transaction = _currentProducerHistoryEntry.Transaction;
+
                 var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
                 var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
 
-                _hasEnoughSignatures = CheckIfBlockByteHasMajorityOfSignatures(currentProducerHistoryEntry, requestedApprovals.Count, requiredKeys);
-                _packedTransactionAndSignatures = GetPackedTransactionAndSignatures(currentProducerHistoryEntry, _blockByteInHex, requestedApprovals.Count, requiredKeys);
-                
+                _hasEnoughSignatures = CheckIfBlockByteHasMajorityOfSignatures(_currentProducerHistoryEntry, requestedApprovals.Count, requiredKeys);
+                _packedTransactionAndSignatures = GetPackedTransactionAndSignatures(_currentProducerHistoryEntry, _blockByteInHex, requestedApprovals.Count, requiredKeys);
                 
             }
+
+            _hasSignedBlockByte = _currentProducerHistoryEntry.SignedProducers.Any(p => p == _nodeConfigurations.AccountName);
 
             foreach (var historyValidationTable in _historyValidations)
             {
