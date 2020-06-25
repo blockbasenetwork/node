@@ -63,7 +63,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 !_providerConfigurations.AutomaticProduction.FullNode.IsActive)
                 return;
 
-            _logger.LogInformation("Automatic Production running. Node will automatically send candidatures to sidechains that clear the required conditions");
+            _logger.LogInformation("Automatic Production running. Node will automatically send candidatures to sidechains that meet the required conditions");
 
             var networkInfo = await _mainchainService.GetInfo();
             var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
@@ -84,14 +84,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         chainsInCandidature.ForEach(async s =>
                         {
                             var checkResult = await CheckIfSidechainFitsRules(s);
-                            if (checkResult.Item1 && await DoesVersionCheckOut(s.Name) && IsSidechainNotRunning(s.Name))
+                            if (checkResult.found && await DoesVersionCheckOut(s.Name) && IsSidechainNotRunning(s.Name))
                             {
                                 _logger.LogInformation($"Found sidechain {s.Name} eligible for automatic production");
 
                                 await DeleteSidechainIfExistsInDb(s.Name);
                                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(s.Name);
-                                await TryAddStakeIfNecessary(s.Name, checkResult.Item3);
-                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(s.Name, checkResult.Item2, true);
+                                await TryAddStakeIfNecessary(s.Name, checkResult.stakeToPut);
+                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(s.Name, checkResult.producerType, true);
                             }
                         });
                     }
@@ -136,7 +136,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             return trackerSidechains;
         }
 
-        private async Task<(bool, int, decimal)> CheckIfSidechainFitsRules(TrackerSidechain sidechain)
+        private async Task<(bool found, int producerType, decimal stakeToPut)> CheckIfSidechainFitsRules(TrackerSidechain sidechain)
         {
             var candidates = await _mainchainService.RetrieveCandidates(sidechain.Name);
             var producers = await _mainchainService.RetrieveProducersFromTable(sidechain.Name);
