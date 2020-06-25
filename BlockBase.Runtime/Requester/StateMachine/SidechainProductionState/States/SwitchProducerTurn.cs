@@ -60,6 +60,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             if (IsTimeUpForProducer(_currentProducer, _contractInfo))
             {
                 await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _nodeConfigurations.AccountName);
+                await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
                 _hasSwitchedProducer = true;
             }
 
@@ -138,6 +139,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
                 var chosenProducerAccountName = validProducers[r].Key;
                 try
                 {
+
+                    //TODO: modify this to be able to request more than one
                     await _mainchainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
                     _logger.LogDebug("Updated history validation table.");
                 }

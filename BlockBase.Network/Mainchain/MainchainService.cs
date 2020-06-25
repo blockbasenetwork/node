@@ -427,18 +427,50 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> AddBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active")
+        public async Task<string> SubmitBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active")
+        {
+            var transaction = new Transaction()
+            {
+                expiration = DateTime.UtcNow.AddHours(1),
+                actions = new List<EosSharp.Core.Api.v1.Action>()
+                {
+                    new EosSharp.Core.Api.v1.Action()
+                    {
+                        account = NetworkConfigurations.BlockBaseOperationsContract,
+                        authorization = new List<PermissionLevel>()
+                        {
+                            new PermissionLevel() {actor = owner, permission = EosMsigConstants.VERIFY_HISTORY_PERMISSION }
+                        },
+                        name = EosMethodNames.HISTORY_VALIDATE,
+                        data = CreateDataForHistValidate(owner, producerName)
+                    }
+                }
+            };
+
+            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+            return await AddBlockByteVerifyTransactionAndSignature(owner, producerName, byteInHexadecimal, signedTransaction.PackedTransaction);
+
+        }
+
+        public async Task<string> AddBlockByteVerifyTransactionAndSignature(string owner, string accountName, string byteInHexadecimal, byte[] packedTransaction, string permission = "active")
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
-                   EosMethodNames.ADD_BLOCK_BYTE,
-                   NetworkConfigurations.BlockBaseOperationsContract,
-                   producerName,
-                   CreateDataForAddBlockByte(owner, producerName, byteInHexadecimal),
-                   permission),
-                   NetworkConfigurations.MaxNumberOfConnectionRetries
-           );
+                    EosMethodNames.ADD_BLOCK_BYTE,
+                    NetworkConfigurations.BlockBaseOperationsContract,
+                    accountName,
+                    CreateDataForAddBlockByte(owner, accountName, byteInHexadecimal, packedTransaction),
+                    permission),
+                    NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result;
+
+        }
+
+        public async Task<string> SignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, Transaction transaction, string permission = "active")
+        {
+            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+            return await AddBlockByteVerifyTransactionAndSignature(owner, accountName, byteInHexadecimal, signedTransaction.PackedTransaction);
         }
 
         public async Task<string> ProposeHistoryValidation(string owner, string accountName, List<string> requestedApprovals, string proposalName)
@@ -779,15 +811,35 @@ namespace BlockBase.Network.Mainchain
             return verifySignaturesList;
         }
 
-        public async Task<HistoryValidationTable> RetrieveHistoryValidationTable(string chain)
+        public async Task<IList<MappedHistoryValidation>> RetrieveHistoryValidation(string chain)
         {
+            var historyValidationList = new List<MappedHistoryValidation>();
+
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<HistoryValidationTable>(
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.HISTORY_VALIDATION_TABLE,
                 chain),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
             if (!opResult.Succeeded) throw opResult.Exception;
-            return opResult.Result.SingleOrDefault();
+            
+            
+            foreach (var historyValidation in opResult.Result)
+            {
+                var mappedHistoryValidation = new MappedHistoryValidation()
+                {
+                    Account = historyValidation.Key,
+                    BlockHash = historyValidation.BlockHash,
+                    VerifySignatures = historyValidation.VerifySignatures,
+                    SignedProducers = historyValidation.SignedProducers,
+                    BlockByteInHexadecimal = historyValidation.BlockByteInHexadecimal,
+                    PackedTransaction = SerializationHelper.HexStringToByteArray(historyValidation.ValidateHistoryPackedTransaction),
+                    Transaction = string.IsNullOrEmpty(historyValidation.ValidateHistoryPackedTransaction) ? null : await EosStub.UnpackTransaction(historyValidation.ValidateHistoryPackedTransaction)
+                };
+
+                historyValidationList.Add(mappedHistoryValidation);
+            }
+
+            return historyValidationList;
         }
 
 
@@ -1048,15 +1100,27 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForAddBlockByte(string owner, string producerName, string byteInHexadecimal)
+        private Dictionary<string, object> CreateDataForAddBlockByte(string owner, string producerName, string byteInHexadecimal, byte[] packedTransaction)
         {
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.PRODUCER, producerName },
-                { EosParameterNames.BYTE_IN_HEXADECIMAL, byteInHexadecimal }
+                { EosParameterNames.BYTE_IN_HEXADECIMAL, byteInHexadecimal },
+                { EosParameterNames.PACKED_TRANSACTION, packedTransaction }
+
             };
         }
+        private Dictionary<string, object> CreateDataForHistValidate(string owner, string producerName)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.PRODUCER, producerName }
+            };
+        }
+
+
 
         private Dictionary<string, object> CreateDataForRemoveCandidate(string owner, string producerName)
         {

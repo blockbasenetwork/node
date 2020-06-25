@@ -193,5 +193,6 @@ namespace BlockBase.Domain.Eos
         public const string BLOCK_BYTE_IN_HEXADECIMAL = "block_byte_in_hex";
         public const string VERIFY_SIGNATURE = "verify_signature";
         public const string VERIFY_SIGNATURES = "verify_signatures";
+        public const string SIGNED_PRODUCERS = "signed_producers";
     }
 }

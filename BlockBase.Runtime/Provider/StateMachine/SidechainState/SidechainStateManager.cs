@@ -10,6 +10,7 @@ using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Provider.StateMachine.PeerConectionState;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.States;
 using System.Threading;
+using BlockBase.Runtime.Provider.StateMachine.SidechainState.HistoryValidationState;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
 {
@@ -28,6 +29,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
         private NetworkConfigurations _networkConfigurations;
         private TaskContainer _blockProductionTaskContainer;
         private TaskContainer _peerConnectionTaskContainer;
+        private TaskContainer _historyValidationTaskContainer;
 
         private TransactionValidationsHandler _transactionValidationsHandler;
 
@@ -64,6 +66,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             if(TaskContainer != null) TaskContainer.Stop();
             if(_blockProductionTaskContainer != null) _blockProductionTaskContainer.Stop();
             if(_peerConnectionTaskContainer != null) _peerConnectionTaskContainer.Stop();
+            if(_historyValidationTaskContainer != null) _historyValidationTaskContainer.Stop();
         }
 
         protected override async Task Run()
@@ -102,7 +105,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
                         _mongoDbProducerService, _blockSender, _transactionValidationsHandler);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
 
-                    _logger.LogDebug($"Started block production");
+                    var historyValidationStateManager = new HistoryValidationStateManager(_logger, _sidechain, _nodeConfigurations, _mainchainService, _mongoDbProducerService);
+                    _historyValidationTaskContainer  = historyValidationStateManager.Start();
+                    _logger.LogDebug($"Started block production and history validation.");
                 }
             }
         }
