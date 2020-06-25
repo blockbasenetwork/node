@@ -101,7 +101,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     _logger.LogError($"Failed to automatically start producing chain with error: {e}");
                 }
 
-                await Task.Delay(1200000);
+                await Task.Delay(120000);
             }
         }
 
