@@ -145,9 +145,17 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return (false, 0, 0);
 
-            var maximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
+            var totalMaximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
+            
+            foreach(var runningSidechain in _sidechainKeeper.GetSidechains().ToList())
+            {
+                if (runningSidechain.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
+                {
+                    totalMaximumMonthlyGrowth += GetMaximumMonthlyGrowth(runningSidechain.SidechainPool.BlockSizeInBytes, (int)runningSidechain.SidechainPool.BlockTimeDuration);
+                }
+            }
 
-            if (maximumMonthlyGrowth > _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB) return (false, 0, 0);
+            if (totalMaximumMonthlyGrowth > _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB) return (false, 0, 0);
 
             int producerTypeToCandidate = 0;
             decimal lowestStakeToMonthlyIncomeRatio = decimal.MaxValue;
