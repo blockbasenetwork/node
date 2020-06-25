@@ -14,6 +14,7 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Network;
 using BlockBase.Utils;
 using BlockBase.Utils.Threading;
+using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -89,7 +90,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
                                 await DeleteSidechainIfExistsInDb(s.Name);
                                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(s.Name);
-                                await _mainchainService.AddStake(s.Name, _nodeConfigurations.AccountName, checkResult.Item3.ToString("F4") + " BBT");
+                                await TryAddStakeIfNecessary(s.Name, checkResult.Item3);
                                 await _sidechainProducerService.AddSidechainToProducerAndStartIt(s.Name, checkResult.Item2);
                             }
                         });
@@ -101,6 +102,28 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 }
 
                 await Task.Delay(1200000);
+            }
+        }
+
+        private async Task TryAddStakeIfNecessary(string sidechain, decimal stake)
+        {
+            var accountStake = await _mainchainService.GetAccountStake(sidechain, _nodeConfigurations.AccountName);
+            decimal providerStake = 0;
+            if (accountStake != null)
+            {
+                var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                decimal.TryParse(stakeString, out providerStake);
+            }
+            var minimumProviderState = Math.Round((decimal)stake / 10000, 4);
+            if (minimumProviderState <= providerStake) return;
+            
+            try
+            {
+                await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
+            }
+            catch (ApiErrorException e)
+            {
+                _logger.LogError($"Failed to add stake to sidechain {sidechain}");
             }
         }
 
@@ -135,7 +158,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockFullProducers, contractInfo.MaxPaymentPerBlockFullProducers, (int)contractInfo.BlockTimeDuration);
                 if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
                     Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio &&
-                    contractInfo.MinPaymentPerBlockFullProducers > _providerConfigurations.AutomaticProduction.FullNode.MinBBTPerBlock &&
+                    Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4) >= (decimal)_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerBlock &&
                     _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB > maximumMonthlyGrowth)
                 {
                     lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
@@ -148,7 +171,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockHistoryProducers, contractInfo.MaxPaymentPerBlockHistoryProducers, (int)contractInfo.BlockTimeDuration);
                 if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
                     Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio &&
-                    contractInfo.MinPaymentPerBlockHistoryProducers > _providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerBlock &&
+                    Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4) >= (decimal)_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerBlock &&
                     _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB > maximumMonthlyGrowth)
                 {
                     lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
@@ -160,7 +183,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             {
                 var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockValidatorProducers, contractInfo.MaxPaymentPerBlockValidatorProducers, (int)contractInfo.BlockTimeDuration);
                 if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
-                    contractInfo.MinPaymentPerBlockValidatorProducers > _providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerBlock &&
+                    Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4) >= (decimal)_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerBlock &&
                     Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio)
                 {
                     lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
@@ -194,7 +217,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             var softwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
             var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
             var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(sidechain);
-            return softwareVersion > versionInContract.SoftwareVersion;
+            return softwareVersion >= versionInContract.SoftwareVersion;
         }
 
         private bool IsSidechainNotRunning(string sidechain)
