@@ -195,4 +195,26 @@ namespace BlockBase.Domain.Eos
         public const string VERIFY_SIGNATURE = "verify_signature";
         public const string VERIFY_SIGNATURES = "verify_signatures";
     }
+
+    public class EosNetworkIds
+    {
+        public const string MAINNET_ID = "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906";
+        public const string JUNGLE_ID = "e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473";
+    }
+
+    public class EosNetworkNames
+    {
+        public static string GetNetworkName(string networkId)
+        {
+            switch(networkId)
+            {
+                case EosNetworkIds.JUNGLE_ID:
+                    return "Jungle";
+                case EosNetworkIds.MAINNET_ID:
+                    return "Mainnet";
+                default:
+                    return "All";
+            }
+        }
+    }
 }

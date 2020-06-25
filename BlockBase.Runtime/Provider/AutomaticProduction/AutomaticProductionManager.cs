@@ -7,6 +7,7 @@ using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Endpoints;
 using BlockBase.Domain.Enums;
+using BlockBase.Domain.Eos;
 using BlockBase.Domain.Results;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
@@ -63,12 +64,15 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             _logger.LogInformation("Automatic Production running. Node will automatically send candidatures to sidechains that clear the required conditions");
 
+            var networkInfo = await _mainchainService.GetInfo();
+            var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
+
             while (true)
             {
                 try
                 {
                     if (_sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains) continue;
-                    var activeSidechains = await GetSidechains();
+                    var activeSidechains = await GetSidechains(networkName);
                     var chainsInCandidature = activeSidechains.Where(s => s.State == "Candidature").ToList();
 
                     if (chainsInCandidature.Any())
@@ -97,9 +101,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             }
         }
 
-        private async Task<List<TrackerSidechain>> GetSidechains()
+        private async Task<List<TrackerSidechain>> GetSidechains(string network)
         {
-            var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_ALL_TRACKER_SIDECHAINS);
+            var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_ALL_TRACKER_SIDECHAINS + $"?network={network}");
             var json = await HttpHelper.CallWebRequest(request);
             var trackerSidechains = JsonConvert.DeserializeObject<List<TrackerSidechain>>(json);
 
