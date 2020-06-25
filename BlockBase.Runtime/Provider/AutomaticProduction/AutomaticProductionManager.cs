@@ -67,6 +67,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             var networkInfo = await _mainchainService.GetInfo();
             var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
 
+            _logger.LogInformation($"Looking for sidechains in network: {networkName}");
+
             while (true)
             {
                 try
@@ -77,6 +79,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
                     if (chainsInCandidature.Any())
                     {
+                        _logger.LogDebug("Found chains in candidature");
                         chainsInCandidature.ForEach(async s =>
                         {
                             var checkResult = await CheckIfSidechainFitsRules(s);
