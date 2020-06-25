@@ -91,7 +91,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                                 await DeleteSidechainIfExistsInDb(s.Name);
                                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(s.Name);
                                 await TryAddStakeIfNecessary(s.Name, checkResult.Item3);
-                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(s.Name, checkResult.Item2);
+                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(s.Name, checkResult.Item2, true);
                             }
                         });
                     }
