@@ -56,8 +56,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
         private async Task Run()
         {
-            if (!_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive ||
-                !_providerConfigurations.AutomaticProduction.HistoryNode.IsActive ||
+            if (!_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive &&
+                !_providerConfigurations.AutomaticProduction.HistoryNode.IsActive &&
                 !_providerConfigurations.AutomaticProduction.FullNode.IsActive)
                 return;
 
