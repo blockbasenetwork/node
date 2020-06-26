@@ -121,7 +121,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             {
                 await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
             }
-            catch (ApiErrorException e)
+            catch (ApiErrorException)
             {
                 _logger.LogError($"Failed to add stake to sidechain {sidechain}");
             }
