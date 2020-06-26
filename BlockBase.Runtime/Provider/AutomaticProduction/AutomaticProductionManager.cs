@@ -143,6 +143,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             var contractInfo = await _mainchainService.RetrieveContractInformation(sidechain.Name);
             var contractState = await _mainchainService.RetrieveContractState(sidechain.Name);
 
+            if (contractInfo == null || producers == null || candidates == null || contractState == null) return (false, 0, 0);
             if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return (false, 0, 0);
 
             var maximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
