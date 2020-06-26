@@ -492,7 +492,17 @@ namespace BlockBase.Network.Mainchain
         public async Task<string> SignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, Transaction transaction, string permission = "active")
         {
             var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
-            return await AddBlockByteVerifyTransactionAndSignature(owner, accountName, byteInHexadecimal, signedTransaction.PackedTransaction);
+            
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                   EosMethodNames.ADD_HIST_SIG,
+                   NetworkConfigurations.BlockBaseOperationsContract,
+                   accountName,
+                   CreateDataForSignHistoryValidation(owner, accountName, producerToValidade, byteInHexadecimal, signedTransaction.Signatures.SingleOrDefault()),
+                   permission),
+                   NetworkConfigurations.MaxNumberOfConnectionRetries
+           );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
         }
 
         public async Task<string> ProposeHistoryValidation(string owner, string accountName, List<string> requestedApprovals, string proposalName)
@@ -843,8 +853,8 @@ namespace BlockBase.Network.Mainchain
                 chain),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
             if (!opResult.Succeeded) throw opResult.Exception;
-            
-            
+
+
             foreach (var historyValidation in opResult.Result)
             {
                 var mappedHistoryValidation = new MappedHistoryValidation()
@@ -1163,6 +1173,19 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.NAME, producerName }
             };
         }
+
+        private Dictionary<string, object> CreateDataForSignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, string signature)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.PRODUCER, accountName },
+                { EosParameterNames.PRODUCER_TO_VALIDATE, producerToValidade },
+                { EosParameterNames.VERIFY_SIGNATURE, signature}
+            };
+
+        }
+
 
         #endregion
 

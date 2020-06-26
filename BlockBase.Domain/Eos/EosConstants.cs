@@ -73,11 +73,11 @@ namespace BlockBase.Domain.Eos
         public const string HISTORY_VALIDATE = "histvalidate";
         public const string ADD_BLOCK_BYTE = "addblckbyte";
         public const string ADD_VERIFY_SIGNATURE = "addversig";
+        public const string ADD_HIST_SIG = "addhistsig";
         public const string UNLINK_AUTH = "unlinkauth";
         public const string DELETE_AUTH = "deleteauth";
         public const string REMOVE_CANDIDATE = "rcandidate";
         public const string REMOVE_BLACKLISTED = "removeblisted";
-
     }
 
     public class EosParameterNames
@@ -91,6 +91,8 @@ namespace BlockBase.Domain.Eos
         public const string PUBLIC_KEY = "publicKey";
         public const string SECRET_HASH = "secretHash";
         public const string PRODUCER_TYPE = "producerType";
+        public const string PRODUCER_TO_VALIDATE = "producerToValidade";
+
         public const string SECRET = "secret";
         public const string WORK_TIME_IN_SECONDS = "workDurationInSeconds";
         public const string BLOCK = "block";
