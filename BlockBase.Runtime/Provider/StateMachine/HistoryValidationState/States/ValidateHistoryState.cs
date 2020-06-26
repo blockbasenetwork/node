@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
-using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
@@ -138,7 +137,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
                 
             }
 
-            _hasSignedBlockByte = _currentProducerHistoryEntry.SignedProducers.Any(p => p == _nodeConfigurations.AccountName);
+            _hasSignedBlockByte = _currentProducerHistoryEntry?.SignedProducers.Any(p => p == _nodeConfigurations.AccountName) ?? false;
 
             foreach (var historyValidationTable in _historyValidations)
             {

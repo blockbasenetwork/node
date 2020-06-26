@@ -18,7 +18,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
 {
-    #pragma warning disable
+#pragma warning disable
     public class SwitchProducerTurn : AbstractMainchainState<StartState, EndState>
     {
         private static Random _rnd = new Random();
@@ -60,7 +60,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             if (IsTimeUpForProducer(_currentProducer, _contractInfo))
             {
                 await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.CHANGE_CURRENT_PRODUCER, _nodeConfigurations.AccountName);
-                await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
                 _hasSwitchedProducer = true;
             }
 
@@ -77,14 +76,18 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
                 //only after the producers are all blacklisted can they be punished
                 //there should be an if guarding this
-                if(blackListedProducers.Count > 0)
+                if (blackListedProducers.Count > 0)
                     await _mainchainService.PunishProd(_nodeConfigurations.AccountName);
                 _areProducersPunished = true;
 
                 //only after the producers are punished should the history validation start
                 //there sould be an if guarding this
-                //await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
-                //_hasHistoryValidationBeenActivated = true;
+
+                if (!_hasHistoryValidationBeenActivated)
+                {
+                    await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
+                    _hasHistoryValidationBeenActivated = true;
+                }
 
                 _hasDoneTheSettlement = true;
 
@@ -122,32 +125,38 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             var numberOfRoundsAlreadyPassed = _blocksCount.Sum(b => b.blocksproduced) + _blocksCount.Sum(b => b.blocksfailed);
             _roundsUntilSettlement = Convert.ToInt32(_contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
 
-            _needsASettlement = _roundsUntilSettlement -1 <= 0;
+            _needsASettlement = _roundsUntilSettlement - 1 <= 0;
 
             _lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_nodeConfigurations.AccountName, (int)_contractInfo.BlocksBetweenSettlement);
         }
 
         private async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
         {
-            var lastValidBlockheaderTable = await _mainchainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)contractInfo.BlocksBetweenSettlement);
-            if (lastValidBlockheaderTable != null)
+
+            var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
+            if (!validProducers.Any()) return;
+
+            var blockHeaderList = await _mainchainService.RetrieveBlockheaderList(clientAccountName, validProducers.Count());
+            if(blockHeaderList == null || blockHeaderList.Count == 0) return;
+            List<BlockheaderTable> blockHeaderListCopy = blockHeaderList.ToList();
+
+            foreach (var producer in validProducers)
             {
-                var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
-                if (!validProducers.Any()) return;
-                var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
-                int r = _rnd.Next(validProducers.Count);
-                var chosenProducerAccountName = validProducers[r].Key;
+                if(blockHeaderListCopy.Count == 0 ) blockHeaderListCopy = blockHeaderList.ToList();
+                
+                int r = _rnd.Next(blockHeaderListCopy.Count);
+                var chosenBlockHeader = blockHeaderListCopy[r];
                 try
                 {
-
-                    //TODO: modify this to be able to request more than one
-                    await _mainchainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
-                    _logger.LogDebug("Updated history validation table.");
+                    await _mainchainService.RequestHistoryValidation(clientAccountName, producer.Key, chosenBlockHeader.BlockHash);
+                    blockHeaderListCopy.Remove(chosenBlockHeader);
+                    _logger.LogDebug($"Updated history validation table -> Producer: {producer.Key} BlockHash: {chosenBlockHeader.BlockHash}");
                 }
                 catch (ApiErrorException apiException)
                 {
                     _logger.LogWarning($"Unable to request history validation with error: {apiException?.error?.name}");
                 }
+
             }
         }
 
