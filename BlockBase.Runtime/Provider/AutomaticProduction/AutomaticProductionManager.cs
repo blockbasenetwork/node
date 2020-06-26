@@ -81,19 +81,19 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     if (chainsInCandidature.Any())
                     {
                         _logger.LogDebug("Found chains in candidature");
-                        chainsInCandidature.ForEach(async s =>
+                        foreach (var chainInCandidature in chainsInCandidature)
                         {
-                            var checkResult = await CheckIfSidechainFitsRules(s);
-                            if (checkResult.found && await DoesVersionCheckOut(s.Name) && IsSidechainNotRunning(s.Name))
+                            var checkResult = await CheckIfSidechainFitsRules(chainInCandidature);
+                            if (checkResult.found && await DoesVersionCheckOut(chainInCandidature.Name) && IsSidechainNotRunning(chainInCandidature.Name))
                             {
-                                _logger.LogInformation($"Found sidechain {s.Name} eligible for automatic production");
+                                _logger.LogInformation($"Found sidechain {chainInCandidature.Name} eligible for automatic production");
 
-                                await DeleteSidechainIfExistsInDb(s.Name);
-                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(s.Name);
-                                await TryAddStakeIfNecessary(s.Name, checkResult.stakeToPut);
-                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(s.Name, checkResult.producerType, true);
+                                await DeleteSidechainIfExistsInDb(chainInCandidature.Name);
+                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name);
+                                await TryAddStakeIfNecessary(chainInCandidature.Name, checkResult.stakeToPut);
+                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainInCandidature.Name, checkResult.producerType, true);
                             }
-                        });
+                        }
                     }
                 }
                 catch (Exception e)
@@ -116,7 +116,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             }
             var minimumProviderState = Math.Round((decimal)stake / 10000, 4);
             if (minimumProviderState <= providerStake) return;
-            
+
             try
             {
                 await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
@@ -148,8 +148,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             var maximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
             var totalMaximumMonthlyGrowth = maximumMonthlyGrowth;
-            
-            foreach(var runningSidechain in _sidechainKeeper.GetSidechains().ToList())
+
+            foreach (var runningSidechain in _sidechainKeeper.GetSidechains().ToList())
             {
                 if (runningSidechain.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
                 {
