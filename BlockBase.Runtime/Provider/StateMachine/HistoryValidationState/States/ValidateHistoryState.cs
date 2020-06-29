@@ -121,7 +121,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             {
                 _blockHashToValidateHasChanged = _blockHashToValidate == _currentProducerHistoryEntry.BlockHash ? false : true;
             }
-            else if (_blockHashToValidate == null)
+            else if (_blockHashToValidate == null && _currentProducerHistoryEntry != null)
             {
                 _blockHashToValidate = _currentProducerHistoryEntry.BlockHash;
             }
