@@ -31,6 +31,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
         private IList<MappedHistoryValidation> _historyValidations;
         private SidechainPool _sidechainPool;
         private string _blockByteInHex;
+        private string _blockHashToValidate;
         private EosSharp.Core.Api.v1.Transaction _transaction;
         private MappedHistoryValidation _currentProducerHistoryEntry;
 
@@ -38,6 +39,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
         private bool _hasSignedBlockByte;
         private bool _hasEnoughSignatures;
         private bool _hasToSubmitBlockByte;
+        private bool _blockHashToValidateHasChanged;
         private IDictionary<string, string> _blockBytesPerValidationEntryAccount;
 
         private (byte[] packedTransaction, List<string> signatures) _packedTransactionAndSignatures;
@@ -88,10 +90,10 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (!_historyValidations.Any(t => !t.SignedProducers.Contains(_nodeConfigurations.AccountName)) && _currentProducerHistoryEntry == null)
-                return Task.FromResult((true, typeof(EndState).Name));
+            if (_blockHashToValidateHasChanged || (!_historyValidations.Any(t => t.BlockByteInHexadecimal != "" && !t.SignedProducers.Contains(_nodeConfigurations.AccountName)) && _currentProducerHistoryEntry == null))
+                return Task.FromResult((true, typeof(StartState).Name));
 
-            else return Task.FromResult((false, typeof(EndState).Name));
+            else return Task.FromResult((false, typeof(StartState).Name));
         }
 
         protected override Task<bool> IsWorkDone()
@@ -114,6 +116,15 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             if (_historyValidations == null || !_historyValidations.Any()) return;
 
             _currentProducerHistoryEntry = _historyValidations.Where(e => e.Account == _nodeConfigurations.AccountName).SingleOrDefault();
+
+            if (_blockHashToValidate != null && _currentProducerHistoryEntry != null)
+            {
+                _blockHashToValidateHasChanged = _blockHashToValidate == _currentProducerHistoryEntry.BlockHash ? false : true;
+            }
+            else
+            {
+                _blockHashToValidate = _currentProducerHistoryEntry.BlockHash;
+            }
 
             _hasToSubmitBlockByte = _currentProducerHistoryEntry != null ? true : false;
 
