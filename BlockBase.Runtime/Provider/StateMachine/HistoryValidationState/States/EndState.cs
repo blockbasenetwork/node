@@ -17,41 +17,34 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
     public class EndState : AbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
-        private PeerConnectionsHandler _peerConnectionsHandler;
-        private NodeConfigurations _nodeConfigurations;
-        private SidechainPool _sidechainPool;
-        public EndState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
+        public EndState(ILogger logger, SidechainPool sidechainPool) : base(logger)
         {
-            _mainchainService = mainchainService;
-            _nodeConfigurations = nodeConfigurations;
-            _sidechainPool = sidechain;
-            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
-        protected override Task<bool> IsWorkDone()
+        protected override Task DoWork()
         {
-            throw new NotImplementedException();
-        }
-
-        protected override async Task DoWork()
-        {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new NotImplementedException();
+            return Task.FromResult(false);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new NotImplementedException();
+            return Task.FromResult((true, string.Empty));
         }
 
-        protected override async Task UpdateStatus() 
+
+        protected override Task<bool> IsWorkDone()
         {
-            throw new NotImplementedException();
+            return Task.FromResult(true);
+        }
+
+        protected override Task UpdateStatus()
+        {
+            return Task.CompletedTask;
         }
     }
 }

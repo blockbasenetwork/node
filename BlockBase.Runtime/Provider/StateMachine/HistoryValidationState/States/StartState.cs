@@ -18,40 +18,48 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
     public class StartState : AbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
-        private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private SidechainPool _sidechainPool;
-        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
+        private ContractStateTable _contractStateTable;
+        private List<ProducerInTable> _producerList;
+        private IList<MappedHistoryValidation> _historyValidations;
+        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
             _sidechainPool = sidechain;
-            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            throw new NotImplementedException();
+            return Task.FromResult(true);
         }
 
-        protected override async Task DoWork()
+        protected override Task DoWork()
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            throw new NotImplementedException();
+            if (_contractStateTable == null || _producerList == null || _historyValidations == null) return Task.FromResult(false);
+            //TODO verifies if he is a producer
+            return Task.FromResult(_producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            throw new NotImplementedException();
+            if (_historyValidations.Any(t => !t.SignedProducers.Contains(_nodeConfigurations.AccountName)))
+                return Task.FromResult((true, typeof(ValidateHistoryState).Name));
+
+            return Task.FromResult((false, typeof(ValidateHistoryState).Name));
         }
 
-        protected override async Task UpdateStatus() 
+        protected override async Task UpdateStatus()
         {
-            throw new NotImplementedException();
+            _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _historyValidations = await _mainchainService.RetrieveHistoryValidation(_sidechainPool.ClientAccountName);
         }
     }
 }

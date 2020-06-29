@@ -14,6 +14,9 @@ namespace BlockBase.Network.Mainchain.Pocos
 
         [JsonProperty(EosAtributeNames.VERIFY_SIGNATURES)]
         public List<string> VerifySignatures {get; set;}
+        
+        [JsonProperty(EosAtributeNames.SIGNED_PRODUCERS)]
+        public List<string> SignedProducers {get; set;}
 
         [JsonProperty(EosAtributeNames.PACKED_TRANSACTION)]
         public string ValidateHistoryPackedTransaction { get; set; }

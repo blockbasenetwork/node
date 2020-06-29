@@ -18,7 +18,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
 {
-    #pragma warning disable
+#pragma warning disable
     public class SwitchProducerTurn : AbstractMainchainState<StartState, EndState>
     {
         private static Random _rnd = new Random();
@@ -27,6 +27,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private CurrentProducerTable _currentProducer;
         private List<BlockCountTable> _blocksCount;
         private List<ProducerInTable> _producerList;
+        private List<WarningTable> _warnings;
         private int _roundsUntilSettlement;
         private bool _needsASettlement;
         private BlockheaderTable _lastBlockHeader;
@@ -68,7 +69,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             if (_needsASettlement && !_hasDoneTheSettlement)
             {
                 //TODO rpinto - how do I know if they are already blacklisted
-                var producersToBlackList = _producerList.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).ToList();
+                var producersToBlackList = _producerList.Where(p => _warnings.Any(w => w.Producer == p.Key && w.WarningType == EosTableValues.WARNING_PUNISH)).ToList();
 
                 //TODO rpinto - can I use this list to remove blacklisted from the above list?
                 var blackListedProducers = await BlackListProducers(_nodeConfigurations, producersToBlackList);
@@ -76,14 +77,18 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
                 //only after the producers are all blacklisted can they be punished
                 //there should be an if guarding this
-                if(blackListedProducers.Count > 0)
+                if (blackListedProducers.Count > 0)
                     await _mainchainService.PunishProd(_nodeConfigurations.AccountName);
                 _areProducersPunished = true;
 
                 //only after the producers are punished should the history validation start
                 //there sould be an if guarding this
-                //await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
-                //_hasHistoryValidationBeenActivated = true;
+
+                if (!_hasHistoryValidationBeenActivated)
+                {
+                    await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
+                    _hasHistoryValidationBeenActivated = true;
+                }
 
                 _hasDoneTheSettlement = true;
 
@@ -115,61 +120,64 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_nodeConfigurations.AccountName);
             _blocksCount = await _mainchainService.RetrieveBlockCount(_nodeConfigurations.AccountName);
             _producerList = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
+            _warnings = await _mainchainService.RetrieveWarningTable(_nodeConfigurations.AccountName);
 
             if (_contractState == null || _contractInfo == null || _currentProducer == null || _blocksCount == null) return;
 
             var numberOfRoundsAlreadyPassed = _blocksCount.Sum(b => b.blocksproduced) + _blocksCount.Sum(b => b.blocksfailed);
             _roundsUntilSettlement = Convert.ToInt32(_contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
 
-            _needsASettlement = _roundsUntilSettlement -1 <= 0;
+            _needsASettlement = _roundsUntilSettlement - 1 <= 0;
 
             _lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_nodeConfigurations.AccountName, (int)_contractInfo.BlocksBetweenSettlement);
         }
 
         private async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
         {
-            var lastValidBlockheaderTable = await _mainchainService.GetLastValidSubmittedBlockheader(clientAccountName, (int)contractInfo.BlocksBetweenSettlement);
-            if (lastValidBlockheaderTable != null)
+
+            var validProducers = producers.Where(p => !_warnings.Any(w => w.Producer == p.Key && w.WarningType == EosTableValues.WARNING_PUNISH) && p.ProducerType != 1).ToList();
+            if (!validProducers.Any()) return;
+
+            var blockHeaderList = await _mainchainService.RetrieveBlockheaderList(clientAccountName, validProducers.Count());
+            if (blockHeaderList == null || blockHeaderList.Count == 0) return;
+            List<BlockheaderTable> blockHeaderListCopy = blockHeaderList.ToList();
+
+            foreach (var producer in validProducers)
             {
-                var validProducers = producers.Where(p => p.Warning != EosTableValues.WARNING_PUNISH && p.ProducerType != 1).ToList();
-                if (!validProducers.Any()) return;
-                var lastValidBlockheader = lastValidBlockheaderTable.ConvertToBlockHeader();
-                int r = _rnd.Next(validProducers.Count);
-                var chosenProducerAccountName = validProducers[r].Key;
+                if (blockHeaderListCopy.Count == 0) blockHeaderListCopy = blockHeaderList.ToList();
+
+                int r = _rnd.Next(blockHeaderListCopy.Count);
+                var chosenBlockHeader = blockHeaderListCopy[r];
                 try
                 {
-                    await _mainchainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
-                    _logger.LogInformation("Updated history validation table.");
+                    await _mainchainService.RequestHistoryValidation(clientAccountName, producer.Key, chosenBlockHeader.BlockHash);
+                    blockHeaderListCopy.Remove(chosenBlockHeader);
+                    _logger.LogInformation($"Updated history validation table -> Producer: {producer.Key} BlockHash: {chosenBlockHeader.BlockHash}");
                 }
                 catch (ApiErrorException apiException)
                 {
                     _logger.LogWarning($"Unable to request history validation with error: {apiException?.error?.name}");
                 }
+
             }
         }
 
-        private async Task<List<ProducerInTable>> BlackListProducers(NodeConfigurations nodeConfigurations, List<ProducerInTable> producers)
+        private async Task<List<ProducerInTable>> BlackListProducers(NodeConfigurations nodeConfigurations, List<ProducerInTable> producersToBlackList)
         {
             var blackListed = new List<ProducerInTable>();
 
-            if (producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any())
+            _logger.LogInformation("Blacklisting producers...");
+            foreach (var producer in producersToBlackList)
             {
-                _logger.LogInformation("Blacklisting producers...");
-                foreach (var producer in producers)
+                try
                 {
-                    if (producer.Warning == EosTableValues.WARNING_PUNISH)
-                    {
-                        try
-                        {
-                            await _mainchainService.BlacklistProducer(nodeConfigurations.AccountName, producer.Key);
-                            blackListed.Add(producer);
+                    await _mainchainService.BlacklistProducer(nodeConfigurations.AccountName, producer.Key);
+                    blackListed.Add(producer);
 
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogDebug($"Failed to blacklist producer {producer.Key} - {ex.Message}");
-                        }
-                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug($"Failed to blacklist producer {producer.Key} - {ex.Message}");
                 }
             }
 
