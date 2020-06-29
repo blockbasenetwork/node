@@ -192,7 +192,7 @@ namespace BlockBase.Api
                 services.AddSingleton<IConnector, PSqlConnector>();
                 services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockRequestsHandler>();
-                services.AddSingleton<TransactionsHandler>();
+                services.AddSingleton<TransactionsManager>();
                 services.AddSingleton<PeerConnectionsHandler>();
                 services.AddSingleton<BlockValidationsHandler>();
                 services.AddSingleton<TransactionValidationsHandler>();

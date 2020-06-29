@@ -32,7 +32,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private bool _needsASettlement;
         private BlockheaderTable _lastBlockHeader;
         private IMainchainService _mainchainService;
-        private TransactionsHandler _transactionSender;
+        private TransactionsManager _transactionSender;
         private NodeConfigurations _nodeConfigurations;
         private bool _removedIncludedTransactions;
         private bool _areProducersBlackListed;
@@ -41,7 +41,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private bool _hasDoneTheSettlement;
         private bool _hasSwitchedProducer;
 
-        public SwitchProducerTurn(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, TransactionsHandler transactionSender) : base(logger)
+        public SwitchProducerTurn(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, TransactionsManager transactionSender) : base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

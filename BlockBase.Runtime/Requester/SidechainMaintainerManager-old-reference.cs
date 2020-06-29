@@ -39,7 +39,7 @@
 //         private PeerConnectionsHandler _peerConnectionsHandler;
 //         private const float DELAY_IN_SECONDS = 0.5f;
 //         public TaskContainer TaskContainer { get; private set; }
-//         private TransactionsHandler _transactionSender;
+//         private transactionsManager _transactionSender;
 //         private HistoryValidation _historyValidation;
 //         private IConnector _connector;
 //         private IMongoDbProducerService _mongoDbProducerService;
@@ -58,7 +58,7 @@
 
             
 //         }
-//         public SidechainMaintainerManagerOld(ILogger<SidechainMaintainerManagerOld> logger, IMongoDbProducerService mongoDbService, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, TransactionsHandler transactionSender, IConnector connector)
+//         public SidechainMaintainerManagerOld(ILogger<SidechainMaintainerManagerOld> logger, IMongoDbProducerService mongoDbService, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler, transactionsManager transactionSender, IConnector connector)
 //         {
 //             _peerConnectionsHandler = peerConnectionsHandler;
 //             _mainchainService = mainchainService;

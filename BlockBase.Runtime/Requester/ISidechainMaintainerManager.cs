@@ -8,6 +8,7 @@ namespace BlockBase.Runtime.Requester
         TaskContainer TaskContainerMaintainer { get; }
         TaskContainer TaskContainerProduction { get; }
         TaskContainer TaskContainerConnections { get; }
+        TaskContainer TaskContainerTransactions { get; }
 
         bool IsMaintainerRunning();
         bool IsProductionRunning();
