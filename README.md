@@ -142,7 +142,6 @@ Before you can request the network for a new sidechain, you have to configure th
     },
     "MinimumProducerStake": 0, // The minimum stake each node has to provide as collateral to apply to participation
     "BlockTimeInSeconds": 60, // The time in seconds between the production of each block
-    "NumberOfBlocksBetweenSettlements": 10, // The number of blocks between each settlement. Its during settlements that payments are made
     "MaxBlockSizeInBytes": 1000000, // The maximum size of a block in bytes
     "ReservedProducerSeats": ["producer1eosaccount", "producer2eosaccount"] // A list of EOS accounts you want to pre-select as service providers for your network
   }
