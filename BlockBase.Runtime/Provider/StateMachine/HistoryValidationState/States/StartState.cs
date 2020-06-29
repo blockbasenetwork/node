@@ -49,7 +49,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (_historyValidations.Any(t => !t.SignedProducers.Contains(_nodeConfigurations.AccountName)))
+            if (_historyValidations.Any(t => !t.SignedProducers.Contains(_nodeConfigurations.AccountName) || t.Account == _nodeConfigurations.AccountName))
                 return Task.FromResult((true, typeof(ValidateHistoryState).Name));
 
             return Task.FromResult((false, typeof(ValidateHistoryState).Name));
