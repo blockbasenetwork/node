@@ -63,7 +63,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
                 if (!syncResult)
                 {
-                    _logger.LogDebug("Producer not up to date, building chain.");
+                    _logger.LogInformation("Producer not up to date, building chain.");
                     opResult = await SyncChain();
                     _isNodeSynchronized = opResult.Succeeded;
                 }

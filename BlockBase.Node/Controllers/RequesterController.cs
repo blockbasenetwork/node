@@ -277,8 +277,8 @@ namespace BlockBase.Node.Controllers
                 {
                     string stakeToInsert = stake.ToString("F4") + " BBT";
                     var stakeTransaction = await _mainchainService.AddStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName, stakeToInsert);
-                    _logger.LogDebug("Stake sent to contract. Tx = " + stakeTransaction);
-                    _logger.LogDebug("Stake inserted = " + stakeToInsert);
+                    _logger.LogInformation("Stake sent to contract. Tx = " + stakeTransaction);
+                    _logger.LogInformation("Stake inserted = " + stakeToInsert);
                 }
 
                 //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?

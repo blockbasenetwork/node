@@ -334,8 +334,8 @@ namespace BlockBase.Node.Controllers
                 if (stake > 0)
                 {
                     var stakeTransaction = await _mainchainService.AddStake(chainName, NodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
-                    _logger.LogDebug("Sent stake to contract. Tx = " + stakeTransaction);
-                    _logger.LogDebug("Stake inserted = " + stake.ToString("F4") + " BBT");
+                    _logger.LogInformation("Sent stake to contract. Tx = " + stakeTransaction);
+                    _logger.LogInformation("Stake inserted = " + stake.ToString("F4") + " BBT");
                 }
 
                 //arriving here, there shouldn't be an active state controller associated to this chain

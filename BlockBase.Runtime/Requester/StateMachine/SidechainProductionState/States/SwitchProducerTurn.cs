@@ -139,7 +139,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
                 try
                 {
                     await _mainchainService.RequestHistoryValidation(clientAccountName, chosenProducerAccountName, HashHelper.ByteArrayToFormattedHexaString(lastValidBlockheader.BlockHash));
-                    _logger.LogDebug("Updated history validation table.");
+                    _logger.LogInformation("Updated history validation table.");
                 }
                 catch (ApiErrorException apiException)
                 {
@@ -154,7 +154,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
             if (producers.Where(p => p.Warning == EosTableValues.WARNING_PUNISH).Any())
             {
-                _logger.LogDebug("Blacklisting producers...");
+                _logger.LogInformation("Blacklisting producers...");
                 foreach (var producer in producers)
                 {
                     if (producer.Warning == EosTableValues.WARNING_PUNISH)

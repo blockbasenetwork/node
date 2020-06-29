@@ -136,7 +136,7 @@ namespace BlockBase.Runtime.Network
 
                     if (peerConnected == null)
                     {
-                        _logger.LogInformation("     Connect to ip: " + producer.ProducerInfo.IPEndPoint.Address + ":" + producer.ProducerInfo.IPEndPoint.Port);
+                        _logger.LogDebug("     Connect to ip: " + producer.ProducerInfo.IPEndPoint.Address + ":" + producer.ProducerInfo.IPEndPoint.Port);
                         var peer = await ConnectAsync(producer.ProducerInfo.IPEndPoint, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
                         if (peer != null)
                         {
@@ -393,14 +393,14 @@ namespace BlockBase.Runtime.Network
         private void Disconnect(PeerConnection peerConnection)
         {
             if (peerConnection.Peer == null) return;
-            _logger.LogInformation("Disconnect from peer " + peerConnection.Peer.EndPoint.Address + ":" + peerConnection.Peer.EndPoint.Port + ".");
+            _logger.LogDebug("Disconnect from peer " + peerConnection.Peer.EndPoint.Address + ":" + peerConnection.Peer.EndPoint.Port + ".");
             _networkService.DisconnectPeer(peerConnection.Peer);
             CurrentPeerConnections.Remove(peerConnection);
         }
 
         private void Disconnect(Peer peer)
         {
-            _logger.LogInformation("Disconnect from peer " + peer.EndPoint.Address + ":" + peer.EndPoint.Port + ".");
+            _logger.LogDebug("Disconnect from peer " + peer.EndPoint.Address + ":" + peer.EndPoint.Port + ".");
             _networkService.DisconnectPeer(peer);
         }
 

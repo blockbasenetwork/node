@@ -57,7 +57,7 @@ namespace BlockBase.Runtime.Network
 
         private async void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
-            _logger.LogDebug($"Successfully tested connection to {args.Peer.EndPoint.Address.ToString()}:{args.Peer.EndPoint.Port}");
+            _logger.LogInformation($"Successfully tested connection to {args.Peer.EndPoint.Address.ToString()}:{args.Peer.EndPoint.Port}");
 
             _connections.Add(args.Peer.EndPoint, (ip) => ip.Address.ToString() == args.Peer.EndPoint.Address.ToString());
 
@@ -79,19 +79,19 @@ namespace BlockBase.Runtime.Network
                 string endPoint = _systemConfig.IPAddress + ":" + _systemConfig.TcpPort;
                 var message = new NetworkMessage(type, payload, TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, endPoint, _nodeConfigurations.AccountName, ipEndPoint);
                 await _networkService.SendMessageAsync(message);
-                _logger.LogDebug($"Sent ping message #{number}");
+                _logger.LogInformation($"Sent ping message #{number}");
                 await Task.Delay(delayBetweenMessages);
                 SendDataUntilPeerExists(number+1, delayBetweenMessages, ipEndPoint);
             }
             catch 
             {
-                _logger.LogDebug("Failed to send message");
+                _logger.LogInformation("Failed to send message");
             }
         }
 
         private void MessageForwarder_PongMessageReceived(PongReceivedEventArgs args, IPEndPoint sender)
         {
-            _logger.LogDebug($"Received pong message from {sender.Address.ToString()} with number: {args.nonce}");
+            _logger.LogInformation($"Received pong message from {sender.Address.ToString()} with number: {args.nonce}");
         }
 
 

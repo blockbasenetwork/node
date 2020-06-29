@@ -44,7 +44,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
             var addCandidateTransaction = await _mainchainService.AddCandidature(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey, HashHelper.ByteArrayToFormattedHexaString(secretHash), (int)_sidechainPool.ProducerType, softwareVersion);
             
-            _logger.LogDebug($"Sent candidature to chain {_sidechainPool.ClientAccountName} Tx: {addCandidateTransaction}");
+            _logger.LogInformation($"Sent candidature to chain {_sidechainPool.ClientAccountName} Tx: {addCandidateTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()

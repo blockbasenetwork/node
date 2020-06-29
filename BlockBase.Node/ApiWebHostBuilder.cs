@@ -28,16 +28,20 @@ using System.IO;
 using System.Net;
 using BlockBase.Node.Filters;
 using BlockBase.Runtime.Provider.AutomaticProduction;
+using Serilog.Events;
+using System.Linq;
 
 namespace BlockBase.Api
 {
     public class ApiWebHostBuilder
     {
         private readonly IWebHostBuilder _webHostBuider;
+        private bool _verbose = false;
 
         public ApiWebHostBuilder(string[] args)
         {
             _webHostBuider = WebHost.CreateDefaultBuilder(args);
+            _verbose = args.Any(a => a == "--verbose");
         }
 
         public ApiWebHostBuilder ConfigureMainSettings(string[] args)
@@ -140,12 +144,22 @@ namespace BlockBase.Api
                     .AddEnvironmentVariables()
                     .Build();
 
-                Log.Logger = new LoggerConfiguration()
-                    .ReadFrom.Configuration(configuration.GetSection("Logging"))
-                    .Enrich.FromLogContext()
-                    .WriteTo.Console(theme: AnsiConsoleTheme.Code)
-                    .WriteTo.File($"logs/BlockBaseNode_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log")
-                    .CreateLogger();
+                var logConfig = new LoggerConfiguration()
+                   .ReadFrom.Configuration(configuration.GetSection("Logging"))
+                   .Enrich.FromLogContext();
+
+                if (_verbose)
+                {
+                    logConfig = logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
+                }
+                else
+                {
+                    logConfig = logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code, restrictedToMinimumLevel: LogEventLevel.Information);
+                }
+
+                logConfig = logConfig.WriteTo.File($"logs/BlockBaseNode_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log");
+
+                Log.Logger = logConfig.CreateLogger();
 
                 logging.AddSerilog();
             });

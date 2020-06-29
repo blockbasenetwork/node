@@ -92,7 +92,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
                     var peerConnectionStateManager = new PeerConnectionStateManager(_sidechain, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _mainchainService);
                     _peerConnectionTaskContainer = peerConnectionStateManager.Start();
 
-                    _logger.LogDebug("Started peer connection state manager");
+                    _logger.LogInformation("Started peer connection state manager");
                 }
 
                 if (currentState.GetType() == typeof(ProductionState) && _blockProductionTaskContainer == null)
@@ -103,7 +103,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
                         _mongoDbProducerService, _blockSender, _transactionValidationsHandler);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
 
-                    _logger.LogDebug($"Started block production");
+                    _logger.LogInformation($"Started block production");
                 }
             }
         }
