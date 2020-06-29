@@ -28,7 +28,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private List<BlockCountTable> _blocksCount;
         private List<ProducerInTable> _producerList;
         private List<WarningTable> _warnings;
-        private int _roundsUntilSettlement;
         private bool _needsASettlement;
         private BlockheaderTable _lastBlockHeader;
         private IMainchainService _mainchainService;
@@ -124,12 +123,10 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
             if (_contractState == null || _contractInfo == null || _currentProducer == null || _blocksCount == null) return;
 
-            var numberOfRoundsAlreadyPassed = _blocksCount.Sum(b => b.blocksproduced) + _blocksCount.Sum(b => b.blocksfailed);
-            _roundsUntilSettlement = Convert.ToInt32(_contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
-
-            _needsASettlement = _needsASettlement == false ? (_roundsUntilSettlement == 0) : _needsASettlement;
-
             _lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_nodeConfigurations.AccountName, (int)_contractInfo.BlocksBetweenSettlement);
+
+            var numberOfRoundsAlreadyPassed = _blocksCount.Sum(b => b.blocksproduced) + _blocksCount.Sum(b => b.blocksfailed);
+            _needsASettlement = _lastBlockHeader?.SequenceNumber > 2 && !_hasSwitchedProducer && numberOfRoundsAlreadyPassed == 1 ? true : _needsASettlement;
         }
 
         private async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
