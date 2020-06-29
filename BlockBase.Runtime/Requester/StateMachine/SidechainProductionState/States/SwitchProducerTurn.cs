@@ -127,7 +127,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             var numberOfRoundsAlreadyPassed = _blocksCount.Sum(b => b.blocksproduced) + _blocksCount.Sum(b => b.blocksfailed);
             _roundsUntilSettlement = Convert.ToInt32(_contractInfo.BlocksBetweenSettlement) - Convert.ToInt32(numberOfRoundsAlreadyPassed);
 
-            _needsASettlement = _roundsUntilSettlement - 1 <= 0;
+            _needsASettlement = _needsASettlement == false ? (_roundsUntilSettlement == 0) : _needsASettlement;
 
             _lastBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_nodeConfigurations.AccountName, (int)_contractInfo.BlocksBetweenSettlement);
         }
