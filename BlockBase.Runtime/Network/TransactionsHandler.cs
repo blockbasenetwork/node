@@ -36,7 +36,7 @@ namespace BlockBase.Runtime.Network
         private readonly int WAIT_TIME_IN_SECONDS = 10;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
-        private IList<ProducerInTable> _currentProducers;
+        private ThreadSafeList<ProducerInTable> _currentProducers;
         private IMongoDbRequesterService _mongoDbRequesterService;
         private int _numberOfConsecutiveEmptyBlocks;
 
@@ -75,7 +75,7 @@ namespace BlockBase.Runtime.Network
                 var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == sequenceNumber).SingleOrDefault();
                 if (transactionSendingTrackPoco != null)
                 {
-                    if (_currentProducers.Where(p => p.Key == args.SenderAccountName).Count() != 0)
+                    if (_currentProducers.GetEnumerable().Where(p => p.Key == args.SenderAccountName).Count() != 0)
                     {
                         transactionSendingTrackPoco.ProducersAlreadyReceived.Add(args.SenderAccountName);
                     }
@@ -125,8 +125,9 @@ namespace BlockBase.Runtime.Network
                 _sendingTransactions = true;
                 while (_transactionsToSend.Count() != 0)
                 {
-                    _currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
-                    await TryToSendTransactions();
+                    var producers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
+                    _currentProducers.ClearAndAddRange(producers);
+                    await TryToSendTransactions(producers);
                     await Task.Delay(WAIT_TIME_IN_SECONDS * 1000);
                 }
             }
@@ -140,7 +141,7 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        private async Task TryToSendTransactions()
+        private async Task TryToSendTransactions(IEnumerable<ProducerInTable> producers)
         {
             var listPeerConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().ToList();
             ListHelper.Shuffle<PeerConnection>(listPeerConnections);
@@ -152,8 +153,8 @@ namespace BlockBase.Runtime.Network
 
                     foreach (var transactionSendingTrack in transactionsSendingTrackPocos)
                     {
-                        if (transactionSendingTrack.ProducersAlreadyReceived.Count() > Math.Floor((double)(_currentProducers.Count() / 2))
-                            && _currentProducers.Count > _numberOfConsecutiveEmptyBlocks)
+                        if (transactionSendingTrack.ProducersAlreadyReceived.Count() > Math.Floor((double)(producers.Count() / 2))
+                            && producers.Count() > _numberOfConsecutiveEmptyBlocks)
                         {
                             transactionsSendingTrackPocos.Remove(transactionSendingTrack);
                         }
