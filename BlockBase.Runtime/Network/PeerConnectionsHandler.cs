@@ -97,9 +97,8 @@ namespace BlockBase.Runtime.Network
         public void AddKnownSidechain(SidechainPool sidechain)
         {
             var sidechainAlreadyKnown = KnownSidechains.GetEnumerable().Where(p => p.ClientAccountName == sidechain.ClientAccountName).SingleOrDefault();
-            if (sidechainAlreadyKnown != null) KnownSidechains.Remove(sidechainAlreadyKnown);
-
-            KnownSidechains.Add(sidechain);
+            if (sidechainAlreadyKnown != null) KnownSidechains.Replace(sidechainAlreadyKnown, sidechain);
+            else KnownSidechains.Add(sidechain);
         }
 
         public async Task UpdateConnectedProducersInSidechainPool(SidechainPool sidechain)
@@ -280,6 +279,8 @@ namespace BlockBase.Runtime.Network
 
         public async Task<bool> ArePeersConnected(SidechainPool sidechain)
         {
+            AddKnownSidechain(sidechain);
+
             var peersConnected = true;
             if (_checkingConnection) return peersConnected;
 

@@ -109,6 +109,11 @@ namespace BlockBase.DataPersistence.Data
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockheaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
+                
+                var update = Builders<TransactionDB>.Update.Set<string>("BlockHash", "");
+                await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockHash, update);
+
                 await blockheaderCollection.DeleteOneAsync(b => b.BlockHash == blockHash);
                 await session.CommitTransactionAsync();
             }
