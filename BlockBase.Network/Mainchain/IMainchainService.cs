@@ -68,5 +68,6 @@ namespace BlockBase.Network.Mainchain
         Task<List<VerifySignature>> RetrieveVerifySignatures(string account);
         Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName);
         Task<List<BlackListTable>> RetrieveBlacklistTable(string chain);
+        Task<List<WarningTable>> RetrieveWarningTable(string chain);
     }
 }

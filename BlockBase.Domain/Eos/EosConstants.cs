@@ -22,12 +22,14 @@ namespace BlockBase.Domain.Eos
         public const string HISTORY_VALIDATION_TABLE = "histval";
         public const string VERIFY_SIGNATURE_TABLE = "verifysig";
         public const string RESERVED_SEATS_TABLE = "reservedseat";
+        public const string WARNING_TABLE = "warnings";
     }
 
     public class EosTableValues
     {
-        public const int WARNING_FLAGGED = 1;
-        public const int WARNING_PUNISH = 2;
+        public const int WARNING_PUNISH = 0;
+        public const int WARNING_BLOCKS_FAILED = 1;
+        public const int WARNING_HISTORY_VALIDATION_FAILED = 2;
     }
 
     public class EosMsigConstants
@@ -197,6 +199,8 @@ namespace BlockBase.Domain.Eos
         public const string VERIFY_SIGNATURE = "verify_signature";
         public const string VERIFY_SIGNATURES = "verify_signatures";
         public const string SIGNED_PRODUCERS = "signed_producers";
+        public const string WARNING_CREATION_DATE_IN_SECONDS = "warning_creation_date_in_seconds";
+        public const string PRODUCER_EXIT_DATE_IN_SECONDS = "producer_exit_date_in_seconds";
     }
 
     public class EosNetworkIds

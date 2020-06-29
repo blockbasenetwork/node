@@ -11,9 +11,6 @@ namespace BlockBase.Network.Mainchain.Pocos
         [JsonProperty(EosAtributeNames.PUBLIC_KEY)]
         public string PublicKey { get; set; }
 
-        [JsonProperty(EosAtributeNames.WARNING_TYPE)]
-        public uint Warning { get; set; }
-
         [JsonProperty(EosAtributeNames.WORK_DURATION_IN_SECONDS)]
         public ulong WorkTimeInSeconds { get; set; }
 

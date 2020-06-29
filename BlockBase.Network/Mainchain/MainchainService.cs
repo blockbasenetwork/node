@@ -885,6 +885,17 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<List<WarningTable>> RetrieveWarningTable(string chain)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<WarningTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.WARNING_TABLE,
+                chain),
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
 
         #endregion
 
