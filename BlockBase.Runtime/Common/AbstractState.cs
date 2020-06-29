@@ -47,17 +47,15 @@ namespace BlockBase.Runtime.Common
                         return typeof(TEndState).Name;
                     }
 
-                    _logger.LogDebug($"{Path} - Starting to delay... {_delay.Seconds} seconds");
                     await Task.Delay(_delay);
                     //resetting delay every time after it has been done to avoid a situation where a very short delay gets set and no condition resets it to a higher value
                     _delay = TimeSpan.FromSeconds(5);
-                    _logger.LogDebug($"{Path} - Finished delay");
 
                     _logger.LogDebug($"{Path} - Starting to update status...");
                     await UpdateStatus();
                     _logger.LogInformation($"{Path} - Status updated");
 
-                    _logger.LogDebug($"{Path} - Starting to verify if has conditions to continue...");
+
                     if (!await HasConditionsToContinue())
                     {
                         _logger.LogDebug($"{Path} - No conditions to continue in this state");
@@ -65,18 +63,14 @@ namespace BlockBase.Runtime.Common
                         if(this is TStartState) return typeof(TEndState).Name;
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
                     }
-                    _logger.LogDebug($"{Path} - Conditions to continue verified");
 
-                    _logger.LogDebug($"{Path} - Starting to verify if has conditions to jump...");
                     var jumpStatus = await HasConditionsToJump();
                     if (jumpStatus.inConditionsToJump)
                     {
                         _logger.LogInformation($"{Path} - Jumping to {jumpStatus.nextState}");
                         return jumpStatus.nextState;
                     }
-                    _logger.LogDebug($"{Path} - No conditions found to jump");
 
-                    _logger.LogDebug($"{Path} - Starting to verify if has work to be done...");
                     if (!await IsWorkDone())
                     {
                         _logger.LogDebug($"{Path} - Starting to do work...");
@@ -95,9 +89,7 @@ namespace BlockBase.Runtime.Common
                     _logger.LogDebug($"Trace: {ex}");
 
                     var crashDelay = TimeSpan.FromSeconds(3);
-                    _logger.LogDebug($"{Path} - Starting after crash delay... {crashDelay.Seconds} seconds");
                     await Task.Delay(crashDelay);
-                    _logger.LogDebug($"{Path} - Finished after crash delay");
                 }
             }
         }
