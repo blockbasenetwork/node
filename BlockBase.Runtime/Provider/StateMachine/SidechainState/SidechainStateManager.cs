@@ -84,7 +84,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
                     await currentState.Run(default(CancellationToken));
                     _blockProductionTaskContainer.Stop();
                     _peerConnectionTaskContainer.Stop();
-                    if (_inAutomaticMode) await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(_sidechain.ClientAccountName);
                     this.Stop();
                     return;
                 }
