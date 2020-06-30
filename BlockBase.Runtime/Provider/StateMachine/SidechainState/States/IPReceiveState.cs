@@ -41,7 +41,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         {
             var isReadyToProduceTransaction = await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             
-            _logger.LogDebug($"Sent ready to produce transaction. Tx: {isReadyToProduceTransaction}");
+            _logger.LogInformation($"Sent ready to produce transaction. Tx: {isReadyToProduceTransaction}");
         }
 
         protected override Task<bool> HasConditionsToContinue()

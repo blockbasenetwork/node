@@ -22,7 +22,7 @@ namespace BlockBase.Node
             ResponseMessage = message;
         }
 
-        public OperationResponse(string message, bool success)
+        public OperationResponse(bool success, string message)
         {
             Succeeded = success;
             Response = default(T);

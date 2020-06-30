@@ -24,26 +24,24 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Network
 {
-    public class TransactionsHandler
+    public class TransactionsManager
     {
         private INetworkService _networkService;
         private ILogger _logger;
         private NodeConfigurations _nodeConfigurations;
-        public Task Task { get; private set; }
+        private TaskContainer TaskContainer;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NetworkConfigurations _networkConfigurations;
         private readonly int MAX_TRANSACTIONS_PER_MESSAGE = 50;
         private readonly int WAIT_TIME_IN_SECONDS = 10;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
-        private IList<ProducerInTable> _currentProducers;
+        private ThreadSafeList<ProducerInTable> _currentProducers;
         private IMongoDbRequesterService _mongoDbRequesterService;
         private int _numberOfConsecutiveEmptyBlocks;
-
-        private bool _sendingTransactions = false;
         private bool _hasBeenSetup = false;
 
-        public TransactionsHandler(ILogger<TransactionsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, IMainchainService mainchainService, IMongoDbRequesterService mongoDbRequesterService)
+        public TransactionsManager(ILogger<TransactionsManager> logger, IOptions<NodeConfigurations> nodeConfigurations, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NetworkConfigurations> networkConfigurations, IMainchainService mainchainService, IMongoDbRequesterService mongoDbRequesterService)
         {
             _networkService = networkService;
             _logger = logger;
@@ -51,6 +49,7 @@ namespace BlockBase.Runtime.Network
             _peerConnectionsHandler = peerConnectionsHandler;
             _networkConfigurations = networkConfigurations.Value;
             _transactionsToSend = new ThreadSafeList<TransactionSendingTrackPoco>();
+            _currentProducers = new ThreadSafeList<ProducerInTable>();
             _mainchainService = mainchainService;
             _mongoDbRequesterService = mongoDbRequesterService;
             _networkService.SubscribeTransactionConfirmationReceivedEvent(MessageForwarder_TransactionConfirmationReceived);
@@ -75,7 +74,7 @@ namespace BlockBase.Runtime.Network
                 var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == sequenceNumber).SingleOrDefault();
                 if (transactionSendingTrackPoco != null)
                 {
-                    if (_currentProducers.Where(p => p.Key == args.SenderAccountName).Count() != 0)
+                    if (_currentProducers.GetEnumerable().Where(p => p.Key == args.SenderAccountName).Count() != 0)
                     {
                         transactionSendingTrackPoco.ProducersAlreadyReceived.Add(args.SenderAccountName);
                     }
@@ -83,11 +82,23 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        public Task Start()
+        public TaskContainer Start()
         {
             _logger.LogDebug("Task starting.");
-            Task = Task.Run(async () => await Execute());
-            return Task;
+
+            if (TaskContainer != null) TaskContainer.Stop();
+            
+            TaskContainer = TaskContainer.Create(Execute);
+            TaskContainer.Start();
+            return TaskContainer;
+        }
+
+        public void Stop()
+        {
+            if(TaskContainer != null && TaskContainer.Task.Status == TaskStatus.Running)
+            {
+                TaskContainer.Stop();
+            }
         }
 
         public async Task RemoveIncludedTransactions(uint numberOfIncludedTransactions, string lastValidBlockHash)
@@ -118,29 +129,29 @@ namespace BlockBase.Runtime.Network
 
         private async Task Execute()
         {
-            if (_sendingTransactions) return;
-            
-            try
+            while (true)
             {
-                _sendingTransactions = true;
-                while (_transactionsToSend.Count() != 0)
+                try
                 {
-                    _currentProducers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
-                    await TryToSendTransactions();
+
+                    if (_transactionsToSend.Count() != 0)
+                    {
+                        var producers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
+                        _currentProducers.ClearAndAddRange(producers);
+                        await TryToSendTransactions(producers);
+                    }
+
                     await Task.Delay(WAIT_TIME_IN_SECONDS * 1000);
+
                 }
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical($"Send transactions failed with: {e}");
-            }
-            finally
-            {  
-                _sendingTransactions = false;
+                catch (Exception e)
+                {
+                    _logger.LogCritical($"Send transactions failed with: {e}");
+                }
             }
         }
 
-        private async Task TryToSendTransactions()
+        private async Task TryToSendTransactions(IEnumerable<ProducerInTable> producers)
         {
             var listPeerConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().ToList();
             ListHelper.Shuffle<PeerConnection>(listPeerConnections);
@@ -152,8 +163,8 @@ namespace BlockBase.Runtime.Network
 
                     foreach (var transactionSendingTrack in transactionsSendingTrackPocos)
                     {
-                        if (transactionSendingTrack.ProducersAlreadyReceived.Count() > Math.Floor((double)(_currentProducers.Count() / 2))
-                            && _currentProducers.Count > _numberOfConsecutiveEmptyBlocks)
+                        if (transactionSendingTrack.ProducersAlreadyReceived.Count() > Math.Floor((double)(producers.Count() / 2))
+                            && producers.Count() > _numberOfConsecutiveEmptyBlocks)
                         {
                             transactionsSendingTrackPocos.Remove(transactionSendingTrack);
                         }

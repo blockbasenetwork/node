@@ -35,7 +35,7 @@ namespace BlockBase.DataPersistence.Utils
             }
             catch(Exception e)
             {
-                _logger.LogWarning($"Unable to connect to MongoDB: {e.Message}");
+                _logger.LogInformation($"Unable to connect to MongoDB: {e.Message}");
                 return false;
             }
         }
@@ -48,7 +48,7 @@ namespace BlockBase.DataPersistence.Utils
             }
             catch(Exception e)
             {
-                _logger.LogWarning($"Unable to connect to Postgres: {e.Message}");
+                _logger.LogInformation($"Unable to connect to Postgres: {e.Message}");
                 return false;
             }
         }

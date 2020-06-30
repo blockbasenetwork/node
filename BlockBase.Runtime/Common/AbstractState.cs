@@ -43,45 +43,39 @@ namespace BlockBase.Runtime.Common
                     //checks if execution is cancelled
                     if (cancellationToken.IsCancellationRequested) 
                     {
-                        _logger.LogDebug($"{Path} - Jumping to {typeof(TEndState).Name}");
+                        _logger.LogInformation($"{Path} - Cancellation requested jumping to {typeof(TEndState).Name}");
                         return typeof(TEndState).Name;
                     }
 
-                    if(_verbose) _logger.LogDebug($"{Path} - Starting to delay... {_delay.Seconds} seconds");
                     await Task.Delay(_delay);
                     //resetting delay every time after it has been done to avoid a situation where a very short delay gets set and no condition resets it to a higher value
                     _delay = TimeSpan.FromSeconds(5);
-                    if(_verbose) _logger.LogDebug($"{Path} - Finished delay");
 
-                    if(_verbose) _logger.LogDebug($"{Path} - Starting to update status...");
+                    _logger.LogDebug($"{Path} - Starting to update status...");
                     await UpdateStatus();
-                    if(_verbose) _logger.LogDebug($"{Path} - Status updated");
+                    _logger.LogInformation($"{Path} - Status updated");
 
-                    if(_verbose) _logger.LogDebug($"{Path} - Starting to verify if has conditions to continue...");
+
                     if (!await HasConditionsToContinue())
                     {
-                        if(_verbose) _logger.LogDebug($"{Path} - No conditions to continue in this state");
+                        _logger.LogDebug($"{Path} - No conditions to continue in this state");
                         //if there are no conditions to continue on the start state, jump to the end state
                         if(this is TStartState) return typeof(TEndState).Name;
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
                     }
-                    if(_verbose) _logger.LogDebug($"{Path} - Conditions to continue verified");
 
-                    if(_verbose) _logger.LogDebug($"{Path} - Starting to verify if has conditions to jump...");
                     var jumpStatus = await HasConditionsToJump();
                     if (jumpStatus.inConditionsToJump)
                     {
-                        _logger.LogDebug($"{Path} - Jumping to {jumpStatus.nextState}");
+                        _logger.LogInformation($"{Path} - Jumping to {jumpStatus.nextState}");
                         return jumpStatus.nextState;
                     }
-                    if(_verbose) _logger.LogDebug($"{Path} - No conditions found to jump");
 
-                    if(_verbose) _logger.LogDebug($"{Path} - Starting to verify if has work to be done...");
                     if (!await IsWorkDone())
                     {
-                        if(_verbose) _logger.LogDebug($"{Path} - Starting to do work...");
+                        _logger.LogDebug($"{Path} - Starting to do work...");
                         await DoWork();
-                        _logger.LogDebug($"{Path} - Work done");
+                        _logger.LogInformation($"{Path} - Work done");
                     }
                     else
                     {
@@ -92,12 +86,10 @@ namespace BlockBase.Runtime.Common
                 catch (Exception ex)
                 {
                     _logger.LogError($"{Path} | {ex.Message}");
-                    if(_verbose) _logger.LogDebug($"Trace: {ex}");
+                    _logger.LogDebug($"Trace: {ex}");
 
                     var crashDelay = TimeSpan.FromSeconds(3);
-                    if(_verbose) _logger.LogDebug($"{Path} - Starting after crash delay... {crashDelay.Seconds} seconds");
                     await Task.Delay(crashDelay);
-                    if(_verbose) _logger.LogDebug($"{Path} - Finished after crash delay");
                 }
             }
         }

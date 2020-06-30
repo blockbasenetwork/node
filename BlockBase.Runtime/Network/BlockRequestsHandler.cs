@@ -19,6 +19,7 @@ using static BlockBase.Network.Rounting.MessageForwarder;
 using System.Collections.Generic;
 using BlockBase.Network.Mainchain;
 using BlockBase.Runtime.Helpers;
+using BlockBase.Utils.Crypto;
 
 namespace BlockBase.Runtime.Network
 {
@@ -30,7 +31,6 @@ namespace BlockBase.Runtime.Network
         private NodeConfigurations _nodeConfigurations;
         private string _localEndPoint;
         private IMainchainService _mainchainService;
-        private HistoryValidation _historyValidation;
 
         public BlockRequestsHandler(ILogger<BlockRequestsHandler> logger, IOptions<NodeConfigurations> nodeConfigurations, SystemConfig systemConfig, INetworkService networkService, IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService)
         {
@@ -42,7 +42,6 @@ namespace BlockBase.Runtime.Network
 
             _nodeConfigurations = nodeConfigurations?.Value;
             _localEndPoint = systemConfig.IPAddress + ":" + systemConfig.TcpPort;
-            _historyValidation = new HistoryValidation(_logger, _mongoDbProducerService, _mainchainService);
         }
 
         private async void MessageForwarder_BlockRequest(BlocksRequestReceivedEventArgs args)
@@ -53,12 +52,17 @@ namespace BlockBase.Runtime.Network
                 var blocksToSend = new List<Block>();
                 var data = new List<byte>();
 
-                var historyTable = await _mainchainService.RetrieveHistoryValidationTable(args.ClientAccountName);
-                if (historyTable != null)
+                var historyTables = await _mainchainService.RetrieveHistoryValidation(args.ClientAccountName);
+                if (historyTables != null)
                 {
-                    var blockToValidateSequenceNumber = await _historyValidation.GetChosenBlockSequenceNumber(historyTable.BlockHash, args.ClientAccountName);
+                    foreach(var historyTable in historyTables)
+                    {
+                    var blockToValidateSequenceNumber = await GetChosenBlockSequenceNumber(historyTable.BlockHash, args.ClientAccountName);      if (blockToValidateSequenceNumber.HasValue && args.BlocksSequenceNumber.Contains(blockToValidateSequenceNumber.Value))
+                        args.BlocksSequenceNumber.Remove(blockToValidateSequenceNumber.Value);
+                    //Removes validations blocks
                     if (blockToValidateSequenceNumber.HasValue && args.BlocksSequenceNumber.Contains(blockToValidateSequenceNumber.Value))
                         args.BlocksSequenceNumber.Remove(blockToValidateSequenceNumber.Value);
+                    }
                 }
 
 
@@ -127,6 +131,24 @@ namespace BlockBase.Runtime.Network
             // logger.LogDebug($"Data {HashHelper.ByteArrayToFormattedHexaString(data)}");
 
             return data;
+        }
+
+        public async Task<ulong?> GetChosenBlockSequenceNumber(string blockhash, string clientAccountName)
+        {
+            var block = await _mongoDbProducerService.GetSidechainBlockAsync(clientAccountName, blockhash);
+
+            if (block == null)
+            {
+                _logger.LogWarning("Producer does not have most current block for history validation.");
+                return null;
+            }
+
+            var blockHashNumber = BitConverter.ToUInt64(HashHelper.FormattedHexaStringToByteArray(blockhash));
+            // logger.LogWarning("Blockhash converted to number: " + blockHashNumber);
+
+            var chosenBlockSequenceNumber = (blockHashNumber % block.BlockHeader.SequenceNumber) + 1;
+            // logger.LogWarning($"Current block sequence number {block.BlockHeader.SequenceNumber}, chosen block sequence number {chosenBlockSequenceNumber}");
+            return chosenBlockSequenceNumber;
         }
     }
 }

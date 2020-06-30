@@ -32,7 +32,7 @@ namespace BlockBase.DataPersistence.Data
                 var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
                 var info = await (await transactionInfoCollection.FindAsync(t => true)).SingleOrDefaultAsync();
                 //TODO rpinto - this assumes that the requester has received the block from the providers - this may not always happen?
-                if (info.BlockHash == lastValidBlockHash) return sequenceNumbers;
+                if (info != null && info.BlockHash == lastValidBlockHash) return sequenceNumbers;
 
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
 

@@ -51,6 +51,15 @@ namespace BlockBase.Utils.Threading
             }
         }
 
+        public void Replace(T itemToReplace, T newItem)
+        {
+            lock(Locker)
+            {
+                _list.Remove(itemToReplace);
+                _list.Add(newItem);
+            }
+        }
+
         public void Clear()
         {
             lock (Locker)

@@ -17,6 +17,7 @@ using BlockBase.Domain.Results;
 using BlockBase.Domain.Enums;
 using BlockBase.Runtime.Network;
 using BlockBase.Node.Filters;
+using BlockBase.Domain.Endpoints;
 
 namespace BlockBase.Node.Controllers
 {
@@ -57,10 +58,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>("Please provide a sidechain name."));
+                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>(false, "Please provide a sidechain name."));
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
 
-                if (contractInfo == null) return NotFound(new OperationResponse<string>($"Sidechain {sidechainName} configuration not found"));
+                if (contractInfo == null) return NotFound(new OperationResponse<string>(false, $"Sidechain {sidechainName} configuration not found"));
 
                 var result = new GetSidechainConfigurationModel
                 {
@@ -256,7 +257,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
+                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>(false, "Please provide a valid account name"));
 
                 var stakeTable = await _mainchainService.RetrieveAccountStakedSidechains(accountName);
 
@@ -285,7 +286,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetTop21ProducersAndEndpoints/");
+                var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_TOP_21_PRODUCERS_ENDPOINTS);
                 var json = await HttpHelper.CallWebRequest(request);
                 var topProducers = JsonConvert.DeserializeObject<List<TopProducerEndpoint>>(json);
 
@@ -296,7 +297,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Newtonsoft.Json.JsonReaderException)
             {
-                return NotFound(new OperationResponse<string>("Unable to retrieve the list of producers"));
+                return NotFound(new OperationResponse<string>(false, "Unable to retrieve the list of producers"));
             }
             catch (Exception e)
             {
@@ -322,7 +323,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                var request = HttpHelper.ComposeWebRequestGet($"https://blockbase.network/api/NodeSupport/GetAllTrackerSidechains?network={network.ToString()}");
+                var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_ALL_TRACKER_SIDECHAINS + $"?network={network.ToString()}");
                 var json = await HttpHelper.CallWebRequest(request);
                 var trackerSidechains = JsonConvert.DeserializeObject<List<TrackerSidechain>>(json);
 
@@ -330,7 +331,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Newtonsoft.Json.JsonReaderException)
             {
-                return NotFound(new OperationResponse<string>("Unable to retrieve the list of sidechains"));
+                return NotFound(new OperationResponse<string>(false, "Unable to retrieve the list of sidechains"));
             }
             catch (Exception e)
             {
@@ -357,10 +358,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>("Please provide a valid account name"));
+                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>(false, "Please provide a valid account name"));
 
                 var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
-                if (rewardTable == null) return NotFound(new OperationResponse<string>($"The reward table for {accountName} was not found"));
+                if (rewardTable == null) return NotFound(new OperationResponse<string>(false, $"The reward table for {accountName} was not found"));
 
 
 

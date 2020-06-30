@@ -22,12 +22,14 @@ namespace BlockBase.Domain.Eos
         public const string HISTORY_VALIDATION_TABLE = "histval";
         public const string VERIFY_SIGNATURE_TABLE = "verifysig";
         public const string RESERVED_SEATS_TABLE = "reservedseat";
+        public const string WARNING_TABLE = "warnings";
     }
 
     public class EosTableValues
     {
-        public const int WARNING_FLAGGED = 1;
-        public const int WARNING_PUNISH = 2;
+        public const int WARNING_PUNISH = 0;
+        public const int WARNING_BLOCKS_FAILED = 1;
+        public const int WARNING_HISTORY_VALIDATION_FAILED = 2;
     }
 
     public class EosMsigConstants
@@ -73,9 +75,11 @@ namespace BlockBase.Domain.Eos
         public const string HISTORY_VALIDATE = "histvalidate";
         public const string ADD_BLOCK_BYTE = "addblckbyte";
         public const string ADD_VERIFY_SIGNATURE = "addversig";
+        public const string ADD_HIST_SIG = "addhistsig";
         public const string UNLINK_AUTH = "unlinkauth";
         public const string DELETE_AUTH = "deleteauth";
-
+        public const string REMOVE_CANDIDATE = "rcandidate";
+        public const string REMOVE_BLACKLISTED = "removeblisted";
     }
 
     public class EosParameterNames
@@ -89,6 +93,8 @@ namespace BlockBase.Domain.Eos
         public const string PUBLIC_KEY = "publicKey";
         public const string SECRET_HASH = "secretHash";
         public const string PRODUCER_TYPE = "producerType";
+        public const string PRODUCER_TO_VALIDATE = "producerToValidade";
+
         public const string SECRET = "secret";
         public const string WORK_TIME_IN_SECONDS = "workDurationInSeconds";
         public const string BLOCK = "block";
@@ -192,5 +198,30 @@ namespace BlockBase.Domain.Eos
         public const string BLOCK_BYTE_IN_HEXADECIMAL = "block_byte_in_hex";
         public const string VERIFY_SIGNATURE = "verify_signature";
         public const string VERIFY_SIGNATURES = "verify_signatures";
+        public const string SIGNED_PRODUCERS = "signed_producers";
+        public const string WARNING_CREATION_DATE_IN_SECONDS = "warning_creation_date_in_seconds";
+        public const string PRODUCER_EXIT_DATE_IN_SECONDS = "producer_exit_date_in_seconds";
+    }
+
+    public class EosNetworkIds
+    {
+        public const string MAINNET_ID = "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906";
+        public const string JUNGLE_ID = "e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473";
+    }
+
+    public class EosNetworkNames
+    {
+        public static string GetNetworkName(string networkId)
+        {
+            switch(networkId)
+            {
+                case EosNetworkIds.JUNGLE_ID:
+                    return "Jungle";
+                case EosNetworkIds.MAINNET_ID:
+                    return "Mainnet";
+                default:
+                    return "All";
+            }
+        }
     }
 }
