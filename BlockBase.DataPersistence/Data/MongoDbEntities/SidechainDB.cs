@@ -10,5 +10,9 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
     {
         [BsonId()]
         public string Id { get; set; }
+
+        // [BsonElement("Timestamp")]
+        // [BsonRequired()]
+        // public string Timestamp { get; set; }
     }
 }

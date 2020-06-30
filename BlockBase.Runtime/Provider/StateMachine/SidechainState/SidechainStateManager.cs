@@ -32,8 +32,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
         private TaskContainer _historyValidationTaskContainer;
 
         private TransactionValidationsHandler _transactionValidationsHandler;
-
-
+        private ISidechainProducerService _sidechainProducerService;
         private bool _inAutomaticMode = false;
 
 
@@ -46,6 +45,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             IMongoDbProducerService mongoDbProducerService, IMainchainService mainchainService,
              BlockRequestsHandler blockSender,
             TransactionValidationsHandler transactionValidationsHandler,
+            ISidechainProducerService sidechainProducerService,
             bool automatic = false) : base(logger)
         {
             _sidechain = sidechain;
@@ -58,6 +58,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             _peerConnectionsHandler = peerConnectionsHandler;
             _blockSender = blockSender;
             _transactionValidationsHandler = transactionValidationsHandler;
+            _sidechainProducerService = sidechainProducerService;
             _inAutomaticMode = automatic;
         }
 
@@ -121,7 +122,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             if (state == typeof(IPSendTimeState).Name) return new IPSendTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
             if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
             if (state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService);
+            if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService, _sidechainProducerService);
 
             return null;
         }

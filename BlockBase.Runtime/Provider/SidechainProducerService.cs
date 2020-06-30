@@ -71,7 +71,7 @@ namespace BlockBase.Runtime.Provider
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
             sidechainPool.ProducerType = producerType != 0 ? (ProducerTypeEnum)producerType : sidechainPool.ProducerType;
 
-            var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _transactionValidationsHandler, automatic);
+            var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _transactionValidationsHandler, this, automatic);
 
             var sidechainContext = new SidechainContext
             {
