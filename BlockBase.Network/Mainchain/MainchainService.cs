@@ -449,7 +449,7 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> SubmitBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active")
+        public async Task<string> SubmitBlockByte(string owner, string producerName, string byteInHexadecimal, string blockHash, string permission = "active")
         {
             var transaction = new Transaction()
             {
@@ -464,7 +464,7 @@ namespace BlockBase.Network.Mainchain
                             new PermissionLevel() {actor = owner, permission = EosMsigConstants.VERIFY_HISTORY_PERMISSION }
                         },
                         name = EosMethodNames.HISTORY_VALIDATE,
-                        data = CreateDataForHistValidate(owner, producerName)
+                        data = CreateDataForHistValidate(owner, producerName, blockHash)
                     }
                 }
             };
@@ -1165,12 +1165,13 @@ namespace BlockBase.Network.Mainchain
 
             };
         }
-        private Dictionary<string, object> CreateDataForHistValidate(string owner, string producerName)
+        private Dictionary<string, object> CreateDataForHistValidate(string owner, string producerName, string blockHash)
         {
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
-                { EosParameterNames.PRODUCER, producerName }
+                { EosParameterNames.PRODUCER, producerName },
+                { EosParameterNames.BLOCK_HASH, blockHash }
             };
         }
 

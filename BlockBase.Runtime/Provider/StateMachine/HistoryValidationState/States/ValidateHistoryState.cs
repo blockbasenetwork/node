@@ -62,7 +62,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
         {
 
             if (_hasToSubmitBlockByte && !_hasSubmittedBlockByte)
-                await TryAddBlockByte(_blockByteInHex);
+                await TryAddBlockByte(_blockByteInHex, _blockHashToValidate);
 
             if (_hasToSubmitBlockByte && _hasSubmittedBlockByte && !_hasSignedBlockByte)
                 await TryAddHistorySignature(_nodeConfigurations.AccountName, _blockByteInHex, _transaction);
@@ -161,9 +161,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             }
         }
 
-        private async Task TryAddBlockByte(string blockByte)
+        private async Task TryAddBlockByte(string blockByte, string blockHash)
         {
-            var addBlockByteTransaction = await _mainchainService.SubmitBlockByte(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockByte);
+            var addBlockByteTransaction = await _mainchainService.SubmitBlockByte(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, blockByte, blockHash);
             _logger.LogDebug($"Adding block byte {blockByte}.");
         }
 
