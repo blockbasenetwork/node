@@ -113,9 +113,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             //check preconditions to continue update
             if (_contractState == null) return;
             if (_producerList == null) return;
-            if (_historyValidations == null || !_historyValidations.Any()) return;
+            if (_historyValidations == null) return;
 
             _currentProducerHistoryEntry = _historyValidations.Where(e => e.Account == _nodeConfigurations.AccountName).SingleOrDefault();
+
+            if (_currentProducerHistoryEntry == null) return;
 
             if (_blockHashToValidate != null && _currentProducerHistoryEntry != null)
             {
