@@ -9,6 +9,7 @@ namespace BlockBase.Network.Sidechain
     {
         public string ClientAccountName { get; set; }
         public string ClientPublicKey { get; set; }
+        public ulong SidechainCreationTimestamp { get; set; }
 
         public ThreadSafeList<ProducerInPool> ProducersInPool { get; set; }
         public SidechainPoolStateEnum State { get; set; }

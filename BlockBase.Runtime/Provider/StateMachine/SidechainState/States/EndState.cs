@@ -14,12 +14,15 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private IMongoDbProducerService _mongoDbProducerService;
         private ISidechainProducerService _sidechainProducerService;
 
-        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService, ISidechainProducerService sidechainProducerService) : base(logger, sidechainPool)
+        private bool _inAutomaticMode;
+
+        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService, ISidechainProducerService sidechainProducerService, bool inAutomaticMode) : base(logger, sidechainPool)
         {
             _chainExistsInDatabase = false;
             _sidechainPool = sidechainPool;
             _mongoDbProducerService = mongoDbProducerService;
             _sidechainProducerService = sidechainProducerService;
+            _inAutomaticMode = inAutomaticMode;
         }
 
         protected override Task<bool> IsWorkDone()

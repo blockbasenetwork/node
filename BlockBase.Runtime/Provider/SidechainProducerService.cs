@@ -61,7 +61,7 @@ namespace BlockBase.Runtime.Provider
         }
 
         //TODO rpinto - this probably needs to be in a try catch
-        public async Task AddSidechainToProducerAndStartIt(string sidechainName, int producerType = 0, bool automatic = false)
+        public async Task AddSidechainToProducerAndStartIt(string sidechainName, ulong sidechainCreationTimestamp, int producerType, bool automatic)
         {
 
             if (_sidechainKeeper.ContainsKey(sidechainName)) throw new Exception("Sidechain already exists");
@@ -69,6 +69,10 @@ namespace BlockBase.Runtime.Provider
 
             //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
+
+            if(sidechainPool.SidechainCreationTimestamp != sidechainCreationTimestamp)
+                throw new InvalidOperationException("Sidechain timestamps don't match");
+
             sidechainPool.ProducerType = producerType != 0 ? (ProducerTypeEnum)producerType : sidechainPool.ProducerType;
 
             var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _transactionValidationsHandler, this, automatic);
@@ -104,22 +108,13 @@ namespace BlockBase.Runtime.Provider
             var sidechainsDB = await _mongoDbProducerService.GetAllProducingSidechainsAsync();
             foreach (var sidechainDB in sidechainsDB)
             {
-                //TODO rpinto - why are these checks here?? doesn't make any sense
-                // var contractState = await _mainchainService.RetrieveContractState(sidechainDB.Id);
-                // if (contractState == null || (!contractState.ProductionTime && !contractState.CandidatureTime)) continue;
-
-                // var producersInChain = await _mainchainService.RetrieveProducersFromTable(sidechainDB.Id);
-                // if (!producersInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
-
-                // var candidatesInChain = await _mainchainService.RetrieveCandidates(sidechainDB.Id);
-                // if (candidatesInChain.Any(p => p.Key == _nodeConfigurations.AccountName)) continue;
-
                 try
                 {
-                    await AddSidechainToProducerAndStartIt(sidechainDB.Id);
+                    await AddSidechainToProducerAndStartIt(sidechainDB.Id, sidechainDB.Timestamp, 0, sidechainDB.IsAutomatic);
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogInformation($"Unable to recover {sidechainDB.Id}", ex.Message);
                     _logger.LogError($"Unable to recover {sidechainDB.Id}", ex.Message);
                 }
             }
@@ -146,10 +141,11 @@ namespace BlockBase.Runtime.Provider
         {
             var sidechainPool = new SidechainPool();
 
-            var publicKey = (await _mainchainService.RetrieveClientTable(sidechainName)).PublicKey;
+            var clientTable = await _mainchainService.RetrieveClientTable(sidechainName);
 
             sidechainPool.ClientAccountName = sidechainName;
-            sidechainPool.ClientPublicKey = publicKey;
+            sidechainPool.ClientPublicKey = clientTable.PublicKey;
+            sidechainPool.SidechainCreationTimestamp = clientTable.SidechainCreationTimestamp;
 
             var contractInformation = await _mainchainService.RetrieveContractInformation(sidechainName);
             var candidatesInTable = await _mainchainService.RetrieveCandidates(sidechainName);

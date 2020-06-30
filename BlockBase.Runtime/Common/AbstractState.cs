@@ -20,16 +20,13 @@ namespace BlockBase.Runtime.Common
         protected ILogger _logger;
         protected TimeSpan _delay;
 
-        protected bool _inAutomaticMode;
-
         protected string Path { get; set; }
 
-        public AbstractState(ILogger logger, bool automatic = false, bool verbose = false)
+        public AbstractState(ILogger logger, bool verbose = false)
         {
             _logger = logger;
             _delay = TimeSpan.FromSeconds(5);
             _verbose = verbose;
-            _inAutomaticMode = automatic;
             Path = this.GetType().FullName;
         }
         public virtual async Task<string> Run(CancellationToken cancellationToken)

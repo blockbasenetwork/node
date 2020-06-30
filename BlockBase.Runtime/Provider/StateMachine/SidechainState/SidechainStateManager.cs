@@ -46,7 +46,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
              BlockRequestsHandler blockSender,
             TransactionValidationsHandler transactionValidationsHandler,
             ISidechainProducerService sidechainProducerService,
-            bool automatic = false) : base(logger)
+            bool automatic) : base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
@@ -121,7 +121,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             if (state == typeof(IPSendTimeState).Name) return new IPSendTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
             if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
             if (state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService, _sidechainProducerService);
+            if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService, _sidechainProducerService, _inAutomaticMode);
 
             return null;
         }

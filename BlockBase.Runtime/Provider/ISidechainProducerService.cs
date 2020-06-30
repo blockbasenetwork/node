@@ -12,7 +12,7 @@ namespace BlockBase.Runtime.Provider
 {
     public interface ISidechainProducerService
     {
-        Task AddSidechainToProducerAndStartIt(string sidechainName, int producerType, bool automatic = false);
+        Task AddSidechainToProducerAndStartIt(string sidechainName, ulong sidechainCreationTimestamp, int producerType, bool automatic);
         void RemoveSidechainFromProducerAndStopIt(string sidechainName);
         Task LoadAndRunSidechainsFromRecoverDB();
         Task Run(bool recoverChains = true);
