@@ -37,7 +37,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> LinkAuthorization(string actionName, string accountname, string authorization, string permission = "active");
         Task<string> ClaimReward(string chain, string producerName, string permission = "active");
         Task<string> RequestHistoryValidation(string owner, string producerName, string blockHash, string permission = "active");
-        Task<string> SubmitBlockByte(string owner, string producerName, string byteInHexadecimal, string permission = "active");
+        Task<string> SubmitBlockByte(string owner, string producerName, string byteInHexadecimal, string blockHash, string permission = "active");
         Task<string> SignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, Transaction transaction, string permission = "active");
         Task<string> CreateVerifyBlockTransactionAndAddToContract(string owner, string accountName, string blockHash);
         Task<string> AddBlockByteVerifyTransactionAndSignature(string owner, string accountName, string byteInHexadecimal, byte[] packedTransaction, string permission = "active");
