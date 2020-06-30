@@ -56,7 +56,7 @@ namespace BlockBase.Runtime.Network
             if (transactionsProto == null) return;
 
             var receivedValidTransactions = new List<ulong>();
-            _logger.LogDebug($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber}");
+            _logger.LogInformation($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber}");
 
             foreach (var transactionProto in transactionsProto)
             {
