@@ -114,8 +114,8 @@ namespace BlockBase.Runtime.Provider
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogInformation($"Unable to recover {sidechainDB.Id}", ex.Message);
-                    _logger.LogError($"Unable to recover {sidechainDB.Id}", ex.Message);
+                    _logger.LogInformation($"Unable to recover {sidechainDB.Id}");
+                    _logger.LogError($"Exception {ex}");
                 }
             }
         }
