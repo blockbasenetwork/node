@@ -90,10 +90,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (_blockHashToValidateHasChanged || (!_historyValidations.Any(t => t.BlockByteInHexadecimal != "" && !t.SignedProducers.Contains(_nodeConfigurations.AccountName)) && _currentProducerHistoryEntry == null))
-                return Task.FromResult((true, typeof(StartState).Name));
-
-            else return Task.FromResult((false, typeof(StartState).Name));
+            var conditionsToJump = _blockHashToValidateHasChanged || (!_historyValidations.Any(t => t.BlockByteInHexadecimal != "" && !t.SignedProducers.Contains(_nodeConfigurations.AccountName)) && _currentProducerHistoryEntry == null);
+            return Task.FromResult((conditionsToJump, typeof(StartState).Name));
         }
 
         protected override Task<bool> IsWorkDone()
@@ -160,6 +158,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
                     _logger.LogInformation($"Calculated provider {historyValidationTable.Account} validation block byte: {blockByte}.");
                     _blockBytesPerValidationEntryAccount[historyValidationTable.Account] = blockByte;
                 }
+            }
+
+            if (_hasToSubmitBlockByte && _hasSubmittedBlockByte && !_hasEnoughSignatures)
+            {
+                _delay = TimeSpan.FromSeconds(3);
             }
         }
 
