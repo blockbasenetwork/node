@@ -18,7 +18,7 @@ using Newtonsoft.Json;
 
 namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
-    public class ValidateHistoryState : AbstractState<StartState, EndState>
+    public class ValidateHistoryState : ProviderAbstractState<StartState, EndState>
     {
 
         private IMainchainService _mainchainService;
@@ -47,7 +47,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         public ValidateHistoryState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations) : base(logger)
+            NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
         {
             _logger = logger;
             _mainchainService = mainchainService;

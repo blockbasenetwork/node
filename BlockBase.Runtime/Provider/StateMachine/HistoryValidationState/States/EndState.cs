@@ -15,9 +15,9 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
-    public class EndState : AbstractState<StartState, EndState>
+    public class EndState : ProviderAbstractState<StartState, EndState>
     {
-        public EndState(ILogger logger, SidechainPool sidechainPool) : base(logger)
+        public EndState(ILogger logger, SidechainPool sidechainPool) : base(logger, sidechainPool)
         {
         }
 

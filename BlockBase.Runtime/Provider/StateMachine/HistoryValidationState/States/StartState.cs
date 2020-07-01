@@ -15,7 +15,7 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
-    public class StartState : AbstractState<StartState, EndState>
+    public class StartState : ProviderAbstractState<StartState, EndState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
@@ -23,7 +23,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producerList;
         private IList<MappedHistoryValidation> _historyValidations;
-        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
+        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechain)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
