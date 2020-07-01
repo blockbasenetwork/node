@@ -7,6 +7,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
@@ -15,15 +16,19 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
+        private NetworkConfigurations _networkConfigurations;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
         private ContractInformationTable _contractInfo;
 
+        private bool _hasIpChanged;
+
         private SidechainPool _sidechainPool;
-        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
+        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
+            _networkConfigurations = networkConfigurations;
             _sidechainPool = sidechainPool;
         }
 
@@ -50,6 +55,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
+            if (_hasIpChanged) return Task.FromResult((_hasIpChanged, typeof(UpdateIpState).Name));
             return Task.FromResult((isProducerInTable && _contractStateTable.IPSendTime, typeof(IPSendTimeState).Name));
         }
 
@@ -58,11 +64,18 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
-
+            
             //check preconditions to continue update
             if(_contractInfo == null) return;
 
-            _delay = TimeSpan.FromSeconds(GetDelayInProductionTime());
+            //check if provider ip has changed
+            var iPAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
+            var endpoint = _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort;
+            var tableEncryptedIpAddress = iPAddresses.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.EncryptedIPs?.LastOrDefault();
+            var encryptedIpAddress = AssymetricEncryption.EncryptText(endpoint, _nodeConfigurations.ActivePrivateKey, _sidechainPool.ClientPublicKey);
+            _hasIpChanged = tableEncryptedIpAddress != encryptedIpAddress;
+
+            _delay = _hasIpChanged ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(GetDelayInProductionTime());
         }
 
         private int GetDelayInProductionTime()
