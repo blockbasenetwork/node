@@ -185,6 +185,7 @@ namespace BlockBase.Domain.Eos
         public const string REWARD = "reward";
         public const string WARNING_TYPE = "warning_type";
         public const string SIDECHAIN_START_DATE_IN_SECONDS = "sidechain_start_date_in_seconds";
+        public const string SIDECHAIN_CREATION_TIMESTAMP = "sidechain_creation_timestamp";
         public const string PRODUCER_STAKE = "producerstake";
         public const string BALANCE = "balance";
         public const string OWNER = "owner";

@@ -74,7 +74,11 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             {
                 try
                 {
-                    if (_sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains) continue;
+                    if (_sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
+                    {
+                        await Task.Delay(1000);
+                        continue;
+                    }
                     var activeSidechains = await GetSidechains(networkName);
                     var chainsInCandidature = activeSidechains.Where(s => s.State == "Candidature").ToList();
 
@@ -84,14 +88,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         foreach (var chainInCandidature in chainsInCandidature)
                         {
                             var checkResult = await CheckIfSidechainFitsRules(chainInCandidature);
-                            if (checkResult.found && await DoesVersionCheckOut(chainInCandidature.Name) && IsSidechainNotRunning(chainInCandidature.Name))
+                            if (checkResult.found && await DoesVersionCheckOut(chainInCandidature.Name) && !IsSidechainRunning(chainInCandidature.Name))
                             {
                                 _logger.LogInformation($"Found sidechain {chainInCandidature.Name} eligible for automatic production");
 
                                 await DeleteSidechainIfExistsInDb(chainInCandidature.Name);
-                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name);
+                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name, checkResult.sidechainTimestamp, true);
                                 await TryAddStakeIfNecessary(chainInCandidature.Name, checkResult.stakeToPut);
-                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainInCandidature.Name, checkResult.producerType, true);
+                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainInCandidature.Name, checkResult.sidechainTimestamp, checkResult.producerType, true);
                             }
                         }
                     }
@@ -136,15 +140,16 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             return trackerSidechains;
         }
 
-        private async Task<(bool found, int producerType, decimal stakeToPut)> CheckIfSidechainFitsRules(TrackerSidechain sidechain)
+        private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(TrackerSidechain sidechain)
         {
             var candidates = await _mainchainService.RetrieveCandidates(sidechain.Name);
             var producers = await _mainchainService.RetrieveProducersFromTable(sidechain.Name);
             var contractInfo = await _mainchainService.RetrieveContractInformation(sidechain.Name);
             var contractState = await _mainchainService.RetrieveContractState(sidechain.Name);
+            var clientInfo = await _mainchainService.RetrieveClientTable(sidechain.Name);
 
-            if (contractInfo == null || producers == null || candidates == null || contractState == null) return (false, 0, 0);
-            if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return (false, 0, 0);
+            if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) return (false, 0, 0, 0);
+            if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return (false, 0, 0, 0);
 
             var maximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
             var totalMaximumMonthlyGrowth = maximumMonthlyGrowth;
@@ -157,7 +162,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 }
             }
 
-            if (totalMaximumMonthlyGrowth > _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB) return (false, 0, 0);
+            if (totalMaximumMonthlyGrowth > _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB) return (false, 0, 0, 0);
 
             int producerTypeToCandidate = 0;
             decimal lowestStakeToMonthlyIncomeRatio = decimal.MaxValue;
@@ -201,9 +206,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 }
             }
 
-            if (producerTypeToCandidate == 0) return (false, 0, 0);
+            if (producerTypeToCandidate == 0) return (false, 0, 0, 0);
 
-            return (true, producerTypeToCandidate, stakeToPut);
+            return (true, producerTypeToCandidate, stakeToPut, clientInfo.SidechainCreationTimestamp);
         }
 
         private decimal GetStakeToMonthlyIncomeRatio(decimal stake, ulong minPaymentPerBlock, ulong maxPaymentPerBlock, int blockTimeDuration)
@@ -230,19 +235,16 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             return softwareVersion >= versionInContract.SoftwareVersion;
         }
 
-        private bool IsSidechainNotRunning(string sidechain)
+        private bool IsSidechainRunning(string sidechain)
         {
             var chainExistsInPool = _sidechainProducerService.DoesChainExist(sidechain);
             if (chainExistsInPool)
             {
                 var sidechainContext = _sidechainProducerService.GetSidechainContext(sidechain);
-                if (sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
-                {
-                    return false;
-                }
-                _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(sidechain);
+                return sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running;
             }
-            return true;
+            return false;
+                
         }
 
         private async Task DeleteSidechainIfExistsInDb(string sidechain)

@@ -7,7 +7,11 @@ namespace BlockBase.Network.Mainchain.Pocos
     {
         [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
+        
         [JsonProperty(EosAtributeNames.PUBLIC_KEY)]
         public string PublicKey { get; set; }
+
+        [JsonProperty(EosAtributeNames.SIDECHAIN_CREATION_TIMESTAMP)]
+        public ulong SidechainCreationTimestamp { get; set; }
     }
 }

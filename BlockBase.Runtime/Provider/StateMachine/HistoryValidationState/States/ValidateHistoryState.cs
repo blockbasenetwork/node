@@ -90,10 +90,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (_blockHashToValidateHasChanged || (!_historyValidations.Any(t => t.BlockByteInHexadecimal != "" && !t.SignedProducers.Contains(_nodeConfigurations.AccountName)) && _currentProducerHistoryEntry == null))
-                return Task.FromResult((true, typeof(StartState).Name));
-
-            else return Task.FromResult((false, typeof(StartState).Name));
+            var conditionsToJump = _blockHashToValidateHasChanged || (!_historyValidations.Any(t => t.BlockByteInHexadecimal != "" && !t.SignedProducers.Contains(_nodeConfigurations.AccountName)) && _currentProducerHistoryEntry == null);
+            return Task.FromResult((conditionsToJump, typeof(StartState).Name));
         }
 
         protected override Task<bool> IsWorkDone()
@@ -113,9 +111,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             //check preconditions to continue update
             if (_contractState == null) return;
             if (_producerList == null) return;
-            if (_historyValidations == null || !_historyValidations.Any()) return;
+            if (_historyValidations == null) return;
 
             _currentProducerHistoryEntry = _historyValidations.Where(e => e.Account == _nodeConfigurations.AccountName).SingleOrDefault();
+
+            if (_currentProducerHistoryEntry == null) return;
 
             if (_blockHashToValidate != null && _currentProducerHistoryEntry != null)
             {
@@ -158,6 +158,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
                     _logger.LogInformation($"Calculated provider {historyValidationTable.Account} validation block byte: {blockByte}.");
                     _blockBytesPerValidationEntryAccount[historyValidationTable.Account] = blockByte;
                 }
+            }
+
+            if (_hasToSubmitBlockByte && _hasSubmittedBlockByte && !_hasEnoughSignatures)
+            {
+                _delay = TimeSpan.FromSeconds(3);
             }
         }
 

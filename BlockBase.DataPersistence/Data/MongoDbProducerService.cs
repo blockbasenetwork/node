@@ -441,11 +441,13 @@ namespace BlockBase.DataPersistence.Data
        
         #region Recover DB
 
-        public async Task AddProducingSidechainToDatabaseAsync(string sidechain)
+        public async Task AddProducingSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool isAutomatic)
         {
             var sidechainDb = new SidechainDB()
             {
-                Id = sidechain
+                Id = sidechain,
+                Timestamp = timestamp,
+                IsAutomatic = isAutomatic
             };
 
             using (IClientSession session = await MongoClient.StartSessionAsync())

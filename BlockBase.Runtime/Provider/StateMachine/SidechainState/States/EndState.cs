@@ -12,11 +12,17 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private bool _chainExistsInDatabase;
         private SidechainPool _sidechainPool;
         private IMongoDbProducerService _mongoDbProducerService;
-        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService) : base(logger, sidechainPool)
+        private ISidechainProducerService _sidechainProducerService;
+
+        private bool _inAutomaticMode;
+
+        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService, ISidechainProducerService sidechainProducerService, bool inAutomaticMode) : base(logger, sidechainPool)
         {
             _chainExistsInDatabase = false;
             _sidechainPool = sidechainPool;
             _mongoDbProducerService = mongoDbProducerService;
+            _sidechainProducerService = sidechainProducerService;
+            _inAutomaticMode = inAutomaticMode;
         }
 
         protected override Task<bool> IsWorkDone()
@@ -35,6 +41,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
                 _logger.LogDebug($"Removing sidechain {_sidechainPool.ClientAccountName} data from database");
                     await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(_sidechainPool.ClientAccountName);
             }
+
+            _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(_sidechainPool.ClientAccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()

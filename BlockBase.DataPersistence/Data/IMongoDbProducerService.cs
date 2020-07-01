@@ -31,7 +31,7 @@ namespace BlockBase.DataPersistence.Data
         Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber);
         Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash);
         
-        Task AddProducingSidechainToDatabaseAsync(string sidechain);
+        Task AddProducingSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool isAutomatic);
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllProducingSidechainsAsync();
