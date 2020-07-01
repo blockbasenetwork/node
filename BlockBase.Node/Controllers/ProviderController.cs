@@ -262,6 +262,9 @@ namespace BlockBase.Node.Controllers
                 if (chainContract == null) return NotFound(new OperationResponse<string>(false, $"Sidechain {chainName} not found"));
                 if (!chainContract.CandidatureTime) return BadRequest(new OperationResponse<string>(false, $"Sidechain not in candidature time"));
 
+                var clientInfo = await _mainchainService.RetrieveClientTable(chainName);
+                if (clientInfo == null) return NotFound(new OperationResponse<string>(false, $"Sidechain {chainName} client info not found"));
+
                 var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
                 if (contractInfo == null) return NotFound(new OperationResponse<string>(false, $"Sidechain {chainName} contract info not found"));
 
@@ -329,7 +332,8 @@ namespace BlockBase.Node.Controllers
                     return BadRequest(new OperationResponse<string>(false, $"Minimum provider stake is {minimumProviderState}, currently staked {providerStake} and added {stake} which is not enough. Please stake {minimumProviderState - providerStake}"));
                 }
 
-                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName);
+                
+                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName, clientInfo.SidechainCreationTimestamp, false);
 
                 if (stake > 0)
                 {
@@ -338,9 +342,7 @@ namespace BlockBase.Node.Controllers
                     _logger.LogInformation("Stake inserted = " + stake.ToString("F4") + " BBT");
                 }
 
-                //arriving here, there shouldn't be an active state controller associated to this chain
-                //this was checked above
-                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainName, providerType);
+                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainName, clientInfo.SidechainCreationTimestamp, providerType, false);
 
                 return Ok(new OperationResponse<string>(true, "Candidature successfully added"));
             }

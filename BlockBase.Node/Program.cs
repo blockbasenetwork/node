@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace BlockBase.Node
 {
@@ -32,7 +33,7 @@ namespace BlockBase.Node
             networkService.Run();
             //TODO rpinto - commented this because I don't want it to start on startup for now - uncomment when ready
             //sidechainMaintainerService.Start();
-            sidechainProducerService.Run(!noRecover);
+            Task.WaitAll(sidechainProducerService.Run(!noRecover));
             automaticProductionManager.Start();
 
             webHost.Run();

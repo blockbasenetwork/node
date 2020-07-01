@@ -9,7 +9,7 @@ namespace BlockBase.Runtime.Common
             where TStartState : IState
             where TEndState : IState
     {
-        protected ProviderAbstractState(ILogger logger, SidechainPool sidechainPool, bool automatic = false, bool verbose = false) : base(logger, automatic, verbose)
+        protected ProviderAbstractState(ILogger logger, SidechainPool sidechainPool, bool verbose = false) : base(logger, verbose)
         {
             Path = $"{sidechainPool.ClientAccountName} - {this.GetType().FullName}";
         }
