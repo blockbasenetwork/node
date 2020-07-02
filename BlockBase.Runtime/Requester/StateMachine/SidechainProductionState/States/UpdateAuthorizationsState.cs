@@ -53,24 +53,27 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
 
             var notValidatorProducers = _producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).ToList();
-            
+
             //TODO rpinto - these are two different authorization assign where if the first is done but the second fails, the second will never go through again because the first will always blow up
             //used try catch to try to solve it
-            try {
+            try
+            {
                 await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, _producerList, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
-            } catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 _logger.LogError($"Failed in assigning permissions", ex.Message);
             }
             try
             {
                 if (notValidatorProducers.Any()) await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, notValidatorProducers, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
-            } catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 _logger.LogError($"Failed in assigning permissions", ex.Message);
             }
 
-            
+
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -101,19 +104,21 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         {
             var verifyBlockPermission = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
             //TODO rpinto - remove old version of verifyhistori
-            var verifyHistoryPermisson = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION || p.perm_name == "verifyhistori").FirstOrDefault();
+            var verifyHistoryPermisson = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
             if (!producerList.Any()) return false;
-            foreach(var producer in producerList)
+            foreach (var producer in producerList)
             {
-                if(!DoesProducerHavePermission(producer, verifyBlockPermission)) return true;
-                if((producer.ProducerType == 2 || producer.ProducerType == 3) && !DoesProducerHavePermission(producer, verifyHistoryPermisson)) return true;
+                if (!DoesProducerHavePermission(producer, verifyBlockPermission)) return true;
+                if ((producer.ProducerType == 2 || producer.ProducerType == 3) && !DoesProducerHavePermission(producer, verifyHistoryPermisson)) return true;
             }
+            if (producerList.Count() < verifyBlockPermission.required_auth?.accounts?.Count()) return true;
+            if (producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).Count() < verifyHistoryPermisson.required_auth?.accounts?.Count()) return true;
             return false;
         }
 
         private bool DoesProducerHavePermission(ProducerInTable producer, Permission permission)
         {
-            if(permission == null) return false;
+            if (permission == null) return false;
 
             return permission.required_auth.accounts.Any(a => a.permission.actor == producer.Key && a.permission.permission == "active" && a.weight == 1);
         }
