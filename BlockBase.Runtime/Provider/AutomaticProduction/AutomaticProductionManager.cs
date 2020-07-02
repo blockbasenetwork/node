@@ -30,6 +30,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
         private IMainchainService _mainchainService;
 
         private NodeConfigurations _nodeConfigurations;
+        private NetworkConfigurations _networkConfigurations;
         private ProviderConfigurations _providerConfigurations;
 
         private ILogger _logger;
@@ -43,6 +44,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             _nodeConfigurations = nodeConfigurations.Value;
             _providerConfigurations = providerConfigurations.Value;
+            _networkConfigurations = networkConfigurations.Value;
 
             _logger = logger;
         }
@@ -94,8 +96,15 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
                                 await DeleteSidechainIfExistsInDb(chainInCandidature.Name);
                                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name, checkResult.sidechainTimestamp, true);
-                                await TryAddStakeIfNecessary(chainInCandidature.Name, checkResult.stakeToPut);
-                                await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainInCandidature.Name, checkResult.sidechainTimestamp, checkResult.producerType, true);
+                                
+                                if (await TryAddStakeIfNecessary(chainInCandidature.Name, checkResult.stakeToPut))
+                                {
+                                    await _sidechainProducerService.AddSidechainToProducerAndStartIt(chainInCandidature.Name, checkResult.sidechainTimestamp, checkResult.producerType, true);
+                                }   
+                                else
+                                {
+                                    _logger.LogError($"Not enough BBT to stake for sidechain {chainInCandidature.Name}");
+                                }
                             }
                         }
                     }
@@ -109,26 +118,32 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             }
         }
 
-        private async Task TryAddStakeIfNecessary(string sidechain, decimal stake)
+        private async Task<bool> TryAddStakeIfNecessary(string sidechain, decimal stake)
         {
             var accountStake = await _mainchainService.GetAccountStake(sidechain, _nodeConfigurations.AccountName);
+            var bbtBalanceTable = await _mainchainService.GetCurrencyBalance(_networkConfigurations.BlockBaseTokenContract, _nodeConfigurations.AccountName, "BBT");
             decimal providerStake = 0;
+            decimal bbtBalance = 0;
             if (accountStake != null)
             {
                 var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
                 decimal.TryParse(stakeString, out providerStake);
             }
+            if (bbtBalanceTable != null)
+            {
+                var bbtBalanceString = bbtBalanceTable.FirstOrDefault()?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                decimal.TryParse(bbtBalanceString, out bbtBalance);
+            }
             var minimumProviderState = Math.Round((decimal)stake / 10000, 4);
-            if (minimumProviderState <= providerStake) return;
+            if (minimumProviderState <= providerStake) return true;
 
-            try
+            if (bbtBalance >= stake)
             {
                 await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
+                return true;
             }
-            catch (ApiErrorException)
-            {
-                _logger.LogError($"Failed to add stake to sidechain {sidechain}");
-            }
+                
+            return false;
         }
 
         private async Task<List<TrackerSidechain>> GetSidechains(string network)
