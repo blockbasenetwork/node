@@ -58,6 +58,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
             if (_needsToUpdateIps) return Task.FromResult((_needsToUpdateIps, typeof(UpdateIpState).Name));
+            if (!isProducerInTable) return Task.FromResult((true, typeof(EndState).Name));
             return Task.FromResult((isProducerInTable && _contractStateTable.IPSendTime, typeof(IPSendTimeState).Name));
         }
 
