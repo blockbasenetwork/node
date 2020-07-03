@@ -49,7 +49,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractStateTable != null && (_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime));
+            return Task.FromResult(_contractStateTable != null && (_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime) && _producers.Any(c => c.Key == _nodeConfigurations.AccountName));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
@@ -62,6 +62,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
+
+            if (!_producers.Any(c => c.Key == _nodeConfigurations.AccountName)) return;
 
             UpdateProducersInSidechainPool();
             UpdateIPsInSidechain();
