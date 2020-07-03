@@ -194,6 +194,7 @@ namespace BlockBase.Api
                 services.AddSingleton<BlockRequestsHandler>();
                 services.AddSingleton<TransactionsManager>();
                 services.AddSingleton<PeerConnectionsHandler>();
+                services.AddSingleton<PendingTransactionRecovery>();
                 services.AddSingleton<BlockValidationsHandler>();
                 services.AddSingleton<TransactionValidationsHandler>();
                 services.AddSingleton<DatabaseKeyManager>();

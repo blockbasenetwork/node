@@ -16,58 +16,24 @@ namespace BlockBase.DataPersistence.Data
         public MongoDbRequesterService(IOptions<NodeConfigurations> nodeConfigurations, ILogger<MongoDbProducerService> logger) : base(nodeConfigurations, logger)
         {
         }
-        public async Task<IList<ulong>> RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, uint numberOfIncludedTransactions, string lastValidBlockHash)
-        {
-
-            var lastTransactionSequenceNumber = await GetLastTransactionSequenceNumberDBAsync(databaseName);
-            var lastIncludedSequenceNumber = lastTransactionSequenceNumber + (ulong)numberOfIncludedTransactions;
-            IList<ulong> sequenceNumbers = new List<ulong>();
-            for (ulong i = lastTransactionSequenceNumber + 1; i <= lastIncludedSequenceNumber; i++)
-                sequenceNumbers.Add(i);
-
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-
-                var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
-                var info = await (await transactionInfoCollection.FindAsync(t => true)).SingleOrDefaultAsync();
-                //TODO rpinto - this assumes that the requester has received the block from the providers - this may not always happen?
-                if (info != null && info.BlockHash == lastValidBlockHash) return sequenceNumbers;
-
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
-
-                session.StartTransaction();
-                await transactionCollection.DeleteManyAsync(s => sequenceNumbers.Contains(s.SequenceNumber));
-                await transactionInfoCollection.DeleteManyAsync(t => true);
-                await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB() { BlockHash = lastValidBlockHash, LastIncludedSequenceNumber = lastIncludedSequenceNumber });
-                await session.CommitTransactionAsync();
-            }
-
-            return sequenceNumbers;
-        }
-
-        public async Task CreateTransactionInfoIfNotExists(string databaseName)
-        {
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-
-
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-
-                var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
-
-                var info = await (await transactionInfoCollection.FindAsync(t => true)).SingleOrDefaultAsync();
-
-                if (info == null)
-                {
-                    await transactionInfoCollection.InsertOneAsync(new TransactionInfoDB { BlockHash = "none", LastIncludedSequenceNumber = 0 });
-                }
-            }
-        }
-
         public async Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName)
         {
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+        }
+       
+        public async Task<TransactionDB> RetrievePendingTransaction(string databaseName)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+
+                var transactionQuery = from t in transactionCollection.AsQueryable()
+                                       select t;
+
+                return await transactionQuery.SingleOrDefaultAsync();
+            }
         }
 
         public async Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName)
@@ -76,12 +42,21 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
 
-                var transactionInfoCollection = sidechainDatabase.GetCollection<TransactionInfoDB>(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
 
-                var transactionQuery = from t in transactionInfoCollection.AsQueryable()
-                                       select t.LastIncludedSequenceNumber;
+                var transactionQuery = from t in transactionCollection.AsQueryable()
+                                       select t.SequenceNumber;
 
-                return await transactionQuery.SingleOrDefaultAsync();
+                var result = await transactionQuery.OrderByDescending(t => t).FirstOrDefaultAsync();
+
+                if(result != 0) return result;
+                
+                transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+
+                transactionQuery = from t in transactionCollection.AsQueryable()
+                                       select t.SequenceNumber;
+
+                return await transactionQuery.OrderByDescending(t => t).FirstOrDefaultAsync();
             }
         }
 
@@ -91,7 +66,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + sidechain);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
-                await sidechainDatabase.DropCollectionAsync(MongoDbConstants.TRANSACTIONS_INFO_COLLECTION_NAME);
+                await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
 
                 if ((await sidechainDatabase.ListCollectionsAsync()).ToList().Count() == 0)
                 {
@@ -100,15 +75,49 @@ namespace BlockBase.DataPersistence.Data
             }
         }
 
-        public async Task AddTransactionsToSidechainDatabaseAsync(string databaseName, IEnumerable<TransactionDB> transactions)
+        public async Task MovePendingTransactionToExecutedAsync(string databaseName, TransactionDB transaction)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
-                await transactionscol.InsertManyAsync(transactions);
+                var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                await pendingExecutionTransactionCollection.DeleteOneAsync(t=> transaction.TransactionHash == transaction.TransactionHash);
+                var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                await executedTransactionsCollection.InsertOneAsync(transaction);
                 await session.CommitTransactionAsync();
+            }
+        }
+
+        public async Task AddPendingExecutionTransactionAsync(string databaseName, TransactionDB transaction)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                session.StartTransaction();
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                await transactionsCollection.InsertOneAsync(transaction);
+                await session.CommitTransactionAsync();
+            }
+        }
+
+        public async Task RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, ulong lastIncludedTransactionSequenceNumber)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                await transactionscol.DeleteManyAsync(t => t.SequenceNumber <= lastIncludedTransactionSequenceNumber);
+            }
+        }
+
+        public async Task RemovePendingExecutionTransactionAsync(string databaseName, TransactionDB transaction)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                await transactionscol.DeleteOneAsync(t => t.TransactionHash == transaction.TransactionHash);
             }
         }
     }

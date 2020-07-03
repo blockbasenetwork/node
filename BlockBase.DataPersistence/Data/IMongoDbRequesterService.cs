@@ -7,12 +7,14 @@ namespace BlockBase.DataPersistence.Data
 {
     public interface IMongoDbRequesterService
     {
-        Task CreateTransactionInfoIfNotExists(string databaseName);
         Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName);
+        Task<TransactionDB> RetrievePendingTransaction(string databaseName);
         Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName);
         Task DropRequesterDatabase(string sidechain);
-        Task AddTransactionsToSidechainDatabaseAsync(string databaseName, IEnumerable<TransactionDB> transactions);
-        Task<IList<ulong>> RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, uint numberOfIncludedTransactions, string lastValidBlockHash);
+        Task MovePendingTransactionToExecutedAsync(string databaseName, TransactionDB transactions);
+        Task AddPendingExecutionTransactionAsync(string databaseName, TransactionDB transaction);
+        Task RemovePendingExecutionTransactionAsync(string databaseName, TransactionDB transaction);
+        Task RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, ulong lastIncludedTransactionSequenceNumber);
 
     }
 }
