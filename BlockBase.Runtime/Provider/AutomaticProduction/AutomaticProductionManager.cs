@@ -134,9 +134,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 var bbtBalanceString = bbtBalanceTable.FirstOrDefault()?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
                 decimal.TryParse(bbtBalanceString, out bbtBalance);
             }
-            var minimumProviderState = Math.Round((decimal)stake / 10000, 4);
-            if (minimumProviderState <= providerStake) return true;
-
+            
+            if (providerStake >= stake) return true;
             if (bbtBalance >= stake)
             {
                 await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
