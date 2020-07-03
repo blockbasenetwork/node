@@ -53,7 +53,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             if (_lastBlockHeader != null && !_removedIncludedTransactions)
             {
                 //TODO rpinto - to remove included transactions, we have to make sure the requester has already received the produced block by p2p comm
-                await _transactionSender.RemoveIncludedTransactions(_lastBlockHeader.TransactionCount, _lastBlockHeader.BlockHash);
+                await _transactionSender.RemoveIncludedTransactions(_lastBlockHeader.TransactionCount, _lastBlockHeader.LastTransactionSequenceNumber);
                 _removedIncludedTransactions = true;
             }
 

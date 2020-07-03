@@ -23,7 +23,6 @@ namespace BlockBase.Runtime.Sql
         private Transformer _transformer;
         private IGenerator _generator;
         private InfoPostProcessing _infoPostProcessing;
-        private BareBonesSqlBaseVisitor<object> _visitor;
         private IConnector _connector;
         private ILogger _logger;
         private ConcurrentVariables _concurrentVariables;
@@ -35,7 +34,6 @@ namespace BlockBase.Runtime.Sql
 
         public SqlCommandManager(MiddleMan middleMan, ILogger logger, IConnector connector, ConcurrentVariables concurrentVariables, TransactionsManager transactionSender, NodeConfigurations nodeConfigurations, IMongoDbRequesterService mongoDbRequesterService)
         {
-            _visitor = new BareBonesSqlVisitor();
             _infoPostProcessing = new InfoPostProcessing(middleMan);
             _generator = new PSqlGenerator();
             _logger = logger;
@@ -57,14 +55,8 @@ namespace BlockBase.Runtime.Sql
 
             try
             {
-                AntlrInputStream inputStream = new AntlrInputStream(sqlString);
-                BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
-                CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
-                BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
-                var context = parser.sql_stmt_list();
-                var builder = (Builder)_visitor.Visit(context);
                 var executioner = new StatementExecutionManager(_transformer, _generator, _logger, _connector, _infoPostProcessing, _concurrentVariables, _transactionSender, _nodeConfigurations, _mongoDbRequesterService);
-                results = await executioner.ExecuteBuilder(builder, CreateQueryResult);
+                results = await executioner.ExecuteSqlText(sqlString, CreateQueryResult);
             }
             catch (Exception e)
             {
