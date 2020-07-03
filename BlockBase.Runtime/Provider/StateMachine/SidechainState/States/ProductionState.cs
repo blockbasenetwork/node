@@ -70,6 +70,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             
             //check preconditions to continue update
             if(_contractInfo == null) return;
+            if(!_producers.Any(c => c.Key == _nodeConfigurations.AccountName)) return;
 
             _needsToUpdateIps = IsIpUpdateRequired(_ipAddresses.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault().EncryptedIPs);
 
