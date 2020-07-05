@@ -281,7 +281,7 @@ namespace BlockBase.Node.Controllers
                     var sidechainContext = _sidechainProducerService.GetSidechainContext(chainName);
 
                     //if it's running he should need to do anything because the state manager will decide what to do
-                    if (sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
+                    if (sidechainContext.SidechainStateManager.TaskContainer.IsRunning())
                         return BadRequest(new OperationResponse<string>(false, $"Request to produce sidechain {chainName} previously sent."));
                     //if it's not running, there was a problem and it should be removed from the pool list
                     else

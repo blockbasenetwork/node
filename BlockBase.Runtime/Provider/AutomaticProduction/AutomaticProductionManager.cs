@@ -170,7 +170,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             foreach (var runningSidechain in _sidechainKeeper.GetSidechains().ToList())
             {
-                if (runningSidechain.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
+                if (runningSidechain.SidechainStateManager.TaskContainer.IsRunning())
                 {
                     totalMaximumMonthlyGrowth += GetMaximumMonthlyGrowth(runningSidechain.SidechainPool.BlockSizeInBytes, (int)runningSidechain.SidechainPool.BlockTimeDuration);
                 }
@@ -255,7 +255,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (chainExistsInPool)
             {
                 var sidechainContext = _sidechainProducerService.GetSidechainContext(sidechain);
-                return sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running;
+                return sidechainContext.SidechainStateManager.TaskContainer.IsRunning();
             }
             return false;
                 
