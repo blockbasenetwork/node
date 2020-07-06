@@ -113,6 +113,16 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             if (_producerList == null) return;
             if (_historyValidations == null) return;
 
+            foreach (var historyValidationTable in _historyValidations)
+            {
+                if (!_blockBytesPerValidationEntryAccount.ContainsKey(historyValidationTable.Account) && historyValidationTable.Account != _nodeConfigurations.AccountName)
+                {
+                    var blockByte = await GetBlockByte(historyValidationTable.BlockHash, _sidechainPool.ClientAccountName);
+                    _logger.LogInformation($"Calculated provider {historyValidationTable.Account} validation block byte: {blockByte}.");
+                    _blockBytesPerValidationEntryAccount[historyValidationTable.Account] = blockByte;
+                }
+            }
+
             _currentProducerHistoryEntry = _historyValidations.Where(e => e.Account == _nodeConfigurations.AccountName).SingleOrDefault();
 
             if (_currentProducerHistoryEntry == null) return;
@@ -149,16 +159,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             }
 
             _hasSignedBlockByte = _currentProducerHistoryEntry?.SignedProducers.Any(p => p == _nodeConfigurations.AccountName) ?? false;
-
-            foreach (var historyValidationTable in _historyValidations)
-            {
-                if (!_blockBytesPerValidationEntryAccount.ContainsKey(historyValidationTable.Account) && historyValidationTable.Account != _nodeConfigurations.AccountName)
-                {
-                    var blockByte = await GetBlockByte(historyValidationTable.BlockHash, _sidechainPool.ClientAccountName);
-                    _logger.LogInformation($"Calculated provider {historyValidationTable.Account} validation block byte: {blockByte}.");
-                    _blockBytesPerValidationEntryAccount[historyValidationTable.Account] = blockByte;
-                }
-            }
 
             if (_hasToSubmitBlockByte && _hasSubmittedBlockByte && !_hasEnoughSignatures)
             {
