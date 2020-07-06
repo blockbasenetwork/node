@@ -252,8 +252,8 @@ namespace BlockBase.DataPersistence.Data
                                            where
                                            //all blocks with timestamps earlier than when the last production start time
                                            b.Timestamp < (ulong)lastProductionStartTime
-                                           //and with a timestamp bigger than the latest confirmed blockheader
-                                           && b.Timestamp > blockheaderDB.Timestamp
+                                           //and unconfirmed
+                                           && b.Confirmed == false
                                            select b;
 
 

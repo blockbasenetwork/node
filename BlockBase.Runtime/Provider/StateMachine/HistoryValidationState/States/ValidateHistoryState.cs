@@ -222,6 +222,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             var chosenBlockSequenceNumber = (blockHashNumber % block.BlockHeader.SequenceNumber) + 1;
             // logger.LogWarning($"Current block sequence number {block.BlockHeader.SequenceNumber}, chosen block sequence number {chosenBlockSequenceNumber}");
 
+            _logger.LogDebug($"Chosen block sequence number for validation: {chosenBlockSequenceNumber}");
             var chosenBlock = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(clientAccountName, chosenBlockSequenceNumber, chosenBlockSequenceNumber)).SingleOrDefault();
             if (chosenBlock == null)
             {
