@@ -95,7 +95,7 @@ namespace BlockBase.Runtime.Network
 
         public void Stop()
         {
-            if (TaskContainer != null && TaskContainer.Task.Status == TaskStatus.Running)
+            if (TaskContainer != null && TaskContainer.IsRunning())
             {
                 TaskContainer.Stop();
             }

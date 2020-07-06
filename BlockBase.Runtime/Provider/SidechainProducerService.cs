@@ -70,6 +70,8 @@ namespace BlockBase.Runtime.Provider
             //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
 
+            if(sidechainPool == null) throw new Exception("Unable to retrieve sidechain pool");
+
             if(sidechainPool.SidechainCreationTimestamp != sidechainCreationTimestamp)
                 throw new InvalidOperationException("Sidechain timestamps don't match");
 
@@ -143,13 +145,17 @@ namespace BlockBase.Runtime.Provider
 
             var clientTable = await _mainchainService.RetrieveClientTable(sidechainName);
 
+            if(clientTable == null) return null;
+
             sidechainPool.ClientAccountName = sidechainName;
             sidechainPool.ClientPublicKey = clientTable.PublicKey;
             sidechainPool.SidechainCreationTimestamp = clientTable.SidechainCreationTimestamp;
 
             var contractInformation = await _mainchainService.RetrieveContractInformation(sidechainName);
-            var candidatesInTable = await _mainchainService.RetrieveCandidates(sidechainName);
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
+            var candidatesInTable = await _mainchainService.RetrieveCandidates(sidechainName);
+            
+            if(contractInformation == null || producersInTable == null || candidatesInTable == null) return null;
 
             sidechainPool.BlockTimeDuration = contractInformation.BlockTimeDuration;
             sidechainPool.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;

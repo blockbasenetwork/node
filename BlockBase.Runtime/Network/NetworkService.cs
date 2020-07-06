@@ -68,9 +68,19 @@ namespace BlockBase.Runtime.Network
             TcpConnector.PeerConnected += eventHandler;
         }
 
+        public void UnSubscribePeerConnectedEvent(PeerConnectedEventHandler eventHandler)
+        {
+            TcpConnector.PeerConnected -= eventHandler;
+        }
+
         public void SubscribePeerDisconnectedEvent(PeerDisconnectedEventHandler eventHandler)
         {
             TcpConnector.PeerDisconnected += eventHandler;
+        }
+
+        public void UnSubscribePeerDisconnectedEvent(PeerDisconnectedEventHandler eventHandler)
+        {
+            TcpConnector.PeerDisconnected -= eventHandler;
         }
 
         public void SubscribeMinedBlockReceivedEvent(MinedBlockReceivedEventHandler eventHandler)
@@ -78,9 +88,19 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.MinedBlockReceived += eventHandler;
         }
 
+        public void UnSubscribeMinedBlockReceivedEvent(MinedBlockReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.MinedBlockReceived -= eventHandler;
+        }
+
         public void SubscribeRecoverBlockReceivedEvent(RecoverBlockReceivedEventHandler eventHandler)
         {
             MessageForwarder.RecoverBlockReceived += eventHandler;
+        }
+
+        public void UnSubscribeRecoverBlockReceivedEvent(RecoverBlockReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.RecoverBlockReceived -= eventHandler;
         }
 
         public void SubscribeIdentificationMessageReceivedEvent(IdentificationMessageReceivedEventHandler eventHandler)
@@ -88,18 +108,39 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.IdentificationMessageReceived += eventHandler;
         }
 
+        public void UnSubscribeIdentificationMessageReceivedEvent(IdentificationMessageReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.IdentificationMessageReceived -= eventHandler;
+        }
+
         public void SubscribeTransactionsReceivedEvent(TransactionsReceivedEventHandler eventHandler)
         {
             MessageForwarder.TransactionsReceived += eventHandler;
+        }
+
+        public void UnSubscribeTransactionsReceivedEvent(TransactionsReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.TransactionsReceived -= eventHandler;
         }
 
         public void SubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler)
         {
             MessageForwarder.BlocksRequestReceived += eventHandler;
         }
+
+        public void UnSubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.BlocksRequestReceived -= eventHandler;
+        }
+
         public void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler)
         {
             MessageForwarder.PingReceived += eventHandler;
+        }
+
+        public void UnSubscribePingReceivedEvent(PingReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.PingReceived -= eventHandler;
         }
 
         public void SubscribePongReceivedEvent(PongReceivedEventHandler eventHandler)
@@ -107,9 +148,19 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.PongReceived += eventHandler;
         }
 
+        public void UnSubscribePongReceivedEvent(PongReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.PongReceived -= eventHandler;
+        }
+
         public void SubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler)
         {
             MessageForwarder.TransactionConfirmationReceived += eventHandler;
+        }
+
+        public void UnSubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler)
+        {
+            MessageForwarder.TransactionConfirmationReceived -= eventHandler;
         }
 
         public async Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type)

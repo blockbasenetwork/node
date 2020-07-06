@@ -50,22 +50,22 @@ namespace BlockBase.Runtime.Requester
 
         public bool IsMaintainerRunning()
         {
-            return TaskContainerMaintainer != null && TaskContainerMaintainer.Task.Status == TaskStatus.Running;
+            return TaskContainerMaintainer != null && TaskContainerMaintainer.IsRunning();
         }
 
         public bool IsProductionRunning()
         {
-            return TaskContainerProduction != null && TaskContainerProduction.Task.Status == TaskStatus.Running;
+            return TaskContainerProduction != null && TaskContainerProduction.IsRunning();
         }
 
         public bool IsConnectionsManagerRunning()
         {
-            return TaskContainerConnections != null && TaskContainerConnections.Task.Status == TaskStatus.Running;
+            return TaskContainerConnections != null && TaskContainerConnections.IsRunning();
         }
 
         public bool IsTransactionsManagerRunning()
         {
-            return TaskContainerTransactions != null && TaskContainerTransactions.Task.Status == TaskStatus.Running;
+            return TaskContainerTransactions != null && TaskContainerTransactions.IsRunning();
         }
 
         public async Task Start()

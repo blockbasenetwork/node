@@ -100,6 +100,10 @@ namespace BlockBase.Runtime.Network
             try
             {
                 await Task.Delay(timeSpan);
+
+                _networkService.UnSubscribePeerConnectedEvent(TcpConnector_PeerConnected);
+                _networkService.UnSubscribePongReceivedEvent(MessageForwarder_PongMessageReceived);
+
                 _connections.Remove(peer.EndPoint);
                 await Task.Delay(TimeSpan.FromSeconds(2));
                 _networkService.DisconnectPeer(peer);

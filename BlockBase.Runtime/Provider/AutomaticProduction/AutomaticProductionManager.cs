@@ -134,9 +134,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 var bbtBalanceString = bbtBalanceTable.FirstOrDefault()?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
                 decimal.TryParse(bbtBalanceString, out bbtBalance);
             }
-            var minimumProviderState = Math.Round((decimal)stake / 10000, 4);
-            if (minimumProviderState <= providerStake) return true;
-
+            
+            if (providerStake >= stake) return true;
             if (bbtBalance >= stake)
             {
                 await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
@@ -171,7 +170,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             foreach (var runningSidechain in _sidechainKeeper.GetSidechains().ToList())
             {
-                if (runningSidechain.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running)
+                if (runningSidechain.SidechainStateManager.TaskContainer.IsRunning())
                 {
                     totalMaximumMonthlyGrowth += GetMaximumMonthlyGrowth(runningSidechain.SidechainPool.BlockSizeInBytes, (int)runningSidechain.SidechainPool.BlockTimeDuration);
                 }
@@ -256,7 +255,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (chainExistsInPool)
             {
                 var sidechainContext = _sidechainProducerService.GetSidechainContext(sidechain);
-                return sidechainContext.SidechainStateManager.TaskContainer.Task.Status == TaskStatus.Running;
+                return sidechainContext.SidechainStateManager.TaskContainer.IsRunning();
             }
             return false;
                 

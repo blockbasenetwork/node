@@ -370,13 +370,13 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (!_sidechainMaintainerManager.IsMaintainerRunning() || !_sidechainMaintainerManager.IsProductionRunning())
+                if (_sidechainMaintainerManager.IsMaintainerRunning() || _sidechainMaintainerManager.IsProductionRunning())
                 {
-                    await _sidechainMaintainerManager.Start();
-                    return Ok(new OperationResponse<string>(true, "Chain maintenance started."));
+                    return BadRequest(new OperationResponse<string>(false, $"Sidechain was already running."));
                 }
-
-                return BadRequest(new OperationResponse<string>(false, $"Sidechain was already running."));
+                
+                await _sidechainMaintainerManager.Start();
+                return Ok(new OperationResponse<string>(true, "Chain maintenance started."));
             }
             catch (Exception e)
             {

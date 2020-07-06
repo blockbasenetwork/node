@@ -208,7 +208,8 @@ namespace BlockBase.Runtime.Network
 
             else if (peer == null)
             {
-                _waitingForApprovalPeers.Add(args.Peer);
+                if(!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
+                    _waitingForApprovalPeers.Add(args.Peer);
             }
         }
 
@@ -222,6 +223,7 @@ namespace BlockBase.Runtime.Network
                 CurrentPeerConnections.Remove(peerConnection);
             }
 
+            //TODO rpinto noticed that this may fail because it may have multiple equal elements with same endpoint - added contains check before adding element
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.IPEndPoint)).SingleOrDefault();
             if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
