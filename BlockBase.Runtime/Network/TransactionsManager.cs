@@ -109,10 +109,12 @@ namespace BlockBase.Runtime.Network
             await _mongoDbRequesterService.RemoveAlreadyIncludedTransactionsDBAsync(_nodeConfigurations.AccountName, lastIncludedTransactionSequenceNumber);
 
             var transactionSendingTrackPocosToRemove = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber <= lastIncludedTransactionSequenceNumber).ToList();
-            foreach(var transactionSendingTrackPocoToRemove in transactionSendingTrackPocosToRemove) _transactionsToSend.Remove(transactionSendingTrackPocoToRemove);
+            foreach (var transactionSendingTrackPocoToRemove in transactionSendingTrackPocosToRemove) _transactionsToSend.Remove(transactionSendingTrackPocoToRemove);
         }
         public void AddScriptTransactionToSend(Transaction transaction)
         {
+            if (_transactionsToSend.GetEnumerable().Any(t => t.Transaction.TransactionHash.SequenceEqual(transaction.TransactionHash))) return;
+
             TransactionSendingTrackPoco transactionSendingTrack;
 
             transactionSendingTrack = new TransactionSendingTrackPoco()
@@ -120,6 +122,7 @@ namespace BlockBase.Runtime.Network
                 Transaction = transaction,
                 ProducersAlreadyReceived = new ThreadSafeList<string>()
             };
+
             _transactionsToSend.Add(transactionSendingTrack);
         }
 

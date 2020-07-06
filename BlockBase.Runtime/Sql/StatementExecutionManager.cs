@@ -259,6 +259,7 @@ namespace BlockBase.Runtime.Sql
                     await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
                     
                 await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, transactionDB);
+                _transactionsManager.AddScriptTransactionToSend(transactionDB.TransactionFromTransactionDB());
             }
             catch
             {
