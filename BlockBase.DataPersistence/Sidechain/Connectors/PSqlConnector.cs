@@ -353,11 +353,18 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         }
 
-        public async Task<bool> WasTransactionWasExecuted(string databaseName, ulong transactionNumer)
+        public async Task<bool> WasTransactionExecuted(string databaseName, ulong transactionNumer)
         {
-            var query = $"SELECT * FROM {TRANSACTION_INFO_TABLE_NAME} WHERE {SEQUENCE_NUMBER_COLUMN_NAME} = {transactionNumer}";
-            var results = await ExecuteQuery(query, databaseName);
-            return results.Count != 0;
+            try
+            {
+                var query = $"SELECT * FROM {TRANSACTION_INFO_TABLE_NAME} WHERE {SEQUENCE_NUMBER_COLUMN_NAME} = {transactionNumer}";
+                var results = await ExecuteQuery(query, databaseName);
+                return results.Count != 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
 
