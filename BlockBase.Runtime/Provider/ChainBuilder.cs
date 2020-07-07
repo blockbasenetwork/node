@@ -81,7 +81,7 @@ namespace BlockBase.Runtime.Provider
 
                 if (!validConnectedProducers.Any())
                 {
-                    // _logger.LogDebug("No connected producers to request blocks.");
+                    _logger.LogDebug("No connected producers to request blocks.");
                     return new OpResult<bool>(new Exception("Unable to synchronize. No connected producers to request blocks."));
                 }
 
