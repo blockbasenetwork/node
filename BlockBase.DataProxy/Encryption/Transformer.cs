@@ -40,7 +40,8 @@ namespace BlockBase.DataProxy.Encryption
             switch (statement)
             {
                 case IfStatement ifStatement:
-                    command.TransformedSqlStatement = new List<ISqlStatement>() {GetTransformedIfStatment(ifStatement, _databaseInfoRecord.IV)};      
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedIfStatment(ifStatement, _databaseInfoRecord.IV) };
                     break;
                 case CreateDatabaseStatement createDatabaseStatement:
                     command.TransformedSqlStatement = GetTransformedCreateDatabaseStatement(createDatabaseStatement, out _databaseInfoRecord);
@@ -60,37 +61,44 @@ namespace BlockBase.DataProxy.Encryption
                     break;
 
                 case CreateTableStatement createTableStatement:
+                    CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedCreateTableStatement(createTableStatement, _databaseInfoRecord.IV);
                     break;
 
                 case DropTableStatement dropTableStatement:
+                    CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedDropTableStatement(dropTableStatement, _databaseInfoRecord.IV);
                     break;
 
                 case AbstractAlterTableStatement abstractAlterTableStatement:
+                    CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedAlterTableStatement(abstractAlterTableStatement, _databaseInfoRecord.IV);
                     break;
 
                 case InsertRecordStatement insertRecordStatement:
+                    CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedInsertRecordStatement(insertRecordStatement, _databaseInfoRecord.IV) };
                     break;
 
                 case SimpleSelectStatement simpleSelectStatement:
+                    CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = new List<ISqlStatement>() { GetTransformedSimpleSelectStatement(simpleSelectStatement, _databaseInfoRecord.IV) };
                     break;
 
                 case UpdateRecordStatement updateRecordStatement:
+                    CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedUpdateRecordStatement(updateRecordStatement, _databaseInfoRecord.IV);
                     break;
 
                 case DeleteRecordStatement deleteRecordStatement:
+                    CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedDeleteRecordStatement(deleteRecordStatement, _databaseInfoRecord.IV);
                     break;
 
             }
         }
         #region Transform SqlStatements
-        
+
         private ISqlStatement GetTransformedIfStatment(IfStatement ifStatement, string databaseIV)
         {
             return GetTransformedSimpleSelectStatement(ifStatement.SimpleSelectStatement, databaseIV);
@@ -823,7 +831,10 @@ namespace BlockBase.DataProxy.Encryption
             depth++;
             return AddBktValueExpression(bktValues, newLogicalExpression, depth, maxDepth, tableAndColumnName);
         }
-
+        private void CheckIfDatabaseAlreadyChosen()
+        {
+            if (_databaseInfoRecord == null) throw new FormatException("Please use or create a database first.");
+        }
         private InfoRecord GetInfoRecordThrowErrorIfNotExists(estring name, string parentIV)
         {
             var infoRecord = _encryptor.FindInfoRecord(name, parentIV);

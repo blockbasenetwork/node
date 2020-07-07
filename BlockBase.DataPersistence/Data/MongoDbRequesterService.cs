@@ -21,7 +21,7 @@ namespace BlockBase.DataPersistence.Data
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
         }
        
-        public async Task<TransactionDB> RetrievePendingTransaction(string databaseName)
+        public async Task<IList<TransactionDB>> RetrievePendingTransactions(string databaseName)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
@@ -32,7 +32,7 @@ namespace BlockBase.DataPersistence.Data
                 var transactionQuery = from t in transactionCollection.AsQueryable()
                                        select t;
 
-                return await transactionQuery.SingleOrDefaultAsync();
+                return await transactionQuery.ToListAsync();
             }
         }
 
@@ -89,14 +89,14 @@ namespace BlockBase.DataPersistence.Data
             }
         }
 
-        public async Task AddPendingExecutionTransactionAsync(string databaseName, TransactionDB transaction)
+        public async Task AddPendingExecutionTransactionsAsync(string databaseName, IList<TransactionDB> transactions)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
-                await transactionsCollection.InsertOneAsync(transaction);
+                foreach(var transaction in transactions) await transactionsCollection.InsertOneAsync(transaction);
                 await session.CommitTransactionAsync();
             }
         }

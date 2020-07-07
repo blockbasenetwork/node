@@ -13,7 +13,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         Task<IList<InfoRecord>> GetInfoRecords();
         Task ExecuteCommand(string sqlCommand, string databaseName);
         Task ExecuteCommandWithTransactionNumber(string sqlCommand, string databaseName, ulong transactionNumer);
-        Task<bool> WasTransactionWasExecuted(string databaseName, ulong transactionNumer);
+        Task<bool> WasTransactionExecuted(string databaseName, ulong transactionNumer);
         Task<IList<IList<string>>> ExecuteQuery(string sqlQuery, string databaseName);
         Task InsertToDatabasesTable(string databaseName);
         Task DeleteFromDatabasesTable(string databaseName);
