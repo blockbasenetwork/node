@@ -159,15 +159,19 @@ namespace BlockBase.Runtime.Network
                 if (peerConnection.ConnectionState == ConnectionStateEnum.Connected)
                 {
                     var transactionsSendingTrackPocos = _transactionsToSend.GetEnumerable().Where(p => !p.ProducersAlreadyReceived.GetEnumerable().Contains(peerConnection.ConnectionAccountName)).ToList();
+                    var transactionsToRemove = new List<TransactionSendingTrackPoco>();
 
                     foreach (var transactionSendingTrack in transactionsSendingTrackPocos)
                     {
                         if (transactionSendingTrack.ProducersAlreadyReceived.Count() > Math.Floor((double)(producers.Count() / 2))
                             && producers.Count() > _numberOfConsecutiveEmptyBlocks)
                         {
-                            transactionsSendingTrackPocos.Remove(transactionSendingTrack);
+                            transactionsToRemove.Add(transactionSendingTrack);
                         }
                     }
+
+                    transactionsToRemove.ForEach(t => transactionsSendingTrackPocos.Remove(t));
+
                     if (transactionsSendingTrackPocos.Count != 0)
                         await SendScriptTransactionsToProducer(transactionsSendingTrackPocos.Select(p => p.Transaction), peerConnection);
                 }
