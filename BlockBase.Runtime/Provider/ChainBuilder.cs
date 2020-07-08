@@ -32,8 +32,6 @@ namespace BlockBase.Runtime.Provider
     // public class ChainBuilder : IThreadableComponent
     public class ChainBuilder
     {
-        public TaskContainer TaskContainer { get; private set; }
-
         private SidechainPool _sidechainPool;
         private IMongoDbProducerService _mongoDbProducerService;
         private ILogger _logger;
@@ -141,15 +139,16 @@ namespace BlockBase.Runtime.Provider
                         }
                     }
 
-                    if (TaskContainer.CancellationTokenSource.IsCancellationRequested) 
+                    if (_lastSidechainBlockheader == null)
                     {
-                        
-                        return new OpResult<bool>(new Exception("Operation cancelled."));
+                        _logger.LogDebug("No blockheaders in smart contract.");
+                        return new OpResult<bool>(false);
                     }
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogDebug($"Chain builder exception thrown: {ex}");
                 return new OpResult<bool>(ex);
             }
         }
@@ -196,7 +195,6 @@ namespace BlockBase.Runtime.Provider
 
             if (_lastSidechainBlockheader == null)
             {
-                TaskContainer.CancellationTokenSource.Cancel();
                 return;
             }
             var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();
