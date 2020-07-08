@@ -22,9 +22,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractState;
         private ContractInformationTable _contractInfo;
-
-        private bool _verifyBlockPermissionSet;
-        private bool _historyValidatePermissionSet;
         public StartProductionState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
@@ -33,31 +30,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected async override Task DoWork()
         {
-            try
-            {
-                await _mainchainService.LinkAuthorization(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _nodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
-            }
-            catch
-            {
-                //TODO rpinto - is there a better way to do this than doing it in a catch?
-                _verifyBlockPermissionSet = true;
-                _logger.LogDebug($"Already linked authorization {EosMsigConstants.VERIFY_BLOCK_PERMISSION}");
-            }
-            try
-            {
-                await _mainchainService.LinkAuthorization(EosMethodNames.HISTORY_VALIDATE, _nodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
-            }
-            catch
-            {
-                //TODO rpinto - is there a better way to do this than doing it in a catch?
-                _historyValidatePermissionSet = true;
-                _logger.LogDebug($"Already linked authorization {EosMethodNames.HISTORY_VALIDATE}");
-            }
-
-            if(_verifyBlockPermissionSet && _historyValidatePermissionSet)
-            {
-                await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _nodeConfigurations.AccountName);
-            }
+            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.PRODUCTION_TIME, _nodeConfigurations.AccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()

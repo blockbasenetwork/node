@@ -63,7 +63,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             decimal.TryParse(stakeString, out requesterStake);
 
             var maxPaymentPerBlock = new[] { _contractInfo.MaxPaymentPerBlockFullProducers, _contractInfo.MaxPaymentPerBlockHistoryProducers, _contractInfo.MaxPaymentPerBlockValidatorProducers }.Max();
-            var neededBBT = _contractInfo.BlocksBetweenSettlement * _contractInfo.MaxPaymentPerBlockFullProducers;
+            var neededBBT = _contractInfo.BlocksBetweenSettlement * maxPaymentPerBlock;
             var neededBBTDecimal = Math.Round((decimal)neededBBT / 10000, 4);
 
             return (requesterStake >= neededBBTDecimal);
