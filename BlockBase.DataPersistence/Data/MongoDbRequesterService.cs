@@ -27,7 +27,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
 
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
 
                 var transactionQuery = from t in transactionCollection.AsQueryable()
                                        select t;
@@ -42,7 +42,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
 
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
 
                 var transactionQuery = from t in transactionCollection.AsQueryable()
                                        select t.SequenceNumber;
@@ -66,7 +66,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + sidechain);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
-                await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
 
                 if ((await sidechainDatabase.ListCollectionsAsync()).ToList().Count() == 0)
                 {
@@ -81,7 +81,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                 await pendingExecutionTransactionCollection.DeleteOneAsync(t=> transaction.TransactionHash == transaction.TransactionHash);
                 var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                 await executedTransactionsCollection.InsertOneAsync(transaction);
@@ -95,7 +95,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                 foreach(var transaction in transactions) await transactionsCollection.InsertOneAsync(transaction);
                 await session.CommitTransactionAsync();
             }
@@ -116,7 +116,7 @@ namespace BlockBase.DataPersistence.Data
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_TO_EXECUTE_COLLECTION_NAME);
+                var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                 await transactionscol.DeleteOneAsync(t => t.TransactionHash == transaction.TransactionHash);
             }
         }

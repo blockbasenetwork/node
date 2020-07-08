@@ -2,8 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Antlr4.Runtime;
 using BlockBase.DataPersistence.Data;
+using BlockBase.DataPersistence.Data.MongoDbEntities;
+using BlockBase.DataPersistence.Sidechain.Connectors;
+using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
+using BlockBase.Domain.Database.QueryParser;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
+using BlockBase.Domain.Database.Sql.QueryParser;
+using BlockBase.Domain.Enums;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
@@ -30,13 +38,14 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         private INetworkService _networkService;
         private bool _isNodeSynchronized;
         private bool _isReadyToProduce;
+        private IConnector _connector;
         TransactionValidationsHandler _transactionValidationsHandler;
-
 
         public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
-            INetworkService networkService, TransactionValidationsHandler transactionValidationsHandler) : base(logger, sidechainPool)
+            INetworkService networkService, TransactionValidationsHandler transactionValidationsHandler,
+            IConnector connector) : base(logger, sidechainPool)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -50,16 +59,22 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             _isReadyToProduce = false;
 
             _transactionValidationsHandler = transactionValidationsHandler;
+            _connector = connector;
 
         }
 
         protected override async Task DoWork()
         {
             OpResult<bool> opResult = null;
+
             if (!_isNodeSynchronized)
             {
                 //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
                 var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime, _sidechainPool.ProducerType);
+
+                if (_sidechainPool.ProducerType == ProducerTypeEnum.Full)
+                    await ExecutePendingTransactions();
+
 
                 if (!syncResult)
                 {
@@ -113,8 +128,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
             //check preconditions to continue update
             //check preconditions to continue update
-            if(_contractStateTable == null) return;
-            if(_producerList == null) return;
+            if (_contractStateTable == null) return;
+            if (_producerList == null) return;
 
             _lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
@@ -122,8 +137,72 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                 _isNodeSynchronized = true;
 
             _isReadyToProduce = _producerList.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce);
+        }
 
-            
+        private async Task ExecutePendingTransactions()
+        {
+            if (_lastValidSubmittedBlockHeader == null || _lastValidSubmittedBlockHeader.LastTransactionSequenceNumber == 0) return;
+
+            var transactionToExecute = await _mongoDbProducerService.GetTransactionToExecute(_sidechainPool.ClientAccountName);
+
+            if (transactionToExecute != null && !await HasTransactionBeenExecuted(transactionToExecute))
+                await ExecuteTransaction(transactionToExecute.TransactionFromTransactionDB());
+
+            var currentSequenceNumber = transactionToExecute?.SequenceNumber ?? 0;
+
+            var subsequentTransactions = (await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_sidechainPool.ClientAccountName, currentSequenceNumber)).OrderBy(t => t.SequenceNumber);
+
+            foreach (var transaction in subsequentTransactions)
+            {
+                if(transaction.SequenceNumber != currentSequenceNumber + 1) return;
+                await ExecuteTransaction(transaction);
+                currentSequenceNumber++;
+            }
+
+            return;
+
+        }
+
+        private Domain.Database.Sql.QueryBuilder.Builder ParseSqlText(string sqlString)
+        {
+            AntlrInputStream inputStream = new AntlrInputStream(sqlString);
+            BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
+            CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+            BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
+            var visitor = new BareBonesSqlVisitor();
+            var context = parser.sql_stmt_list();
+            return (Domain.Database.Sql.QueryBuilder.Builder)visitor.Visit(context);
+        }
+
+
+        private async Task<bool> HasTransactionBeenExecuted(TransactionDB pendingTransaction)
+        {
+            var builder = ParseSqlText(pendingTransaction.TransactionJson);
+            var sqlStatement = builder.SqlCommands[0].OriginalSqlStatement;
+
+            var createDatabaseStatement = sqlStatement as CreateDatabaseStatement;
+            var dropDatabaseStatement = sqlStatement as DropDatabaseStatement;
+
+            if (createDatabaseStatement != null)
+                return await _connector.DoesDatabaseExist(createDatabaseStatement.DatabaseName.Value);
+
+            if (dropDatabaseStatement != null)
+                return !await _connector.DoesDatabaseExist(dropDatabaseStatement.DatabaseName.Value);
+
+
+            return await _connector.WasTransactionExecuted(pendingTransaction.DatabaseName, pendingTransaction.SequenceNumber);
+        }
+
+
+        private async Task ExecuteTransaction(Transaction transaction)
+        {
+            var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
+            await _mongoDbProducerService.UpdateTransactionToExecute(_sidechainPool.ClientAccountName, transactionDB);
+
+            if (transactionDB.DatabaseName != "")
+                await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, transactionDB.SequenceNumber);
+            else
+                await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
 
         }
 
