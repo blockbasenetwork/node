@@ -49,13 +49,13 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
 
         protected override IState BuildState(string state)
         {
-            if(state == typeof(StartState).Name) return new StartState(_logger, _mainchainService, _nodeConfigurations, _sidechainPool);
-            if(state == typeof(SynchronizeNodeState).Name) return new SynchronizeNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _networkService, _transactionValidationsHandler, _connector);
-            if(state == typeof(SynchronizeValidatorNodeState).Name) return new SynchronizeValidatorNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _networkService, _transactionValidationsHandler);
-            if(state == typeof(NetworkReactionState).Name) return new NetworkReactionState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
-            if(state == typeof(ProduceBlockState).Name) return new ProduceBlockState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations,  _blockSender);
-            if(state == typeof(ClaimRewardState).Name) return new ClaimRewardState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
-            if(state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool);
+            if (state == typeof(StartState).Name) return new StartState(_logger, _mainchainService, _nodeConfigurations, _sidechainPool);
+            if (state == typeof(SynchronizeNodeState).Name) return new SynchronizeNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _networkService, _transactionValidationsHandler, _connector, _peerConnectionsHandler);
+            if (state == typeof(SynchronizeValidatorNodeState).Name) return new SynchronizeValidatorNodeState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _networkService, _transactionValidationsHandler);
+            if (state == typeof(NetworkReactionState).Name) return new NetworkReactionState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
+            if (state == typeof(ProduceBlockState).Name) return new ProduceBlockState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _blockSender);
+            if (state == typeof(ClaimRewardState).Name) return new ClaimRewardState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
+            if (state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool);
             throw new System.NotImplementedException();
         }
     }

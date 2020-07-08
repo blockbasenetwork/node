@@ -29,14 +29,20 @@ namespace BlockBase.Node
             var pendingTransactionRecovery = webHost.Services.Get<PendingTransactionRecovery>();
 
 
-            var noRecover = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
+            var noRecoverCommandFound = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
 
             networkService.Run();
             //TODO rpinto - commented this because I don't want it to start on startup for now - uncomment when ready
             //sidechainMaintainerService.Start();
-            Task.WaitAll(pendingTransactionRecovery.Run());        
-            Task.WaitAll(sidechainProducerService.Run(!noRecover));
-            automaticProductionManager.Start();
+            
+
+            if(noRecoverCommandFound == false)
+            {
+                Task.WaitAll(pendingTransactionRecovery.Run());
+                Task.WaitAll(sidechainProducerService.Run());
+                automaticProductionManager.Start();
+            }
+                
 
             webHost.Run();
         }

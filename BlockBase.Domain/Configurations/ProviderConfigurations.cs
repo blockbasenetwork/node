@@ -27,7 +27,8 @@ namespace BlockBase.Domain.Configurations
     public class ProviderNodeConfig
     {
         public bool IsActive { get; set; }
-        public double MinBBTPerBlock { get; set; }
+        public double MinBBTPerEmptyBlock { get; set; }
+        public double MinBBTPerMBRatio { get; set; }
         public double MaxStakeToMonthlyIncomeRatio { get; set; }
     }
 }

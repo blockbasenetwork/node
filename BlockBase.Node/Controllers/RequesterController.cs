@@ -300,8 +300,9 @@ namespace BlockBase.Node.Controllers
                         var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
                         return Ok(new OperationResponse<string>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
                     }
-                    catch (ApiErrorException)
+                    catch (ApiErrorException ex)
                     {
+                        _logger.LogInformation($"Failed {i + 1} times. Error: {ex.Message}");
                         i++;
                     }
                 }

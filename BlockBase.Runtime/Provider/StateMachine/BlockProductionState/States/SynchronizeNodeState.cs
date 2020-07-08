@@ -11,6 +11,7 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Database.QueryParser;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryParser;
+using BlockBase.Domain;
 using BlockBase.Domain.Enums;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
@@ -40,12 +41,13 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         private bool _isReadyToProduce;
         private IConnector _connector;
         TransactionValidationsHandler _transactionValidationsHandler;
+        PeerConnectionsHandler _peerConnectionsHandler;
 
         public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
             INetworkService networkService, TransactionValidationsHandler transactionValidationsHandler,
-            IConnector connector) : base(logger, sidechainPool)
+            IConnector connector, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -61,6 +63,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             _transactionValidationsHandler = transactionValidationsHandler;
             _connector = connector;
 
+            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         protected override async Task DoWork()
@@ -208,6 +211,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
         private async Task<OpResult<bool>> SyncChain()
         {
+            UpdateConnections();
             _logger.LogDebug("Building chain.");
             var chainBuilder = new ChainBuilder(_logger, _sidechainPool, _mongoDbProducerService, _nodeConfigurations, _networkService, _mainchainService, _networkConfigurations.GetEndPoint(), _transactionValidationsHandler);
             var opResult = await chainBuilder.Run();
@@ -215,6 +219,24 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             return opResult;
         }
 
+        private void UpdateConnections()
+        {
+            var currentConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable();
 
+            var producersInPool = _producerList.Select(m => new ProducerInPool
+            {
+                ProducerInfo = new ProducerInfo
+                {
+                    AccountName = m.Key,
+                    PublicKey = m.PublicKey,
+                    NewlyJoined = false,
+                    ProducerType = (ProducerTypeEnum)m.ProducerType,
+                    IPEndPoint = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()?.IPEndPoint
+                },
+                PeerConnection = currentConnections.Where(p => p.ConnectionAccountName == m.Key).FirstOrDefault()
+            }).ToList();
+
+            _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
+        }
     }
 }

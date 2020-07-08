@@ -58,9 +58,9 @@ namespace BlockBase.Runtime.Provider
             _connector = connector;
         }
 
-        public async Task Run(bool recoverChains = true)
+        public async Task Run()
         {
-            if (recoverChains) await LoadAndRunSidechainsFromRecoverDB();
+            await LoadAndRunSidechainsFromRecoverDB();
         }
 
         //TODO rpinto - this probably needs to be in a try catch

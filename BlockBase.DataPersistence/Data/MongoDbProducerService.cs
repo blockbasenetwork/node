@@ -264,7 +264,7 @@ namespace BlockBase.DataPersistence.Data
                         await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockHeaderDBToRemove.BlockHash, update);
                     }
 
-                    await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
+                    await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Confirmed == false);
 
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
 
