@@ -41,7 +41,7 @@ namespace BlockBase.Runtime.Sql
         private TransactionsManager _transactionsManager;
         private NodeConfigurations _nodeConfigurations;
         private IMongoDbRequesterService _mongoDbRequesterService;
-        private BareBonesSqlBaseVisitor<object> _visitor;
+        private SqlExecutionHelper _sqlExecutionHelper;
 
         public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionsManager transactionsManager, NodeConfigurations nodeConfigurations, IMongoDbRequesterService mongoDbRequesterService)
         {
@@ -54,14 +54,15 @@ namespace BlockBase.Runtime.Sql
             _nodeConfigurations = nodeConfigurations;
             _transactionsManager = transactionsManager;
             _mongoDbRequesterService = mongoDbRequesterService;
-            _visitor = new BareBonesSqlVisitor();
+            _sqlExecutionHelper = new SqlExecutionHelper(connector);
+            
         }
 
         public delegate QueryResult CreateQueryResultDelegate(bool success, string statementType, string exceptionMessage = null);
 
         public async Task<IList<QueryResult>> ExecuteSqlText(string sqlString, CreateQueryResultDelegate createQueryResult)
         {
-            var builder = ParseSqlText(sqlString);
+            var builder = _sqlExecutionHelper.ParseSqlText(sqlString);
             return await ExecuteBuilder(builder, createQueryResult);
         }
 
@@ -272,45 +273,16 @@ namespace BlockBase.Runtime.Sql
             }
         }
 
-        private Builder ParseSqlText(string sqlString)
-        {
-            AntlrInputStream inputStream = new AntlrInputStream(sqlString);
-            BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
-            CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
-            BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
-            var context = parser.sql_stmt_list();
-            return (Builder)_visitor.Visit(context);
-        }
-
         public async Task LoadAndExecutePendingTransaction()
         {
             var pendingTransactions = await _mongoDbRequesterService.RetrievePendingTransactions(_nodeConfigurations.AccountName);
             foreach (var pendingTransaction in pendingTransactions)
             {
-                if (pendingTransaction != null && !await HasTransactionBeenExecuted(pendingTransaction))
+                if (pendingTransaction != null && !await _sqlExecutionHelper.HasTransactionBeenExecuted(pendingTransaction))
                     await TryToExecutePendingTransaction(pendingTransaction.TransactionFromTransactionDB());
             }
         }
 
-        private async Task<bool> HasTransactionBeenExecuted(TransactionDB pendingTransaction)
-        {
-            _databaseName = pendingTransaction.DatabaseName;
-            var builder = ParseSqlText(pendingTransaction.TransactionJson);
-            var sqlStatement = builder.SqlCommands[0].OriginalSqlStatement;
-
-            var createDatabaseStatement = sqlStatement as CreateDatabaseStatement;
-            var dropDatabaseStatement = sqlStatement as DropDatabaseStatement;
-
-            if (createDatabaseStatement != null)
-                return await _connector.DoesDatabaseExist(createDatabaseStatement.DatabaseName.Value);
-
-            if (dropDatabaseStatement != null)
-                return !await _connector.DoesDatabaseExist(dropDatabaseStatement.DatabaseName.Value);
-
-
-            return await _connector.WasTransactionExecuted(pendingTransaction.DatabaseName, pendingTransaction.SequenceNumber);
-        }
-        
         private Transaction CreateTransaction(string json, string databaseName, string senderPrivateKey)
         {
             var sequenceNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());

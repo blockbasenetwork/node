@@ -20,6 +20,7 @@ using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Network;
 using BlockBase.Utils.Operation;
 using Microsoft.Extensions.Logging;
+using BlockBase.Runtime.Sql;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
@@ -43,6 +44,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         TransactionValidationsHandler _transactionValidationsHandler;
         PeerConnectionsHandler _peerConnectionsHandler;
 
+        private SqlExecutionHelper _sqlExecutionHelper;
+
         public SynchronizeNodeState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
@@ -64,6 +67,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             _connector = connector;
 
             _peerConnectionsHandler = peerConnectionsHandler;
+            _sqlExecutionHelper = new SqlExecutionHelper(connector);
         }
 
         protected override async Task DoWork()
@@ -148,7 +152,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
             var transactionToExecute = await _mongoDbProducerService.GetTransactionToExecute(_sidechainPool.ClientAccountName);
 
-            if (transactionToExecute != null && !await HasTransactionBeenExecuted(transactionToExecute))
+            if (transactionToExecute != null && !await _sqlExecutionHelper.HasTransactionBeenExecuted(transactionToExecute))
                 await ExecuteTransaction(transactionToExecute.TransactionFromTransactionDB());
 
             var currentSequenceNumber = transactionToExecute?.SequenceNumber ?? 0;
@@ -166,36 +170,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
         }
 
-        private Domain.Database.Sql.QueryBuilder.Builder ParseSqlText(string sqlString)
-        {
-            AntlrInputStream inputStream = new AntlrInputStream(sqlString);
-            BareBonesSqlLexer lexer = new BareBonesSqlLexer(inputStream);
-            CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
-            BareBonesSqlParser parser = new BareBonesSqlParser(commonTokenStream);
-            var visitor = new BareBonesSqlVisitor();
-            var context = parser.sql_stmt_list();
-            return (Domain.Database.Sql.QueryBuilder.Builder)visitor.Visit(context);
-        }
-
-
-        private async Task<bool> HasTransactionBeenExecuted(TransactionDB pendingTransaction)
-        {
-            var builder = ParseSqlText(pendingTransaction.TransactionJson);
-            var sqlStatement = builder.SqlCommands[0].OriginalSqlStatement;
-
-            var createDatabaseStatement = sqlStatement as CreateDatabaseStatement;
-            var dropDatabaseStatement = sqlStatement as DropDatabaseStatement;
-
-            if (createDatabaseStatement != null)
-                return await _connector.DoesDatabaseExist(createDatabaseStatement.DatabaseName.Value);
-
-            if (dropDatabaseStatement != null)
-                return !await _connector.DoesDatabaseExist(dropDatabaseStatement.DatabaseName.Value);
-
-
-            return await _connector.WasTransactionExecuted(pendingTransaction.DatabaseName, pendingTransaction.SequenceNumber);
-        }
-
+       
 
         private async Task ExecuteTransaction(Transaction transaction)
         {
