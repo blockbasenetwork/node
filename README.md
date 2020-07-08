@@ -310,20 +310,22 @@ By setting any of the `IsActive` active properties to `true`, when the node star
 {
   "AutomaticProduction": {
     "ValidatorNode": {
-      "IsActive": false, // Determines if the automatic production as a validator is active
-      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "IsActive": false, // Determines if the automatic production as a validator node is active
+      "MinBBTPerEmptyBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
       "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
     },
     "HistoryNode": {
-      "IsActive": false, // Determines if the automatic production as a validator is active
-      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "IsActive": false, // Determines if the automatic production as a history node is active
+      "MinBBTPerEmptyBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MinBBTPerMBRatio": 0, // The minimum amount of BBT per MB of data added to the block body
       "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
       "MaxSidechainGrowthPerMonthInMB":0 // The maximum amount in MB a sidechain may grow per month
     },
     
     "FullNode": {
-      "IsActive": false, // Determines if the automatic production as a validator is active
-      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "IsActive": false, // Determines if the automatic production as a full node is active
+      "MinBBTPerEmptyBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MinBBTPerMBRatio": 0, // The minimum amount of BBT per MB of data added to the block body
       "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
       "MaxSidechainGrowthPerMonthInMB":0 // The maximum amount in MB a sidechain may grow per month
     },
