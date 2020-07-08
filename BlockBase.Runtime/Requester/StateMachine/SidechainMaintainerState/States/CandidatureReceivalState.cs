@@ -37,7 +37,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if(_contractState.CandidatureTime) return Task.FromResult((true, typeof(UpdateAuthorizationsState).Name));
+            if(_contractState.CandidatureTime) return Task.FromResult((true, typeof(NextStateRouter).Name));
             return Task.FromResult((false, string.Empty));
         }
 
