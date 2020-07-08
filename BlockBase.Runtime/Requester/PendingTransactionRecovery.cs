@@ -5,7 +5,6 @@ using BlockBase.DataProxy;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Database.Sql.Generators;
-using BlockBase.Domain.Database.Sql.QueryParser;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Sql;
 using Microsoft.Extensions.Logging;
