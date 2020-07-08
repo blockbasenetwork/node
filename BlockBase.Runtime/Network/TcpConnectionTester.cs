@@ -19,10 +19,12 @@ using static BlockBase.Network.Rounting.MessageForwarder;
 
 namespace BlockBase.Runtime.Network
 {
-    #pragma warning disable
+#pragma warning disable
     public class TcpConnectionTester
     {
         private INetworkService _networkService;
+
+        private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private ThreadSafeList<IPEndPoint> _connections;
         private ILogger<TcpConnector> _logger;
@@ -30,13 +32,14 @@ namespace BlockBase.Runtime.Network
 
         private DateTime _lastUsage;
 
-        public TcpConnectionTester(SystemConfig systemConfig, ILogger<TcpConnector> logger, INetworkService networkService, IOptions<NodeConfigurations> nodeConfigurations)
+        public TcpConnectionTester(SystemConfig systemConfig, ILogger<TcpConnector> logger, INetworkService networkService, PeerConnectionsHandler peerConnectionsHandler, IOptions<NodeConfigurations> nodeConfigurations)
         {
             _logger = logger;
             // _tcpConnector = tcpConnector;
             _networkService = networkService;
             _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
             _networkService.SubscribePongReceivedEvent(MessageForwarder_PongMessageReceived);
+            _peerConnectionsHandler = peerConnectionsHandler;
             _nodeConfigurations = nodeConfigurations.Value;
             _connections = new ThreadSafeList<IPEndPoint>();
             _systemConfig = systemConfig;
@@ -47,31 +50,42 @@ namespace BlockBase.Runtime.Network
         {
             _lastUsage = DateTime.UtcNow;
 
-            
+            if (_connections.Contains((ip) => ip.Address.ToString() == remoteEndPoint.Address.ToString())) return null;
 
-            if(_connections.Contains((ip) => ip.Address.ToString() == remoteEndPoint.Address.ToString())) return null;
+            var peerConnection = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Address.ToString() == remoteEndPoint.Address.ToString() && p.IPEndPoint.Port == remoteEndPoint.Port).SingleOrDefault();
+
+            if (peerConnection != null)
+            {
+                PrepareAndSendData(peerConnection.Peer);
+                return peerConnection.Peer;
+            }
+
             var peer = await _networkService.ConnectAsync(remoteEndPoint);//, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
-
             return peer;
         }
 
-        private async void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
+        private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
-            _logger.LogInformation($"Successfully tested connection to {args.Peer.EndPoint.Address.ToString()}:{args.Peer.EndPoint.Port}");
-
-            _connections.Add(args.Peer.EndPoint, (ip) => ip.Address.ToString() == args.Peer.EndPoint.Address.ToString());
-
-
-            DisconnectAfter(args.Peer, TimeSpan.FromSeconds(20));
-            SendDataUntilPeerExists(1, TimeSpan.FromSeconds(1), args.Peer.EndPoint);
+            PrepareAndSendData(args.Peer);
         }
 
-        private async Task SendDataUntilPeerExists(int number, TimeSpan delayBetweenMessages, IPEndPoint ipEndPoint) 
+        private void PrepareAndSendData(Peer peer)
+        {
+            _logger.LogInformation($"Successfully tested connection to {peer.EndPoint.Address.ToString()}:{peer.EndPoint.Port}");
+
+            _connections.Add(peer.EndPoint, (ip) => ip.Address.ToString() == peer.EndPoint.Address.ToString());
+
+            DisconnectAfter(peer, TimeSpan.FromSeconds(20));
+            SendDataUntilPeerExists(1, TimeSpan.FromSeconds(1), peer.EndPoint);
+
+        }
+
+        private async Task SendDataUntilPeerExists(int number, TimeSpan delayBetweenMessages, IPEndPoint ipEndPoint)
         {
 
             try
             {
-                if(!_connections.Contains((ip) => ip.Address.ToString() == ipEndPoint.Address.ToString())) return;
+                if (!_connections.Contains((ip) => ip.Address.ToString() == ipEndPoint.Address.ToString())) return;
 
                 var bytes = Encoding.Unicode.GetBytes($"Hello message #{number} from {_systemConfig.IPAddress}");
                 byte[] payload = BitConverter.GetBytes(number);
@@ -81,9 +95,9 @@ namespace BlockBase.Runtime.Network
                 await _networkService.SendMessageAsync(message);
                 _logger.LogInformation($"Sent ping message #{number}");
                 await Task.Delay(delayBetweenMessages);
-                SendDataUntilPeerExists(number+1, delayBetweenMessages, ipEndPoint);
+                SendDataUntilPeerExists(number + 1, delayBetweenMessages, ipEndPoint);
             }
-            catch 
+            catch
             {
                 _logger.LogInformation("Failed to send message");
             }
@@ -106,11 +120,14 @@ namespace BlockBase.Runtime.Network
 
                 _connections.Remove(peer.EndPoint);
                 await Task.Delay(TimeSpan.FromSeconds(2));
-                _networkService.DisconnectPeer(peer);
-                
+
+                //if the peer connections handler knows this peer don't force a disconnect
+                if(!_peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Any(p => p.IPEndPoint.Address.ToString() == peer.EndPoint.Address.ToString() && p.IPEndPoint.Port == peer.EndPoint.Port))
+                    _networkService.DisconnectPeer(peer);
+
                 _logger.LogDebug($"Peer {peer.EndPoint.Address.ToString()}:{peer.EndPoint.Port} disconnected automatically after {timeSpan.TotalSeconds} seconds");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError($"Error disconnecting peer {peer.EndPoint.Address.ToString()}:{peer.EndPoint.Port} automatically: {ex.Message}");
             }
