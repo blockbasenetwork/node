@@ -42,6 +42,9 @@ namespace BlockBase.Node
                 Task.WaitAll(sidechainProducerService.Run());
                 automaticProductionManager.Start();
             }
+
+            //force instantiation of the connection tester
+            var connectionTester = webHost.Services.Get<TcpConnectionTester>();
                 
 
             webHost.Run();
