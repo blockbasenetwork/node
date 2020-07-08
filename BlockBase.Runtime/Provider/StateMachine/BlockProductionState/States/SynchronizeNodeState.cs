@@ -72,6 +72,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
             if (!_isNodeSynchronized)
             {
+                if (!await _mongoDbProducerService.IsBlockConfirmed(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash))
+                {
+                    await _mongoDbProducerService.ConfirmBlock(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash);
+                }
+
                 //synchronizes the node - it may abort synchronization if it fails to receive blocks for too long
                 var syncResult = await _mongoDbProducerService.TrySynchronizeDatabaseWithSmartContract(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash, _currentProducer.StartProductionTime, _sidechainPool.ProducerType);
 
@@ -88,11 +93,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                 else
                 {
                     _isNodeSynchronized = true;
-                }
-
-                if (!await _mongoDbProducerService.IsBlockConfirmed(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash))
-                {
-                    await _mongoDbProducerService.ConfirmBlock(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash);
                 }
             }
 
