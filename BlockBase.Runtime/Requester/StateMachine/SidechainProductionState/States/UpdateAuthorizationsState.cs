@@ -12,6 +12,7 @@ using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using BlockBase.Runtime.Requester.StateMachine.Common;
 using EosSharp.Core.Api.v1;
+using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
@@ -19,6 +20,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
     public class UpdateAuthorizationsState : AbstractMainchainState<StartState, EndState>
     {
         private bool _inNeedToUpdateAuthorizations;
+        private bool _verifyBlockPermissionLinked;
+        private bool _historyValidatePermissionLinked;
         private NodeConfigurations _nodeConfigurations;
         private List<ProducerInTable> _producerList;
         private IMainchainService _mainchainService;
@@ -33,47 +36,55 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
         protected override async Task DoWork()
         {
-
-            //TODO rpinto - this is done in the old version - doesn't seem right to me
-            // var producersInPool = _producerList.Select(m => new ProducerInPool
-            // {
-            //     ProducerInfo = new ProducerInfo
-            //     {
-            //         AccountName = m.Key,
-            //         PublicKey = m.PublicKey,
-            //         ProducerType = (ProducerTypeEnum)m.ProducerType,
-            //         //TODO rpinto - why is this here set to true??
-            //         NewlyJoined = true
-            //     }
-            // }).ToList();
-
-            //  _sidechainPool.ProducersInPool.ClearAndAddRange(producersInPool);
-
-
-
-
             var notValidatorProducers = _producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).ToList();
 
             //TODO rpinto - these are two different authorization assign where if the first is done but the second fails, the second will never go through again because the first will always blow up
             //used try catch to try to solve it
-            try
+            if (_inNeedToUpdateAuthorizations)
             {
-                await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, _producerList, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Failed in assigning permissions", ex.Message);
-            }
-            try
-            {
-                if (notValidatorProducers.Any()) await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, notValidatorProducers, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Failed in assigning permissions", ex.Message);
+                try
+                {
+                    await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, _producerList, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Failed in assigning permissions", ex.Message);
+                }
+                try
+                {
+                    if (notValidatorProducers.Any()) await _mainchainService.AuthorizationAssign(_nodeConfigurations.AccountName, notValidatorProducers, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Failed in assigning permissions", ex.Message);
+                }
             }
 
+            if (!_verifyBlockPermissionLinked)
+            {
+                try
+                {
+                    await _mainchainService.LinkAuthorization(EosMsigConstants.VERIFY_BLOCK_PERMISSION, _nodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
+                }
+                catch (ApiErrorException ex)
+                {
+                    //TODO rpinto - is there a better way to do this than doing it in a catch?
+                    if (ex.error.details.FirstOrDefault().message.Contains(EosErrors.ALREADY_LINKED_AUTH_ERROR)) _verifyBlockPermissionLinked = true;
+                }
+            }
 
+            if (!_historyValidatePermissionLinked)
+            {
+                try
+                {
+                    await _mainchainService.LinkAuthorization(EosMethodNames.HISTORY_VALIDATE, _nodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
+                }
+                catch (ApiErrorException ex)
+                {
+                    //TODO rpinto - is there a better way to do this than doing it in a catch?
+                    if (ex.error.details.FirstOrDefault().message.Contains(EosErrors.ALREADY_LINKED_AUTH_ERROR)) _historyValidatePermissionLinked = true;
+                }
+            }
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -85,12 +96,12 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((!_inNeedToUpdateAuthorizations, typeof(NextStateRouter).Name));
+            return Task.FromResult((!_inNeedToUpdateAuthorizations && _historyValidatePermissionLinked && _verifyBlockPermissionLinked, typeof(NextStateRouter).Name));
         }
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(!_inNeedToUpdateAuthorizations);
+            return Task.FromResult(!_inNeedToUpdateAuthorizations && _historyValidatePermissionLinked && _verifyBlockPermissionLinked);
         }
 
         protected override async Task UpdateStatus()
@@ -103,7 +114,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private bool DoesItNeedToUpdateAuthorizations(List<ProducerInTable> producerList, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
             var verifyBlockPermission = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
-            //TODO rpinto - remove old version of verifyhistori
             var verifyHistoryPermisson = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
             if (!producerList.Any()) return false;
             foreach (var producer in producerList)
