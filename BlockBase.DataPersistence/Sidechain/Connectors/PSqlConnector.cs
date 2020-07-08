@@ -15,9 +15,11 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         private ILogger _logger;
         private static readonly string DEFAULT_DATABASE_NAME = "blockbasedb";
         private static readonly string DATABASES_TABLE_NAME = "databases";
+        private static readonly string TRANSACTION_INFO_TABLE_NAME = "blockbase_transaction_info";
+        private static readonly string SEQUENCE_NUMBER_COLUMN_NAME = "sequence_number";
         private static readonly string INFO_TABLE_NAME = "info";
         private bool _hasBeenSetup = false;
-        private string _defaultDatabaseNameWithPrefix;
+        private string _dbPrefix;
 
 
         public PSqlConnector(IOptions<NodeConfigurations> nodeConfigurations, ILogger<PSqlConnector> logger)
@@ -28,7 +30,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             + ";Port=" + nodeConfigurationsValue.PostgresPort
             + ";Password=" + nodeConfigurationsValue.PostgresPassword;
             _logger = logger;
-            _defaultDatabaseNameWithPrefix = nodeConfigurationsValue.DatabasesPrefix + DEFAULT_DATABASE_NAME;
+            _dbPrefix = nodeConfigurationsValue.DatabasesPrefix;
 
         }
 
@@ -73,13 +75,14 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         public async Task InsertToDatabasesTable(string databaseName)
         {
-            await ExecuteCommand($"INSERT INTO {DATABASES_TABLE_NAME} (name) VALUES ( '{databaseName}' );", _defaultDatabaseNameWithPrefix);
+            await ExecuteCommand($"INSERT INTO {DATABASES_TABLE_NAME} (name) VALUES ( '{databaseName}' );", DEFAULT_DATABASE_NAME);
         }
 
         public async Task DeleteFromDatabasesTable(string databaseName)
         {
-            await ExecuteCommand($"DELETE FROM {DATABASES_TABLE_NAME} WHERE name = '{databaseName}';", _defaultDatabaseNameWithPrefix);
+            await ExecuteCommand($"DELETE FROM {DATABASES_TABLE_NAME} WHERE name = '{databaseName}';", DEFAULT_DATABASE_NAME);
         }
+
         private async Task<IList<InfoRecord>> GetInfoRecordsFromDatabase(string databaseName)
         {
             var query = $"SELECT row_to_json(result) from (SELECT * FROM {INFO_TABLE_NAME}) AS result;";
@@ -115,12 +118,12 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         }
 
-        public async Task<bool> DoesDefaultDatabaseExist()
+        public async Task<bool> DoesDatabaseExist(string databaseName)
         {
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
-                string cmdText = $"SELECT 1 FROM pg_database WHERE datname='{_defaultDatabaseNameWithPrefix}'";
+                string cmdText = $"SELECT 1 FROM pg_database WHERE datname='{_dbPrefix + databaseName}'";
                 NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
 
                 bool databaseExists = await cmd.ExecuteScalarAsync() != null;
@@ -132,13 +135,17 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
             }
         }
+        public async Task<bool> DoesDefaultDatabaseExist()
+        {
+            return await DoesDatabaseExist(DEFAULT_DATABASE_NAME);
+        }
         private async Task CreateDefaultDatabase()
         {
             bool dbExists = await DoesDefaultDatabaseExist();
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
-                NpgsqlCommand cmd = new NpgsqlCommand($"CREATE DATABASE {_defaultDatabaseNameWithPrefix};", conn);
+                NpgsqlCommand cmd = new NpgsqlCommand($"CREATE DATABASE {_dbPrefix + DEFAULT_DATABASE_NAME};", conn);
                 try
                 {
                     await cmd.ExecuteNonQueryAsync();
@@ -154,12 +161,12 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
             }
 
-            await CreateTableIfNotExists();
+            await CreateDatabasesTableIfNotExists();
 
         }
         public async Task DropDefaultDatabase()
         {
-            await DropDatabase(_defaultDatabaseNameWithPrefix);
+            await DropDatabase(DEFAULT_DATABASE_NAME);
         }
 
         public async Task DropDatabase(string databaseName)
@@ -167,7 +174,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
-                NpgsqlCommand cmd = new NpgsqlCommand($"DROP DATABASE {databaseName};", conn);
+                NpgsqlCommand cmd = new NpgsqlCommand($"DROP DATABASE {_dbPrefix + databaseName};", conn);
                 try
                 {
                     await cmd.ExecuteNonQueryAsync();
@@ -185,10 +192,10 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         }
 
 
-        private async Task CreateTableIfNotExists()
+        private async Task CreateDatabasesTableIfNotExists()
         {
             bool tableExists = false;
-            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(_defaultDatabaseNameWithPrefix)))
+            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(DEFAULT_DATABASE_NAME)))
             {
                 await conn.OpenAsync();
                 string cmdText = $"select * from information_schema.tables where table_name ='{DATABASES_TABLE_NAME}';";
@@ -214,13 +221,44 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
             }
         }
+
+        private async Task CreateTransactionInfoTableIfNotExists(string databaseName)
+        {
+            bool tableExists = false;
+            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(databaseName)))
+            {
+                await conn.OpenAsync();
+                string cmdText = $"select * from information_schema.tables where table_name ='{TRANSACTION_INFO_TABLE_NAME}';";
+                NpgsqlCommand cmd = new NpgsqlCommand(cmdText, conn);
+                try
+                {
+                    tableExists = await cmd.ExecuteScalarAsync() != null;
+                    if (!tableExists)
+                    {
+                        cmd.Dispose();
+                        cmd = new NpgsqlCommand($"CREATE TABLE {TRANSACTION_INFO_TABLE_NAME} ( {SEQUENCE_NUMBER_COLUMN_NAME} NUMERIC PRIMARY KEY );", conn);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e.Message, "Unable to create default table");
+                }
+                finally
+                {
+                    cmd.Dispose();
+                    await conn.CloseAsync();
+                }
+            }
+        }
+
         private async Task<IList<string>> GetDatabaseList()
         {
             var query = $"SELECT * from {DATABASES_TABLE_NAME};";
 
             var results = new List<string>();
 
-            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(_defaultDatabaseNameWithPrefix)))
+            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(DEFAULT_DATABASE_NAME)))
             {
                 try
                 {
@@ -253,7 +291,12 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         public async Task ExecuteCommand(string sqlCommand, string databaseName)
         {
             var connectionString = _serverConnectionString;
-            if (databaseName != null) connectionString = AddDatabaseNameToServerConnectionString(databaseName);
+            if (databaseName != "") connectionString = AddDatabaseNameToServerConnectionString(databaseName);
+            else 
+            {
+                var index = sqlCommand.IndexOf("_");
+                sqlCommand = sqlCommand.Insert(index, _dbPrefix);
+            }
             using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
             {
                 try
@@ -275,6 +318,61 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 }
             }
         }
+
+        public async Task ExecuteCommandWithTransactionNumber(string sqlCommand, string databaseName, ulong transactionNumer)
+        {
+            var connectionString = _serverConnectionString;
+
+            connectionString = AddDatabaseNameToServerConnectionString(databaseName);
+            await CreateTransactionInfoTableIfNotExists(databaseName);
+
+            using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
+            {
+                try
+                {
+                    await conn.OpenAsync();
+                    var transaction = conn.BeginTransaction();
+                    using (var command1 = new NpgsqlCommand(sqlCommand, conn))
+                    {
+                        await command1.ExecuteNonQueryAsync();
+                    }
+
+                    using (var command2 = new NpgsqlCommand($"INSERT INTO {TRANSACTION_INFO_TABLE_NAME} ({SEQUENCE_NUMBER_COLUMN_NAME}) VALUES ( {transactionNumer} );", conn))
+                    {
+                        await command2.ExecuteNonQueryAsync();
+                    }
+                    await transaction.CommitAsync();
+
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e.Message, "Error executing command.");
+                    throw e;
+                }
+                finally
+                {
+
+                    await conn.CloseAsync();
+                }
+            }
+
+        }
+
+        public async Task<bool> WasTransactionExecuted(string databaseName, ulong transactionNumer)
+        {
+            try
+            {
+                var query = $"SELECT * FROM {TRANSACTION_INFO_TABLE_NAME} WHERE {SEQUENCE_NUMBER_COLUMN_NAME} = {transactionNumer}";
+                var results = await ExecuteQuery(query, databaseName);
+                return results.Count != 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
         public async Task<IList<IList<string>>> ExecuteQuery(string sqlQuery, string databaseName)
         {
             var records = new List<IList<string>>();
@@ -314,7 +412,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         private string AddDatabaseNameToServerConnectionString(string databaseName)
         {
-            return _serverConnectionString + ";Database=" + databaseName + ";Pooling=false";
+            return _serverConnectionString + ";Database=" + _dbPrefix + databaseName + ";Pooling=false";
         }
 
 

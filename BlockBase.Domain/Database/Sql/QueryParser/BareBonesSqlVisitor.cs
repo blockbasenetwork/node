@@ -103,7 +103,6 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitCreate_table_stmt(Create_table_stmtContext context)
         {
-            ThrowIfDatabaseNameIsNull();
             ThrowIfParserHasException(context);
 
             return new CreateTableStatement()
@@ -115,14 +114,14 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitDrop_table_stmt(Drop_table_stmtContext context)
         {
-            ThrowIfDatabaseNameIsNull();
+            
             ThrowIfParserHasException(context);
             return new DropTableStatement() { TableName = (estring)Visit(context.table_name().complex_name()) };
         }
 
         public override object VisitAlter_table_stmt(Alter_table_stmtContext context)
         {
-            ThrowIfDatabaseNameIsNull();
+            
             ThrowIfParserHasException(context);
 
             var tableNameEstring = (estring)Visit(context.table_name().complex_name());
@@ -169,7 +168,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitInsert_stmt(Insert_stmtContext context)
         {
-            ThrowIfDatabaseNameIsNull();
+            
             ThrowIfParserHasException(context);
             var insertRecordStatement = new InsertRecordStatement()
             {
@@ -196,7 +195,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitUpdate_stmt(Update_stmtContext context)
         {
-            ThrowIfDatabaseNameIsNull();
+            
             ThrowIfParserHasException(context);
             var updateRecordStatement = new UpdateRecordStatement()
             {
@@ -222,7 +221,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitDelete_stmt(Delete_stmtContext context)
         {
-            ThrowIfDatabaseNameIsNull();
+            
             ThrowIfParserHasException(context);
             return new DeleteRecordStatement()
             {
@@ -233,7 +232,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitSimple_select_stmt([NotNull] Simple_select_stmtContext context)
         {
-            ThrowIfDatabaseNameIsNull();
+            
             ThrowIfParserHasException(context);
             var simpleSelectStatement = new SimpleSelectStatement()
             {
@@ -251,7 +250,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitSelect_core(Select_coreContext context)
         {
-            ThrowIfDatabaseNameIsNull();
+            
             ThrowIfParserHasException(context);
             var selectCoreStatement = new SelectCoreStatement();
             if (context.K_DISTINCT() != null) selectCoreStatement.DistinctFlag = true;
@@ -555,15 +554,11 @@ namespace BlockBase.Domain.Database.QueryParser
             throw new FormatException("No comparison operator in string.");
         }
 
-        private void ThrowIfDatabaseNameIsNull()
-        {
-            if (_databaseName == null) throw new FormatException("Please use or create a database first.");
-        }
-
         private void ThrowIfParserHasException(ParserRuleContext context)
         {
             if (context.exception != null) throw context.exception;
         }
+
 
         #endregion Auxiliar Methods
     }

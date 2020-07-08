@@ -7,8 +7,9 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
         public static readonly string BLOCKHEADERS_COLLECTION_NAME = "Blockheaders";
         public static readonly string LAST_SEARCHED_FOR_TRANSACTIONS_BLOCKHEADER_COLLECTION_NAME = "LastSearchedForTransactionsBlockHeader";
         public static readonly string PROVIDER_TRANSACTIONS_COLLECTION_NAME = "Transactions";
+        public static readonly string REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME = "PendingExecutionTransactions";
         public static readonly string REQUESTER_TRANSACTIONS_COLLECTION_NAME = "TransactionsToSend";
-        public static readonly string TRANSACTIONS_INFO_COLLECTION_NAME = "TransactionsInfo";
+        public static readonly string PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME = "CurrentTransactionToExecute";
         public static readonly string PRODUCING_SIDECHAINS_COLLECTION_NAME = "ProducingSidechains";
         public static readonly string MAINTAINED_SIDECHAINS_COLLECTION_NAME = "MaintainedSidechains";
         public const string CREATE_DATABASE = "CreateDatabase";

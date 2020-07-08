@@ -27,7 +27,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         private NodeConfigurations _nodeConfigurations;
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
-        private BlockheaderTable _lastSubmittedBlockHeader;
+        private BlockheaderTable _lastValidSubmittedBlockHeader;
         private SidechainPool _sidechainPool;
         private NetworkConfigurations _networkConfigurations;
         private INetworkService _networkService;
@@ -61,7 +61,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
             if (!_isNodeSynchronized)
             {
-                var syncResult = await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash);
+                var syncResult = await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash);
 
                 if (!syncResult)
                 {
@@ -74,10 +74,10 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                     _isNodeSynchronized = true;
                 }
 
-                if (!await _mongoDbProducerService.IsBlockConfirmed(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash))
+                if (!await _mongoDbProducerService.IsBlockConfirmed(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash))
                 {
-                    await _mongoDbProducerService.ConfirmBlock(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash);
-                    await _mongoDbProducerService.ClearValidatorNode(_sidechainPool.ClientAccountName, _lastSubmittedBlockHeader.BlockHash, _lastSubmittedBlockHeader.TransactionCount);
+                    await _mongoDbProducerService.ConfirmBlock(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash);
+                    await _mongoDbProducerService.ClearValidatorNode(_sidechainPool.ClientAccountName, _lastValidSubmittedBlockHeader.BlockHash, _lastValidSubmittedBlockHeader.TransactionCount);
                 }
             }
 
@@ -123,22 +123,12 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             if (_producerList == null) return;
             if (_currentProducer == null) return;
 
-            _lastSubmittedBlockHeader = await WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(
-                //TODO rpinto - check if this timespan can be better estimated
-                _currentProducer.StartProductionTime, TimeSpan.FromSeconds(5));
+            _lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+
+            if (_lastValidSubmittedBlockHeader == null)
+                _isNodeSynchronized = true;
 
             _isReadyToProduce = _producerList?.Any(p => p.Key == _nodeConfigurations.AccountName && p.IsReadyToProduce) ?? false;
-        }
-
-
-        private async Task<BlockheaderTable> WaitForAndRetrieveTheLastValidBlockHeaderInSmartContract(long currentStartProductionTime, TimeSpan delayBetweenRequests)
-        {
-            while (true)
-            {
-                var lastSubmittedBlock = await _mainchainService.GetLastSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
-                if (lastSubmittedBlock != null && lastSubmittedBlock.IsVerified && lastSubmittedBlock.Timestamp > currentStartProductionTime) return lastSubmittedBlock;
-                await Task.Delay(delayBetweenRequests);
-            }
         }
 
         private async Task<OpResult<bool>> SyncChain()

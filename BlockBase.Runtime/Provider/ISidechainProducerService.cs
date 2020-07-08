@@ -15,7 +15,7 @@ namespace BlockBase.Runtime.Provider
         Task AddSidechainToProducerAndStartIt(string sidechainName, ulong sidechainCreationTimestamp, int producerType, bool automatic);
         void RemoveSidechainFromProducerAndStopIt(string sidechainName);
         Task LoadAndRunSidechainsFromRecoverDB();
-        Task Run(bool recoverChains = true);
+        Task Run();
 
         bool DoesChainExist(string sidechainName);
 

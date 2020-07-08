@@ -11,6 +11,7 @@ using BlockBase.Runtime.Provider.StateMachine.PeerConectionState;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.States;
 using System.Threading;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.HistoryValidationState;
+using BlockBase.DataPersistence.Sidechain.Connectors;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
 {
@@ -34,6 +35,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
         private TransactionValidationsHandler _transactionValidationsHandler;
         private ISidechainProducerService _sidechainProducerService;
         private bool _inAutomaticMode = false;
+        private IConnector _connector;
 
 
 
@@ -46,7 +48,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
              BlockRequestsHandler blockSender,
             TransactionValidationsHandler transactionValidationsHandler,
             ISidechainProducerService sidechainProducerService,
-            bool automatic) : base(logger)
+            bool automatic, IConnector connector) : base(logger)
         {
             _sidechain = sidechain;
             _logger = logger;
@@ -60,6 +62,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             _transactionValidationsHandler = transactionValidationsHandler;
             _sidechainProducerService = sidechainProducerService;
             _inAutomaticMode = automatic;
+            _connector = connector;
         }
 
         public override void Stop()
@@ -103,7 +106,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
                     var blockProductionStateManager = new BlockProductionStateManager(
                         _logger, _sidechain, _nodeConfigurations, _networkConfigurations,
                         _networkService, _peerConnectionsHandler, _mainchainService,
-                        _mongoDbProducerService, _blockSender, _transactionValidationsHandler);
+                        _mongoDbProducerService, _blockSender, _transactionValidationsHandler, _connector);
                     _blockProductionTaskContainer = blockProductionStateManager.Start();
 
                     var historyValidationStateManager = new HistoryValidationStateManager(_logger, _sidechain, _nodeConfigurations, _mainchainService, _mongoDbProducerService);

@@ -17,6 +17,7 @@ using BlockBase.Domain.Enums;
 using BlockBase.Domain;
 using BlockBase.DataPersistence.Sidechain;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState;
+using BlockBase.DataPersistence.Sidechain.Connectors;
 
 namespace BlockBase.Runtime.Provider
 {
@@ -36,10 +37,11 @@ namespace BlockBase.Runtime.Provider
         private ILogger _logger;
         private BlockRequestsHandler _blockSender;
         private TransactionValidationsHandler _transactionValidationsHandler;
+        private IConnector _connector;
 
 
         public SidechainProducerService(SidechainKeeper sidechainKeeper, PeerConnectionsHandler peerConnectionsHandler, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, ILogger<SidechainProducerService> logger, INetworkService networkService,
-                                        IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockValidationsHandler blockValidator, TransactionValidationsHandler transactionValidator, BlockRequestsHandler blockSender, TransactionValidationsHandler transactionValidationsHandler)
+                                        IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, BlockValidationsHandler blockValidator, TransactionValidationsHandler transactionValidator, BlockRequestsHandler blockSender, TransactionValidationsHandler transactionValidationsHandler, IConnector connector)
         {
             _networkService = networkService;
             _mainchainService = mainchainService;
@@ -53,11 +55,12 @@ namespace BlockBase.Runtime.Provider
             _transactionValidator = transactionValidator;
             _blockSender = blockSender;
             _transactionValidationsHandler = transactionValidationsHandler;
+            _connector = connector;
         }
 
-        public async Task Run(bool recoverChains = true)
+        public async Task Run()
         {
-            if (recoverChains) await LoadAndRunSidechainsFromRecoverDB();
+            await LoadAndRunSidechainsFromRecoverDB();
         }
 
         //TODO rpinto - this probably needs to be in a try catch
@@ -70,12 +73,14 @@ namespace BlockBase.Runtime.Provider
             //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
 
+            if(sidechainPool == null) throw new Exception("Unable to retrieve sidechain pool");
+
             if(sidechainPool.SidechainCreationTimestamp != sidechainCreationTimestamp)
                 throw new InvalidOperationException("Sidechain timestamps don't match");
 
             sidechainPool.ProducerType = producerType != 0 ? (ProducerTypeEnum)producerType : sidechainPool.ProducerType;
 
-            var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _transactionValidationsHandler, this, automatic);
+            var sidechainStateManager = new SidechainStateManager(sidechainPool, _peerConnectionsHandler, _nodeConfigurations, _networkConfigurations, _logger, _networkService, _mongoDbProducerService, _mainchainService, _blockSender, _transactionValidationsHandler, this, automatic, _connector);
 
             var sidechainContext = new SidechainContext
             {
@@ -143,13 +148,17 @@ namespace BlockBase.Runtime.Provider
 
             var clientTable = await _mainchainService.RetrieveClientTable(sidechainName);
 
+            if(clientTable == null) return null;
+
             sidechainPool.ClientAccountName = sidechainName;
             sidechainPool.ClientPublicKey = clientTable.PublicKey;
             sidechainPool.SidechainCreationTimestamp = clientTable.SidechainCreationTimestamp;
 
             var contractInformation = await _mainchainService.RetrieveContractInformation(sidechainName);
-            var candidatesInTable = await _mainchainService.RetrieveCandidates(sidechainName);
             var producersInTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
+            var candidatesInTable = await _mainchainService.RetrieveCandidates(sidechainName);
+            
+            if(contractInformation == null || producersInTable == null || candidatesInTable == null) return null;
 
             sidechainPool.BlockTimeDuration = contractInformation.BlockTimeDuration;
             sidechainPool.BlocksBetweenSettlement = contractInformation.BlocksBetweenSettlement;

@@ -26,15 +26,26 @@ namespace BlockBase.Node
             var sidechainMaintainerService = webHost.Services.Get<ISidechainMaintainerManager>();
             var sidechainProducerService = webHost.Services.Get<ISidechainProducerService>();
             var automaticProductionManager = webHost.Services.Get<IAutomaticProductionManager>();
-            
+            var pendingTransactionRecovery = webHost.Services.Get<PendingTransactionRecovery>();
 
-            var noRecover = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
+
+            var noRecoverCommandFound = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
 
             networkService.Run();
             //TODO rpinto - commented this because I don't want it to start on startup for now - uncomment when ready
             //sidechainMaintainerService.Start();
-            Task.WaitAll(sidechainProducerService.Run(!noRecover));
-            automaticProductionManager.Start();
+            
+
+            if(noRecoverCommandFound == false)
+            {
+                Task.WaitAll(pendingTransactionRecovery.Run());
+                Task.WaitAll(sidechainProducerService.Run());
+                automaticProductionManager.Start();
+            }
+
+            //force instantiation of the connection tester
+            var connectionTester = webHost.Services.Get<TcpConnectionTester>();
+                
 
             webHost.Run();
         }

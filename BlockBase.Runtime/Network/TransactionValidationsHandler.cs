@@ -64,7 +64,7 @@ namespace BlockBase.Runtime.Network
                     continue;
 
                 var transaction = new Transaction().SetValuesFromProto(transactionProto);
-                if (ValidateTransaction(transaction, args.ClientAccountName))
+                if (await ValidateTransaction(transaction, args.ClientAccountName))
                 {
                     await SaveTransaction(args.ClientAccountName, transaction);
                     var sequenceNumbers = await GetConfirmedTransactionsSequeceNumber(transaction, args.ClientAccountName, sender);
@@ -92,7 +92,7 @@ namespace BlockBase.Runtime.Network
             await _networkService.SendMessageAsync(message);
         }
 
-        public bool ValidateTransaction(Transaction transaction, string clientAccountName)
+        public async Task<bool> ValidateTransaction(Transaction transaction, string clientAccountName)
         {
 
             if (!_sidechainKeeper.TryGet(clientAccountName, out var sidechainContext))
@@ -100,7 +100,6 @@ namespace BlockBase.Runtime.Network
                 _logger.LogDebug($"Transaction received but sidechain {clientAccountName} is unknown.");
                 return false;
             }
-
             if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
             {
                 _logger.LogDebug($"Transaction #{transaction.SequenceNumber} hash not valid.");
@@ -112,6 +111,15 @@ namespace BlockBase.Runtime.Network
                 _logger.LogDebug($"Transaction signature not valid.");
                 return false;
             }
+            var maxBlockSize = (await _mainChainService.RetrieveContractInformation(clientAccountName)).SizeOfBlockInBytes;
+            var transactionSize = transaction.ConvertToProto().ToByteArray().Count();
+
+            if (transactionSize + BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE > maxBlockSize)
+            {
+                _logger.LogDebug($"Transaction is too big.");
+                return false;
+            }
+
             return true;
         }
 

@@ -7,7 +7,7 @@ namespace BlockBase.Utils.Threading
     public class TaskContainer
     {
         public string TaskIdentifier { get; set; }
-        public Task Task { get; set; }
+        private Task Task { get; set; }
         public Func<Task> Func { get; set; }
         public CancellationTokenSource CancellationTokenSource { get; set; }
 
@@ -20,6 +20,11 @@ namespace BlockBase.Utils.Threading
                 CancellationTokenSource = cancellationTokenSource,
                 Func = func
             };
+        }
+
+        public bool IsRunning()
+        {
+            return Task != null && Task.Status != TaskStatus.RanToCompletion;
         }
 
         public void Start()

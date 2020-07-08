@@ -30,5 +30,16 @@ namespace BlockBase.Runtime.Network
         void SubscribePingReceivedEvent(PingReceivedEventHandler eventHandler);
         void SubscribePongReceivedEvent(PongReceivedEventHandler eventHandler);
         void SubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler);
+
+        void UnSubscribePeerConnectedEvent(PeerConnectedEventHandler eventHandler);
+        void UnSubscribePeerDisconnectedEvent(PeerDisconnectedEventHandler eventHandler);
+        void UnSubscribeMinedBlockReceivedEvent(MinedBlockReceivedEventHandler eventHandler);
+        void UnSubscribeRecoverBlockReceivedEvent(RecoverBlockReceivedEventHandler eventHandler);
+        void UnSubscribeIdentificationMessageReceivedEvent(IdentificationMessageReceivedEventHandler eventHandler);
+        void UnSubscribeTransactionsReceivedEvent(TransactionsReceivedEventHandler eventHandler);
+        void UnSubscribeBlocksRequestReceivedEvent(BlocksRequestReceivedEventHandler eventHandler);   
+        void UnSubscribePingReceivedEvent(PingReceivedEventHandler eventHandler);
+        void UnSubscribePongReceivedEvent(PongReceivedEventHandler eventHandler);
+        void UnSubscribeTransactionConfirmationReceivedEvent(TransactionConfirmationReceivedEventHandler eventHandler);
     }
 }

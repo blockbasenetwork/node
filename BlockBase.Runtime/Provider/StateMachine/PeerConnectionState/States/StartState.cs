@@ -22,6 +22,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private SidechainPool _sidechainPool;
+        private List<ProducerInTable> _producers;
         public StartState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool)
         {
             _mainchainService = mainchainService;
@@ -42,7 +43,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractStateTable != null && (_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime));
+            var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
+
+            return Task.FromResult(isProducerInTable && _contractStateTable != null && (_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
@@ -53,6 +56,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         protected override async Task UpdateStatus() 
         {
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
         }
     }
 }

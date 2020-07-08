@@ -87,7 +87,7 @@ namespace BlockBase.Runtime.Network
             _logger.LogDebug("Task starting.");
 
             if (TaskContainer != null) TaskContainer.Stop();
-            
+
             TaskContainer = TaskContainer.Create(Execute);
             TaskContainer.Start();
             return TaskContainer;
@@ -95,28 +95,26 @@ namespace BlockBase.Runtime.Network
 
         public void Stop()
         {
-            if(TaskContainer != null && TaskContainer.Task.Status == TaskStatus.Running)
+            if (TaskContainer != null && TaskContainer.IsRunning())
             {
                 TaskContainer.Stop();
             }
         }
 
-        public async Task RemoveIncludedTransactions(uint numberOfIncludedTransactions, string lastValidBlockHash)
+        public async Task RemoveIncludedTransactions(uint numberOfIncludedTransactions, ulong lastIncludedTransactionSequenceNumber)
         {
             if (numberOfIncludedTransactions == 0) _numberOfConsecutiveEmptyBlocks++;
             else _numberOfConsecutiveEmptyBlocks = 0;
 
-            var transactionsRemovedSequenceNumbers = await _mongoDbRequesterService.RemoveAlreadyIncludedTransactionsDBAsync(_nodeConfigurations.AccountName, numberOfIncludedTransactions, lastValidBlockHash);
+            await _mongoDbRequesterService.RemoveAlreadyIncludedTransactionsDBAsync(_nodeConfigurations.AccountName, lastIncludedTransactionSequenceNumber);
 
-            foreach (var sequenceNumber in transactionsRemovedSequenceNumbers)
-            {
-                var transactionSendingTrackPoco = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber == sequenceNumber).SingleOrDefault();
-                _transactionsToSend.Remove(transactionSendingTrackPoco);
-            }
-
+            var transactionSendingTrackPocosToRemove = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber <= lastIncludedTransactionSequenceNumber).ToList();
+            foreach (var transactionSendingTrackPocoToRemove in transactionSendingTrackPocosToRemove) _transactionsToSend.Remove(transactionSendingTrackPocoToRemove);
         }
         public void AddScriptTransactionToSend(Transaction transaction)
         {
+            if (_transactionsToSend.GetEnumerable().Any(t => t.Transaction.TransactionHash.SequenceEqual(transaction.TransactionHash))) return;
+
             TransactionSendingTrackPoco transactionSendingTrack;
 
             transactionSendingTrack = new TransactionSendingTrackPoco()
@@ -124,6 +122,7 @@ namespace BlockBase.Runtime.Network
                 Transaction = transaction,
                 ProducersAlreadyReceived = new ThreadSafeList<string>()
             };
+
             _transactionsToSend.Add(transactionSendingTrack);
         }
 
@@ -160,15 +159,19 @@ namespace BlockBase.Runtime.Network
                 if (peerConnection.ConnectionState == ConnectionStateEnum.Connected)
                 {
                     var transactionsSendingTrackPocos = _transactionsToSend.GetEnumerable().Where(p => !p.ProducersAlreadyReceived.GetEnumerable().Contains(peerConnection.ConnectionAccountName)).ToList();
+                    var transactionsToRemove = new List<TransactionSendingTrackPoco>();
 
                     foreach (var transactionSendingTrack in transactionsSendingTrackPocos)
                     {
                         if (transactionSendingTrack.ProducersAlreadyReceived.Count() > Math.Floor((double)(producers.Count() / 2))
                             && producers.Count() > _numberOfConsecutiveEmptyBlocks)
                         {
-                            transactionsSendingTrackPocos.Remove(transactionSendingTrack);
+                            transactionsToRemove.Add(transactionSendingTrack);
                         }
                     }
+
+                    transactionsToRemove.ForEach(t => transactionsSendingTrackPocos.Remove(t));
+
                     if (transactionsSendingTrackPocos.Count != 0)
                         await SendScriptTransactionsToProducer(transactionsSendingTrackPocos.Select(p => p.Transaction), peerConnection);
                 }
@@ -193,7 +196,6 @@ namespace BlockBase.Runtime.Network
         {
             try
             {
-                await _mongoDbRequesterService.CreateTransactionInfoIfNotExists(_nodeConfigurations.AccountName);
                 var transactions = await _mongoDbRequesterService.RetrieveTransactionsInMempool(_nodeConfigurations.AccountName);
                 foreach (var transaction in transactions)
                     AddScriptTransactionToSend(transaction);

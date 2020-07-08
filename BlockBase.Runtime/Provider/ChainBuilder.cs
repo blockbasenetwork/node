@@ -32,8 +32,6 @@ namespace BlockBase.Runtime.Provider
     // public class ChainBuilder : IThreadableComponent
     public class ChainBuilder
     {
-        public TaskContainer TaskContainer { get; private set; }
-
         private SidechainPool _sidechainPool;
         private IMongoDbProducerService _mongoDbProducerService;
         private ILogger _logger;
@@ -77,11 +75,11 @@ namespace BlockBase.Runtime.Provider
             try
             {
                 var producerIndex = 0;
-                var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected).ToList();
+                var validConnectedProducers = _sidechainPool.ProducersInPool.GetEnumerable().Where(m => m.PeerConnection?.ConnectionState == ConnectionStateEnum.Connected && m.ProducerInfo?.ProducerType != ProducerTypeEnum.Validator).ToList();
 
                 if (!validConnectedProducers.Any())
                 {
-                    // _logger.LogDebug("No connected producers to request blocks.");
+                    _logger.LogDebug("No connected producers to request blocks.");
                     return new OpResult<bool>(new Exception("Unable to synchronize. No connected producers to request blocks."));
                 }
 
@@ -102,6 +100,9 @@ namespace BlockBase.Runtime.Provider
                 while (true)
                 {
                     _currentSendingProducer = validConnectedProducers.ElementAt(producerIndex);
+
+                    _logger.LogDebug($"Number of valid connected producers: {validConnectedProducers.Count}");
+                    _logger.LogDebug($"Asking blocks to producer {_currentSendingProducer.ProducerInfo.AccountName}");
 
                     if (_missingBlocksSequenceNumber.Count() == 0)
                     {
@@ -138,15 +139,16 @@ namespace BlockBase.Runtime.Provider
                         }
                     }
 
-                    if (TaskContainer.CancellationTokenSource.IsCancellationRequested) 
+                    if (_lastSidechainBlockheader == null)
                     {
-                        
-                        return new OpResult<bool>(new Exception("Operation cancelled."));
+                        _logger.LogDebug("No blockheaders in smart contract.");
+                        return new OpResult<bool>(false);
                     }
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogDebug($"Chain builder exception thrown: {ex}");
                 return new OpResult<bool>(ex);
             }
         }
@@ -193,7 +195,6 @@ namespace BlockBase.Runtime.Provider
 
             if (_lastSidechainBlockheader == null)
             {
-                TaskContainer.CancellationTokenSource.Cancel();
                 return;
             }
             var blockHeaderSC = _lastSidechainBlockheader.ConvertToBlockHeader();

@@ -204,6 +204,11 @@ namespace BlockBase.Domain.Eos
         public const string PRODUCER_EXIT_DATE_IN_SECONDS = "producer_exit_date_in_seconds";
     }
 
+    public class EosErrors
+    {
+        public const string ALREADY_LINKED_AUTH_ERROR = "new requirement is same as old";
+    }
+
     public class EosNetworkIds
     {
         public const string MAINNET_ID = "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906";

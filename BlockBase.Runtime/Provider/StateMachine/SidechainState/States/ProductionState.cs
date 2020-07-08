@@ -7,6 +7,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
 
@@ -20,8 +21,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
         private ContractInformationTable _contractInfo;
+        private List<IPAddressTable> _ipAddresses;
 
-        private bool _hasIpChanged;
+        private bool _needsToUpdateIps;
 
         private SidechainPool _sidechainPool;
         public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool)
@@ -45,17 +47,15 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         protected override Task<bool> HasConditionsToContinue()
         {
             if(_contractStateTable == null || _contractInfo == null ||  _producers == null) return Task.FromResult(false);
-
-            var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
-
-            return Task.FromResult((_contractStateTable.ProductionTime || _contractStateTable.IPSendTime) && isProducerInTable);
+            return Task.FromResult((_contractStateTable.ProductionTime || _contractStateTable.IPSendTime));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
-            if (_hasIpChanged) return Task.FromResult((_hasIpChanged, typeof(UpdateIpState).Name));
+            if (_needsToUpdateIps) return Task.FromResult((_needsToUpdateIps, typeof(UpdateIpState).Name));
+            if (!isProducerInTable) return Task.FromResult((true, typeof(EndState).Name));
             return Task.FromResult((isProducerInTable && _contractStateTable.IPSendTime, typeof(IPSendTimeState).Name));
         }
 
@@ -64,18 +64,15 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             _contractInfo = await _mainchainService.RetrieveContractInformation(_sidechainPool.ClientAccountName);
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
+            _ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
             
             //check preconditions to continue update
             if(_contractInfo == null) return;
+            if(!_producers.Any(c => c.Key == _nodeConfigurations.AccountName)) return;
 
-            //check if provider ip has changed
-            var iPAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
-            var endpoint = _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort;
-            var tableEncryptedIpAddress = iPAddresses.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault()?.EncryptedIPs?.LastOrDefault();
-            var encryptedIpAddress = AssymetricEncryption.EncryptText(endpoint, _nodeConfigurations.ActivePrivateKey, _sidechainPool.ClientPublicKey);
-            _hasIpChanged = tableEncryptedIpAddress != encryptedIpAddress;
+            _needsToUpdateIps = IsIpUpdateRequired(_ipAddresses.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault().EncryptedIPs);
 
-            _delay = _hasIpChanged ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(GetDelayInProductionTime());
+            _delay = _needsToUpdateIps ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(GetDelayInProductionTime());
         }
 
         private int GetDelayInProductionTime()
@@ -91,6 +88,22 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             if (ipReceiveTimediff > 0) return Convert.ToInt32(ipReceiveTimediff);
 
             return Convert.ToInt32(15);
+        }
+
+        private bool IsIpUpdateRequired(List<string> encryptedIpsInTable)
+        {
+            int numberOfIpsToSend = (int)Math.Ceiling(_producers.Count() / 4.0);
+            var keysToUse = ListHelper.GetListSortedCountingFrontFromIndex(_producers, _producers.FindIndex(m => m.Key == _nodeConfigurations.AccountName)).Take(numberOfIpsToSend).Select(p => p.PublicKey).ToList();
+            keysToUse.Add(_sidechainPool.ClientPublicKey);
+
+            var listEncryptedIps = new List<string>();
+            var endpoint = _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort;
+            foreach (string receiverPublicKey in keysToUse)
+            {
+                listEncryptedIps.Add(AssymetricEncryption.EncryptText(endpoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
+            }
+
+            return listEncryptedIps.Except(encryptedIpsInTable).Any();
         }
     }
 

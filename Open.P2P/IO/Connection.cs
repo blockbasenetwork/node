@@ -118,13 +118,13 @@ namespace Open.P2P.IO
                 var localEndPoint = (IPEndPoint)_localEndPoint;
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    Console.WriteLine($"Binding socket locally");
+                    //Console.WriteLine($"Binding socket locally");
                     _socket.Bind(new IPEndPoint(IPAddress.Parse("0.0.0.0"), localEndPoint.Port));
                 }
 
                 else
                 {
-                    Console.WriteLine($"Binding socket locally");
+                    //Console.WriteLine($"Binding socket locally");
                     _socket.Bind(new IPEndPoint(IPAddress.Parse("127.0.0.1"), localEndPoint.Port));
                 }
             }

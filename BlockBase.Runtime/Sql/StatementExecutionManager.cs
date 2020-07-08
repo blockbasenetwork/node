@@ -4,18 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Antlr4.Runtime;
 using BlockBase.DataPersistence.Data;
 using BlockBase.DataPersistence.Data.MongoDbEntities;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
+using BlockBase.Domain.Database.QueryParser;
 using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.QueryParser;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Network;
@@ -37,8 +40,8 @@ namespace BlockBase.Runtime.Sql
         private ConcurrentVariables _concurrentVariables;
         private TransactionsManager _transactionsManager;
         private NodeConfigurations _nodeConfigurations;
-        private IList<Transaction> _transactionsToSendToProducers;
         private IMongoDbRequesterService _mongoDbRequesterService;
+        private SqlExecutionHelper _sqlExecutionHelper;
 
         public StatementExecutionManager(Transformer transformer, IGenerator generator, ILogger logger, IConnector connector, InfoPostProcessing infoPostProcessing, ConcurrentVariables concurrentVariables, TransactionsManager transactionsManager, NodeConfigurations nodeConfigurations, IMongoDbRequesterService mongoDbRequesterService)
         {
@@ -51,16 +54,26 @@ namespace BlockBase.Runtime.Sql
             _nodeConfigurations = nodeConfigurations;
             _transactionsManager = transactionsManager;
             _mongoDbRequesterService = mongoDbRequesterService;
-            _transactionsToSendToProducers = new List<Transaction>();
+            _sqlExecutionHelper = new SqlExecutionHelper(connector);
+            
         }
 
         public delegate QueryResult CreateQueryResultDelegate(bool success, string statementType, string exceptionMessage = null);
-        public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate CreateQueryResult)
+
+        public async Task<IList<QueryResult>> ExecuteSqlText(string sqlString, CreateQueryResultDelegate createQueryResult)
         {
+            var builder = _sqlExecutionHelper.ParseSqlText(sqlString);
+            return await ExecuteBuilder(builder, createQueryResult);
+        }
+
+        public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate createQueryResult)
+        {
+
             var results = new List<QueryResult>();
             var databasesSemaphores = _concurrentVariables.DatabasesSemaphores;
             foreach (var sqlCommand in builder.SqlCommands)
             {
+                var pendingTransactions = new List<Transaction>();
                 try
                 {
                     _transformer.TransformCommand(sqlCommand);
@@ -88,8 +101,8 @@ namespace BlockBase.Runtime.Sql
                         case ReadQuerySqlCommand readQuerySql:
                             var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
                             var namesAndResults = await ExecuteSelectStatement(
-                                builder, 
-                                (SimpleSelectStatement) readQuerySql.OriginalSqlStatement, 
+                                builder,
+                                (SimpleSelectStatement)readQuerySql.OriginalSqlStatement,
                                 transformedSelectStatement,
                                 readQuerySql.TransformedSqlStatementText[0]);
 
@@ -109,16 +122,14 @@ namespace BlockBase.Runtime.Sql
                                 foreach (var changeRecordsToExecute in changesToExecute)
                                 {
                                     //_logger.LogDebug(changeRecordsToExecute);
-                                    await _connector.ExecuteCommand(changeRecordsToExecute, _databaseName);
-                                    AddTransactionToSend(changeRecordsToExecute, _databaseName);
+                                    pendingTransactions.Add(CreateTransaction(changeRecordsToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                                 }
                             }
                             else
                             {
-                                await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                AddTransactionToSend(sqlTextToExecute, _databaseName);
+                                pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            results.Add(CreateQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            results.Add(createQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
 
 
@@ -127,16 +138,16 @@ namespace BlockBase.Runtime.Sql
                             {
                                 sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
                                 //_logger.LogDebug(sqlTextToExecute);
-                                await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-                                AddTransactionToSend(sqlTextToExecute, _databaseName);
+
+                                pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            results.Add(CreateQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            results.Add(createQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
 
                         case DatabaseSqlCommand databaseSqlCommand:
                             if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement)
                             {
-                                results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
+                                results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                                 continue;
                             }
 
@@ -150,14 +161,11 @@ namespace BlockBase.Runtime.Sql
                             {
                                 sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
                                 if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
-                                    await _connector.ExecuteCommand(sqlTextToExecute, null);
+                                    pendingTransactions.Add(CreateTransaction(sqlTextToExecute, "", _nodeConfigurations.ActivePrivateKey));
                                 else
-                                    await _connector.ExecuteCommand(sqlTextToExecute, _databaseName);
-
-                                //_logger.LogDebug(sqlTextToExecute);
-                                AddTransactionToSend(sqlTextToExecute, _databaseName ?? "");
+                                    pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            results.Add(CreateQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
                             break;
                         case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
                             if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
@@ -187,27 +195,32 @@ namespace BlockBase.Runtime.Sql
                             sqlTextToExecute = ifSqlCommand.TransformedSqlStatementText[0];
                             if ((await ExecuteSelectStatement(builder, originalSimpleSelectStatement, transformedSimpleSelectStatement, sqlTextToExecute)).ResultRows.Count != 0)
                             {
-                                results.AddRange(await ExecuteBuilder(((IfStatement)ifSqlCommand.OriginalSqlStatement).Builder, CreateQueryResult));
+                                results.AddRange(await ExecuteBuilder(((IfStatement)ifSqlCommand.OriginalSqlStatement).Builder, createQueryResult));
                             }
                             else
                             {
-                                results.Add(CreateQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), "Condition not fulfilled."));
+                                results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), "Condition not fulfilled."));
                             }
                             _logger.LogDebug("if statement");
                             break;
                     }
+
+                    await AddPendingTransactions(pendingTransactions);
+
+                    var orderedTransactions = pendingTransactions.OrderBy(t => t.SequenceNumber);
+                    foreach (var transaction in orderedTransactions)
+                        await TryToExecutePendingTransaction(transaction);
+
                 }
                 catch (Exception e)
                 {
                     _logger.LogError($"Error executing sql command.{e}");
-                    results.Add(CreateQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
+                    results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
                 }
             }
             if (_databaseName != null)
                 databasesSemaphores[_databaseName].Release();
 
-            SendTransactionsToProducers();
-            _transactionsToSendToProducers = new List<Transaction>();
             return results;
         }
 
@@ -234,23 +247,46 @@ namespace BlockBase.Runtime.Sql
 
         }
 
-        private void AddTransactionToSend(string queryToExecute, string databaseName)
+        private async Task AddPendingTransactions(IList<Transaction> transactions)
         {
-            var transactionNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());
-            var transaction = CreateTransaction(queryToExecute, transactionNumber, databaseName, _nodeConfigurations.ActivePrivateKey);
-            _transactionsToSendToProducers.Add(transaction);
-        }
-        private void SendTransactionsToProducers()
-        {
-            _mongoDbRequesterService.AddTransactionsToSidechainDatabaseAsync(_nodeConfigurations.AccountName,
-            _transactionsToSendToProducers.Select(t => new TransactionDB().TransactionDBFromTransaction(t)));
-
-            foreach (var transactionToSend in _transactionsToSendToProducers)
-                _transactionsManager.AddScriptTransactionToSend(transactionToSend);
+            var transactionsDB = transactions.Select(t => new TransactionDB().TransactionDBFromTransaction(t)).ToList();
+            await _mongoDbRequesterService.AddPendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, transactionsDB);
         }
 
-        private Transaction CreateTransaction(string json, ulong sequenceNumber, string databaseName, string senderPrivateKey)
+        private async Task TryToExecutePendingTransaction(Transaction transaction)
         {
+            var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
+            try
+            {
+                if (transactionDB.DatabaseName != "")
+                    await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, transactionDB.SequenceNumber);
+                else
+                    await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
+
+                await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, transactionDB);
+                _transactionsManager.AddScriptTransactionToSend(transactionDB.TransactionFromTransactionDB());
+            }
+            catch
+            {
+                await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, transactionDB);
+                _concurrentVariables.RollbackOneTransactionNumber();
+            }
+        }
+
+        public async Task LoadAndExecutePendingTransaction()
+        {
+            var pendingTransactions = await _mongoDbRequesterService.RetrievePendingTransactions(_nodeConfigurations.AccountName);
+            foreach (var pendingTransaction in pendingTransactions)
+            {
+                if (pendingTransaction != null && !await _sqlExecutionHelper.HasTransactionBeenExecuted(pendingTransaction))
+                    await TryToExecutePendingTransaction(pendingTransaction.TransactionFromTransactionDB());
+            }
+        }
+
+        private Transaction CreateTransaction(string json, string databaseName, string senderPrivateKey)
+        {
+            var sequenceNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());
+
             var transaction = new Transaction()
             {
                 Json = json,

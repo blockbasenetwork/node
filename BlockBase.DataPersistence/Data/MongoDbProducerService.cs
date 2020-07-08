@@ -252,8 +252,8 @@ namespace BlockBase.DataPersistence.Data
                                            where
                                            //all blocks with timestamps earlier than when the last production start time
                                            b.Timestamp < (ulong)lastProductionStartTime
-                                           //and with a timestamp bigger than the latest confirmed blockheader
-                                           && b.Timestamp > blockheaderDB.Timestamp
+                                           //and unconfirmed
+                                           && b.Confirmed == false
                                            select b;
 
 
@@ -264,7 +264,7 @@ namespace BlockBase.DataPersistence.Data
                         await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockHeaderDBToRemove.BlockHash, update);
                     }
 
-                    await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Timestamp > blockheaderDB.Timestamp);
+                    await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Confirmed == false);
 
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
 
@@ -508,6 +508,38 @@ namespace BlockBase.DataPersistence.Data
 
                 var result = query.ToList();
                 return result;
+            }
+        }
+
+        public async Task<TransactionDB> GetTransactionToExecute(string sidechain)
+        {
+           using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var database = MongoClient.GetDatabase(_dbPrefix + sidechain);
+
+                var transactionCol = database.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME).AsQueryable();
+                var query = from t in transactionCol
+                            select t;
+
+                return await query.SingleOrDefaultAsync();
+                
+            }
+        }
+
+        public async Task UpdateTransactionToExecute(string sidechain, TransactionDB transaction)
+        {
+             using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                session.StartTransaction();
+                var database = MongoClient.GetDatabase(_dbPrefix + sidechain);
+
+                var transactionCol = database.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME);
+                
+                await transactionCol.DeleteManyAsync(t => true);
+                
+                await transactionCol.InsertOneAsync(transaction);
+
+                await session.CommitTransactionAsync();
             }
         }
 
