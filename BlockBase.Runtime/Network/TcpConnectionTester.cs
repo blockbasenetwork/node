@@ -37,9 +37,8 @@ namespace BlockBase.Runtime.Network
             _logger = logger;
             // _tcpConnector = tcpConnector;
             _networkService = networkService;
-            _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
-            _networkService.SubscribePongReceivedEvent(MessageForwarder_PongMessageReceived);
             _peerConnectionsHandler = peerConnectionsHandler;
+            _networkService.SubscribePingReceivedEvent(MessageForwarder_PingMessageReceived);
             _nodeConfigurations = nodeConfigurations.Value;
             _connections = new ThreadSafeList<IPEndPoint>();
             _systemConfig = systemConfig;
@@ -54,12 +53,16 @@ namespace BlockBase.Runtime.Network
 
             var peerConnection = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.Address.ToString() == remoteEndPoint.Address.ToString() && p.IPEndPoint.Port == remoteEndPoint.Port).SingleOrDefault();
 
+            _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
+            _networkService.SubscribePongReceivedEvent(MessageForwarder_PongMessageReceived);
+
             if (peerConnection != null)
             {
                 PrepareAndSendData(peerConnection.Peer);
                 return peerConnection.Peer;
             }
 
+            
             var peer = await _networkService.ConnectAsync(remoteEndPoint);//, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
             return peer;
         }
@@ -106,6 +109,11 @@ namespace BlockBase.Runtime.Network
         private void MessageForwarder_PongMessageReceived(PongReceivedEventArgs args, IPEndPoint sender)
         {
             _logger.LogInformation($"Received pong message from {sender.Address.ToString()} with number: {args.nonce}");
+        }
+
+        private void MessageForwarder_PingMessageReceived(PingReceivedEventArgs args, IPEndPoint sender)
+        {
+            _logger.LogInformation($"Received ping message from {sender.Address.ToString()} with number: {args.nonce}");
         }
 
 
