@@ -143,13 +143,14 @@ namespace BlockBase.Runtime.Provider
 
                     if (TaskContainer.CancellationTokenSource.IsCancellationRequested) 
                     {
-                        
+                        _logger.LogDebug("Chain builder operation canceled");
                         return new OpResult<bool>(new Exception("Operation cancelled."));
                     }
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogDebug($"Chain builder exception thrown: {ex}");
                 return new OpResult<bool>(ex);
             }
         }
