@@ -26,6 +26,10 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private List<ProducerInTable> _producerList;
         private IMainchainService _mainchainService;
         private EosSharp.Core.Api.v1.GetAccountResponse _sidechainAccountInfo;
+
+        private Permission _verifyBlockPermission;
+        private Permission _historyValidatePermission;
+
         public UpdateAuthorizationsState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _inNeedToUpdateAuthorizations = false;
@@ -59,7 +63,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
                 }
             }
 
-            if (!_verifyBlockPermissionLinked)
+            if (_verifyBlockPermission != null && !_verifyBlockPermissionLinked)
             {
                 try
                 {
@@ -72,7 +76,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
                 }
             }
 
-            if (!_historyValidatePermissionLinked)
+            if (_historyValidatePermission != null && !_historyValidatePermissionLinked)
             {
                 try
                 {
@@ -115,16 +119,16 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         private bool DoesItNeedToUpdateAuthorizations(List<ProducerInTable> producerList, EosSharp.Core.Api.v1.GetAccountResponse sidechainAccountInfo)
         {
-            var verifyBlockPermission = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
-            var verifyHistoryPermisson = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION || p.perm_name == "verifyhistori").FirstOrDefault();
+            _verifyBlockPermission = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
+            _historyValidatePermission = sidechainAccountInfo.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
             if (!producerList.Any()) return false;
             foreach (var producer in producerList)
             {
-                if (!DoesProducerHavePermission(producer, verifyBlockPermission)) return true;
-                if ((producer.ProducerType == 2 || producer.ProducerType == 3) && !DoesProducerHavePermission(producer, verifyHistoryPermisson)) return true;
+                if (!DoesProducerHavePermission(producer, _verifyBlockPermission)) return true;
+                if ((producer.ProducerType == 2 || producer.ProducerType == 3) && !DoesProducerHavePermission(producer, _historyValidatePermission)) return true;
             }
-            if (producerList.Count() < verifyBlockPermission.required_auth?.accounts?.Count()) return true;
-            if (producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).Count() < verifyHistoryPermisson.required_auth?.accounts?.Count()) return true;
+            if (producerList.Count() < _verifyBlockPermission.required_auth?.accounts?.Count()) return true;
+            if (producerList.Where(p => (ProducerTypeEnum)p.ProducerType != ProducerTypeEnum.Validator).Count() < _historyValidatePermission.required_auth?.accounts?.Count()) return true;
             return false;
         }
 
