@@ -171,7 +171,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             //verify if node isn't in the candidates list nor the producers list
             if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return defaultReturnValue;
 
-            if (!CheckIfSidechainGrowthFitsInConfiguredMaximumGrowth(contractInfo, _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB)) return defaultReturnValue;
+            if (!CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
+                ||
+                !CheckIfSidechainGrowthFitsInConfiguredMaximumGrowth(contractInfo, _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB)) return defaultReturnValue;
 
             decimal requestedStake = ConvertBBTValueToDecimalPoint(contractInfo.Stake);
 
@@ -293,6 +295,13 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             }
 
             return totalMaximumMonthlyGrowth <= maxTotalGrowthPerMonthInMB;
+        }
+
+        private bool CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(int maxNumberOfSidechainsToProduce)
+        {
+            var currentProducingSidechains = _sidechainKeeper.GetSidechains().Count();
+
+            return currentProducingSidechains < maxNumberOfSidechainsToProduce;
         }
 
         // private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(TrackerSidechain sidechain)
