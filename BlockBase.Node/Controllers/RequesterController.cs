@@ -275,6 +275,8 @@ namespace BlockBase.Node.Controllers
                 //Check configurations
                 if (RequesterConfigurations.MaxBlockSizeInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
                     return BadRequest(new OperationResponse<string>(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
+                if (RequesterConfigurations.ValidatorNodes.RequiredNumber + RequesterConfigurations.HistoryNodes.RequiredNumber + RequesterConfigurations.FullNodes.RequiredNumber == 0)
+                    return BadRequest(new OperationResponse<string>(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
 
                 if (stake > 0)
                 {
