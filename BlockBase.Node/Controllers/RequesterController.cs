@@ -30,6 +30,7 @@ using BlockBase.Utils.Crypto;
 using System.Reflection;
 using BlockBase.Utils;
 using BlockBase.Domain.Eos;
+using BlockBase.Domain.Blockchain;
 
 namespace BlockBase.Node.Controllers
 {
@@ -271,7 +272,9 @@ namespace BlockBase.Node.Controllers
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
                 if (contractSt != null) return BadRequest(new OperationResponse<string>(false, $"Sidechain {NodeConfigurations.AccountName} already exists"));
 
-
+                //Check configurations
+                if (RequesterConfigurations.MaxBlockSizeInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
+                    return BadRequest(new OperationResponse<string>(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
 
                 if (stake > 0)
                 {
