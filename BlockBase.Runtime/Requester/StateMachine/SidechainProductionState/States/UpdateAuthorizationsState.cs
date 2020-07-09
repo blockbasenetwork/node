@@ -63,6 +63,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
                 }
             }
 
+            if (_verifyBlockPermission == null) _verifyBlockPermissionLinked = true;
             if (_verifyBlockPermission != null && !_verifyBlockPermissionLinked)
             {
                 try
@@ -76,6 +77,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
                 }
             }
 
+            if (_historyValidatePermission == null) _historyValidatePermissionLinked = true;
             if (_historyValidatePermission != null && !_historyValidatePermissionLinked)
             {
                 try
@@ -111,6 +113,9 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         {
             _producerList = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
             _sidechainAccountInfo = await _mainchainService.GetAccount(_nodeConfigurations.AccountName);
+
+            if (_producerList == null || _sidechainAccountInfo == null) return;
+
             _inNeedToUpdateAuthorizations = DoesItNeedToUpdateAuthorizations(_producerList, _sidechainAccountInfo);
         }
 
