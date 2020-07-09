@@ -270,6 +270,8 @@ namespace BlockBase.Node.Controllers
                 _connector.Setup().Wait();
 
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
                 if (contractSt != null) return BadRequest(new OperationResponse<string>(false, $"Sidechain {NodeConfigurations.AccountName} already exists"));
 
                 //Check configurations
@@ -277,6 +279,8 @@ namespace BlockBase.Node.Controllers
                     return BadRequest(new OperationResponse<string>(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
                 if (RequesterConfigurations.ValidatorNodes.RequiredNumber + RequesterConfigurations.HistoryNodes.RequiredNumber + RequesterConfigurations.FullNodes.RequiredNumber == 0)
                     return BadRequest(new OperationResponse<string>(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
+                if (RequesterConfigurations.BlockTimeInSeconds < 60 && networkName == EosNetworkNames.MAINNET)
+                    return BadRequest(new OperationResponse<string>(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
 
                 if (stake > 0)
                 {
