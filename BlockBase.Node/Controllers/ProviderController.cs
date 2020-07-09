@@ -297,8 +297,8 @@ namespace BlockBase.Node.Controllers
                     return BadRequest(new OperationResponse<string>($"Producer type inserted is not needed in the given sidechain configuration"));
                 }
 
-                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
                 var candidates = await _mainchainService.RetrieveCandidates(chainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
                 
                 var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == NodeConfigurations.ActivePublicKey) || candidates.Any(c => c.PublicKey == NodeConfigurations.ActivePublicKey);
                 if (isPublicKeyAlreadyUsed) return BadRequest(new OperationResponse<string>(false, $"Key {NodeConfigurations.ActivePublicKey} is already being used by another producer or candidate"));
