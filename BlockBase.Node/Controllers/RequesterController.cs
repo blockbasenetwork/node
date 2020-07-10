@@ -273,7 +273,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -321,7 +321,7 @@ namespace BlockBase.Node.Controllers
                 }
 
                 if (!await HasEnoughStakeUntilNextSettlement())
-                    return BadRequest(new OperationResponse<string>(false, $"Account does not have enough stake to pay for first settlement of configured sidechain"));
+                    return BadRequest(new OperationResponse(false, $"Account does not have enough stake to pay for first settlement of configured sidechain"));
 
                 //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
