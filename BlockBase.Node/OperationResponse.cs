@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace BlockBase.Node
 {
-    public class OperationResponse<T>
+    public class OperationResponse
     {
         public bool Succeeded { get; set; }
         public Exception Exception { get; set; }
-        public T Response { get; set; }
+        
         public string ResponseMessage { get; set; }
 
         public OperationResponse() { }
@@ -25,9 +25,15 @@ namespace BlockBase.Node
         public OperationResponse(bool success, string message)
         {
             Succeeded = success;
-            Response = default(T);
             ResponseMessage = message;
         }
+
+    }
+    public class OperationResponse<T> : OperationResponse
+    {
+        public T Response { get; set; }
+
+        public OperationResponse() { }
 
         public OperationResponse(T response, string message = null)
         {
