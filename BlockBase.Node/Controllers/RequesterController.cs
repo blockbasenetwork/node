@@ -299,6 +299,7 @@ namespace BlockBase.Node.Controllers
 
 
                 var configuration = GetSidechainConfigurations();
+                var apiError = new ApiErrorException();
                 //TODO rpinto - review this while loop
                 while (i < 3)
                 {
@@ -316,10 +317,11 @@ namespace BlockBase.Node.Controllers
                     {
                         _logger.LogInformation($"Failed {i + 1} times. Error: {ex.Message}");
                         i++;
+                        apiError = ex;
                     }
                 }
 
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationCanceledException());
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(false, $"Error configuring chain: {apiError.error?.name} Details: {apiError.error?.details?.FirstOrDefault()?.message}"));
             }
             catch (Exception e)
             {
