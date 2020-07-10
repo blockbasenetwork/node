@@ -22,6 +22,7 @@ using System.Globalization;
 using BlockBase.Node.Filters;
 using BlockBase.Utils;
 using System.Reflection;
+using BlockBase.Domain.Eos;
 
 namespace BlockBase.Node.Controllers
 {
@@ -262,6 +263,9 @@ namespace BlockBase.Node.Controllers
                 if (chainContract == null) return NotFound(new OperationResponse<string>(false, $"Sidechain {chainName} not found"));
                 if (!chainContract.CandidatureTime) return BadRequest(new OperationResponse<string>(false, $"Sidechain not in candidature time"));
 
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
+
                 var clientInfo = await _mainchainService.RetrieveClientTable(chainName);
                 if (clientInfo == null) return NotFound(new OperationResponse<string>(false, $"Sidechain {chainName} client info not found"));
 
@@ -293,12 +297,13 @@ namespace BlockBase.Node.Controllers
                     }
                 }
 
-                if((contractInfo.NumberOfFullProducersRequired == 0 && providerType == 3) || (contractInfo.NumberOfHistoryProducersRequired == 0 && providerType == 2) || (contractInfo.NumberOfValidatorProducersRequired == 0 && providerType == 1)) {
+                if((contractInfo.NumberOfFullProducersRequired == 0 && providerType == 3) || (contractInfo.NumberOfHistoryProducersRequired == 0 && providerType == 2) || (contractInfo.NumberOfValidatorProducersRequired == 0 && providerType == 1))
                     return BadRequest(new OperationResponse<string>($"Producer type inserted is not needed in the given sidechain configuration"));
-                }
+                if (contractInfo.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
+                    return BadRequest(new OperationResponse<string>($"Sidechain has block time lower than 60 seconds running on mainnet and can not be joined"));
 
-                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
                 var candidates = await _mainchainService.RetrieveCandidates(chainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
                 
                 var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == NodeConfigurations.ActivePublicKey) || candidates.Any(c => c.PublicKey == NodeConfigurations.ActivePublicKey);
                 if (isPublicKeyAlreadyUsed) return BadRequest(new OperationResponse<string>(false, $"Key {NodeConfigurations.ActivePublicKey} is already being used by another producer or candidate"));

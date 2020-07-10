@@ -30,6 +30,7 @@ using BlockBase.Utils.Crypto;
 using System.Reflection;
 using BlockBase.Utils;
 using BlockBase.Domain.Eos;
+using BlockBase.Domain.Blockchain;
 
 namespace BlockBase.Node.Controllers
 {
@@ -299,9 +300,17 @@ namespace BlockBase.Node.Controllers
                 _connector.Setup().Wait();
 
                 var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
                 if (contractSt != null) return BadRequest(new OperationResponse<string>(false, $"Sidechain {NodeConfigurations.AccountName} already exists"));
 
-
+                //Check configurations
+                if (RequesterConfigurations.MaxBlockSizeInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
+                    return BadRequest(new OperationResponse<string>(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
+                if (RequesterConfigurations.ValidatorNodes.RequiredNumber + RequesterConfigurations.HistoryNodes.RequiredNumber + RequesterConfigurations.FullNodes.RequiredNumber == 0)
+                    return BadRequest(new OperationResponse<string>(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
+                if (RequesterConfigurations.BlockTimeInSeconds < 60 && networkName == EosNetworkNames.MAINNET)
+                    return BadRequest(new OperationResponse<string>(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
 
                 if (stake > 0)
                 {
@@ -310,6 +319,9 @@ namespace BlockBase.Node.Controllers
                     _logger.LogInformation("Stake sent to contract. Tx = " + stakeTransaction);
                     _logger.LogInformation("Stake inserted = " + stakeToInsert);
                 }
+
+                if (!await HasEnoughStakeUntilNextSettlement())
+                    return BadRequest(new OperationResponse<string>(false, $"Account does not have enough stake to pay for first settlement of configured sidechain"));
 
                 //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
@@ -828,6 +840,23 @@ namespace BlockBase.Node.Controllers
             public bool Encrypted { get; set; }
             public string DatabaseName { get; set; }
             public string TableName { get; set; }
+        }
+
+        private async Task<bool> HasEnoughStakeUntilNextSettlement()
+        {
+            decimal requesterStake = 0;
+            var accountStake = await _mainchainService.GetAccountStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
+            if (accountStake == null) return false;
+
+            var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            decimal.TryParse(stakeString, out requesterStake);
+
+            var maxPaymentPerBlock = new[] { RequesterConfigurations.ValidatorNodes.MaxPaymentPerBlock, RequesterConfigurations.HistoryNodes.MaxPaymentPerBlock, RequesterConfigurations.FullNodes.MaxPaymentPerBlock }.Max();
+            var numberOfProducers = RequesterConfigurations.FullNodes.RequiredNumber + RequesterConfigurations.HistoryNodes.RequiredNumber + RequesterConfigurations.ValidatorNodes.RequiredNumber;
+            var neededBBT = (numberOfProducers * 5) * maxPaymentPerBlock;
+            var neededBBTDecimal = Math.Round((decimal)neededBBT / 10000, 4);
+
+            return (requesterStake >= neededBBTDecimal);
         }
     }
 }
