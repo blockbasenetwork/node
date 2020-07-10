@@ -248,6 +248,36 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
+        /// Returns the current staked balance in the sidechain
+        /// </summary>
+        /// <returns>Stake balance</returns>
+        /// <response code="200">Stake retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving staket</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Retrieves the current staked balance in the sidechain",
+            Description = "Used to get the current staked balance in the sidechain",
+            OperationId = "CheckCurrentStakeInSidechain()"
+        )]
+        public async Task<ObjectResult> CheckCurrentStakeInSidechain()
+        {
+            try
+            {
+                var sidechainName = NodeConfigurations.AccountName;
+                var stakeLedger = await _mainchainService.RetrieveAccountStakedSidechains(sidechainName);
+                var stakeRecord = stakeLedger.Where(o => o.Sidechain == sidechainName).FirstOrDefault();
+                var stakeToReturn = stakeRecord != null ? stakeRecord.Stake : "0.0000 BBT";
+                
+                return Ok(new OperationResponse<string>(stakeToReturn, "Stake retrieved with success"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
         /// Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration
         /// </summary>
         /// <param name="stake">The amount of BBT the requester wants to stake in this sidechain for payment to service providers</param>
