@@ -290,6 +290,9 @@ namespace BlockBase.Node.Controllers
                     _logger.LogInformation("Stake inserted = " + stakeToInsert);
                 }
 
+                if (!await HasEnoughStakeUntilNextSettlement())
+                    return BadRequest(new OperationResponse<string>(false, $"Account does not have enough stake to pay for first settlement of configured sidechain"));
+
                 //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
                 var i = 0;
@@ -807,6 +810,23 @@ namespace BlockBase.Node.Controllers
             public bool Encrypted { get; set; }
             public string DatabaseName { get; set; }
             public string TableName { get; set; }
+        }
+
+        private async Task<bool> HasEnoughStakeUntilNextSettlement()
+        {
+            decimal requesterStake = 0;
+            var accountStake = await _mainchainService.GetAccountStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
+            if (accountStake == null) return false;
+
+            var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            decimal.TryParse(stakeString, out requesterStake);
+
+            var maxPaymentPerBlock = new[] { RequesterConfigurations.ValidatorNodes.MaxPaymentPerBlock, RequesterConfigurations.HistoryNodes.MaxPaymentPerBlock, RequesterConfigurations.FullNodes.MaxPaymentPerBlock }.Max();
+            var numberOfProducers = RequesterConfigurations.FullNodes.RequiredNumber + RequesterConfigurations.HistoryNodes.RequiredNumber + RequesterConfigurations.ValidatorNodes.RequiredNumber;
+            var neededBBT = (numberOfProducers * 5) * maxPaymentPerBlock;
+            var neededBBTDecimal = Math.Round((decimal)neededBBT / 10000, 4);
+
+            return (requesterStake >= neededBBTDecimal);
         }
     }
 }
