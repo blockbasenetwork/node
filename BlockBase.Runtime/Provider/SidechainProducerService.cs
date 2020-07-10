@@ -155,8 +155,8 @@ namespace BlockBase.Runtime.Provider
             sidechainPool.SidechainCreationTimestamp = clientTable.SidechainCreationTimestamp;
 
             var contractInformation = await _mainchainService.RetrieveContractInformation(sidechainName);
-            var producersInTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
             var candidatesInTable = await _mainchainService.RetrieveCandidates(sidechainName);
+            var producersInTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
             
             if(contractInformation == null || producersInTable == null || candidatesInTable == null) return null;
 

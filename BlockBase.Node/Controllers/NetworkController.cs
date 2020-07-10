@@ -58,10 +58,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse<string>(false, "Please provide a sidechain name."));
+                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a sidechain name."));
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
 
-                if (contractInfo == null) return NotFound(new OperationResponse<string>(false, $"Sidechain {sidechainName} configuration not found"));
+                if (contractInfo == null) return NotFound(new OperationResponse(false, $"Sidechain {sidechainName} configuration not found"));
 
                 var result = new GetSidechainConfigurationModel
                 {
@@ -93,7 +93,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<ContractInformationTable>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -131,16 +131,16 @@ namespace BlockBase.Node.Controllers
                 if (candidatureTable == null && producerTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature and production table");
 
                 if (candidatureTable != null && candidatureTable.Where(m => m.Key == accountName).Any())
-                    return Ok(new OperationResponse<bool>(false, $"Account {accountName} has applied for {sidechainName}"));
+                    return Ok(new OperationResponse(false, $"Account {accountName} has applied for {sidechainName}"));
 
                 if (producerTable != null && producerTable.Where(m => m.Key == accountName).Any())
-                    return Ok(new OperationResponse<bool>(false, $"Account {accountName} is producing for {sidechainName}"));
+                    return Ok(new OperationResponse(false, $"Account {accountName} is producing for {sidechainName}"));
 
-                return Ok(new OperationResponse<bool>(false, $"Producer {accountName} not found"));
+                return Ok(new OperationResponse(false, $"Producer {accountName} not found"));
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -236,7 +236,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<ContractStateTable>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -257,7 +257,7 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>(false, "Please provide a valid account name"));
+                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
 
                 var stakeTable = await _mainchainService.RetrieveAccountStakedSidechains(accountName);
 
@@ -265,7 +265,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -297,11 +297,11 @@ namespace BlockBase.Node.Controllers
             }
             catch (Newtonsoft.Json.JsonReaderException)
             {
-                return NotFound(new OperationResponse<string>(false, "Unable to retrieve the list of producers"));
+                return NotFound(new OperationResponse(false, "Unable to retrieve the list of producers"));
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -331,11 +331,11 @@ namespace BlockBase.Node.Controllers
             }
             catch (Newtonsoft.Json.JsonReaderException)
             {
-                return NotFound(new OperationResponse<string>(false, "Unable to retrieve the list of sidechains"));
+                return NotFound(new OperationResponse(false, "Unable to retrieve the list of sidechains"));
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -358,10 +358,10 @@ namespace BlockBase.Node.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse<string>(false, "Please provide a valid account name"));
+                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
 
                 var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
-                if (rewardTable == null) return NotFound(new OperationResponse<string>(false, $"The reward table for {accountName} was not found"));
+                if (rewardTable == null) return NotFound(new OperationResponse(false, $"The reward table for {accountName} was not found"));
 
 
 
@@ -369,7 +369,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -405,7 +405,7 @@ namespace BlockBase.Node.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 

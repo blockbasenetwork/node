@@ -27,6 +27,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
         private ISidechainProducerService _sidechainProducerService;
         private IMongoDbProducerService _mongoDbProducerService;
         private IMainchainService _mainchainService;
+        private string _networkName;
 
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
@@ -67,9 +68,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             _logger.LogInformation("Automatic Production running. Node will automatically send candidatures to sidechains that meet the required conditions");
 
             var networkInfo = await _mainchainService.GetInfo();
-            var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
+            _networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
 
-            _logger.LogInformation($"Looking for sidechains in network: {networkName}");
+            _logger.LogInformation($"Looking for sidechains in network: {_networkName}");
 
             while (true)
             {
@@ -80,7 +81,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         await Task.Delay(1000);
                         continue;
                     }
-                    var activeSidechains = await GetSidechains(networkName);
+                    var activeSidechains = await GetSidechains(_networkName);
                     var chainsInCandidature = activeSidechains.Where(s => s.State == "Candidature").ToList();
 
                     if (chainsInCandidature.Any())
@@ -167,6 +168,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             //verify if had access to chain information
             if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) return defaultReturnValue;
+
+            if (contractInfo.BlockTimeDuration < 60 && _networkName == EosNetworkNames.MAINNET) return defaultReturnValue;
 
             //verify if node isn't in the candidates list nor the producers list
             if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return defaultReturnValue;

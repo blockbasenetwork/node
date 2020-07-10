@@ -217,14 +217,16 @@ namespace BlockBase.Domain.Eos
 
     public class EosNetworkNames
     {
+        public const string MAINNET = "Mainnet";
+        public const string JUNGLE = "Jungle";
         public static string GetNetworkName(string networkId)
         {
             switch(networkId)
             {
                 case EosNetworkIds.JUNGLE_ID:
-                    return "Jungle";
+                    return JUNGLE;
                 case EosNetworkIds.MAINNET_ID:
-                    return "Mainnet";
+                    return MAINNET;
                 default:
                     return "All";
             }
