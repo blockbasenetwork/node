@@ -248,6 +248,36 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
+        /// Returns the current staked balance in the sidechain
+        /// </summary>
+        /// <returns>Stake balance</returns>
+        /// <response code="200">Stake retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving staket</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Retrieves the current staked balance in the sidechain",
+            Description = "Used to get the current staked balance in the sidechain",
+            OperationId = "CheckCurrentStakeInSidechain()"
+        )]
+        public async Task<ObjectResult> CheckCurrentStakeInSidechain()
+        {
+            try
+            {
+                var sidechainName = NodeConfigurations.AccountName;
+                var stakeLedger = await _mainchainService.RetrieveAccountStakedSidechains(sidechainName);
+                var stakeRecord = stakeLedger.Where(o => o.Sidechain == sidechainName).FirstOrDefault();
+                var stakeToReturn = stakeRecord != null ? stakeRecord.Stake : "0.0000 BBT";
+                
+                return Ok(new OperationResponse<string>(stakeToReturn, "Stake retrieved with success"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+            }
+        }
+
+        /// <summary>
         /// Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration
         /// </summary>
         /// <param name="stake">The amount of BBT the requester wants to stake in this sidechain for payment to service providers</param>
@@ -290,12 +320,16 @@ namespace BlockBase.Node.Controllers
                     _logger.LogInformation("Stake inserted = " + stakeToInsert);
                 }
 
+                if (!await HasEnoughStakeUntilNextSettlement())
+                    return BadRequest(new OperationResponse<string>(false, $"Account does not have enough stake to pay for first settlement of configured sidechain"));
+
                 //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
                 var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
                 var i = 0;
 
 
                 var configuration = GetSidechainConfigurations();
+                var apiError = new ApiErrorException();
                 //TODO rpinto - review this while loop
                 while (i < 3)
                 {
@@ -313,10 +347,11 @@ namespace BlockBase.Node.Controllers
                     {
                         _logger.LogInformation($"Failed {i + 1} times. Error: {ex.Message}");
                         i++;
+                        apiError = ex;
                     }
                 }
 
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationCanceledException());
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(false, $"Error configuring chain: {apiError.error?.name} Details: {apiError.error?.details?.FirstOrDefault()?.message}"));
             }
             catch (Exception e)
             {
@@ -807,6 +842,23 @@ namespace BlockBase.Node.Controllers
             public bool Encrypted { get; set; }
             public string DatabaseName { get; set; }
             public string TableName { get; set; }
+        }
+
+        private async Task<bool> HasEnoughStakeUntilNextSettlement()
+        {
+            decimal requesterStake = 0;
+            var accountStake = await _mainchainService.GetAccountStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
+            if (accountStake == null) return false;
+
+            var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            decimal.TryParse(stakeString, out requesterStake);
+
+            var maxPaymentPerBlock = new[] { RequesterConfigurations.ValidatorNodes.MaxPaymentPerBlock, RequesterConfigurations.HistoryNodes.MaxPaymentPerBlock, RequesterConfigurations.FullNodes.MaxPaymentPerBlock }.Max();
+            var numberOfProducers = RequesterConfigurations.FullNodes.RequiredNumber + RequesterConfigurations.HistoryNodes.RequiredNumber + RequesterConfigurations.ValidatorNodes.RequiredNumber;
+            var neededBBT = (numberOfProducers * 5) * maxPaymentPerBlock;
+            var neededBBTDecimal = Math.Round((decimal)neededBBT / 10000, 4);
+
+            return (requesterStake >= neededBBTDecimal);
         }
     }
 }

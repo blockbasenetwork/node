@@ -416,7 +416,7 @@ namespace BlockBase.Node.Controllers
         [HttpPost]
         [SwaggerOperation(
             Summary = "Sends a transaction to BlockBase Operations Contract stating that the provider wants to leave this sidechain",
-            Description = "The provider uses this service to state that he wants to stop producing for this sidechain",
+            Description = "The provider uses this service to state that he wants to stop producing for this sidechain, please note that leaving a sidechain will take a full day to take effect",
             OperationId = "RequestToLeaveSidechainProduction"
         )]
         public async Task<ObjectResult> RequestToLeaveSidechainProduction(string sidechainName, bool cleanLocalSidechainData = false)
@@ -448,7 +448,7 @@ namespace BlockBase.Node.Controllers
 
 
 
-                return Ok(new OperationResponse(true, $"Exit successfully requested for {sidechainName}"));
+                return Ok(new OperationResponse(true, $"Exit successfully requested for {sidechainName}. This node will automatically leave the sidehain after a full day has passed."));
 
             }
             catch (Exception e)
