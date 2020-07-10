@@ -165,9 +165,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                 await ExecuteTransaction(transaction);
                 currentSequenceNumber++;
             }
-
             return;
-
         }
 
        

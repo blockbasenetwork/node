@@ -64,6 +64,7 @@ namespace BlockBase.DataPersistence.Data
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
+                session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + sidechain);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
@@ -72,6 +73,7 @@ namespace BlockBase.DataPersistence.Data
                 {
                     await MongoClient.DropDatabaseAsync(_dbPrefix + sidechain);
                 }
+                await session.CommitTransactionAsync();
             }
         }
 

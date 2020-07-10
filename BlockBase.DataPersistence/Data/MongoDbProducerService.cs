@@ -22,54 +22,6 @@ namespace BlockBase.DataPersistence.Data
         {
         }
 
-        public async Task CreateDatabasesAndIndexes(string databaseName)
-        {
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                var blockheaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
-
-                var indexOptions = new CreateIndexOptions { Unique = true };
-
-                var blockHeaderKeys = Builders<BlockheaderDB>.IndexKeys.Ascending(a => a.SequenceNumber);
-                var blockHeadersModel = new CreateIndexModel<BlockheaderDB>(blockHeaderKeys, indexOptions);
-
-                var transactionsKeys = Builders<TransactionDB>.IndexKeys.Ascending(a => a.SequenceNumber);
-                var transactionsModel = new CreateIndexModel<TransactionDB>(transactionsKeys, indexOptions);
-
-                await blockheaderCollection.Indexes.CreateOneAsync(blockHeadersModel);
-                await transactionCollection.Indexes.CreateOneAsync(transactionsModel);
-            }
-        }
-
-        public async Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence)
-        {
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-
-                session.StartTransaction();
-                var blocks = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME).AsQueryable();
-                var query = from b in blocks
-                            where b.SequenceNumber == blockSequence
-                            select b.BlockHash;
-
-                var blockhash = query.SingleOrDefault();
-
-                if (blockhash == null) return new List<TransactionDB>();
-
-                var transactions = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME).AsQueryable();
-                var getTransactions = from t in transactions
-                                      where t.BlockHash == blockhash
-                                      select t;
-                var result = getTransactions.ToList();
-
-                await session.CommitTransactionAsync();
-
-                return result;
-            }
-        }
 
         public async Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName)
         {
@@ -158,28 +110,13 @@ namespace BlockBase.DataPersistence.Data
             return blockheader != null;
         }
 
-        public async Task<Block> GetLastValidSidechainBlockAsync(string databaseName)
-        {
-            using (IClientSession session = await MongoClient.StartSessionAsync())
-            {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
-                var blockHeader = (await (await blockHeaderCollection.FindAsync(b => b.Confirmed == true)).ToListAsync()).LastOrDefault();
-                if (blockHeader != null) return new Block(blockHeader.BlockHeaderFromBlockHeaderDB(), await GetBlockTransactionsAsync(databaseName, blockHeader.BlockHash));
-                return null;
-            }
-        }
-
         public async Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
-                session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var blockHeaders = await (await blockHeaderCollection.FindAsync(b => b.SequenceNumber >= beginSequenceNumber && b.SequenceNumber <= endSequenceNumber)).ToListAsync();
-                await session.CommitTransactionAsync();
                 var orderedBlockHeaders = blockHeaders.OrderByDescending(b => b.SequenceNumber);
                 var blockList = new List<Block>();
                 foreach (var blockHeader in orderedBlockHeaders)
@@ -197,7 +134,6 @@ namespace BlockBase.DataPersistence.Data
             {
                 ulong lowerEndToGet = 1;
                 ulong upperEndToGet;
-                session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var missingSequenceNumbers = new List<ulong>();
@@ -230,7 +166,6 @@ namespace BlockBase.DataPersistence.Data
         //If the smart contract validates the last transaction sequence number this problem may be prevented
         //The provider would just produce a wrong block, but even so he would have to recover the missing transactions,
         //or reassociate them. I don't think this method is doing that
-        //TODO rpinto - all this should be done inside a transaction
         public async Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime, ProducerTypeEnum producerType)
         {
 
@@ -240,12 +175,12 @@ namespace BlockBase.DataPersistence.Data
             {
                 using (IClientSession session = await MongoClient.StartSessionAsync())
                 {
+                    session.StartTransaction();
+
                     var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
 
                     var blockHeaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                     var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
-
-
 
                     //marciak - this is checking if there's unconfirmed blocks
                     var blockHeaderQuery = from b in blockHeaderCollection.AsQueryable()
@@ -255,7 +190,6 @@ namespace BlockBase.DataPersistence.Data
                                            //and unconfirmed
                                            && b.Confirmed == false
                                            select b;
-
 
                     //marciak - this is disassociating the transactions from the unconfirmed blocks, so that they can be associated to new blocks
                     foreach (var blockHeaderDBToRemove in blockHeaderQuery.AsEnumerable())
@@ -267,6 +201,8 @@ namespace BlockBase.DataPersistence.Data
                     await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Confirmed == false);
 
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
+
+                    await session.CommitTransactionAsync();
 
                     //TODO rpinto changed it to be bigger or equal to the number of blocks
                     //old version - if (Convert.ToInt64(blockheaderDB.SequenceNumber) == numberOfBlocks)
@@ -452,11 +388,9 @@ namespace BlockBase.DataPersistence.Data
 
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
-                session.StartTransaction();
                 var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
                 var sidechainCollection = recoverDatabase.GetCollection<SidechainDB>(MongoDbConstants.PRODUCING_SIDECHAINS_COLLECTION_NAME);
                 await sidechainCollection.InsertOneAsync(sidechainDb);
-                await session.CommitTransactionAsync();
             }
         }
 
