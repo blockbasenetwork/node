@@ -497,7 +497,7 @@ namespace BlockBase.Network.Mainchain
                    EosMethodNames.ADD_HIST_SIG,
                    NetworkConfigurations.BlockBaseOperationsContract,
                    accountName,
-                   CreateDataForSignHistoryValidation(owner, accountName, producerToValidade, byteInHexadecimal, signedTransaction.Signatures.SingleOrDefault()),
+                   CreateDataForSignHistoryValidation(owner, accountName, producerToValidade, byteInHexadecimal, signedTransaction.Signatures.SingleOrDefault(), signedTransaction.PackedTransaction),
                    permission),
                    NetworkConfigurations.MaxNumberOfConnectionRetries
            );
@@ -1186,14 +1186,15 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForSignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, string signature)
+        private Dictionary<string, object> CreateDataForSignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, string signature, byte[] packedTransaction)
         {
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.PRODUCER, accountName },
                 { EosParameterNames.PRODUCER_TO_VALIDATE, producerToValidade },
-                { EosParameterNames.VERIFY_SIGNATURE, signature}
+                { EosParameterNames.VERIFY_SIGNATURE, signature},
+                { EosParameterNames.PACKED_TRANSACTION, packedTransaction }
             };
 
         }
