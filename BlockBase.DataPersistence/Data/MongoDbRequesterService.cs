@@ -18,11 +18,13 @@ namespace BlockBase.DataPersistence.Data
         }
         public async Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName)
         {
+            ClearSpecialCharacters(databaseName);
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
         }
        
         public async Task<IList<TransactionDB>> RetrievePendingTransactions(string databaseName)
         {
+            ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -38,6 +40,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName)
         {
+            ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -62,6 +65,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task DropRequesterDatabase(string sidechain)
         {
+            ClearSpecialCharacters(sidechain);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
@@ -79,6 +83,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task MovePendingTransactionToExecutedAsync(string databaseName, TransactionDB transaction)
         {
+            ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
@@ -93,6 +98,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task AddPendingExecutionTransactionsAsync(string databaseName, IList<TransactionDB> transactions)
         {
+            ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
@@ -105,6 +111,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, ulong lastIncludedTransactionSequenceNumber)
         {
+            ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -115,6 +122,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task RemovePendingExecutionTransactionAsync(string databaseName, TransactionDB transaction)
         {
+            ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);

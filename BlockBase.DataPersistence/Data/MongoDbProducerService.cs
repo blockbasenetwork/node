@@ -25,6 +25,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
@@ -62,7 +63,7 @@ namespace BlockBase.DataPersistence.Data
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var blockheaderCollection = sidechainDatabase.GetCollection<BlockheaderDB>(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
-                
+
                 var update = Builders<TransactionDB>.Update.Set<string>("BlockHash", "");
                 await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockHash, update);
 
@@ -72,6 +73,8 @@ namespace BlockBase.DataPersistence.Data
         }
         public async Task RemoveUnconfirmedBlocks(string databaseName)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
+
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
@@ -95,6 +98,8 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<Block> GetSidechainBlockAsync(string databaseName, string blockhash)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
+
             var blockheader = await GetBlockHeaderByBlockHashAsync(databaseName, blockhash);
 
             if (blockheader == null) return null;
@@ -106,12 +111,14 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<bool> IsBlockInDatabase(string databaseName, string blockhash)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             var blockheader = await GetBlockHeaderByBlockHashAsync(databaseName, blockhash);
             return blockheader != null;
         }
 
         public async Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -130,6 +137,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 ulong lowerEndToGet = 1;
@@ -168,7 +176,7 @@ namespace BlockBase.DataPersistence.Data
         //or reassociate them. I don't think this method is doing that
         public async Task<bool> TrySynchronizeDatabaseWithSmartContract(string databaseName, string lastConfirmedSmartContractBlockHash, long lastProductionStartTime, ProducerTypeEnum producerType)
         {
-
+            databaseName = ClearSpecialCharacters(databaseName);
             //gets the latest confirmed block
             var blockheaderDB = await GetBlockHeaderByBlockHashAsync(databaseName, lastConfirmedSmartContractBlockHash);
             if (blockheaderDB != null)
@@ -218,11 +226,13 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<bool> IsBlockConfirmed(string databaseName, string blockHash)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             var blockHeader = await GetBlockHeaderByBlockHashAsync(databaseName, blockHash);
             return blockHeader != null ? blockHeader.Confirmed : false;
         }
         public async Task ConfirmBlock(string databaseName, string blockHash)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             var blockHeader = await GetBlockHeaderByBlockHashAsync(databaseName, blockHash);
             if (blockHeader == null) return;
 
@@ -238,6 +248,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task ClearValidatorNode(string databaseName, string blockHash, uint transactionCount)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             var blockHeader = await GetBlockHeaderByBlockHashAsync(databaseName, blockHash);
             if (blockHeader == null) return;
 
@@ -256,6 +267,7 @@ namespace BlockBase.DataPersistence.Data
 
         private async Task<BlockheaderDB> GetBlockHeaderByBlockHashAsync(string databaseName, string blockHash)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -271,6 +283,7 @@ namespace BlockBase.DataPersistence.Data
         }
         public async Task<IList<Transaction>> GetBlockTransactionsAsync(string databaseName, string blockhash)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -288,6 +301,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<Transaction> GetTransactionBySequenceNumber(string databaseName, ulong transactionNumber)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -304,6 +318,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<IList<Transaction>> GetTransactionsSinceSequenceNumber(string databaseName, ulong transactionNumber)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -320,7 +335,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<TransactionDB> GetTransactionDBAsync(string databaseName, string transactionHash)
         {
-
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -341,6 +356,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<bool> IsTransactionInDB(string databaseName, Transaction transaction)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -358,6 +374,7 @@ namespace BlockBase.DataPersistence.Data
         }
         public async Task SaveTransaction(string databaseName, Transaction transaction)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
@@ -372,13 +389,15 @@ namespace BlockBase.DataPersistence.Data
         }
         public async Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
         }
-       
+
         #region Recover DB
 
         public async Task AddProducingSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool isAutomatic)
         {
+            sidechain = ClearSpecialCharacters(sidechain);
             var sidechainDb = new SidechainDB()
             {
                 Id = sidechain,
@@ -396,6 +415,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task RemoveProducingSidechainFromDatabaseAsync(string databaseName)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
@@ -416,6 +436,7 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<bool> CheckIfProducingSidechainAlreadyExists(string databaseName)
         {
+            databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
@@ -447,7 +468,8 @@ namespace BlockBase.DataPersistence.Data
 
         public async Task<TransactionDB> GetTransactionToExecute(string sidechain)
         {
-           using (IClientSession session = await MongoClient.StartSessionAsync())
+            sidechain = ClearSpecialCharacters(sidechain);
+            using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var database = MongoClient.GetDatabase(_dbPrefix + sidechain);
 
@@ -456,21 +478,22 @@ namespace BlockBase.DataPersistence.Data
                             select t;
 
                 return await query.SingleOrDefaultAsync();
-                
+
             }
         }
 
         public async Task UpdateTransactionToExecute(string sidechain, TransactionDB transaction)
         {
-             using (IClientSession session = await MongoClient.StartSessionAsync())
+            sidechain = ClearSpecialCharacters(sidechain);
+            using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 session.StartTransaction();
                 var database = MongoClient.GetDatabase(_dbPrefix + sidechain);
 
                 var transactionCol = database.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME);
-                
+
                 await transactionCol.DeleteManyAsync(t => true);
-                
+
                 await transactionCol.InsertOneAsync(transaction);
 
                 await session.CommitTransactionAsync();
