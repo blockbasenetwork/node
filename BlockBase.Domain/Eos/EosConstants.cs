@@ -80,6 +80,8 @@ namespace BlockBase.Domain.Eos
         public const string DELETE_AUTH = "deleteauth";
         public const string REMOVE_CANDIDATE = "rcandidate";
         public const string REMOVE_BLACKLISTED = "removeblisted";
+        public const string ADD_RESERVED_SEATS = "addreseats";
+        public const string REMOVE_RESERVED_SEATS = "rreservseats";
     }
 
     public class EosParameterNames
@@ -90,11 +92,12 @@ namespace BlockBase.Domain.Eos
         public const string NAME = "name";
         public const string CONFIG_INFO_JSON = "infoJson";
         public const string RESERVED_SEATS = "reservedSeats";
+        public const string SEATS_TO_ADD = "seatsToAdd";
+        public const string SEATS_TO_REMOVE = "seatsToRemove";
         public const string PUBLIC_KEY = "publicKey";
         public const string SECRET_HASH = "secretHash";
         public const string PRODUCER_TYPE = "producerType";
         public const string PRODUCER_TO_VALIDATE = "producerToValidade";
-
         public const string SECRET = "secret";
         public const string WORK_TIME_IN_SECONDS = "workDurationInSeconds";
         public const string BLOCK = "block";

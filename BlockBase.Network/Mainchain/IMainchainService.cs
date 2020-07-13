@@ -19,6 +19,8 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
         Task<string> AddEncryptedIps(string chain, string accountName, List<string> encryptedIps);
+        Task<string> AddReservedSeats(string chain, List<string> seatsToAdd);
+        Task<string> RemoveReservedSeats(string chain, List<string> reservedSeatsToRemove);
         Task<string> NotifyReady(string chain, string accountName);
         Task<string> ProposeBlockVerification(string chain, string accountName, List<string> requestedApprovals, string blockHash);
         Task<string> ApproveTransaction(string proposerName, string proposedTransactionName, string accountName, string proposalHash, string permission = "active");

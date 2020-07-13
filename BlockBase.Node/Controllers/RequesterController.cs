@@ -802,16 +802,16 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Removes the given accoutn from the sidechain blacklist
+        /// Removes the given account from the sidechain blacklist
         /// </summary>
         /// <returns>Operation success</returns>
         /// <param name="account">Account name to remove from blacklist</param>
-        /// <response code="200">Accoutn removed from blacklist with success</response>
+        /// <response code="200">Account removed from blacklist with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error removing accoutn from blacklist</response>
-        [HttpGet]
+        /// <response code="500">Error removing account from blacklist</response>
+        [HttpPost]
         [SwaggerOperation(
-            Summary = "Removes the given accoutn from the sidechain blacklist",
+            Summary = "Removes the given account from the sidechain blacklist",
             Description = "Used to remove from the sidechain blacklist an account that has been previously banned",
             OperationId = "RemoveAccountFromBlacklist"
         )]
@@ -830,6 +830,131 @@ namespace BlockBase.Node.Controllers
                 var trx = await _mainchainService.RemoveBlacklistedProducer(sidechainName, account);
 
                 return Ok(new OperationResponse(true, $"Account {account} successfully removed from blacklist"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+        /// <summary>
+        /// Gets all the current reserved seats in the sidechain
+        /// </summary>
+        /// <returns> List of reserved seats </returns>
+        /// <response code="200">Reserved seats retrieved with success</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="500">Error getting reserved seats information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets all the current reserved seats in the sidechain",
+            Description = "Its used to get all the current account names in the reserved seats of the sidechain.",
+            OperationId = "CheckSidechainReservedSeats"
+        )]
+        public async Task<ObjectResult> CheckSidechainReservedSeats()
+        {
+            try
+            {
+                var sidechainName = NodeConfigurations.AccountName;
+                var reservedSeatsTable = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
+                var sidechainStates = await _mainchainService.RetrieveContractState(sidechainName);
+
+                if(sidechainStates == null)
+                    return BadRequest(new OperationResponse(false, $"The {sidechainName} sidechain is not created."));
+                
+
+                return Ok(new OperationResponse<List<ReservedSeatsTable>>(reservedSeatsTable));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+        /// <summary>
+        /// Adds a list of account names to the sidechain reserved seats
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="reservedSeatsToAdd">Accounts names to add to the reserved seats of the sidechain</param>
+        /// <response code="200">Accounts added to the sidechain reserved seats with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error adding accounts to the sidechain reserved seats</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Adds a list of account names to the sidechain reserved seats",
+            Description = "Used to add accounts to the reserved seat in the sidechain. This way, the inserted accounts are selected first to produce in the sidechain",
+            OperationId = "AddReservedSeat"
+        )]
+        public async Task<ObjectResult> AddReservedSeat(List<string> reservedSeatsToAdd)
+        {
+            if (reservedSeatsToAdd == null || reservedSeatsToAdd.Count() == 0) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+            try
+            {
+                var sidechainName = NodeConfigurations.AccountName;
+
+                var reservedSeatsTable = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
+                var sidechainStates = await _mainchainService.RetrieveContractState(sidechainName);
+                var responseString = "";
+                var listToAdd = new List<string>();
+
+                if(sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
+                    return BadRequest(new OperationResponse(false, $"The {sidechainName} sidechain is not in the correct state or is not created."));
+                
+                foreach(var accountToAdd in reservedSeatsToAdd) {
+                    if (!reservedSeatsTable.Any(p => p.Key == accountToAdd) && accountToAdd != null && accountToAdd.Length > 0) {
+                        responseString +=" ["+accountToAdd+"] ";
+                        listToAdd.Add(accountToAdd);
+                    }
+                }
+
+                if(listToAdd.Count() == 0) return BadRequest(new OperationResponse(false, $"None of the accounts inserted are eligible to get added to the sidechain reserved seats."));
+                var addReserverSeatTx = await _mainchainService.AddReservedSeats(sidechainName, listToAdd);
+                
+                return Ok(new OperationResponse(true, $"Reserved seats successfully added for the accounts{responseString} if they exist in EOSIO network. AddReservedSeats tx: {addReserverSeatTx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+        /// <summary>
+        /// Removes the given account from the sidechain reserved seats
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="reservedSeatsToRemove">Account names to remove from the sidechain reserved seats</param>
+        /// <response code="200">Accounts removed from sidechain reserved seats with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error removing accounts from reserved seats</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Removes the given accoutn from the sidechain reserved seats",
+            Description = "Used to remove accounts from the sidechain reserved seats.",
+            OperationId = "RemoveReservedSeats"
+        )]
+        public async Task<ObjectResult> RemoveReservedSeats(List<string> reservedSeatsToRemove)
+        {
+            if (reservedSeatsToRemove == null || reservedSeatsToRemove.Count() == 0 ) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+            try
+            {
+                var sidechainName = NodeConfigurations.AccountName;
+                var reservedSeatsTable = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
+                var sidechainStates = await _mainchainService.RetrieveContractState(sidechainName);
+                var validAccounts = "";
+                var seatsToRemove = new List<string>();
+
+                if(sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
+                    return BadRequest(new OperationResponse(false, $"The {sidechainName} sidechain is not in the correct state or is not created."));
+                
+                foreach(var accountToRemove in reservedSeatsToRemove) {
+                    if (reservedSeatsTable.Any(p => p.Key == accountToRemove) && accountToRemove.Length >= 1) {
+                        seatsToRemove.Add(accountToRemove);
+                        validAccounts += "[" + accountToRemove + "] ";
+                    }
+                }
+                if(seatsToRemove.Count() == 0) return BadRequest(new OperationResponse(false, $"None of the accounts inserted are eligible to get removed from the sidechain reserved seats."));
+                var removeReservedSeatsTx = await _mainchainService.RemoveReservedSeats(sidechainName, seatsToRemove); 
+
+                return Ok(new OperationResponse(true, $"Accounts {validAccounts}successfully removed from the reserved seats of the sidechain. RemoveReservedSeats tx: {removeReservedSeatsTx}."));
             }
             catch (Exception e)
             {
