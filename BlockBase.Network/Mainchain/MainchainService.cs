@@ -31,7 +31,7 @@ namespace BlockBase.Network.Mainchain
             NetworkConfigurations = networkConfigurations.Value;
 
             _logger = logger;
-            EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
+            EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNetworks);
         }
 
         public async Task<GetInfoResponse> GetInfo()
@@ -1245,6 +1245,12 @@ namespace BlockBase.Network.Mainchain
                         _logger.LogDebug($"Error sending transaction: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");
                         return new OpResult<T>(exception);
                     }
+                }
+
+                //Will try to change network if the current one isn't able to respond to the requested endpoint
+                if (!(opResult.Exception is ApiErrorException))
+                {
+                    EosStub.ChangeNetwork();
                 }
 
                 await Task.Delay(delayInMilliseconds);
