@@ -255,7 +255,7 @@ namespace BlockBase.Node.Controllers
             if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
             if (providerType < 1 || providerType > 3) return BadRequest(new OperationResponse(false, "Please provide a valid provider type. (1) Validator, (2) History, (3) Full"));
             if (stake < 0) return BadRequest(new OperationResponse(false, "Please provide a non-negative stake value"));
-
+            chainName = chainName.Trim();
 
             try
             {
@@ -374,7 +374,7 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> RemoveCandidature(string sidechainName)
         {
             if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
-
+            sidechainName = sidechainName.Trim();
             try
             {
 
@@ -424,6 +424,7 @@ namespace BlockBase.Node.Controllers
             //TODO rpinto - to verify that a manual request to leave a sidechain shouldn't delete the database. That has to be done independently
 
             if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
+            sidechainName = sidechainName.Trim();
 
             try
             {
@@ -476,6 +477,7 @@ namespace BlockBase.Node.Controllers
         {
             if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, $"Please provide a valid sidechain name"));
             if (stake <= 0) return BadRequest(new OperationResponse(false, $"Please provide a positive stake value"));
+            sidechainName = sidechainName.Trim();
 
             try
             {
@@ -510,7 +512,8 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> ClaimStake(string sidechainName)
         {
             if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, $"Please provide a valid sidechain name"));
-
+            sidechainName = sidechainName.Trim();
+            
             try
             {
                 var trx = await _mainchainService.ClaimStake(sidechainName, NodeConfigurations.AccountName);
@@ -615,6 +618,8 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> DeleteSidechainFromDatabase(string sidechainName, bool force = false)
         {
             if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
+            sidechainName = sidechainName.Trim();
+
             try
             {
 
@@ -673,6 +678,8 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> GetBlock(string chainName, ulong blockNumber)
         {
             if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
+            chainName = chainName.Trim();
+
             try
             {
                 var doesSidechainExist = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
@@ -710,6 +717,8 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> GetTransaction(string chainName, ulong transactionNumber)
         {
             if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
+            chainName = chainName.Trim();
+
             try
             {
                 var doesSidechainExist = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
@@ -745,6 +754,7 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> GetTransactionsInMempool(string chainName)
         {
             if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
+            chainName = chainName.Trim();
             try
             {
                 var doesSidechainExist = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
@@ -778,6 +788,7 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> GetSidechainNodeSoftwareVersion(string chainName)
         {
             if (string.IsNullOrWhiteSpace(chainName)) return BadRequest(new OperationResponse(false, "Please provide a valid sidechain name"));
+            chainName = chainName.Trim();
             try
             {
                 var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(chainName);
@@ -810,6 +821,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+                sidechainName = sidechainName.Trim();
 
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var producers = await _mainchainService.RetrieveProducersFromTable(sidechainName);

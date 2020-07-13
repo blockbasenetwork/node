@@ -818,6 +818,7 @@ namespace BlockBase.Node.Controllers
         public async Task<ObjectResult> RemoveAccountFromBlacklist(string account)
         {
             if (string.IsNullOrWhiteSpace(account)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+            account = account.Trim();
             try
             {
                 var sidechainName = NodeConfigurations.AccountName;
