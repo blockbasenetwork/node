@@ -189,6 +189,8 @@ namespace BlockBase.Api
         {
             _webHostBuider.ConfigureServices((hostContext, services) =>
             {
+                services.AddSingleton<KeyChecker>();
+
                 services.AddSingleton<IConnector, PSqlConnector>();
                 services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockRequestsHandler>();

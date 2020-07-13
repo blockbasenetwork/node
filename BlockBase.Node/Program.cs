@@ -27,6 +27,7 @@ namespace BlockBase.Node
             var sidechainProducerService = webHost.Services.Get<ISidechainProducerService>();
             var automaticProductionManager = webHost.Services.Get<IAutomaticProductionManager>();
             var pendingTransactionRecovery = webHost.Services.Get<PendingTransactionRecovery>();
+            var keyChecker = webHost.Services.Get<KeyChecker>();
 
 
             var noRecoverCommandFound = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
@@ -45,7 +46,12 @@ namespace BlockBase.Node
 
             //force instantiation of the connection tester
             var connectionTester = webHost.Services.Get<TcpConnectionTester>();
-                
+
+
+            //check keys
+            var keyCheck = keyChecker.CheckKeys();
+            Task.WaitAll(keyCheck);
+            if (!keyCheck.Result) return;
 
             webHost.Run();
         }
