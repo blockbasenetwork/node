@@ -15,15 +15,13 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
     public class IPReceiveState : ProviderAbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private ContractInformationTable _contractInfo;
         private List<ProducerInTable> _producers;
         private List<BlockheaderTable> _blockHeaders;
 
-        private SidechainPool _sidechainPool;
-        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
+        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

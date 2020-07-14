@@ -17,7 +17,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
     public class EndState : ProviderAbstractState<StartState, EndState>
     {
-        public EndState(ILogger logger, SidechainPool sidechainPool) : base(logger, sidechainPool)
+        public EndState(ILogger logger, SidechainPool sidechainPool, IMainchainService mainchainService) : base(logger, sidechainPool, mainchainService)
         {
         }
 

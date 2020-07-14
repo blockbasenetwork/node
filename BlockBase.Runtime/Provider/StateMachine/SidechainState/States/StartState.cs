@@ -13,14 +13,12 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
     public class StartState : ProviderAbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
         private List<CandidateTable> _candidates;
 
-        private SidechainPool _sidechainPool;
-        public StartState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
+        public StartState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

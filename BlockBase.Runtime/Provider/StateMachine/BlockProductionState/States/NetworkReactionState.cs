@@ -12,15 +12,14 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
     public class NetworkReactionState : ProviderAbstractState<StartState, EndState>
     {
-        private IMainchainService _mainchainService;
         private ContractStateTable _contractStateTable;
         private NodeConfigurations _nodeConfigurations;
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
-        private SidechainPool _sidechainPool;
+
 
         //TODO rpinto - this state has to be fast in jumping to block validation to not miss the connection
-        public NetworkReactionState(ILogger logger, NodeConfigurations nodeConfigurations, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger, sidechainPool)
+        public NetworkReactionState(ILogger logger, NodeConfigurations nodeConfigurations, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger, sidechainPool, mainchainService)
         {
             _nodeConfigurations = nodeConfigurations;
             _mainchainService = mainchainService;

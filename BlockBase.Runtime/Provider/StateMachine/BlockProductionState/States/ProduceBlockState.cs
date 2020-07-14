@@ -23,7 +23,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
     public class ProduceBlockState : ProviderAbstractState<StartState, EndState>
     {
 
-        private IMainchainService _mainchainService;
         private ContractStateTable _contractState;
         private IMongoDbProducerService _mongoDbProducerService;
         private NodeConfigurations _nodeConfigurations;
@@ -31,7 +30,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         private NetworkConfigurations _networkConfigurations;
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
-        private SidechainPool _sidechainPool;
 
         private BlockRequestsHandler _blockSender;
 
@@ -54,7 +52,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
         public ProduceBlockState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, BlockRequestsHandler blockSender) : base(logger, sidechainPool)
+            NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, BlockRequestsHandler blockSender) : base(logger, sidechainPool, mainchainService)
         {
             _logger = logger;
             _mainchainService = mainchainService;
