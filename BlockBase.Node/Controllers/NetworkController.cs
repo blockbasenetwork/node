@@ -61,6 +61,8 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a sidechain name."));
+                sidechainName = sidechainName.Trim();
+
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
 
                 if (contractInfo == null) return NotFound(new OperationResponse(false, $"Sidechain {sidechainName} configuration not found"));
@@ -124,6 +126,8 @@ namespace BlockBase.Node.Controllers
                 {
                     return BadRequest($"Please provide and producer account name and a sidechain name");
                 }
+                accountName = accountName.Trim();
+                sidechainName = sidechainName.Trim();
 
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
@@ -166,6 +170,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest("Please provide a valid sidechain name");
+                sidechainName = sidechainName.Trim();
 
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
@@ -260,6 +265,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+                accountName = accountName.Trim();
 
                 var stakeTable = await _mainchainService.RetrieveAccountStakedSidechains(accountName);
 
@@ -361,6 +367,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+                accountName = accountName.Trim();
 
                 var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
                 if (rewardTable == null) return NotFound(new OperationResponse(false, $"The reward table for {accountName} was not found"));

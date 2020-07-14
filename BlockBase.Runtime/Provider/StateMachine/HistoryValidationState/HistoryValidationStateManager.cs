@@ -35,7 +35,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.HistoryValidati
         {
             if(state == typeof(StartState).Name) return new StartState(_sidechainPool, _logger, _mainchainService, _nodeConfigurations);
             if(state == typeof(ValidateHistoryState).Name) return new ValidateHistoryState(_logger, _mainchainService,_mongoDbProducerService, _sidechainPool,_nodeConfigurations);
-            if(state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool);
+            if(state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool, _mainchainService);
             throw new System.NotImplementedException();
         }
     }

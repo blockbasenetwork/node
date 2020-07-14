@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
+using BlockBase.Network.Mainchain;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
 using Microsoft.Extensions.Logging;
@@ -10,13 +11,12 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
     public class EndState : ProviderAbstractState<StartState, EndState>
     {
         private bool _chainExistsInDatabase;
-        private SidechainPool _sidechainPool;
         private IMongoDbProducerService _mongoDbProducerService;
         private ISidechainProducerService _sidechainProducerService;
 
         private bool _inAutomaticMode;
 
-        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService, ISidechainProducerService sidechainProducerService, bool inAutomaticMode) : base(logger, sidechainPool)
+        public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, bool inAutomaticMode) : base(logger, sidechainPool, mainchainService)
         {
             _chainExistsInDatabase = false;
             _sidechainPool = sidechainPool;

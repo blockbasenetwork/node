@@ -19,16 +19,14 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 {
     public class CheckConnectionState : ProviderAbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private PeerConnectionsHandler _peerConnectionsHandler;
-        private SidechainPool _sidechainPool;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
         private bool _peersConnected;
 
-        public CheckConnectionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool)
+        public CheckConnectionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _sidechainPool = sidechainPool;

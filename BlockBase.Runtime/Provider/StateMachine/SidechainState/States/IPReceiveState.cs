@@ -16,7 +16,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
     public class IPReceiveState : ProviderAbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
@@ -24,8 +23,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private List<ProducerInTable> _producers;
         private List<BlockheaderTable> _blockHeaders;
 
-        private SidechainPool _sidechainPool;
-        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool)
+        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

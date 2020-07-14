@@ -17,13 +17,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 {
     public class StartState : ProviderAbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
-        private SidechainPool _sidechainPool;
         private List<ProducerInTable> _producers;
-        public StartState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool)
+        public StartState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

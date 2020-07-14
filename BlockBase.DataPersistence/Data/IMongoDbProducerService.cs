@@ -9,10 +9,7 @@ namespace BlockBase.DataPersistence.Data
 {
     public interface IMongoDbProducerService
     {
-        Task CreateDatabasesAndIndexes(string databaseName);
-        Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence);
         Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName);
-        Task<Block> GetLastValidSidechainBlockAsync(string databaseName);
         Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
         Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber);
         Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber);
