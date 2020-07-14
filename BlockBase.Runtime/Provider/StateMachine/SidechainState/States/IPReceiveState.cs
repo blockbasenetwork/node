@@ -7,6 +7,7 @@ using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
 using BlockBase.Runtime.Common;
+using BlockBase.Runtime.Network;
 using BlockBase.Utils;
 using BlockBase.Utils.Crypto;
 using Microsoft.Extensions.Logging;
@@ -15,17 +16,19 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
     public class IPReceiveState : ProviderAbstractState<StartState, EndState>
     {
+        private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private ContractInformationTable _contractInfo;
         private List<ProducerInTable> _producers;
         private List<BlockheaderTable> _blockHeaders;
 
-        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool, mainchainService)
+        public IPReceiveState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
             _sidechainPool = sidechainPool;
+            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         protected override Task<bool> IsWorkDone()
@@ -37,6 +40,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         protected override async Task DoWork()
         {
+            _peerConnectionsHandler.AddKnownSidechain(_sidechainPool);
             var isReadyToProduceTransaction = await _mainchainService.NotifyReady(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
             
             _logger.LogInformation($"Sent ready to produce transaction. Tx: {isReadyToProduceTransaction}");

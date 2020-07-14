@@ -65,7 +65,7 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result.Where(b => b.Owner == accountName).ToList();
         }
 
-        public async Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName)
+        public async Task<AccountStake> GetAccountStake(string sidechain, string accountName)
         {
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(
                 NetworkConfigurations.BlockBaseTokenContract,
@@ -74,7 +74,20 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
-            return opResult.Result.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
+            var stakeInTable = opResult.Result.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
+            if (stakeInTable == null) return null;
+
+            decimal stake = 0;
+
+            var stakeString = stakeInTable.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            decimal.TryParse(stakeString, out stake);
+
+            return new AccountStake(){
+                Sidechain = stakeInTable.Sidechain,
+                Owner = stakeInTable.Owner,
+                StakeString = stakeInTable.Stake,
+                Stake = stake
+            };
         }
 
         #region Transactions
@@ -164,6 +177,31 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountName,
                 CreateDataForAddEncryptedIps(chain, accountName, encryptedIps)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> AddReservedSeats(string chain, List<string> seatsToAdd) {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_RESERVED_SEATS,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                chain,
+                CreateDataForAddReservedSeats(chain, seatsToAdd)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> RemoveReservedSeats(string chain, List<string> reservedSeatsToRemove)
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.REMOVE_RESERVED_SEATS,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                chain,
+                CreateDataForRemoveReservedSeats(chain, reservedSeatsToRemove)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
             if (!opResult.Succeeded) throw opResult.Exception;
@@ -960,6 +998,24 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.OWNER, chain},
                 { EosParameterNames.NAME, accountName},
                 { EosParameterNames.ENCRYPTED_IPS, encryptedIps }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForAddReservedSeats(string chain, List<string> seatsToAdd)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, chain},
+                { EosParameterNames.SEATS_TO_ADD, seatsToAdd }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForRemoveReservedSeats(string chain, List<string> reservedSeatsToRemove)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, chain},
+                { EosParameterNames.SEATS_TO_REMOVE, reservedSeatsToRemove }
             };
         }
 
