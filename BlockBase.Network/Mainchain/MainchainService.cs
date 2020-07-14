@@ -65,7 +65,7 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result.Where(b => b.Owner == accountName).ToList();
         }
 
-        public async Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName)
+        public async Task<AccountStake> GetAccountStake(string sidechain, string accountName)
         {
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(
                 NetworkConfigurations.BlockBaseTokenContract,
@@ -74,7 +74,20 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
-            return opResult.Result.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
+            var stakeInTable = opResult.Result.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
+            if (stakeInTable == null) return null;
+
+            decimal stake = 0;
+
+            var stakeString = stakeInTable.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            decimal.TryParse(stakeString, out stake);
+
+            return new AccountStake(){
+                Sidechain = stakeInTable.Sidechain,
+                Owner = stakeInTable.Owner,
+                StakeString = stakeInTable.Stake,
+                Stake = stake
+            };
         }
 
         #region Transactions

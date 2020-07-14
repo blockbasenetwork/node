@@ -324,17 +324,10 @@ namespace BlockBase.Node.Controllers
 
 
                 var accountStake = await _mainchainService.GetAccountStake(chainName, NodeConfigurations.AccountName);
-                decimal providerStake = 0;
-                if (accountStake != null)
-                {
-                    var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-
-                    decimal.TryParse(stakeString, out providerStake);
-                }
                 var minimumProviderState = Math.Round((decimal)contractInfo.Stake / 10000, 4);
-                if (minimumProviderState > providerStake + stake)
+                if (minimumProviderState > accountStake?.Stake + stake)
                 {
-                    return BadRequest(new OperationResponse(false, $"Minimum provider stake is {minimumProviderState}, currently staked {providerStake} and added {stake} which is not enough. Please stake {minimumProviderState - providerStake}"));
+                    return BadRequest(new OperationResponse(false, $"Minimum provider stake is {minimumProviderState}, currently staked {accountStake?.Stake} and added {stake} which is not enough. Please stake {minimumProviderState - accountStake?.Stake}"));
                 }
 
                 

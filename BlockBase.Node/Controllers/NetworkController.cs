@@ -201,7 +201,7 @@ namespace BlockBase.Node.Controllers
 
                     State = contractState.ConfigTime ? "Configure state" : contractState.SecretTime ? "Secrect state" : contractState.IPSendTime ? "Ip Send Time" : contractState.IPReceiveTime ? "Ip Receive Time" : contractState.ProductionTime ? "Production" : contractState.Startchain ? "Startchain" : "No State in chain",
                     StakeDepletionEndDate = StakeEndTimeCalculationAtMaxPayments(contractInfo, tokenLedger),
-                    CurrentRequesterStake = tokenLedger.Stake,
+                    CurrentRequesterStake = tokenLedger.StakeString,
                     InProduction = contractState.ProductionTime,
                     ReservedSeats = new ReservedSeats()
                     {
@@ -409,14 +409,14 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, TokenLedgerTable sidechainStake)
+        private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, AccountStake sidechainStake)
         {
             var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
             var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
             var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;
             var validatorProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfValidatorProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
 
-            var sidechainStakeString = sidechainStake.Stake.Split(" ")[0];
+            var sidechainStakeString = sidechainStake.StakeString.Split(" ")[0];
             var sidechainStakeInUnitsString = sidechainStakeString.Split(".")[0] + sidechainStakeString.Split(".")[1];
 
             var timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice = ulong.Parse(sidechainStakeInUnitsString) / ((fullProducerPaymentPerSettlement + historyroducerPaymentPerSettlement + validatorProducerPaymentPerSettlement));

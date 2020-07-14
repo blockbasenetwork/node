@@ -971,19 +971,15 @@ namespace BlockBase.Node.Controllers
 
         private async Task<bool> HasEnoughStakeUntilNextSettlement()
         {
-            decimal requesterStake = 0;
             var accountStake = await _mainchainService.GetAccountStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
             if (accountStake == null) return false;
-
-            var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-            decimal.TryParse(stakeString, out requesterStake);
 
             var maxPaymentPerBlock = new[] { RequesterConfigurations.ValidatorNodes.MaxPaymentPerBlock, RequesterConfigurations.HistoryNodes.MaxPaymentPerBlock, RequesterConfigurations.FullNodes.MaxPaymentPerBlock }.Max();
             var numberOfProducers = RequesterConfigurations.FullNodes.RequiredNumber + RequesterConfigurations.HistoryNodes.RequiredNumber + RequesterConfigurations.ValidatorNodes.RequiredNumber;
             var neededBBT = (numberOfProducers * 5) * maxPaymentPerBlock;
             var neededBBTDecimal = Math.Round((decimal)neededBBT / 10000, 4);
 
-            return (requesterStake >= neededBBTDecimal);
+            return (accountStake.Stake >= neededBBTDecimal);
         }
     }
 }

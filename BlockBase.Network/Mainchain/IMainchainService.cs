@@ -11,7 +11,7 @@ namespace BlockBase.Network.Mainchain
         Task<GetInfoResponse> GetInfo();
         Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null);
         Task<GetAccountResponse> GetAccount(string accountName);
-        Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName);
+        Task<AccountStake> GetAccountStake(string sidechain, string accountName);
         Task<string> AddStake(string sidechain, string accountName, string stake);
         Task<string> ClaimStake(string sidechain, string accountName);
         Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType, int softwareVersion);
