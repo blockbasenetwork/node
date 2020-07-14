@@ -18,6 +18,7 @@ using BlockBase.Domain.Enums;
 using BlockBase.Runtime.Network;
 using BlockBase.Node.Filters;
 using BlockBase.Domain.Endpoints;
+using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Node.Controllers
 {
@@ -29,14 +30,15 @@ namespace BlockBase.Node.Controllers
     {
         private readonly ILogger _logger;
         private readonly IMainchainService _mainchainService;
-
+        private readonly PeerConnectionsHandler _peerConnectionsHandler;
         private readonly TcpConnectionTester _tcpConnectionTester;
 
-        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService, TcpConnectionTester tcpConnectionTester)
+        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService, TcpConnectionTester tcpConnectionTester, PeerConnectionsHandler peerConnectionsHandler)
         {
             _logger = logger;
             _mainchainService = mainchainService;
             _tcpConnectionTester = tcpConnectionTester;
+            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         /// <summary>
@@ -409,6 +411,39 @@ namespace BlockBase.Node.Controllers
             }
         }
 
+        /// <summary>
+        /// Gets the list of peers this node is currently connected to
+        /// </summary>
+        /// <returns>The list of peers</returns>
+        /// <response code="200">List of peers returned successfully</response>
+        /// <response code="404">Connected peers not found</response>
+        /// <response code="500">Internal error</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the list of peers this node is currently connected to",
+            Description = "Checks the node connections and returns a list of peers this node currently has an active connection with",
+            OperationId = "GetConnectedPeers"
+        )]
+        public ObjectResult GetConnectedPeers()
+        {
+            try
+            {
+                var peers = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().ToList();
+                if (!peers.Any(p => p.ConnectionState == ConnectionStateEnum.Connected))
+                    return NotFound(new OperationResponse(false, "No connected peers found"));
+
+                return Ok(new OperationResponse<List<Network.PeerConnection>>(peers));
+
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+
+        #region Helpers
+
         private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, AccountStake sidechainStake)
         {
             var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
@@ -461,5 +496,7 @@ namespace BlockBase.Node.Controllers
 
             return topProducersEndpointResponse.ToList();
         }
+
+        #endregion
     }
 }
