@@ -122,7 +122,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             if (state == typeof(CandidatureState).Name) return new CandidatureState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _inAutomaticMode);
             if (state == typeof(SecretTimeState).Name) return new SecretTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
             if (state == typeof(IPSendTimeState).Name) return new IPSendTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
-            if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler);
             if (state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
             if (state == typeof(UpdateIpState).Name) return new UpdateIpState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
             if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService, _sidechainProducerService, _inAutomaticMode);
