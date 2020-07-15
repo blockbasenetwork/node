@@ -439,7 +439,18 @@ namespace BlockBase.Node.Controllers
                 if (!peers.Any(p => p.ConnectionState == ConnectionStateEnum.Connected))
                     return NotFound(new OperationResponse(false, "No connected peers found"));
 
-                return Ok(new OperationResponse<List<Network.PeerConnection>>(peers));
+                var peersResult = new List<PeerConnectionResult>();
+
+                foreach (var peer in peers)
+                {
+                    peersResult.Add(new PeerConnectionResult(){
+                        Name = peer.ConnectionAccountName,
+                        State = peer.ConnectionState.ToString(),
+                        Endpoint = peer.IPEndPoint.ToString()
+                    });
+                }
+
+                return Ok(new OperationResponse<List<PeerConnectionResult>>(peersResult));
 
             }
             catch (Exception e)
