@@ -419,7 +419,7 @@ namespace BlockBase.Node.Controllers
         }
 
         /// <summary>
-        /// Gets the list of peers this node is currently connected to
+        /// GGets the list of peers this node knows and the connection status
         /// </summary>
         /// <returns>The list of peers</returns>
         /// <response code="200">List of peers returned successfully</response>
@@ -427,26 +427,28 @@ namespace BlockBase.Node.Controllers
         /// <response code="500">Internal error</response>
         [HttpGet]
         [SwaggerOperation(
-            Summary = "Gets the list of peers this node is currently connected to",
-            Description = "Checks the node connections and returns a list of peers this node currently has an active connection with",
-            OperationId = "GetConnectedPeers"
+            Summary = "Gets the list of peers this node knows and the connection status",
+            Description = "Checks the node connections and returns a list of peers this node currently has knowledge of and the connectino state with each of them",
+            OperationId = "GetPeerConnectionsState"
         )]
-        public ObjectResult GetConnectedPeers()
+        public async Task<ObjectResult> GetPeerConnectionsState()
         {
             try
             {
-                var peers = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().ToList();
-                if (!peers.Any(p => p.ConnectionState == ConnectionStateEnum.Connected))
-                    return NotFound(new OperationResponse(false, "No connected peers found"));
+                var peers = await _peerConnectionsHandler.PingAllConnectionsAndReturnAliveState();
+
+                if (!peers.Any())
+                    return NotFound(new OperationResponse(false, "No peers found"));
 
                 var peersResult = new List<PeerConnectionResult>();
 
                 foreach (var peer in peers)
                 {
                     peersResult.Add(new PeerConnectionResult(){
-                        Name = peer.ConnectionAccountName,
-                        State = peer.ConnectionState.ToString(),
-                        Endpoint = peer.IPEndPoint.ToString()
+                        Name = peer.peer.ConnectionAccountName,
+                        State = peer.peer.ConnectionState.ToString(),
+                        Endpoint = peer.peer.IPEndPoint.ToString(),
+                        ConnectionAlive = peer.connectionAlive
                     });
                 }
 

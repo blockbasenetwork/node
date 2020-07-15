@@ -11,5 +11,6 @@ namespace BlockBase.Domain.Results
         public string Name { get; set; }
         public string State { get; set; }
         public string Endpoint { get; set; }
+        public bool ConnectionAlive { get; set; }
     }
 }
