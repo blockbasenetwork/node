@@ -8,10 +8,11 @@ using EosSharp.Core.Helpers;
 using Cryptography.ECDSA;
 using EosSharp.Core.Exceptions;
 using EosSharp.Core.Api.v1;
+using System.Text.RegularExpressions;
 
 namespace BlockBase.Node
 {
-    public class KeyChecker
+    public class ConfigurationChecker
     {
         private IMainchainService _mainchainService;
 
@@ -20,7 +21,9 @@ namespace BlockBase.Node
 
         private ILogger _logger;
 
-        public KeyChecker(ILogger<KeyChecker> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations)
+        private const int DATABASES_PREFIX_MAX_LENGHT = 10;
+
+        public ConfigurationChecker(ILogger<ConfigurationChecker> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations)
         {
             _mainchainService = mainchainService;
 
@@ -28,6 +31,24 @@ namespace BlockBase.Node
             _networkConfigurations = networkConfigurations.Value;
 
             _logger = logger;
+        }
+
+        public bool CheckDatabasesPrefix()
+        {
+            if (_nodeConfigurations.DatabasesPrefix.Count() > DATABASES_PREFIX_MAX_LENGHT)
+            {
+                _logger.LogCritical($"The configured databases prefix {_nodeConfigurations.DatabasesPrefix} is too big. Please configure a databases prefix with a maximum of {DATABASES_PREFIX_MAX_LENGHT} characters.");
+                return false;
+            }
+
+            var regexItem = new Regex("[^a-z0-9]");
+            if (regexItem.IsMatch(_nodeConfigurations.DatabasesPrefix))
+            {
+                _logger.LogCritical($"The configured databases prefix {_nodeConfigurations.DatabasesPrefix} has special characters. Please configure a databases prefix with no special characters.");
+                return false;
+            }
+
+            return true;
         }
 
         public async Task<bool> CheckKeys()

@@ -27,7 +27,7 @@ namespace BlockBase.Node
             var sidechainProducerService = webHost.Services.Get<ISidechainProducerService>();
             var automaticProductionManager = webHost.Services.Get<IAutomaticProductionManager>();
             var pendingTransactionRecovery = webHost.Services.Get<PendingTransactionRecovery>();
-            var keyChecker = webHost.Services.Get<KeyChecker>();
+            var configurationChecker = webHost.Services.Get<ConfigurationChecker>();
 
 
             var noRecoverCommandFound = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
@@ -35,6 +35,15 @@ namespace BlockBase.Node
             networkService.Run();
             //TODO rpinto - commented this because I don't want it to start on startup for now - uncomment when ready
             //sidechainMaintainerService.Start();
+
+            //check keys
+            var keyCheck = configurationChecker.CheckKeys();
+            Task.WaitAll(keyCheck);
+            if (!keyCheck.Result) return;
+            
+            //check databases prefix
+            var databasesPrefixCheck = configurationChecker.CheckDatabasesPrefix();
+            if(!databasesPrefixCheck) return;
             
 
             if(noRecoverCommandFound == false)
@@ -48,10 +57,7 @@ namespace BlockBase.Node
             var connectionTester = webHost.Services.Get<TcpConnectionTester>();
 
 
-            //check keys
-            var keyCheck = keyChecker.CheckKeys();
-            Task.WaitAll(keyCheck);
-            if (!keyCheck.Result) return;
+
 
             webHost.Run();
         }
