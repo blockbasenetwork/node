@@ -23,6 +23,7 @@ using BlockBase.Runtime.Helpers;
 using Google.Protobuf;
 using BlockBase.Runtime.Provider;
 using static BlockBase.Network.PeerConnection;
+using System.Text;
 
 namespace BlockBase.Runtime.Network
 {
@@ -107,7 +108,10 @@ namespace BlockBase.Runtime.Network
 
             foreach (var transaction in transactions)
             {
+                var sidechainNameBytes = Encoding.UTF8.GetBytes(clientAccountName);
                 var transactionBytes = transaction.ToByteArray();
+                data.AddRange(BitConverter.GetBytes(sidechainNameBytes.Count()));
+                data.AddRange(sidechainNameBytes);
                 data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
                 data.AddRange(transactionBytes);
             }

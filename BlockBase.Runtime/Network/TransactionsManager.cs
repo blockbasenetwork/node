@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Blockchain;
@@ -184,7 +185,10 @@ namespace BlockBase.Runtime.Network
 
             foreach (var transaction in transactions.Take(MAX_TRANSACTIONS_PER_MESSAGE))
             {
+                var sidechainNameBytes = Encoding.UTF8.GetBytes(_nodeConfigurations.AccountName);
                 var transactionBytes = transaction.ConvertToProto().ToByteArray();
+                data.AddRange(BitConverter.GetBytes(sidechainNameBytes.Count()));
+                data.AddRange(sidechainNameBytes);
                 data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
                 data.AddRange(transactionBytes);
             }
