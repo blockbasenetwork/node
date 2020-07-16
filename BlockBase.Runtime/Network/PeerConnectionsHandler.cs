@@ -44,6 +44,7 @@ namespace BlockBase.Runtime.Network
         private const int RATING_LOST_FOR_DISCONECT = 10;
         private const int RATING_LOST_FOR_CONNECT_FAILURE = 10;
         private bool _tryingConnection;
+        private bool _incomingConnectionOngoing;
 
         public PeerConnectionsHandler(INetworkService networkService, SystemConfig systemConfig, ILogger<PeerConnectionsHandler> logger, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations)
         {
@@ -175,7 +176,9 @@ namespace BlockBase.Runtime.Network
 
         private async void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
+            _incomingConnectionOngoing = true;
             int count = 0;
+
             while (_tryingConnection)
             {
                 //polite wait
@@ -189,6 +192,7 @@ namespace BlockBase.Runtime.Network
                 }
                 continue;
             }
+
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
 
@@ -211,6 +215,8 @@ namespace BlockBase.Runtime.Network
                 if (!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
                     _waitingForApprovalPeers.Add(args.Peer);
             }
+
+            _incomingConnectionOngoing = false;
         }
 
         private void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
@@ -228,9 +234,25 @@ namespace BlockBase.Runtime.Network
             if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
-        private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
+        private async void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
         {
+            int count = 0;
+            while (_incomingConnectionOngoing)
+            {
+                //polite wait
+                await Task.Delay(1000);
+                count++;
+                _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
+                if (count > 2)
+                {
+                    _incomingConnectionOngoing = false;
+                    break;
+                }
+                continue;
+            }
+
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.SenderIPEndPoint)).SingleOrDefault();
+
             if (peer == null)
             {
                 _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
