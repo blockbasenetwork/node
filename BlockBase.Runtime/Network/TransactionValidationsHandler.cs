@@ -53,13 +53,14 @@ namespace BlockBase.Runtime.Network
         }
         private async void MessageForwarder_TransactionsReceived(MessageForwarder.TransactionsReceivedEventArgs args, IPEndPoint sender)
         {
+            _logger.LogDebug($"Receiving transaction for sidechain: {args.ClientAccountName}");
             var transactionsProto = SerializationHelper.DeserializeTransactions(args.TransactionsBytes, _logger);
 
             if (transactionsProto == null) return;
 
             var receivedValidTransactions = new List<ulong>();
             var containsUnsavedTransactions = false;
-            _logger.LogInformation($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber}");
+            _logger.LogInformation($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber} for sidechain {args.ClientAccountName}");
 
             foreach (var transactionProto in transactionsProto)
             {
