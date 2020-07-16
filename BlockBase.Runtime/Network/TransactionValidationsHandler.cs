@@ -104,18 +104,17 @@ namespace BlockBase.Runtime.Network
         private async Task SendTransactionsToConnectedProviders(IEnumerable<TransactionProto> transactions, string clientAccountName)
         {
             var data = new List<byte>();
-            _sidechainKeeper.TryGet(clientAccountName, out var sidechainContext);
-
+            var sidechainNameBytes = Encoding.UTF8.GetBytes(clientAccountName);
+            data.AddRange(BitConverter.GetBytes(sidechainNameBytes.Count()));
+            data.AddRange(sidechainNameBytes);
             foreach (var transaction in transactions)
             {
-                var sidechainNameBytes = Encoding.UTF8.GetBytes(clientAccountName);
                 var transactionBytes = transaction.ToByteArray();
-                data.AddRange(BitConverter.GetBytes(sidechainNameBytes.Count()));
-                data.AddRange(sidechainNameBytes);
                 data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
                 data.AddRange(transactionBytes);
             }
 
+            _sidechainKeeper.TryGet(clientAccountName, out var sidechainContext);
             foreach (var producer in sidechainContext.SidechainPool.ProducersInPool.GetEnumerable().Where(p => p.PeerConnection != null && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected && p.PeerConnection.IPEndPoint != null))
             {
                 var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);

@@ -182,18 +182,17 @@ namespace BlockBase.Runtime.Network
         private async Task SendScriptTransactionsToProducer(IEnumerable<Transaction> transactions, PeerConnection peerConnection)
         {
             var data = new List<byte>();
-
+            var sidechainNameBytes = Encoding.UTF8.GetBytes(_nodeConfigurations.AccountName);
+            data.AddRange(BitConverter.GetBytes(sidechainNameBytes.Count()));
+            data.AddRange(sidechainNameBytes);
             foreach (var transaction in transactions.Take(MAX_TRANSACTIONS_PER_MESSAGE))
             {
-                var sidechainNameBytes = Encoding.UTF8.GetBytes(_nodeConfigurations.AccountName);
                 var transactionBytes = transaction.ConvertToProto().ToByteArray();
-                data.AddRange(BitConverter.GetBytes(sidechainNameBytes.Count()));
-                data.AddRange(sidechainNameBytes);
                 data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
                 data.AddRange(transactionBytes);
             }
             var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
-            
+
             _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {peerConnection.ConnectionAccountName}");
             await _networkService.SendMessageAsync(message);
         }
