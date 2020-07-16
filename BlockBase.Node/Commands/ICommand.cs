@@ -10,7 +10,7 @@ namespace BlockBase.Node.Commands
         string CommandInfo { get; }
         string CommandUsage { get;}
 
-        Task<CommandExecutionResult> Execute();
+        Task<CommandExecutionResponse> Execute();
         CommandParseResult TryLoadCommand(string commandStr);
     }
 }

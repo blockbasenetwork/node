@@ -1,9 +1,10 @@
 ﻿using BlockBase.Api;
-using BlockBase.Extensions;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Provider;
 using BlockBase.Runtime.Provider.AutomaticProduction;
 using BlockBase.Runtime.Requester;
+using BlockBase.Utils.Extensions;
+using BlockBase.Utils.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -20,6 +21,8 @@ namespace BlockBase.Node
             Console.WriteLine($"Running version: {Assembly.GetEntryAssembly().GetName().Version.ToString(3)}");
             
             var webHost = CreateWebHostBuilder(args).Build();
+
+            ServiceProvider.Set(webHost.Services);
 
             var networkService = webHost.Services.Get<INetworkService>();
             

@@ -30,6 +30,7 @@ using BlockBase.Node.Filters;
 using BlockBase.Runtime.Provider.AutomaticProduction;
 using Serilog.Events;
 using System.Linq;
+using BlockBase.Node.Commands.Requester;
 
 namespace BlockBase.Api
 {
@@ -211,6 +212,8 @@ namespace BlockBase.Api
 
             return this;
         }
+
+        
 
         public ApiWebHostBuilder ConfigureApiSecurity()
         {

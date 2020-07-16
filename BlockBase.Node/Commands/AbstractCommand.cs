@@ -12,7 +12,7 @@ namespace BlockBase.Node.Commands
 
         public abstract string CommandUsage { get; }
 
-        public abstract Task<CommandExecutionResult> Execute();
+        public abstract Task<CommandExecutionResponse> Execute();
 
         public CommandParseResult TryLoadCommand(string commandStr)
         {

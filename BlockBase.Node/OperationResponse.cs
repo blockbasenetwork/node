@@ -10,7 +10,6 @@ namespace BlockBase.Node
     {
         public bool Succeeded { get; set; }
         public Exception Exception { get; set; }
-        
         public string ResponseMessage { get; set; }
 
         public OperationResponse() { }
