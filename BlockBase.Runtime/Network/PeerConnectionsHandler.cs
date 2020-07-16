@@ -176,10 +176,9 @@ namespace BlockBase.Runtime.Network
 
         private async void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
-            _incomingConnectionOngoing = true;
             int count = 0;
 
-            while (_tryingConnection)
+            while (_tryingConnection || _incomingConnectionOngoing)
             {
                 //polite wait
                 await Task.Delay(1000);
@@ -188,10 +187,13 @@ namespace BlockBase.Runtime.Network
                 if (count > 2)
                 {
                     _tryingConnection = false;
+                    _incomingConnectionOngoing = false;
                     break;
                 }
                 continue;
             }
+
+            _incomingConnectionOngoing = true;
 
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
