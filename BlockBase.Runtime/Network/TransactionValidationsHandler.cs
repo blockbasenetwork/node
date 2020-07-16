@@ -106,7 +106,8 @@ namespace BlockBase.Runtime.Network
         {
             var data = new List<byte>();
             var sidechainNameBytes = Encoding.UTF8.GetBytes(clientAccountName);
-            data.AddRange(BitConverter.GetBytes(sidechainNameBytes.Count()));
+            short lenght = (short)sidechainNameBytes.Length;
+            data.AddRange(BitConverter.GetBytes(lenght));
             data.AddRange(sidechainNameBytes);
             foreach (var transaction in transactions)
             {
