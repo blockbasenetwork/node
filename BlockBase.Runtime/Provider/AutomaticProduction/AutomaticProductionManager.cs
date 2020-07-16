@@ -122,20 +122,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
         {
             var accountStake = await _mainchainService.GetAccountStake(sidechain, _nodeConfigurations.AccountName);
             var bbtBalanceTable = await _mainchainService.GetCurrencyBalance(_networkConfigurations.BlockBaseTokenContract, _nodeConfigurations.AccountName, "BBT");
-            decimal providerStake = 0;
             decimal bbtBalance = 0;
-            if (accountStake != null)
-            {
-                var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                decimal.TryParse(stakeString, out providerStake);
-            }
             if (bbtBalanceTable != null)
             {
                 var bbtBalanceString = bbtBalanceTable.FirstOrDefault()?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
                 decimal.TryParse(bbtBalanceString, out bbtBalance);
             }
 
-            if (providerStake >= stake) return true;
+            if (accountStake?.Stake >= stake) return true;
             if (bbtBalance >= stake)
             {
                 await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");

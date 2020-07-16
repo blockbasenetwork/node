@@ -17,13 +17,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
     public class StartState : ProviderAbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
-        private SidechainPool _sidechainPool;
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producerList;
         private IList<MappedHistoryValidation> _historyValidations;
-        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechain)
+        public StartState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechain, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

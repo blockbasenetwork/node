@@ -27,14 +27,12 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
     public class SynchronizeNodeState : ProviderAbstractState<StartState, EndState>
     {
 
-        private IMainchainService _mainchainService;
         private ContractStateTable _contractStateTable;
         private IMongoDbProducerService _mongoDbProducerService;
         private NodeConfigurations _nodeConfigurations;
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
         private BlockheaderTable _lastValidSubmittedBlockHeader;
-        private SidechainPool _sidechainPool;
 
         private NetworkConfigurations _networkConfigurations;
         private INetworkService _networkService;
@@ -50,7 +48,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations,
             INetworkService networkService, TransactionValidationsHandler transactionValidationsHandler,
-            IConnector connector, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool)
+            IConnector connector, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool, mainchainService)
         {
             _logger = logger;
             _mainchainService = mainchainService;
@@ -165,9 +163,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
                 await ExecuteTransaction(transaction);
                 currentSequenceNumber++;
             }
-
             return;
-
         }
 
        

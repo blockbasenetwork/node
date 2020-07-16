@@ -18,6 +18,7 @@ using BlockBase.Domain.Enums;
 using BlockBase.Runtime.Network;
 using BlockBase.Node.Filters;
 using BlockBase.Domain.Endpoints;
+using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Node.Controllers
 {
@@ -29,14 +30,15 @@ namespace BlockBase.Node.Controllers
     {
         private readonly ILogger _logger;
         private readonly IMainchainService _mainchainService;
-
+        private readonly PeerConnectionsHandler _peerConnectionsHandler;
         private readonly TcpConnectionTester _tcpConnectionTester;
 
-        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService, TcpConnectionTester tcpConnectionTester)
+        public NetworkController(ILogger<NetworkController> logger, IMainchainService mainchainService, TcpConnectionTester tcpConnectionTester, PeerConnectionsHandler peerConnectionsHandler)
         {
             _logger = logger;
             _mainchainService = mainchainService;
             _tcpConnectionTester = tcpConnectionTester;
+            _peerConnectionsHandler = peerConnectionsHandler;
         }
 
         /// <summary>
@@ -59,6 +61,8 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a sidechain name."));
+                sidechainName = sidechainName.Trim();
+
                 ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
 
                 if (contractInfo == null) return NotFound(new OperationResponse(false, $"Sidechain {sidechainName} configuration not found"));
@@ -122,6 +126,8 @@ namespace BlockBase.Node.Controllers
                 {
                     return BadRequest($"Please provide and producer account name and a sidechain name");
                 }
+                accountName = accountName.Trim();
+                sidechainName = sidechainName.Trim();
 
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
@@ -164,6 +170,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest("Please provide a valid sidechain name");
+                sidechainName = sidechainName.Trim();
 
                 var contractState = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
@@ -201,7 +208,7 @@ namespace BlockBase.Node.Controllers
 
                     State = contractState.ConfigTime ? "Configure state" : contractState.SecretTime ? "Secrect state" : contractState.IPSendTime ? "Ip Send Time" : contractState.IPReceiveTime ? "Ip Receive Time" : contractState.ProductionTime ? "Production" : contractState.Startchain ? "Startchain" : "No State in chain",
                     StakeDepletionEndDate = StakeEndTimeCalculationAtMaxPayments(contractInfo, tokenLedger),
-                    CurrentRequesterStake = tokenLedger.Stake,
+                    CurrentRequesterStake = tokenLedger.StakeString,
                     InProduction = contractState.ProductionTime,
                     ReservedSeats = new ReservedSeats()
                     {
@@ -258,6 +265,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+                accountName = accountName.Trim();
 
                 var stakeTable = await _mainchainService.RetrieveAccountStakedSidechains(accountName);
 
@@ -359,6 +367,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+                accountName = accountName.Trim();
 
                 var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
                 if (rewardTable == null) return NotFound(new OperationResponse(false, $"The reward table for {accountName} was not found"));
@@ -409,14 +418,60 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, TokenLedgerTable sidechainStake)
+        /// <summary>
+        /// GGets the list of peers this node knows and the connection status
+        /// </summary>
+        /// <returns>The list of peers</returns>
+        /// <response code="200">List of peers returned successfully</response>
+        /// <response code="404">Connected peers not found</response>
+        /// <response code="500">Internal error</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the list of peers this node knows and the connection status",
+            Description = "Checks the node connections and returns a list of peers this node currently has knowledge of and the connectino state with each of them",
+            OperationId = "GetPeerConnectionsState"
+        )]
+        public async Task<ObjectResult> GetPeerConnectionsState()
+        {
+            try
+            {
+                var peers = await _peerConnectionsHandler.PingAllConnectionsAndReturnAliveState();
+
+                if (!peers.Any())
+                    return NotFound(new OperationResponse(false, "No peers found"));
+
+                var peersResult = new List<PeerConnectionResult>();
+
+                foreach (var peer in peers)
+                {
+                    peersResult.Add(new PeerConnectionResult(){
+                        Name = peer.peer.ConnectionAccountName,
+                        State = peer.peer.ConnectionState.ToString(),
+                        Endpoint = peer.peer.IPEndPoint.ToString(),
+                        ConnectionAlive = peer.connectionAlive
+                    });
+                }
+
+                return Ok(new OperationResponse<List<PeerConnectionResult>>(peersResult));
+
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+
+        #region Helpers
+
+        private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, AccountStake sidechainStake)
         {
             var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
             var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
             var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;
             var validatorProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfValidatorProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
 
-            var sidechainStakeString = sidechainStake.Stake.Split(" ")[0];
+            var sidechainStakeString = sidechainStake.StakeString.Split(" ")[0];
             var sidechainStakeInUnitsString = sidechainStakeString.Split(".")[0] + sidechainStakeString.Split(".")[1];
 
             var timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice = ulong.Parse(sidechainStakeInUnitsString) / ((fullProducerPaymentPerSettlement + historyroducerPaymentPerSettlement + validatorProducerPaymentPerSettlement));
@@ -461,5 +516,7 @@ namespace BlockBase.Node.Controllers
 
             return topProducersEndpointResponse.ToList();
         }
+
+        #endregion
     }
 }

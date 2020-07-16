@@ -15,7 +15,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
     public class ProductionState : ProviderAbstractState<StartState, EndState>
     {
-        private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private ContractStateTable _contractStateTable;
@@ -25,8 +24,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         private bool _needsToUpdateIps;
 
-        private SidechainPool _sidechainPool;
-        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool)
+        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

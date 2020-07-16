@@ -189,6 +189,8 @@ namespace BlockBase.Runtime.Network
                 data.AddRange(transactionBytes);
             }
             var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
+            
+            _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {peerConnection.ConnectionAccountName}");
             await _networkService.SendMessageAsync(message);
         }
 

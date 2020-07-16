@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
@@ -18,8 +19,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private CurrentProducerTable _currentProducer;
         private object _blocksCount;
         private IMainchainService _mainchainService;
-
         private NodeConfigurations _nodeConfigurations;
+        private bool _hasEnoughStake;
 
         public NextStateRouter(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
@@ -53,6 +54,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
             _currentProducer = await _mainchainService.RetrieveCurrentProducer(_nodeConfigurations.AccountName);
             _blocksCount = await _mainchainService.RetrieveBlockCount(_nodeConfigurations.AccountName);
+            _hasEnoughStake = await HasEnoughStakeUntilNextSettlement();
 
             if(_contractState == null || _contractInfo == null || _currentProducer == null) return;
 
@@ -71,13 +73,25 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
         private string GetNextSidechainState(ContractInformationTable contractInfo, ContractStateTable contractState, CurrentProducerTable currentProducer)
         {
-            if (IsTimeToSwitchProducer(contractInfo, contractState, currentProducer))
+            if (_hasEnoughStake && IsTimeToSwitchProducer(contractInfo, contractState, currentProducer))
             {
                 return typeof(SwitchProducerTurn).Name;
             }
 
 
             return null;
+        }
+
+        private async Task<bool> HasEnoughStakeUntilNextSettlement()
+        {
+            var accountStake = await _mainchainService.GetAccountStake(_nodeConfigurations.AccountName, _nodeConfigurations.AccountName);
+            if (accountStake == null) return false;
+
+            var maxPaymentPerBlock = new[] { _contractInfo.MaxPaymentPerBlockFullProducers, _contractInfo.MaxPaymentPerBlockHistoryProducers, _contractInfo.MaxPaymentPerBlockValidatorProducers }.Max();
+            var neededBBT = _contractInfo.BlocksBetweenSettlement * maxPaymentPerBlock;
+            var neededBBTDecimal = Math.Round((decimal)neededBBT / 10000, 4);
+
+            return (accountStake?.Stake >= neededBBTDecimal);
         }
 
         private bool IsTimeToSwitchProducer(ContractInformationTable contractInfo, ContractStateTable contractState, CurrentProducerTable currentProducer)

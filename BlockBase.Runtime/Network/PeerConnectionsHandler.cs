@@ -182,7 +182,7 @@ namespace BlockBase.Runtime.Network
                 await Task.Delay(1000);
                 count++;
                 _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
-                if(count > 2)
+                if (count > 2)
                 {
                     _tryingConnection = false;
                     break;
@@ -208,7 +208,7 @@ namespace BlockBase.Runtime.Network
 
             else if (peer == null)
             {
-                if(!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
+                if (!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
                     _waitingForApprovalPeers.Add(args.Peer);
             }
         }
@@ -319,6 +319,36 @@ namespace BlockBase.Runtime.Network
             _checkingConnection = false;
 
             return peersConnected;
+        }
+
+        public async Task<List<(bool connectionAlive, PeerConnection peer)>> PingAllConnectionsAndReturnAliveState()
+        {
+            var random = new Random();
+            var peersToReturn = new List<(bool connectionAlive, PeerConnection peer)>();
+
+            foreach (var peer in CurrentPeerConnections)
+            {
+                if (peer.ConnectionState == ConnectionStateEnum.Connected)
+                {
+                    var randomInt = random.Next();
+                    await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
+
+                    var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
+                    if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                    {
+                        var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                        if (randomInt == pongNonce)
+                        {
+                            peersToReturn.Add((true, peer));
+                            continue;
+                        }
+                    }
+                }
+
+                peersToReturn.Add((false, peer));
+            }
+
+            return peersToReturn;
         }
 
         #endregion Enter Points
