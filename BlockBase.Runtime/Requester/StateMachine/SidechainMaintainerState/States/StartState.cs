@@ -15,7 +15,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private IMainchainService _mainchainService;
         private ContractInformationTable _contractInfo;
         private ContractStateTable _contractState;
-        private bool _hasEnoughStake;
 
         public StartState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
