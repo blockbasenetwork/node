@@ -318,6 +318,8 @@ namespace BlockBase.Node.Controllers
             DatabaseSecurityConfigurations config;
             try
             {
+                _connector.Setup().Wait();
+
                 if (RequesterConfigurations.DatabaseSecurityConfigurations.Use)
                 {
                     _databaseKeyManager.SetInitialSecrets(RequesterConfigurations.DatabaseSecurityConfigurations);
