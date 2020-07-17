@@ -23,6 +23,7 @@ using BlockBase.Node.Filters;
 using BlockBase.Utils;
 using System.Reflection;
 using BlockBase.Domain.Eos;
+using BlockBase.Domain.Results;
 
 namespace BlockBase.Node.Controllers
 {
@@ -580,13 +581,37 @@ namespace BlockBase.Node.Controllers
             Description = "The provider uses this request to get information about the sidechains the node is producing",
             OperationId = "GetProducingSidechains"
         )]
-        public ObjectResult GetProducingSidechains()
+        public async Task<ObjectResult> GetProducingSidechains()
         {
             try
             {
                 var poolOfSidechains = _sidechainProducerService.GetSidechainContexts();
+                var producingSidechainsResult = new List<ProducingSidechain>();
 
-                return Ok(new OperationResponse<List<string>>(poolOfSidechains.Select(s => s.SidechainPool.ClientAccountName).ToList(), $"Get producing sidechains successful."));
+                foreach(var sidechain in poolOfSidechains)
+                {
+                    var warnings = await _mainchainService.RetrieveWarningTable(sidechain.SidechainPool.ClientAccountName);
+                    var blocksCount = await _mainchainService.RetrieveBlockCount(sidechain.SidechainPool.ClientAccountName);
+
+                    var producingSidechain = new ProducingSidechain(){
+                        Name = sidechain.SidechainPool.ClientAccountName,
+                        SidechainState = sidechain.SidechainPool.State,
+                        BlocksProducedInCurrentSettlement = Convert.ToInt32(blocksCount.Where(b => b.Key == NodeConfigurations.AccountName)?.SingleOrDefault().blocksproduced),
+                        BlocksFailedInCurrentSettlement = Convert.ToInt32(blocksCount.Where(b => b.Key == NodeConfigurations.AccountName)?.SingleOrDefault().blocksfailed)
+                    };
+
+                    foreach (var warning in warnings.Where(w => w.Producer == NodeConfigurations.AccountName))
+                    {
+                        producingSidechain.Warnings.Add(new ProducingSidechainWarning(){
+                            WarningType = (WarningTypeEnum)warning.WarningType,
+                            WarningTimestamp = DateTimeOffset.FromUnixTimeSeconds((long)warning.WarningCreationDateInSeconds).DateTime
+                        });
+                    }
+
+                    producingSidechainsResult.Add(producingSidechain);
+                }
+
+                return Ok(new OperationResponse<List<ProducingSidechain>>(producingSidechainsResult, $"Get producing sidechains successful."));
             }
             catch (Exception e)
             {
