@@ -639,7 +639,7 @@ namespace BlockBase.Node.Controllers
                 var pastSidechains = await _mongoDbProducerService.GetAllPastSidechainsAsync();
                 var pastSidechainsResult = new List<PastSidechain>();
 
-                foreach(var sidechain in pastSidechains)
+                foreach(var sidechain in pastSidechains.Where(s => s.AlreadyLeft))
                 {
                     var pastSidechain = new PastSidechain(){
                         Name = sidechain.Sidechain,
