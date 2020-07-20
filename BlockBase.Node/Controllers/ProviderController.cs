@@ -309,7 +309,7 @@ namespace BlockBase.Node.Controllers
                 if (contractInfo.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
                     return BadRequest(new OperationResponse(false, $"Sidechain has block time lower than 60 seconds running on mainnet and can not be joined"));
                 
-                var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == NodeConfigurations.ActivePublicKey) || candidates.Any(c => c.PublicKey == NodeConfigurations.ActivePublicKey);
+                var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == NodeConfigurations.ActivePublicKey && p.Key != NodeConfigurations.AccountName) || candidates.Any(c => c.PublicKey == NodeConfigurations.ActivePublicKey && c.Key != NodeConfigurations.AccountName);
                 if (isPublicKeyAlreadyUsed) return BadRequest(new OperationResponse(false, $"Key {NodeConfigurations.ActivePublicKey} is already being used by another producer or candidate"));
 
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
@@ -324,14 +324,12 @@ namespace BlockBase.Node.Controllers
                     return BadRequest(new OperationResponse(false, $"There is a database related to this chain. Please delete it"));
                 }
 
-
                 var accountStake = await _mainchainService.GetAccountStake(chainName, NodeConfigurations.AccountName);
                 var minimumProviderState = Math.Round((decimal)contractInfo.Stake / 10000, 4);
                 if (minimumProviderState > accountStake?.Stake + stake)
                 {
                     return BadRequest(new OperationResponse(false, $"Minimum provider stake is {minimumProviderState}, currently staked {accountStake?.Stake} and added {stake} which is not enough. Please stake {minimumProviderState - accountStake?.Stake}"));
                 }
-
                 
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainName, clientInfo.SidechainCreationTimestamp, false);
 
