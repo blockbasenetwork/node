@@ -501,6 +501,21 @@ namespace BlockBase.DataPersistence.Data
             }
         }
 
+        public async Task<IList<PastSidechainDB>> GetAllPastSidechainsAsync()
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+
+                var sidechains = recoverDatabase.GetCollection<PastSidechainDB>(MongoDbConstants.PAST_SIDECHAINS_COLLETION_NAME).AsQueryable();
+                var query = from s in sidechains
+                            select s;
+
+                var result = query.ToList();
+                return result;
+            }
+        }
+
         #endregion
 
         public async Task<TransactionDB> GetTransactionToExecute(string sidechain)
