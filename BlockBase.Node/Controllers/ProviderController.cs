@@ -262,16 +262,22 @@ namespace BlockBase.Node.Controllers
             {
                 var chainContract = await _mainchainService.RetrieveContractState(chainName);
                 if (chainContract == null) return NotFound(new OperationResponse(false, $"Sidechain {chainName} not found"));
-                if (!chainContract.CandidatureTime) return BadRequest(new OperationResponse(false, $"Sidechain not in candidature time"));
-
-                var networkInfo = await _mainchainService.GetInfo();
-                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
 
                 var clientInfo = await _mainchainService.RetrieveClientTable(chainName);
                 if (clientInfo == null) return NotFound(new OperationResponse(false, $"Sidechain {chainName} client info not found"));
 
                 var contractInfo = await _mainchainService.RetrieveContractInformation(chainName);
                 if (contractInfo == null) return NotFound(new OperationResponse(false, $"Sidechain {chainName} contract info not found"));
+
+                var candidates = await _mainchainService.RetrieveCandidates(chainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
+                var isProducerInTable = producers.Any(c => c.Key == NodeConfigurations.AccountName);
+                var isCandidateInTable = candidates.Any(c => c.Key == NodeConfigurations.AccountName);
+
+                if (!chainContract.CandidatureTime && !isProducerInTable && !isCandidateInTable) return BadRequest(new OperationResponse(false, $"Sidechain not in candidature time and provider not in producer or candidate tables"));
+
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
 
                 var softwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
                 var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
@@ -302,14 +308,9 @@ namespace BlockBase.Node.Controllers
                     return BadRequest(new OperationResponse(false, $"Producer type inserted is not needed in the given sidechain configuration"));
                 if (contractInfo.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
                     return BadRequest(new OperationResponse(false, $"Sidechain has block time lower than 60 seconds running on mainnet and can not be joined"));
-
-                var candidates = await _mainchainService.RetrieveCandidates(chainName);
-                var producers = await _mainchainService.RetrieveProducersFromTable(chainName);
                 
                 var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == NodeConfigurations.ActivePublicKey) || candidates.Any(c => c.PublicKey == NodeConfigurations.ActivePublicKey);
                 if (isPublicKeyAlreadyUsed) return BadRequest(new OperationResponse(false, $"Key {NodeConfigurations.ActivePublicKey} is already being used by another producer or candidate"));
-
-                var isProducerInTable = producers.Any(c => c.Key == NodeConfigurations.AccountName);
 
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(chainName);
                 //if the database exists and he's on the producer table, then nothing should be done
