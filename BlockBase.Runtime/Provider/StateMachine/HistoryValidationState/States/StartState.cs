@@ -58,6 +58,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _historyValidations = await _mainchainService.RetrieveHistoryValidation(_sidechainPool.ClientAccountName);
+
+            _delay = TimeSpan.FromSeconds(20);
         }
     }
 }
