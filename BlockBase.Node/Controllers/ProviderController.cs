@@ -424,6 +424,7 @@ namespace BlockBase.Node.Controllers
 
                 var chainContract = await _mainchainService.RetrieveContractState(sidechainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
+                var clientTable = await _mainchainService.RetrieveClientTable(sidechainName);
                 var producersTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
                 if (chainContract == null) return NotFound(new OperationResponse(false, $"Sidechain {sidechainName} not found"));
                 if (candidatureTable == null) return NotFound(new OperationResponse(false, $"Unable to retrieve {sidechainName} candidature table"));
@@ -436,6 +437,7 @@ namespace BlockBase.Node.Controllers
 
                 _logger.LogDebug($"Sending sidechain exit request for {sidechainName}");
                 var trx = await _mainchainService.SidechainExitRequest(sidechainName);
+                await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(sidechainName, clientTable.SidechainCreationTimestamp, false, LeaveNetworkReasonsConstants.EXIT_REQUEST);
 
 
                 //TODO rpinto - needs to verify if exist request has been sent successfully

@@ -235,4 +235,11 @@ namespace BlockBase.Domain.Eos
             }
         }
     }
+
+    public class LeaveNetworkReasonsConstants
+    {
+        public const string EXIT_REQUEST = "Exit request";
+        public const string FAILED_TO_PRODUCE_BLOCKS = "Failed to produce blocks";
+        public const string FAILED_TO_VALIDATE_HISTORY = "Failed to validate sidechain history";
+    }
 }

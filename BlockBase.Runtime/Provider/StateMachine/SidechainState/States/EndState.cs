@@ -27,8 +27,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            if(!_inAutomaticMode) return Task.FromResult(true);
-            if(!_chainExistsInDatabase) return Task.FromResult(true);
+            if (!_inAutomaticMode) return Task.FromResult(true);
+            if (!_chainExistsInDatabase) return Task.FromResult(true);
             return Task.FromResult(false);
         }
 
@@ -39,8 +39,10 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             if (_inAutomaticMode)
             {
                 _logger.LogDebug($"Removing sidechain {_sidechainPool.ClientAccountName} data from database");
-                    await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(_sidechainPool.ClientAccountName);
+                await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(_sidechainPool.ClientAccountName);
             }
+
+            await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(_sidechainPool.ClientAccountName, _sidechainPool.SidechainCreationTimestamp, true);
 
             _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(_sidechainPool.ClientAccountName);
         }
@@ -52,8 +54,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if(!_inAutomaticMode) return Task.FromResult((true, string.Empty));
-            else if(_inAutomaticMode && !_chainExistsInDatabase) return Task.FromResult((true, string.Empty));
+            if (!_inAutomaticMode) return Task.FromResult((true, string.Empty));
+            else if (_inAutomaticMode && !_chainExistsInDatabase) return Task.FromResult((true, string.Empty));
             //it's in automatic mode and the chain still exists
             else return Task.FromResult((false, string.Empty));
         }
