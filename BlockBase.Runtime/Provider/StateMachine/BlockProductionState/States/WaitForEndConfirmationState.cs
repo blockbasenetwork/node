@@ -39,6 +39,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
+            if (_clientTable != null) return Task.FromResult(_clientTable.SidechainCreationTimestamp == _sidechainPool.SidechainCreationTimestamp);
             return Task.FromResult(_waitingStartDate > DateTime.UtcNow.AddMinutes(-30));
         }
 
