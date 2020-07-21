@@ -29,9 +29,8 @@ namespace BlockBase.Runtime.Common
             {
 
                 _logger.LogDebug($"{Path} - Sidechain is no longer the same.");
-                //if there are no conditions to continue on the start state, jump to the end state
-                if (this is TStartState) return typeof(TEndState).Name;
-                return typeof(TStartState).Name; //returns control to the State Manager indicating same state
+                //if there are no conditions to continue on this sidechain, jump to the end state
+                if (!(this is TEndState)) return typeof(TEndState).Name;
             }
             _logger.LogInformation($"{Path} - Sidechain checked");
             return await base.Run(cancellationToken);
