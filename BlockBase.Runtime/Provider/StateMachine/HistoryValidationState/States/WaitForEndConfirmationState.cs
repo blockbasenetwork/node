@@ -38,7 +38,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_waitingStartDate > DateTime.UtcNow.AddDays(-1));
+            return Task.FromResult(_waitingStartDate > DateTime.UtcNow.AddMinutes(-30));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()

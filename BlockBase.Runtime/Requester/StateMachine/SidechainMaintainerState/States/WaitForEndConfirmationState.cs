@@ -17,7 +17,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         private ContractStateTable _contractStateTable;
         private DateTime _waitingStartDate;
 
-        public WaitForEndConfirmationState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
+        public WaitForEndConfirmationState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -36,7 +36,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_waitingStartDate > DateTime.UtcNow.AddDays(-1));
+            return Task.FromResult(_waitingStartDate > DateTime.UtcNow.AddMinutes(-30));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
