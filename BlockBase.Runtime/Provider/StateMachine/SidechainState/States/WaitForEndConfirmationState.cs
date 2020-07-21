@@ -15,6 +15,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
     {
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
+        private ClientTable _clientTable;
         private DateTime _waitingStartDate;
 
         public WaitForEndConfirmationState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool, mainchainService)
@@ -42,12 +43,13 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((_contractStateTable != null, typeof(StartState).Name));
+            return Task.FromResult((_contractStateTable != null && _clientTable?.SidechainCreationTimestamp == _sidechainPool.SidechainCreationTimestamp, typeof(StartState).Name));
         }
 
         protected override async Task UpdateStatus()
         {
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            _clientTable = await _mainchainService.RetrieveClientTable(_sidechainPool.ClientAccountName);
             if (_contractStateTable == null) _mainchainService.ChangeNetwork();
 
             _delay = TimeSpan.FromSeconds(10);
