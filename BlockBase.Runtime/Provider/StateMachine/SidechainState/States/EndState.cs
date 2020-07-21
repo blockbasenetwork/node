@@ -15,6 +15,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private ISidechainProducerService _sidechainProducerService;
 
         private bool _inAutomaticMode;
+        private bool _didWorkOnce;
 
         public EndState(SidechainPool sidechainPool, ILogger logger, IMongoDbProducerService mongoDbProducerService, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, bool inAutomaticMode) : base(logger, sidechainPool, mainchainService)
         {
@@ -27,7 +28,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            if (!_inAutomaticMode) return Task.FromResult(true);
             if (!_chainExistsInDatabase) return Task.FromResult(true);
             return Task.FromResult(false);
         }
@@ -45,19 +45,19 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(_sidechainPool.ClientAccountName, _sidechainPool.SidechainCreationTimestamp, true);
 
             _sidechainProducerService.RemoveSidechainFromProducerAndStopIt(_sidechainPool.ClientAccountName);
+            _didWorkOnce = true;
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_inAutomaticMode);
+            return Task.FromResult(true);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            if (!_inAutomaticMode) return Task.FromResult((true, string.Empty));
-            else if (_inAutomaticMode && !_chainExistsInDatabase) return Task.FromResult((true, string.Empty));
+            if (_inAutomaticMode && !_chainExistsInDatabase) return Task.FromResult((true, string.Empty));
             //it's in automatic mode and the chain still exists
-            else return Task.FromResult((false, string.Empty));
+            else return Task.FromResult((_didWorkOnce, string.Empty));
         }
 
         protected override async Task UpdateStatus()
