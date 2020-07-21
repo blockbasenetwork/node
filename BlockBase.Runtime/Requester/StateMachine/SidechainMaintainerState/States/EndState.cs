@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States
 {
-    public class EndState : AbstractMainchainState<StartState, EndState>
+    public class EndState : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
         public EndState(ILogger logger) : base(logger)
         {

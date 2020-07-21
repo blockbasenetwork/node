@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class EndState : ProviderAbstractState<StartState, EndState>
+    public class EndState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private bool _chainExistsInDatabase;
         private IMongoDbProducerService _mongoDbProducerService;

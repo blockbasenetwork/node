@@ -9,9 +9,10 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.Common
 {
-    public abstract class AbstractMainchainState<TStartState, TEndState> : AbstractState<TStartState, TEndState>
+    public abstract class AbstractMainchainState<TStartState, TEndState, TWaitForEndConfirmationState> : AbstractState<TStartState, TEndState, TWaitForEndConfirmationState>
             where TStartState : IState
             where TEndState : IState
+            where TWaitForEndConfirmationState : IState
     {
 
         public AbstractMainchainState(ILogger logger, bool verbose = false) : base(logger, verbose)

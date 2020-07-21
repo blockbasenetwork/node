@@ -24,7 +24,7 @@ using BlockBase.Runtime.Sql;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
-    public class SynchronizeNodeState : ProviderAbstractState<StartState, EndState>
+    public class SynchronizeNodeState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
 
         private ContractStateTable _contractStateTable;

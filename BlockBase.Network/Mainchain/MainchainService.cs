@@ -1322,7 +1322,7 @@ namespace BlockBase.Network.Mainchain
             return new OpResult<T>(exception);
         }
 
-
+        public void ChangeNetwork() => EosStub.ChangeNetwork();
 
         #endregion
     }

@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class UpdateIpState : ProviderAbstractState<StartState, EndState>
+    public class UpdateIpState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;

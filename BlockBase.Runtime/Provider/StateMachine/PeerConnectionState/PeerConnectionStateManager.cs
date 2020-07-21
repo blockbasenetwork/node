@@ -7,7 +7,7 @@ using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Runtime.Provider.StateMachine.PeerConectionState
+namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState
 {
     public class PeerConnectionStateManager : AbstractStateManager<StartState, EndState>
     {

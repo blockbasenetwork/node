@@ -17,7 +17,7 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 {
-    public class ConnectToPeersState : ProviderAbstractState<StartState, EndState>
+    public class ConnectToPeersState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;

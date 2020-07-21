@@ -7,7 +7,7 @@ using BlockBase.Runtime.Network;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using BlockBase.Runtime.Common;
-using BlockBase.Runtime.Provider.StateMachine.PeerConectionState;
+using BlockBase.Runtime.Provider.StateMachine.PeerConnectionState;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.States;
 using System.Threading;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.HistoryValidationState;

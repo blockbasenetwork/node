@@ -18,7 +18,7 @@ using Newtonsoft.Json;
 
 namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
-    public class ValidateHistoryState : ProviderAbstractState<StartState, EndState>
+    public class ValidateHistoryState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
 
         private ContractStateTable _contractState;

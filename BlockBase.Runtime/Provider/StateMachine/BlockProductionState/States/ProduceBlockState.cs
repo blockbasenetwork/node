@@ -20,7 +20,7 @@ using Newtonsoft.Json;
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
     //TODO rpinto - before starting to produce a block some time should be given to make sure all other nodes catch up
-    public class ProduceBlockState : ProviderAbstractState<StartState, EndState>
+    public class ProduceBlockState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
 
         private ContractStateTable _contractState;

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 {
-    public class EndState : AbstractState<StartState, EndState>
+    public class EndState : AbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
 
         public EndState(ILogger logger): base(logger)

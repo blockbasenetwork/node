@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class StartState : ProviderAbstractState<StartState, EndState>
+    public class StartState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;

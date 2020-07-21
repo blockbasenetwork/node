@@ -7,9 +7,10 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Common
 {
-    public abstract class ProviderAbstractState<TStartState, TEndState> : AbstractState<TStartState, TEndState>
+    public abstract class ProviderAbstractState<TStartState, TEndState, TWaitForEndConfirmationState> : AbstractState<TStartState, TEndState, TWaitForEndConfirmationState>
             where TStartState : IState
             where TEndState : IState
+            where TWaitForEndConfirmationState : IState
     {
 
         protected SidechainPool _sidechainPool;

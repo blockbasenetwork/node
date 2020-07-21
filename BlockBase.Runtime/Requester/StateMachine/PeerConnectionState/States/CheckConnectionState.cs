@@ -17,7 +17,7 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 {
-    public class CheckConnectionState : AbstractState<StartState, EndState>
+    public class CheckConnectionState : AbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;

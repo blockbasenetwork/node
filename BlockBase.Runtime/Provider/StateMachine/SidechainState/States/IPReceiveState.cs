@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class IPReceiveState : ProviderAbstractState<StartState, EndState>
+    public class IPReceiveState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;

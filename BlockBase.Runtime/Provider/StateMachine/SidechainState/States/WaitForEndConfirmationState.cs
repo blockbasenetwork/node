@@ -1,0 +1,58 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
+using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Common;
+using Microsoft.Extensions.Logging;
+
+namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
+{
+    public class WaitForEndConfirmationState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
+    {
+        private NodeConfigurations _nodeConfigurations;
+        private ContractStateTable _contractStateTable;
+        private DateTime _waitingStartDate;
+
+        public WaitForEndConfirmationState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger, sidechainPool, mainchainService)
+        {
+            _mainchainService = mainchainService;
+            _nodeConfigurations = nodeConfigurations;
+            _sidechainPool = sidechainPool;
+            _waitingStartDate = DateTime.UtcNow;
+        }
+
+        protected override Task<bool> IsWorkDone()
+        {
+            return Task.FromResult(true);
+        }
+
+        protected override Task DoWork()
+        {
+            return default(Task);
+        }
+
+        protected override Task<bool> HasConditionsToContinue()
+        {
+            return Task.FromResult(_waitingStartDate > DateTime.UtcNow.AddDays(-1));
+        }
+
+        protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
+        {
+            return Task.FromResult((_contractStateTable != null, typeof(StartState).Name));
+        }
+
+        protected override async Task UpdateStatus()
+        {
+            _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
+            if (_contractStateTable == null) _mainchainService.ChangeNetwork();
+
+            _delay = TimeSpan.FromSeconds(10);
+        }
+
+    }
+
+}

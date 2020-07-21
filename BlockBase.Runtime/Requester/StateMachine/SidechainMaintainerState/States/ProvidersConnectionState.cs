@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States
 {
-    public class ProvidersConnectionState : AbstractMainchainState<StartState, EndState>
+    public class ProvidersConnectionState : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
         private IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;

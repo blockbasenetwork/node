@@ -11,9 +11,10 @@ namespace BlockBase.Runtime.Common
     {
         Task<string> Run(CancellationToken cancellationToken);
     }
-    public abstract class AbstractState<TStartState, TEndState> : IState
+    public abstract class AbstractState<TStartState, TEndState, TWaitForEndConfirmationState> : IState
             where TStartState : IState
             where TEndState : IState
+            where TWaitForEndConfirmationState : IState
     {
         private bool _verbose;
 
@@ -56,8 +57,9 @@ namespace BlockBase.Runtime.Common
                     if (!await HasConditionsToContinue())
                     {
                         _logger.LogDebug($"{Path} - No conditions to continue in this state");
-                        //if there are no conditions to continue on the start state, jump to the end state
-                        if(this is TStartState) return typeof(TEndState).Name;
+                        //if there are no conditions to continue on the start state, jump to wait for end confirmation, when end is confirmed jump to end state
+                        if(this is TStartState) return typeof(TWaitForEndConfirmationState).Name;
+                        if(this is TWaitForEndConfirmationState) return typeof(TEndState).Name;
                         return typeof(TStartState).Name; //returns control to the State Manager indicating same state
                     }
 
