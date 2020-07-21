@@ -28,7 +28,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            if (!_chainExistsInDatabase) return Task.FromResult(true);
+            if (!_chainExistsInDatabase && _didWorkOnce) return Task.FromResult(true);
             return Task.FromResult(false);
         }
 
