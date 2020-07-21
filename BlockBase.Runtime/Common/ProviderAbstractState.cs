@@ -42,6 +42,7 @@ namespace BlockBase.Runtime.Common
         protected async Task<bool> IsSidechainStillTheSame()
         {
             var clientTable = await _mainchainService.RetrieveClientTable(_sidechainPool.ClientAccountName);
+            if (clientTable == null) return true;
             return _sidechainPool.SidechainCreationTimestamp == clientTable.SidechainCreationTimestamp;
         }
 
