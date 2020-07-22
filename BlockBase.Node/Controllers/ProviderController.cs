@@ -651,7 +651,7 @@ namespace BlockBase.Node.Controllers
                     pastSidechainsResult.Add(pastSidechain);
                 }
 
-                return Ok(new OperationResponse<List<PastSidechain>>(pastSidechainsResult, $"Get producing sidechains successful."));
+                return Ok(new OperationResponse<List<PastSidechain>>(pastSidechainsResult, $"Get past sidechains successful."));
             }
             catch (Exception e)
             {
