@@ -60,9 +60,7 @@ namespace BlockBase.Node
             var connectionTester = webHost.Services.Get<TcpConnectionTester>();
 
 
-
-
-            webHost.Run();
+            Task.WaitAll(webHost.RunAsync());
         }
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args)
