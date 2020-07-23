@@ -1,25 +1,27 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
-using BlockBase.Runtime.Common;
-using BlockBase.Runtime.Network;
+using BlockBase.Network.Sidechain;
+using BlockBase.Runtime.Requester.StateMachine.Common;
 using Microsoft.Extensions.Logging;
-
 
 namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 {
-    public class NextStateRouter : AbstractState<StartState, EndState, WaitForEndConfirmationState>
+    public class WaitForEndConfirmationState : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
-        private readonly IMainchainService _mainchainService;
-        private PeerConnectionsHandler _peerConnectionsHandler;
+        private IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
-        public NextStateRouter( ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
+        private DateTime _waitingStartDate;
+
+        public WaitForEndConfirmationState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
-            _peerConnectionsHandler = peerConnectionsHandler;
+            _waitingStartDate = DateTime.UtcNow;
         }
 
         protected override Task<bool> IsWorkDone()
@@ -29,22 +31,27 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 
         protected override Task DoWork()
         {
-            return Task.CompletedTask;
+            return default(Task);
         }
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_contractStateTable != null && (_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime));
+            return Task.FromResult(_waitingStartDate > DateTime.UtcNow.AddMinutes(-30));
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((_contractStateTable.ProductionTime || _contractStateTable.IPReceiveTime, typeof(ConnectToPeersState).Name));
+            return Task.FromResult((_contractStateTable != null, typeof(StartState).Name));
         }
 
-        protected override async Task UpdateStatus() 
+        protected override async Task UpdateStatus()
         {
             _contractStateTable = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
+            if (_contractStateTable == null) _mainchainService.ChangeNetwork();
+
+            _delay = TimeSpan.FromSeconds(10);
         }
+
     }
+
 }

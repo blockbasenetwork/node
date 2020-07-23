@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
-    public class ClaimRewardState : ProviderAbstractState<StartState, EndState>
+    public class ClaimRewardState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;

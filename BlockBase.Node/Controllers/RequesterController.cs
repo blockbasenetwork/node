@@ -21,6 +21,9 @@ using BlockBase.DataProxy;
 using BlockBase.Runtime.Sql;
 using BlockBase.Node.Filters;
 using BlockBase.Node.Commands.Requester;
+using BlockBase.Domain.Eos;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Domain.Blockchain;
 
 namespace BlockBase.Node.Controllers
 {
@@ -146,7 +149,7 @@ namespace BlockBase.Node.Controllers
             try
             {
                 if (_requesterConfigurations.DatabaseSecurityConfigurations.Use)
-                    command = new SetSecretCommand(_logger, _requesterConfigurations, _databaseKeyManager);
+                    command = new SetSecretCommand(_logger, _requesterConfigurations, _databaseKeyManager, _connector);
 
                 else
                 {
@@ -156,7 +159,7 @@ namespace BlockBase.Node.Controllers
                         var json = await reader.ReadToEndAsync();
                         config = JsonConvert.DeserializeObject<DatabaseSecurityConfigurations>(json);
                     }
-                    command = new SetSecretCommand(_logger, _requesterConfigurations, _databaseKeyManager, config);
+                    command = new SetSecretCommand(_logger, _requesterConfigurations, _databaseKeyManager, _connector, config);
                 }
 
                 var result = await command.Execute();
@@ -488,6 +491,84 @@ namespace BlockBase.Node.Controllers
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+        }
+
+        /// <summary>
+        /// Alter current sidechain configurations
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="maxPaymentPerBlockFullProducer">New value for max payment per block for full producers</param>
+        /// <param name="minPaymentPerBlockFullProducer">New value for min payment per block for full producers</param>
+        /// <param name="maxPaymentPerBlockHistoryProducer">New value for max payment per block for history producers</param>
+        /// <param name="minPaymentPerBlockHistoryProducer">New value for min payment per block for history producers</param>
+        /// <param name="maxPaymentPerBlockValidatorProducer">New value for max payment per block for validator producers</param>
+        /// <param name="minPaymentPerBlockValidatorProducer">New value for min payment per block for validator producers</param>
+        /// <param name="minCandidatureStake">New value for minimum stake to enter candidature</param>
+        /// <param name="numberOfFullProducersRequired">New value for number of full producers required</param>
+        /// <param name="numberOfHistoryProducersRequired">New value for number of history producers required</param>
+        /// <param name="numberOfValidatorProducersRequired">New value for number of validator producers required</param>
+        /// <param name="blockTimeInSeconds">New value for block time in seconds</param>
+        /// <param name="blockSizeInBytes">New value for block size in bytes</param>
+        /// <response code="200">Configuration changes sent with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error sending configuration changes</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Alter current sidechain configurations",
+            Description = "Allows requester to send new configurations to be changed in the sidechain. The changes will take effect one day after inserting them. If sent again before the changes take effect it will override the previous request.",
+            OperationId = "ChangeSidechainConfigurations"
+        )]
+        public async Task<ObjectResult> ChangeSidechainConfigurations(decimal? maxPaymentPerBlockFullProducer, decimal? minPaymentPerBlockFullProducer,
+                                                                      decimal? maxPaymentPerBlockHistoryProducer, decimal? minPaymentPerBlockHistoryProducer,
+                                                                      decimal? maxPaymentPerBlockValidatorProducer, decimal? minPaymentPerBlockValidatorProducer,
+                                                                      decimal? minCandidatureStake, int? numberOfFullProducersRequired,
+                                                                      int? numberOfHistoryProducersRequired, int? numberOfValidatorProducersRequired,
+                                                                      int? blockTimeInSeconds, long? blockSizeInBytes)
+        {
+            try
+            {
+                var contractSt = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
+                if (contractSt == null) return BadRequest(new OperationResponse(false, $"Sidechain doesn't exist"));
+                if (contractSt.ConfigTime || contractSt.SecretTime || contractSt.IPSendTime || contractSt.IPReceiveTime) return BadRequest(new OperationResponse(false, $"Sidechain isn't in a state that allows changing configurations"));
+
+                var configurationChanges = new ChangeConfigurationTable();
+
+                configurationChanges.Key = _nodeConfigurations.AccountName;
+
+                configurationChanges.BlockTimeDuration = blockTimeInSeconds != null ? Convert.ToUInt32(blockTimeInSeconds.Value) : contractInfo.BlockTimeDuration;
+                configurationChanges.SizeOfBlockInBytes = blockSizeInBytes != null ? Convert.ToUInt64(blockSizeInBytes.Value) : contractInfo.SizeOfBlockInBytes;
+                configurationChanges.NumberOfFullProducersRequired = numberOfFullProducersRequired != null ? Convert.ToUInt32(numberOfFullProducersRequired.Value) : contractInfo.NumberOfFullProducersRequired;
+                configurationChanges.NumberOfHistoryProducersRequired = numberOfValidatorProducersRequired != null ? Convert.ToUInt32(numberOfValidatorProducersRequired.Value) : contractInfo.NumberOfHistoryProducersRequired;
+                configurationChanges.NumberOfValidatorProducersRequired = numberOfValidatorProducersRequired != null ? Convert.ToUInt32(numberOfValidatorProducersRequired.Value) : contractInfo.NumberOfValidatorProducersRequired;
+                configurationChanges.MaxPaymentPerBlockFullProducers = maxPaymentPerBlockFullProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockFullProducer.Value) : contractInfo.MaxPaymentPerBlockFullProducers;
+                configurationChanges.MaxPaymentPerBlockHistoryProducers = maxPaymentPerBlockHistoryProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockHistoryProducer.Value) : contractInfo.MaxPaymentPerBlockHistoryProducers;
+                configurationChanges.MaxPaymentPerBlockValidatorProducers = maxPaymentPerBlockValidatorProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockValidatorProducer.Value) : contractInfo.MaxPaymentPerBlockValidatorProducers;
+                configurationChanges.MinPaymentPerBlockFullProducers = minPaymentPerBlockFullProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockFullProducer.Value) : contractInfo.MinPaymentPerBlockFullProducers;
+                configurationChanges.MinPaymentPerBlockHistoryProducers = minPaymentPerBlockHistoryProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockHistoryProducer.Value) : contractInfo.MinPaymentPerBlockHistoryProducers;
+                configurationChanges.MinPaymentPerBlockValidatorProducers = minPaymentPerBlockValidatorProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockValidatorProducer.Value) : contractInfo.MinPaymentPerBlockValidatorProducers;
+                configurationChanges.Stake = minCandidatureStake != null ? Convert.ToUInt64(10000 * minCandidatureStake.Value) : contractInfo.Stake;
+
+                //Check configurations
+                if (configurationChanges.SizeOfBlockInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
+                    return BadRequest(new OperationResponse(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
+                if (configurationChanges.NumberOfFullProducersRequired + configurationChanges.NumberOfHistoryProducersRequired + configurationChanges.NumberOfValidatorProducersRequired == 0)
+                    return BadRequest(new OperationResponse(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
+                if (configurationChanges.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
+                    return BadRequest(new OperationResponse(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
+
+                var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurationChanges));
+
+                var alterConfigTx = await _mainchainService.AlterConfigurations(_nodeConfigurations.AccountName, mappedConfig);
+
+                return Ok(new OperationResponse(true, $"Configuration changes succesfully sent. The changes will take effect after one day. Tx: {alterConfigTx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
         }
 
         public class SidebarQueryInfo

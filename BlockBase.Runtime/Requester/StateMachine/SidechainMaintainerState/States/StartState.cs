@@ -9,13 +9,12 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States
 {
-    public class StartState : AbstractMainchainState<StartState, EndState>
+    public class StartState : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private IMainchainService _mainchainService;
         private ContractInformationTable _contractInfo;
         private ContractStateTable _contractState;
-        private bool _hasEnoughStake;
 
         public StartState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {

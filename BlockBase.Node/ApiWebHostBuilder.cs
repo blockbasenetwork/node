@@ -158,7 +158,7 @@ namespace BlockBase.Api
                     logConfig = logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code, restrictedToMinimumLevel: LogEventLevel.Information);
                 }
 
-                logConfig = logConfig.WriteTo.File($"logs/BlockBaseNode_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log");
+                logConfig = logConfig.WriteTo.File($"logs/BlockBaseNode_.log", rollingInterval: RollingInterval.Day);
 
                 Log.Logger = logConfig.CreateLogger();
 

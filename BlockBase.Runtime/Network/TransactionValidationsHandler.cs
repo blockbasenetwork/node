@@ -22,6 +22,8 @@ using BlockBase.Utils.Threading;
 using BlockBase.Runtime.Helpers;
 using Google.Protobuf;
 using BlockBase.Runtime.Provider;
+using static BlockBase.Network.PeerConnection;
+using System.Text;
 
 namespace BlockBase.Runtime.Network
 {
@@ -51,12 +53,14 @@ namespace BlockBase.Runtime.Network
         }
         private async void MessageForwarder_TransactionsReceived(MessageForwarder.TransactionsReceivedEventArgs args, IPEndPoint sender)
         {
+            _logger.LogDebug($"Receiving transaction for sidechain: {args.ClientAccountName}");
             var transactionsProto = SerializationHelper.DeserializeTransactions(args.TransactionsBytes, _logger);
 
             if (transactionsProto == null) return;
 
             var receivedValidTransactions = new List<ulong>();
-            _logger.LogInformation($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber}");
+            var containsUnsavedTransactions = false;
+            _logger.LogInformation($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber} for sidechain {args.ClientAccountName}");
 
             foreach (var transactionProto in transactionsProto)
             {
@@ -66,7 +70,8 @@ namespace BlockBase.Runtime.Network
                 var transaction = new Transaction().SetValuesFromProto(transactionProto);
                 if (await ValidateTransaction(transaction, args.ClientAccountName))
                 {
-                    await SaveTransaction(args.ClientAccountName, transaction);
+                    var isTransactionAlreadySaved = await CheckIfAlreadySavedTransactionAndSave(args.ClientAccountName, transaction);
+                    if (!isTransactionAlreadySaved && !containsUnsavedTransactions) containsUnsavedTransactions = true;
                     var sequenceNumbers = await GetConfirmedTransactionsSequeceNumber(transaction, args.ClientAccountName, sender);
                     foreach (var sequenceNumber in sequenceNumbers)
                         if (sequenceNumber != 0 && !receivedValidTransactions.Contains(sequenceNumber))
@@ -90,6 +95,35 @@ namespace BlockBase.Runtime.Network
                     _nodeConfigurations.AccountName, sender);
             _logger.LogDebug("Sending confirmation transaction.");
             await _networkService.SendMessageAsync(message);
+
+            if (containsUnsavedTransactions)
+            {
+                await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName);
+            }
+        }
+
+        private async Task SendTransactionsToConnectedProviders(IEnumerable<TransactionProto> transactions, string clientAccountName)
+        {
+            var data = new List<byte>();
+            var sidechainNameBytes = Encoding.UTF8.GetBytes(clientAccountName);
+            short lenght = (short)sidechainNameBytes.Length;
+            data.AddRange(BitConverter.GetBytes(lenght));
+            data.AddRange(sidechainNameBytes);
+            foreach (var transaction in transactions)
+            {
+                var transactionBytes = transaction.ToByteArray();
+                data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
+                data.AddRange(transactionBytes);
+            }
+
+            _sidechainKeeper.TryGet(clientAccountName, out var sidechainContext);
+            foreach (var producer in sidechainContext.SidechainPool.ProducersInPool.GetEnumerable().Where(p => p.PeerConnection != null && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected && p.PeerConnection.IPEndPoint != null))
+            {
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
+
+                _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {producer.PeerConnection.ConnectionAccountName}");
+                await _networkService.SendMessageAsync(message);
+            }
         }
 
         public async Task<bool> ValidateTransaction(Transaction transaction, string clientAccountName)
@@ -123,8 +157,9 @@ namespace BlockBase.Runtime.Network
             return true;
         }
 
-        public async Task SaveTransaction(string clientAccountName, Transaction transaction)
+        public async Task<bool> CheckIfAlreadySavedTransactionAndSave(string clientAccountName, Transaction transaction)
         {
+            var alreadySaved = false;
             var sidechainSemaphore = TryGetAndAddSidechainSemaphore(clientAccountName);
 
             await sidechainSemaphore.WaitAsync();
@@ -135,6 +170,10 @@ namespace BlockBase.Runtime.Network
                 {
                     await _mongoDbProducerService.SaveTransaction(databaseName, transaction);
                 }
+                else
+                {
+                    alreadySaved = true;
+                }
             }
             catch (Exception e)
             {
@@ -144,6 +183,8 @@ namespace BlockBase.Runtime.Network
             {
                 sidechainSemaphore.Release();
             }
+
+            return alreadySaved;
         }
         private async Task<IList<ulong>> GetConfirmedTransactionsSequeceNumber(Transaction transaction, string clientAccountName, IPEndPoint sender)
         {

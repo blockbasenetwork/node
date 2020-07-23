@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Configurations;
+using BlockBase.Domain.Enums;
+using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Network.Sidechain;
@@ -13,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class ProductionState : ProviderAbstractState<StartState, EndState>
+    public class ProductionState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
@@ -21,15 +24,19 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private List<ProducerInTable> _producers;
         private ContractInformationTable _contractInfo;
         private List<IPAddressTable> _ipAddresses;
+        private List<WarningTable> _warnings;
+
+        private IMongoDbProducerService _mongoDbProducerService;
 
         private bool _needsToUpdateIps;
 
-        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool, mainchainService)
+        public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, IMongoDbProducerService mongoDbProducerService) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
             _networkConfigurations = networkConfigurations;
             _sidechainPool = sidechainPool;
+            _mongoDbProducerService = mongoDbProducerService;
         }
 
         protected override Task<bool> IsWorkDone()
@@ -63,12 +70,14 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
+            _warnings = await _mainchainService.RetrieveWarningTable(_sidechainPool.ClientAccountName);
             
             //check preconditions to continue update
             if(_contractInfo == null) return;
             if(!_producers.Any(c => c.Key == _nodeConfigurations.AccountName)) return;
 
             _needsToUpdateIps = IsIpUpdateRequired(_ipAddresses.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault().EncryptedIPs);
+            await UpdatePastSidechainDbBasedOnWarnings();
 
             _delay = _needsToUpdateIps ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(GetDelayInProductionTime());
         }
@@ -103,6 +112,27 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
             return listEncryptedIps.Except(encryptedIpsInTable).Any();
         }
-    }
 
+        private async Task UpdatePastSidechainDbBasedOnWarnings()
+        {
+            var warningsForThisProvider = _warnings.Where(w => w.Producer == _nodeConfigurations.AccountName);
+
+            if (!warningsForThisProvider.Any())
+            {
+                await _mongoDbProducerService.RemovePastSidechainFromDatabaseAsync(_sidechainPool.ClientAccountName, _sidechainPool.SidechainCreationTimestamp);
+                return;
+            }
+            var oldestWarning = warningsForThisProvider.First();
+
+            foreach (var warning in warningsForThisProvider)
+            {
+                if (warning.WarningCreationDateInSeconds < oldestWarning.WarningCreationDateInSeconds)
+                    oldestWarning = warning;
+            }
+
+            var reasonLeft = oldestWarning.WarningType == (int)WarningTypeEnum.FailedToProduceBlocks ? LeaveNetworkReasonsConstants.FAILED_TO_PRODUCE_BLOCKS :
+                             oldestWarning.WarningType == (int)WarningTypeEnum.FailedToValidateHistory ? LeaveNetworkReasonsConstants.FAILED_TO_VALIDATE_HISTORY : null;
+            await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(_sidechainPool.ClientAccountName, _sidechainPool.SidechainCreationTimestamp, false, reasonLeft);
+        }
+    }
 }

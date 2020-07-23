@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States
 {
-    public class UpdateAuthorizationsState : AbstractMainchainState<StartState, EndState>
+    public class UpdateAuthorizationsState : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
         private bool _inNeedToUpdateAuthorizations;
         private bool _verifyBlockPermissionLinked;

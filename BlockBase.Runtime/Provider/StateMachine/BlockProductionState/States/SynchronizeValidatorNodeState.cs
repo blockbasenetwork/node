@@ -18,7 +18,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
-    public class SynchronizeValidatorNodeState : ProviderAbstractState<StartState, EndState>
+    public class SynchronizeValidatorNodeState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
 
         private ContractStateTable _contractStateTable;

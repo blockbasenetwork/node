@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 {
-    public class StartState : AbstractState<StartState, EndState>
+    public class StartState : AbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private readonly IMainchainService _mainchainService;
 

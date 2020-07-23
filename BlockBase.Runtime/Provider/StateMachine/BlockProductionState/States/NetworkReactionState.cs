@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
-    public class NetworkReactionState : ProviderAbstractState<StartState, EndState>
+    public class NetworkReactionState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private ContractStateTable _contractStateTable;
         private NodeConfigurations _nodeConfigurations;

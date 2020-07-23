@@ -15,7 +15,7 @@ using BlockBase.Utils;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class CandidatureState : ProviderAbstractState<StartState, EndState>
+    public class CandidatureState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;

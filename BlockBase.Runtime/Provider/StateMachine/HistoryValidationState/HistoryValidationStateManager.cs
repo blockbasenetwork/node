@@ -33,9 +33,10 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.HistoryValidati
 
         protected override IState BuildState(string state)
         {
-            if(state == typeof(StartState).Name) return new StartState(_sidechainPool, _logger, _mainchainService, _nodeConfigurations);
-            if(state == typeof(ValidateHistoryState).Name) return new ValidateHistoryState(_logger, _mainchainService,_mongoDbProducerService, _sidechainPool,_nodeConfigurations);
-            if(state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool, _mainchainService);
+            if (state == typeof(StartState).Name) return new StartState(_sidechainPool, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(ValidateHistoryState).Name) return new ValidateHistoryState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations);
+            if (state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool, _mainchainService);
+            if (state == typeof(WaitForEndConfirmationState).Name) return new WaitForEndConfirmationState(_sidechainPool, _logger, _mainchainService, _nodeConfigurations);
             throw new System.NotImplementedException();
         }
     }

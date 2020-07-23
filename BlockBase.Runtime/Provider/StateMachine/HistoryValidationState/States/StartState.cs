@@ -15,7 +15,7 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
-    public class StartState : ProviderAbstractState<StartState, EndState>
+    public class StartState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
@@ -40,7 +40,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            if (_contractStateTable == null || _producerList == null || _historyValidations == null) return Task.FromResult(false);
+            if (_contractStateTable == null || _producerList == null) return Task.FromResult(false);
             //TODO verifies if he is a producer
             return Task.FromResult(_producerList.Any(p => p.Key == _nodeConfigurations.AccountName));
         }
@@ -58,6 +58,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             _contractStateTable = await _mainchainService.RetrieveContractState(_sidechainPool.ClientAccountName);
             _producerList = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _historyValidations = await _mainchainService.RetrieveHistoryValidation(_sidechainPool.ClientAccountName);
+
+            _delay = TimeSpan.FromSeconds(20);
         }
     }
 }

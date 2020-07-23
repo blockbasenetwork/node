@@ -13,7 +13,7 @@ using System;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class SecretTimeState : ProviderAbstractState<StartState, EndState>
+    public class SecretTimeState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;

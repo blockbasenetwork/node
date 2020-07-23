@@ -466,6 +466,58 @@ namespace BlockBase.DataPersistence.Data
             }
         }
 
+        public async Task AddPastSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool alreadyLeft = false, string reasonLeft = null)
+        {
+            sidechain = ClearSpecialCharacters(sidechain);
+            var pastSidechainDb = new PastSidechainDB()
+            {
+                Sidechain = sidechain,
+                Timestamp = timestamp,
+                AlreadyLeft = alreadyLeft,
+                DateLeftTimestamp = alreadyLeft ? Convert.ToUInt64(DateTimeOffset.UtcNow.ToUnixTimeSeconds()) : 0,
+                ReasonLeft = reasonLeft
+            };
+
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+                var sidechainCollection = recoverDatabase.GetCollection<PastSidechainDB>(MongoDbConstants.PAST_SIDECHAINS_COLLETION_NAME);
+
+                var existingPastSidechain = sidechainCollection.AsQueryable<PastSidechainDB>().Where(s => s.Sidechain == sidechain && s.Timestamp == timestamp).SingleOrDefault();
+                pastSidechainDb.ReasonLeft = existingPastSidechain?.ReasonLeft;
+
+                await sidechainCollection.ReplaceOneAsync(s => s.Sidechain == sidechain && s.Timestamp == timestamp, pastSidechainDb, new UpdateOptions { IsUpsert = true });
+            }
+        }
+
+        public async Task RemovePastSidechainFromDatabaseAsync(string sidechain, ulong timestamp)
+        {
+            sidechain = ClearSpecialCharacters(sidechain);
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+                var sidechainCollection = recoverDatabase.GetCollection<PastSidechainDB>(MongoDbConstants.PAST_SIDECHAINS_COLLETION_NAME);
+                await sidechainCollection.DeleteOneAsync(s => s.Sidechain == sidechain && s.Timestamp == timestamp);
+            }
+        }
+
+        public async Task<IList<PastSidechainDB>> GetAllPastSidechainsAsync()
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+
+                var sidechains = recoverDatabase.GetCollection<PastSidechainDB>(MongoDbConstants.PAST_SIDECHAINS_COLLETION_NAME).AsQueryable();
+                var query = from s in sidechains
+                            select s;
+
+                var result = query.ToList();
+                return result;
+            }
+        }
+
+        #endregion
+
         public async Task<TransactionDB> GetTransactionToExecute(string sidechain)
         {
             sidechain = ClearSpecialCharacters(sidechain);
@@ -499,11 +551,5 @@ namespace BlockBase.DataPersistence.Data
                 await session.CommitTransactionAsync();
             }
         }
-
-
-
-
-        #endregion
-
     }
 }

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.States
 {
-    public class NextStateRouter : AbstractMainchainState<StartState, EndState>
+    public class NextStateRouter : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
         private string _nextState;
         private ContractInformationTable _contractInfo;

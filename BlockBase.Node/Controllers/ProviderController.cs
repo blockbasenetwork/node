@@ -13,16 +13,9 @@ using System.Linq;
 using BlockBase.Utils.Crypto;
 using BlockBase.DataPersistence.Data;
 using Swashbuckle.AspNetCore.Annotations;
-using BlockBase.Domain.Enums;
 using BlockBase.DataPersistence.Utils;
-using BlockBase.Domain.Blockchain;
 using BlockBase.Runtime.Provider;
-using Newtonsoft.Json;
-using System.Globalization;
 using BlockBase.Node.Filters;
-using BlockBase.Utils;
-using System.Reflection;
-using BlockBase.Domain.Eos;
 using BlockBase.Node.Commands.Provider;
 
 namespace BlockBase.Node.Controllers
@@ -142,7 +135,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RequestToLeaveSidechainProduction(string sidechainName, bool cleanLocalSidechainData = false)
         {
-            var command = new RequestToLeaveSidechainProductionCommand(_logger, _mainchainService, _nodeConfigurations, _sidechainProducerService, sidechainName);
+            var command = new RequestToLeaveSidechainProductionCommand(_logger, _mainchainService, _nodeConfigurations, _mongoDbProducerService, sidechainName);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
@@ -230,7 +223,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetProducingSidechains()
         {
-            var command = new GetProducingSidechainsCommand(_logger, _sidechainProducerService);
+            var command = new GetProducingSidechainsCommand(_logger, _sidechainProducerService, _mainchainService, _nodeConfigurations);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);

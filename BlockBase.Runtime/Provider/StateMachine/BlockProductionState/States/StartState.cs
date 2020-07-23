@@ -11,7 +11,7 @@ using BlockBase.Domain.Enums;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
-    public class StartState : ProviderAbstractState<StartState, EndState>
+    public class StartState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private ContractStateTable _contractStateTable;
         private List<ProducerInTable> _producerList;

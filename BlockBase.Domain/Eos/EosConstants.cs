@@ -51,6 +51,7 @@ namespace BlockBase.Domain.Eos
         public const string START_CHAIN = "startchain";
         public const string END_CHAIN = "endservice";
         public const string CONFIG_CHAIN = "configchain";
+        public const string ALTER_CONFIG = "alterconfig";
         public const string START_CANDIDATURE_TIME = "startcandtime";
         public const string START_SEND_TIME = "startsendtime";
         public const string START_RECEIVE_TIME = "startrectime";
@@ -91,6 +92,7 @@ namespace BlockBase.Domain.Eos
         public const string PRODUCER = "producer";
         public const string NAME = "name";
         public const string CONFIG_INFO_JSON = "infoJson";
+        public const string INFO_CHANGE_JSON = "infoChangeJson";
         public const string RESERVED_SEATS = "reservedSeats";
         public const string SEATS_TO_ADD = "seatsToAdd";
         public const string SEATS_TO_REMOVE = "seatsToRemove";
@@ -205,6 +207,7 @@ namespace BlockBase.Domain.Eos
         public const string SIGNED_PRODUCERS = "signed_producers";
         public const string WARNING_CREATION_DATE_IN_SECONDS = "warning_creation_date_in_seconds";
         public const string PRODUCER_EXIT_DATE_IN_SECONDS = "producer_exit_date_in_seconds";
+        public const string CONFIG_CHANGE_TIME_IN_SECONDS = "config_changed_time_in_seconds";
     }
 
     public class EosErrors
@@ -234,5 +237,12 @@ namespace BlockBase.Domain.Eos
                     return "All";
             }
         }
+    }
+
+    public class LeaveNetworkReasonsConstants
+    {
+        public const string EXIT_REQUEST = "Exit request";
+        public const string FAILED_TO_PRODUCE_BLOCKS = "Failed to produce blocks";
+        public const string FAILED_TO_VALIDATE_HISTORY = "Failed to validate sidechain history";
     }
 }

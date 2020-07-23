@@ -323,6 +323,20 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<string> AlterConfigurations(string owner, Dictionary<string, object> configurationsToChange, string permission = "active")
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ALTER_CONFIG,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForAlterConfigurations(owner, configurationsToChange),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         public async Task<string> EndChain(string owner, string permission = "active")
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
@@ -1141,6 +1155,15 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
+        private Dictionary<string, object> CreateDataForAlterConfigurations(string owner, Dictionary<string, object> contractInformation)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.INFO_CHANGE_JSON, contractInformation },
+            };
+        }
+
         private Dictionary<string, object> CreateDataForSidechainExitRequest(string sidechainName)
         {
             return new Dictionary<string, object>()
@@ -1322,7 +1345,7 @@ namespace BlockBase.Network.Mainchain
             return new OpResult<T>(exception);
         }
 
-
+        public void ChangeNetwork() => EosStub.ChangeNetwork();
 
         #endregion
     }

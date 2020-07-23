@@ -33,6 +33,10 @@ namespace BlockBase.DataPersistence.Data
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllProducingSidechainsAsync();
 
+        Task AddPastSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool alreadyLeft = false, string reasonLeft = null);
+        Task RemovePastSidechainFromDatabaseAsync(string sidechain, ulong timestamp);
+        Task<IList<PastSidechainDB>> GetAllPastSidechainsAsync();
+
         Task<TransactionDB> GetTransactionToExecute(string sidechain);
         Task UpdateTransactionToExecute(string sidechain, TransactionDB transaction);
     }
