@@ -41,10 +41,17 @@ namespace BlockBase.Node.Commands.Network
 
         public override string CommandUsage => "test conn --ip <ipAddress> --p <port>";
 
-        public TestConnectionToPeerCommand(ILogger logger, IMainchainService mainchainService)
+        public TestConnectionToPeerCommand(ILogger logger, IMainchainService mainchainService, TcpConnectionTester tcpConnectionTester)
         {
+            _tcpConnectionTester = tcpConnectionTester;
             _mainchainService = mainchainService;
             _logger = logger;
+        }
+
+         public TestConnectionToPeerCommand(ILogger logger, IMainchainService mainchainService, TcpConnectionTester tcpConnectionTester, string ipAddress, int port) : this(logger, mainchainService, tcpConnectionTester)
+        {
+            _ipAddress = ipAddress;
+            _port = port;
         }
 
         public override async Task<CommandExecutionResponse> Execute()

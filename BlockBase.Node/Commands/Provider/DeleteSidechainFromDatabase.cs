@@ -1,24 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
-using BlockBase.DataPersistence.Sidechain.Connectors;
-using BlockBase.Domain.Blockchain;
-using BlockBase.Domain.Configurations;
-using BlockBase.Domain.Eos;
-using BlockBase.Network.Mainchain;
-using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Provider;
-using BlockBase.Utils;
-using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-
 namespace BlockBase.Node.Commands.Provider
 {
     public class DeleteSidechainFromDatabase : AbstractCommand
@@ -45,6 +31,12 @@ namespace BlockBase.Node.Commands.Provider
             _sidechainProducerService = sidechainProducerService;
             _mongoDbProducerService = mongoDbProducerService;
             _logger = logger;
+        }
+
+        public DeleteSidechainFromDatabase(ILogger logger, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService, string sidechainName, bool force) : this(logger, sidechainProducerService, mongoDbProducerService)
+        {
+            _chainName = sidechainName;
+            _force = force;
         }
 
         public override async Task<CommandExecutionResponse> Execute()

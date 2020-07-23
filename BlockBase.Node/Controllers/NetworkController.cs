@@ -10,7 +10,6 @@ using BlockBase.Network.Mainchain.Pocos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
-using BlockBase.Domain;
 using BlockBase.Utils;
 using Newtonsoft.Json;
 using BlockBase.Domain.Results;
@@ -18,7 +17,7 @@ using BlockBase.Domain.Enums;
 using BlockBase.Runtime.Network;
 using BlockBase.Node.Filters;
 using BlockBase.Domain.Endpoints;
-using static BlockBase.Network.PeerConnection;
+using BlockBase.Node.Commands.Network;
 
 namespace BlockBase.Node.Controllers
 {
@@ -58,47 +57,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetSidechainConfiguration(string sidechainName)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest(new OperationResponse(false, "Please provide a sidechain name."));
-                sidechainName = sidechainName.Trim();
+            var command = new GetSidechainConfigurationCommand(_logger, _mainchainService, sidechainName);
+            var result = await command.Execute();
 
-                ContractInformationTable contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-
-                if (contractInfo == null) return NotFound(new OperationResponse(false, $"Sidechain {sidechainName} configuration not found"));
-
-                var result = new GetSidechainConfigurationModel
-                {
-                    account_name = contractInfo.Key,
-                    BlocksBetweenSettlement = contractInfo.BlocksBetweenSettlement,
-                    BlockTimeDuration = contractInfo.BlockTimeDuration,
-                    CandidatureEndDate = DateTimeOffset.FromUnixTimeSeconds(contractInfo.CandidatureEndDate).DateTime,
-                    CandidatureTime = contractInfo.CandidatureTime,
-                    MaxPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers / 10000, 4),
-                    MaxPaymentPerBlockHistoryProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers / 10000, 4),
-                    MaxPaymentPerBlockValidatorProducers = Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers / 10000, 4),
-                    MinPaymentPerBlockFullProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4),
-                    MinPaymentPerBlockHistoryProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4),
-                    MinPaymentPerBlockValidatorProducers = Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4),
-                    Stake = Math.Round((decimal)contractInfo.Stake / 10000, 4),
-                    NumberOfFullProducersRequired = contractInfo.NumberOfFullProducersRequired,
-                    NumberOfHistoryProducersRequired = contractInfo.NumberOfHistoryProducersRequired,
-                    NumberOfValidatorProducersRequired = contractInfo.NumberOfValidatorProducersRequired,
-                    ReceiveEndDate = contractInfo.ReceiveEndDate,
-                    ReceiveTime = contractInfo.ReceiveTime,
-                    SecretEndDate = contractInfo.SecretEndDate,
-                    SendEndDate = contractInfo.SendEndDate,
-                    SendSecretTime = contractInfo.SendSecretTime,
-                    SendTime = contractInfo.SendTime,
-                    SizeOfBlockInBytes = contractInfo.SizeOfBlockInBytes
-                };
-
-                return Ok(new OperationResponse<dynamic>(result));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -120,34 +82,10 @@ namespace BlockBase.Node.Controllers
         //TODO Change name to something more intuitive.
         public async Task<ObjectResult> GetProducerCandidatureState(string accountName, string sidechainName)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(sidechainName))
-                {
-                    return BadRequest($"Please provide and producer account name and a sidechain name");
-                }
-                accountName = accountName.Trim();
-                sidechainName = sidechainName.Trim();
+            var command = new GetProviderCandidatureStateCommand(_logger, _mainchainService, sidechainName, accountName);
+            var result = await command.Execute();
 
-                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
-                var candidatureTable = await _mainchainService.RetrieveCandidates(sidechainName);
-                var producerTable = await _mainchainService.RetrieveProducersFromTable(sidechainName);
-
-                if (contractState == null) return NotFound($"Unable to retrieve {sidechainName} contract state");
-                if (candidatureTable == null && producerTable == null) return NotFound($"Unable to retrieve {sidechainName} candidature and production table");
-
-                if (candidatureTable != null && candidatureTable.Where(m => m.Key == accountName).Any())
-                    return Ok(new OperationResponse(false, $"Account {accountName} has applied for {sidechainName}"));
-
-                if (producerTable != null && producerTable.Where(m => m.Key == accountName).Any())
-                    return Ok(new OperationResponse(false, $"Account {accountName} is producing for {sidechainName}"));
-
-                return Ok(new OperationResponse(false, $"Producer {accountName} not found"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -167,84 +105,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetSidechainState(string sidechainName)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(sidechainName)) return BadRequest("Please provide a valid sidechain name");
-                sidechainName = sidechainName.Trim();
+            var command = new GetSidechainStateCommand(_logger, _mainchainService, sidechainName);
+            var result = await command.Execute();
 
-                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
-                var candidates = await _mainchainService.RetrieveCandidates(sidechainName);
-                var tokenLedger = await _mainchainService.GetAccountStake(sidechainName, sidechainName);
-                var producers = await _mainchainService.RetrieveProducersFromTable(sidechainName);
-                var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-                var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
-
-                if (contractState == null) return BadRequest($"Contract state not found for {sidechainName}");
-                if (candidates == null) return BadRequest($"Candidate table not found for {sidechainName}");
-                if (tokenLedger == null) return BadRequest($"Token ledger table not found for {sidechainName}");
-                if (producers == null) return BadRequest($"Producer table not found for {sidechainName}");
-                if (contractInfo == null) return BadRequest($"Contract info not found for {sidechainName}");
-                if (reservedSeats == null) return BadRequest($"Reserved seats table not found for {sidechainName}");
-
-                var slotsTakenByReservedSeats = 0;
-                var fullNumberOfSlotsTakenByReservedSeats = 0;
-                var historyNumberOfSlotsTakenByReservedSeats = 0;
-                var validatorNumberOfSlotsTakenByReservedSeats = 0;
-
-                foreach (var reservedSeatKey in reservedSeats.Select(r => r.Key).Distinct())
-                {
-                    var producer = producers.Where(o => o.Key == reservedSeatKey).SingleOrDefault();
-                    if (producer != null)
-                    {
-                        slotsTakenByReservedSeats++;
-                        if (producer.ProducerType == 3) fullNumberOfSlotsTakenByReservedSeats++;
-                        if (producer.ProducerType == 2) historyNumberOfSlotsTakenByReservedSeats++;
-                        if (producer.ProducerType == 1) validatorNumberOfSlotsTakenByReservedSeats++;
-                    }
-                }
-
-                var sidechainState = new SidechainState()
-                {
-
-                    State = contractState.ConfigTime ? "Configure state" : contractState.SecretTime ? "Secrect state" : contractState.IPSendTime ? "Ip Send Time" : contractState.IPReceiveTime ? "Ip Receive Time" : contractState.ProductionTime ? "Production" : contractState.Startchain ? "Startchain" : "No State in chain",
-                    StakeDepletionEndDate = StakeEndTimeCalculationAtMaxPayments(contractInfo, tokenLedger),
-                    CurrentRequesterStake = tokenLedger.StakeString,
-                    InProduction = contractState.ProductionTime,
-                    ReservedSeats = new ReservedSeats()
-                    {
-                        TotalNumber = reservedSeats.Count,
-                        SlotsStillAvailable = reservedSeats.Count - slotsTakenByReservedSeats,
-                        SlotsTaken = slotsTakenByReservedSeats
-                    },
-                    FullProducersInfo = new SidechainProducersInfo()
-                    {
-                        NumberOfProducersRequired = (int)contractInfo.NumberOfFullProducersRequired,
-                        NumberOfProducersInChain = producers.Where(o => o.ProducerType == 3).Count(),
-                        CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 3).Count(),
-                        NumberOfSlotsTakenByReservedSeats = fullNumberOfSlotsTakenByReservedSeats
-
-                    },
-                    HistoryProducersInfo = new SidechainProducersInfo()
-                    {
-                        NumberOfProducersRequired = (int)contractInfo.NumberOfHistoryProducersRequired,
-                        NumberOfProducersInChain = producers.Where(o => o.ProducerType == 2).Count(),
-                        CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 2).Count(),
-                        NumberOfSlotsTakenByReservedSeats = historyNumberOfSlotsTakenByReservedSeats
-                    },
-                    ValidatorProducersInfo = new SidechainProducersInfo()
-                    {
-                        NumberOfProducersRequired = (int)contractInfo.NumberOfValidatorProducersRequired,
-                        NumberOfProducersInChain = producers.Where(o => o.ProducerType == 1).Count(),
-                        CandidatesWaitingForSeat = candidates.Where(o => o.ProducerType == 1).Count(),
-                        NumberOfSlotsTakenByReservedSeats = validatorNumberOfSlotsTakenByReservedSeats
-                    }
-                };
-                return Ok(new OperationResponse<SidechainState>(sidechainState));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -262,19 +126,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetAccountStakeRecords(string accountName)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
-                accountName = accountName.Trim();
+            var command = new GetAccountStakeRecordsCommand(_logger, _mainchainService, accountName);
+            var result = await command.Execute();
 
-                var stakeTable = await _mainchainService.RetrieveAccountStakedSidechains(accountName);
-
-                return Ok(stakeTable);
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -292,25 +147,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetTopProducersAndEndpoints()
         {
-            try
-            {
-                var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_TOP_21_PRODUCERS_ENDPOINTS);
-                var json = await HttpHelper.CallWebRequest(request);
-                var topProducers = JsonConvert.DeserializeObject<List<TopProducerEndpoint>>(json);
+            var command = new GetTopProducersEndpointsCommand(_logger);
+            var result = await command.Execute();
 
-                //TODO rpinto - Nice implementation - should be done periodically though, and not on request
-                var topProducersEndpointResponse = await ConvertToAndMeasureTopProducerEndpointResponse(topProducers.Take(10).ToList());
-
-                return Ok(new OperationResponse<List<TopProducerEndpointResponse>>(topProducersEndpointResponse));
-            }
-            catch (Newtonsoft.Json.JsonReaderException)
-            {
-                return NotFound(new OperationResponse(false, "Unable to retrieve the list of producers"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -329,22 +169,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetAllBlockbaseSidechains(NetworkType network = NetworkType.All)
         {
-            try
-            {
-                var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_ALL_TRACKER_SIDECHAINS + $"?network={network.ToString()}");
-                var json = await HttpHelper.CallWebRequest(request);
-                var trackerSidechains = JsonConvert.DeserializeObject<List<TrackerSidechain>>(json);
+            var command = new GetAllBlockBaseSidechainsCommand(_logger, network);
+            var result = await command.Execute();
 
-                return Ok(new OperationResponse<List<TrackerSidechain>>(trackerSidechains));
-            }
-            catch (Newtonsoft.Json.JsonReaderException)
-            {
-                return NotFound(new OperationResponse(false, "Unable to retrieve the list of sidechains"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
 
@@ -364,22 +192,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetCurrentUnclaimedRewards(string accountName)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(accountName)) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
-                accountName = accountName.Trim();
+            var command = new GetCurrentUnclaimedRewardsCommand(_logger, _mainchainService, accountName);
+            var result = await command.Execute();
 
-                var rewardTable = await _mainchainService.RetrieveRewardTable(accountName);
-                if (rewardTable == null) return NotFound(new OperationResponse(false, $"The reward table for {accountName} was not found"));
-
-
-
-                return Ok(new OperationResponse<List<(string provider, string reward)>>(rewardTable.Select(r => (r.Key, $"{Math.Round((double)r.Reward / 10000, 4)} BBT")).ToList()));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
 
@@ -400,22 +216,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> TestConnectionToPeer(string ipAddress, int port)
         {
-            try
-            {
-                if (!IPAddress.TryParse(ipAddress, out var ipAddr)) return BadRequest("Unable to parse the ipAddress");
+            var command = new TestConnectionToPeerCommand(_logger, _mainchainService, _tcpConnectionTester, ipAddress, port);
+            var result = await command.Execute();
 
-                var ipEndPoint = new IPEndPoint(ipAddr, port);
-                var peer = await _tcpConnectionTester.TestListen(ipEndPoint);
-                if (peer != null)
-                    return Ok($"Tried to establish connection to peer. Check the console for results.");
-                else
-                    return Ok($"Unable to connect to peer");
-
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -433,90 +237,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetPeerConnectionsState()
         {
-            try
-            {
-                var peers = await _peerConnectionsHandler.PingAllConnectionsAndReturnAliveState();
+            var command = new GetPeerConnectionStateCommand(_logger, _peerConnectionsHandler);
+            var result = await command.Execute();
 
-                if (!peers.Any())
-                    return NotFound(new OperationResponse(false, "No peers found"));
-
-                var peersResult = new List<PeerConnectionResult>();
-
-                foreach (var peer in peers)
-                {
-                    peersResult.Add(new PeerConnectionResult(){
-                        Name = peer.peer.ConnectionAccountName,
-                        State = peer.peer.ConnectionState.ToString(),
-                        Endpoint = peer.peer.IPEndPoint.ToString(),
-                        ConnectionAlive = peer.connectionAlive
-                    });
-                }
-
-                return Ok(new OperationResponse<List<PeerConnectionResult>>(peersResult));
-
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
-
-
-        #region Helpers
-
-        private DateTime StakeEndTimeCalculationAtMaxPayments(ContractInformationTable contractInfo, AccountStake sidechainStake)
-        {
-            var blocksDividedByTotalNumberOfProducers = contractInfo.BlocksBetweenSettlement / (contractInfo.NumberOfFullProducersRequired + contractInfo.NumberOfHistoryProducersRequired + contractInfo.NumberOfValidatorProducersRequired);
-            var fullProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfFullProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
-            var historyroducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfHistoryProducersRequired) * contractInfo.MaxPaymentPerBlockHistoryProducers;
-            var validatorProducerPaymentPerSettlement = (blocksDividedByTotalNumberOfProducers * contractInfo.NumberOfValidatorProducersRequired) * contractInfo.MaxPaymentPerBlockFullProducers;
-
-            var sidechainStakeString = sidechainStake.StakeString.Split(" ")[0];
-            var sidechainStakeInUnitsString = sidechainStakeString.Split(".")[0] + sidechainStakeString.Split(".")[1];
-
-            var timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice = ulong.Parse(sidechainStakeInUnitsString) / ((fullProducerPaymentPerSettlement + historyroducerPaymentPerSettlement + validatorProducerPaymentPerSettlement));
-            return DateTime.UtcNow.AddSeconds((contractInfo.BlockTimeDuration * contractInfo.BlocksBetweenSettlement) * timesThatRequesterCanPaySettlementWithAllProvidersAtMaxPrice);
-        }
-
-        private async Task<List<TopProducerEndpointResponse>> ConvertToAndMeasureTopProducerEndpointResponse(List<TopProducerEndpoint> topProducers)
-        {
-            var topProducersEndpointResponse = new List<TopProducerEndpointResponse>();
-
-            foreach (var producer in topProducers)
-            {
-                if (!producer.Endpoints.Any()) continue;
-                var producerEndpointResponse = new TopProducerEndpointResponse();
-                producerEndpointResponse.ProducerInfo = producer.ProducerInfo;
-                producerEndpointResponse.Endpoints = new List<EndpointResponse>();
-                var requests = new List<HttpWebRequest>();
-
-                foreach (var endpoint in producer.Endpoints)
-                {
-                    if (!endpoint.Contains("http")) continue;
-
-                    var infoRequest = HttpHelper.ComposeWebRequestGet($"{endpoint}/v1/chain/get_info");
-                    requests.Add(infoRequest);
-                }
-
-                var requestResults = requests.Select(r => HttpHelper.MeasureWebRequest(r.RequestUri.GetLeftPart(System.UriPartial.Authority), r)).ToList();
-                await Task.WhenAll(requestResults);
-                var results = requestResults.Select(r => r.Result);
-
-                foreach (var result in results)
-                {
-                    var endpointResponse = new EndpointResponse();
-                    endpointResponse.Endpoint = result.Item1;
-                    endpointResponse.ResponseTimeInMs = result.Item2;
-                    producerEndpointResponse.Endpoints.Add(endpointResponse);
-                }
-
-                producerEndpointResponse.Endpoints = producerEndpointResponse.Endpoints.OrderBy(e => e.ResponseTimeInMs).ToList();
-                topProducersEndpointResponse.Add(producerEndpointResponse);
-            }
-
-            return topProducersEndpointResponse.ToList();
-        }
-
-        #endregion
     }
 }

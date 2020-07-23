@@ -1,15 +1,11 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore;
 using System.Net;
 using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using BlockBase.DataProxy.Encryption;
-using System.IO;
-using System.Text;
 using BlockBase.Node.Commands.Utils;
-using Microsoft.AspNetCore.Mvc;
+
 
 namespace BlockBase.Node.Commands.Requester
 {
@@ -33,16 +29,20 @@ namespace BlockBase.Node.Commands.Requester
 
         public override string CommandUsage => "set secret [--isEncrypted true --encryptedData <encryptedData> || --isEncrypted false --masterKey <encryptedMasterKey> --epassword <encryptionpassword> --fpassword <filepassword> ]";
 
-        public SetSecretCommand(ILogger logger, RequesterConfigurations requesterConfigurations, DatabaseKeyManager databaseKeyManager, DatabaseSecurityConfigurations databaseSecurityConfigurations = null)
+        public SetSecretCommand(ILogger logger, RequesterConfigurations requesterConfigurations, DatabaseKeyManager databaseKeyManager)
         {
             _requesterConfigurations = requesterConfigurations;
             _databaseKeyManager = databaseKeyManager;
             _logger = logger;
-            _isEncrypted = databaseSecurityConfigurations?.IsEncrypted ?? false;
-            _encryptionMasterKey = databaseSecurityConfigurations?.EncryptionMasterKey;
-            _encryptionPassword = databaseSecurityConfigurations?.EncryptionPassword;
-            _filePassword = databaseSecurityConfigurations?.FilePassword;
-            _encryptedData = databaseSecurityConfigurations?.EncryptedData;
+        }
+
+        public SetSecretCommand(ILogger logger, RequesterConfigurations requesterConfigurations, DatabaseKeyManager databaseKeyManager, DatabaseSecurityConfigurations databaseSecurityConfigurations) : this(logger, requesterConfigurations, databaseKeyManager)
+        {
+            _isEncrypted = databaseSecurityConfigurations.IsEncrypted;
+            _encryptionMasterKey = databaseSecurityConfigurations.EncryptionMasterKey;
+            _encryptionPassword = databaseSecurityConfigurations.EncryptionPassword;
+            _filePassword = databaseSecurityConfigurations.FilePassword;
+            _encryptedData = databaseSecurityConfigurations.EncryptedData;
 
         }
 

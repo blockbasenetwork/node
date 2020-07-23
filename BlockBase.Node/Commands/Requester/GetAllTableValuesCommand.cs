@@ -3,11 +3,11 @@ using System.Threading.Tasks;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using BlockBase.Node.Commands.Utils;
-using BlockBase.Runtime.Requester;
 using BlockBase.DataProxy.Encryption;
 using System.Collections.Generic;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Sql;
+using static BlockBase.Node.Controllers.RequesterController;
 
 namespace BlockBase.Node.Commands.Requester
 {
@@ -33,6 +33,13 @@ namespace BlockBase.Node.Commands.Requester
             _logger = logger;
             _databaseKeyManager = databaseKeyManager;
             _sqlCommandManager = sqlCommandManager;
+        }
+
+        public GetAllTableValuesCommand(ILogger logger, DatabaseKeyManager databaseKeyManager, SqlCommandManager sqlCommandManager, SidebarQueryInfo sidebarQueryInfo) : this(logger, databaseKeyManager, sqlCommandManager)
+        {
+            _databaseName = sidebarQueryInfo.DatabaseName;
+            _tableName = sidebarQueryInfo.TableName;
+            _encrypted = sidebarQueryInfo.Encrypted;
         }
 
         public decimal Stake { get; set; }

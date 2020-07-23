@@ -1,29 +1,15 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
-using BlockBase.DataPersistence.Sidechain.Connectors;
-using BlockBase.Domain.Blockchain;
-using BlockBase.Domain.Configurations;
-using BlockBase.Domain.Eos;
-using BlockBase.Network.Mainchain;
-using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Provider;
-using BlockBase.Utils;
-using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace BlockBase.Node.Commands.Provider
 {
     public class GetTransactionCommand : AbstractCommand
     {
-        private ISidechainProducerService _sidechainProducerService;
 
         private IMongoDbProducerService _mongoDbProducerService;
 
@@ -40,11 +26,16 @@ namespace BlockBase.Node.Commands.Provider
 
         public override string CommandUsage => "get tx --chain <sidechainName> --n <transactionNumber>";
 
-        public GetTransactionCommand(ILogger logger, ISidechainProducerService sidechainProducerService,  IMongoDbProducerService mongoDbProducerService)
+        public GetTransactionCommand(ILogger logger, IMongoDbProducerService mongoDbProducerService)
         {
-            _sidechainProducerService = sidechainProducerService;
             _logger = logger;
             _mongoDbProducerService = mongoDbProducerService;
+        }
+
+          public GetTransactionCommand(ILogger logger, IMongoDbProducerService mongoDbProducerService, string chainName, ulong transactionNumber) : this(logger, mongoDbProducerService)
+        {
+            _chainName = chainName;
+            _transactionNumber = transactionNumber;
         }
 
         public override async Task<CommandExecutionResponse> Execute()

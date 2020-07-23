@@ -1,30 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
-using BlockBase.DataPersistence.Sidechain.Connectors;
-using BlockBase.Domain.Blockchain;
-using BlockBase.Domain.Configurations;
-using BlockBase.Domain.Eos;
-using BlockBase.Network.Mainchain;
-using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Provider;
-using BlockBase.Utils;
-using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace BlockBase.Node.Commands.Provider
 {
     public class GetTransactionsInMempoolCommand : AbstractCommand
     {
-        private ISidechainProducerService _sidechainProducerService;
-
         private IMongoDbProducerService _mongoDbProducerService;
 
         private string _chainName;
@@ -38,11 +24,14 @@ namespace BlockBase.Node.Commands.Provider
 
         public override string CommandUsage => "get tx mempool --chain <sidechainName>";
 
-        public GetTransactionsInMempoolCommand(ILogger logger, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService)
+        public GetTransactionsInMempoolCommand(ILogger logger, IMongoDbProducerService mongoDbProducerService)
         {
-            _sidechainProducerService = sidechainProducerService;
             _logger = logger;
             _mongoDbProducerService = mongoDbProducerService;
+        }
+         public GetTransactionsInMempoolCommand(ILogger logger, IMongoDbProducerService mongoDbProducerService, string chainName) : this(logger, mongoDbProducerService)
+        {
+            _chainName = chainName;
         }
 
         public override async Task<CommandExecutionResponse> Execute()

@@ -1,25 +1,16 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
-using BlockBase.DataPersistence.Sidechain.Connectors;
-using BlockBase.DataPersistence.Utils;
-using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
-using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Provider;
 using BlockBase.Utils;
-using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace BlockBase.Node.Commands.Provider
 {
@@ -58,6 +49,13 @@ namespace BlockBase.Node.Commands.Provider
             _mongoDbProducerService = mongoDbProducerService;
             _sidechainProducerService = sidechainProducerService;
             _logger = logger;
+        }
+
+          public RequestToProduceSidechainCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService, string chainName, int providerType, decimal stake) : this(logger, mainchainService, nodeConfigurations, sidechainProducerService, mongoDbProducerService)
+        {
+            _chainName = chainName;
+            _providerType = providerType;
+            _stake = stake;
         }
 
         public decimal Stake { get; set; }

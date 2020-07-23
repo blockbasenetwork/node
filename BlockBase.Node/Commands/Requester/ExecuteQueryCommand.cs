@@ -1,15 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore;
 using System.Net;
-using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using BlockBase.DataProxy.Encryption;
-using System.IO;
-using System.Text;
 using BlockBase.Node.Commands.Utils;
-using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Sql;
@@ -36,6 +30,11 @@ namespace BlockBase.Node.Commands.Requester
             _databaseKeyManager = databaseKeyManager;
             _sqlCommandManager = sqlCommandManager;
             _logger = logger;
+        }
+
+        public ExecuteQueryCommand(ILogger logger, DatabaseKeyManager databaseKeyManager, SqlCommandManager sqlCommandManager, string queryScript) : this(logger, databaseKeyManager, sqlCommandManager)
+        {
+            _queryScript = queryScript;
         }
 
         public decimal Stake { get; set; }

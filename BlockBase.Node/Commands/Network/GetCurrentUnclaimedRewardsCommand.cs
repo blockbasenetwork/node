@@ -47,6 +47,12 @@ namespace BlockBase.Node.Commands.Network
             _logger = logger;
         }
 
+        public GetCurrentUnclaimedRewardsCommand(ILogger logger, IMainchainService mainchainService, string accountName) : this(logger, mainchainService)
+        {
+            _accountName = accountName;
+        }
+
+
         public override async Task<CommandExecutionResponse> Execute()
         {
              try

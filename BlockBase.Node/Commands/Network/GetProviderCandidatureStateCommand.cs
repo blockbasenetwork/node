@@ -1,24 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading.Tasks;
-using BlockBase.DataPersistence.Data;
-using BlockBase.DataPersistence.Sidechain.Connectors;
-using BlockBase.Domain.Blockchain;
-using BlockBase.Domain.Configurations;
-using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
-using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Node.Commands.Utils;
-using BlockBase.Runtime.Provider;
-using BlockBase.Utils;
-using BlockBase.Utils.Crypto;
-using EosSharp.Core.Exceptions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
 namespace BlockBase.Node.Commands.Network
 {
@@ -43,6 +29,12 @@ namespace BlockBase.Node.Commands.Network
         {
             _mainchainService = mainchainService;
             _logger = logger;
+        }
+
+        public GetProviderCandidatureStateCommand(ILogger logger, IMainchainService mainchainService, string chainName, string accountName) : this(logger, mainchainService)
+        {
+            _chainName = chainName;
+            _accountName = accountName;
         }
 
         public override async Task<CommandExecutionResponse> Execute()
