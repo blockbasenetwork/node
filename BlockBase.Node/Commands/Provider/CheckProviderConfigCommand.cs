@@ -37,6 +37,7 @@ namespace BlockBase.Node.Commands.Provider
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
             _connectionsChecker = connectionsChecker;
+            _networkConfigurations = networkConfigurations;
             _logger = logger;
         }
 

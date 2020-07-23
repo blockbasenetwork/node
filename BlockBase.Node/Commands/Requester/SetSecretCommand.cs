@@ -64,7 +64,8 @@ namespace BlockBase.Node.Commands.Requester
                         IsEncrypted = _isEncrypted,
                         EncryptionMasterKey = _encryptionMasterKey,
                         EncryptionPassword = _encryptionPassword,
-                        EncryptedData = _encryptedData
+                        EncryptedData = _encryptedData,
+                        FilePassword = _filePassword
                     };
                     _databaseKeyManager.SetInitialSecrets(newConfig);
                 }

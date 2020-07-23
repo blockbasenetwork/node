@@ -19,7 +19,6 @@ using System.Text;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
 using BlockBase.Runtime.Sql;
-using System.Linq;
 using BlockBase.Node.Filters;
 using BlockBase.Node.Commands.Requester;
 
