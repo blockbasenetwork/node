@@ -54,7 +54,7 @@ namespace BlockBase.Node.Commands.Provider
           public RequestToProduceSidechainCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService, string chainName, int providerType, decimal stake) : this(logger, mainchainService, nodeConfigurations, sidechainProducerService, mongoDbProducerService)
         {
             _chainName = chainName;
-            _providerType = providerType;
+            this._providerType = providerType;
             _stake = stake;
         }
 
@@ -62,28 +62,34 @@ namespace BlockBase.Node.Commands.Provider
 
         public override async Task<CommandExecutionResponse> Execute()
         {
-            //TODO rpinto - to verify when done. The request to produce a sidechain won't be allowed if there still exists data related to that sidechain on the database
+             //TODO rpinto - to verify when done. The request to produce a sidechain won't be allowed if there still exists data related to that sidechain on the database
             //The user will have to delete it manually. This only happens if the user registered on the sidechain manually too
 
             if (string.IsNullOrWhiteSpace(_chainName)) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Please provide a valid sidechain name"));
             if (_providerType < 1 || _providerType > 3) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Please provide a valid provider type. (1) Validator, (2) History, (3) Full"));
-            if (_stake < 0) return new CommandExecutionResponse(HttpStatusCode.BadRequest,new OperationResponse(false, "Please provide a non-negative stake value"));
+            if (_stake < 0) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Please provide a non-negative stake value"));
             _chainName = _chainName.Trim();
 
             try
             {
                 var chainContract = await _mainchainService.RetrieveContractState(_chainName);
                 if (chainContract == null) return new CommandExecutionResponse(HttpStatusCode.NotFound, new OperationResponse(false, $"Sidechain {_chainName} not found"));
-                if (!chainContract.CandidatureTime) return new CommandExecutionResponse(HttpStatusCode.NotFound, new OperationResponse(false, $"Sidechain not in candidature time"));
-
-                var networkInfo = await _mainchainService.GetInfo();
-                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
 
                 var clientInfo = await _mainchainService.RetrieveClientTable(_chainName);
                 if (clientInfo == null) return new CommandExecutionResponse(HttpStatusCode.NotFound, new OperationResponse(false, $"Sidechain {_chainName} client info not found"));
 
                 var contractInfo = await _mainchainService.RetrieveContractInformation(_chainName);
                 if (contractInfo == null) return new CommandExecutionResponse(HttpStatusCode.NotFound, new OperationResponse(false, $"Sidechain {_chainName} contract info not found"));
+
+                var candidates = await _mainchainService.RetrieveCandidates(_chainName);
+                var producers = await _mainchainService.RetrieveProducersFromTable(_chainName);
+                var isProducerInTable = producers.Any(c => c.Key == _nodeConfigurations.AccountName);
+                var isCandidateInTable = candidates.Any(c => c.Key == _nodeConfigurations.AccountName);
+
+                if (!chainContract.CandidatureTime && !isProducerInTable && !isCandidateInTable) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain not in candidature time and provider not in producer or candidate tables"));
+
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
 
                 var softwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
                 var softwareVersion = VersionHelper.ConvertFromVersionString(softwareVersionString);
@@ -110,18 +116,13 @@ namespace BlockBase.Node.Commands.Provider
                     }
                 }
 
-                if ((contractInfo.NumberOfFullProducersRequired == 0 && _providerType == 3) || (contractInfo.NumberOfHistoryProducersRequired == 0 && _providerType == 2) || (contractInfo.NumberOfValidatorProducersRequired == 0 && _providerType == 1))
+                if((contractInfo.NumberOfFullProducersRequired == 0 && _providerType == 3) || (contractInfo.NumberOfHistoryProducersRequired == 0 && _providerType == 2) || (contractInfo.NumberOfValidatorProducersRequired == 0 && _providerType == 1))
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Producer type inserted is not needed in the given sidechain configuration"));
                 if (contractInfo.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain has block time lower than 60 seconds running on mainnet and can not be joined"));
-
-                var candidates = await _mainchainService.RetrieveCandidates(_chainName);
-                var producers = await _mainchainService.RetrieveProducersFromTable(_chainName);
-
-                var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == _nodeConfigurations.ActivePublicKey) || candidates.Any(c => c.PublicKey == _nodeConfigurations.ActivePublicKey);
+                
+                var isPublicKeyAlreadyUsed = producers.Any(p => p.PublicKey == _nodeConfigurations.ActivePublicKey && p.Key != _nodeConfigurations.AccountName) || candidates.Any(c => c.PublicKey == _nodeConfigurations.ActivePublicKey && c.Key != _nodeConfigurations.AccountName);
                 if (isPublicKeyAlreadyUsed) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Key {_nodeConfigurations.ActivePublicKey} is already being used by another producer or candidate"));
-
-                var isProducerInTable = producers.Any(c => c.Key == _nodeConfigurations.AccountName);
 
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(_chainName);
                 //if the database exists and he's on the producer table, then nothing should be done
@@ -135,15 +136,13 @@ namespace BlockBase.Node.Commands.Provider
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"There is a database related to this chain. Please delete it"));
                 }
 
-
                 var accountStake = await _mainchainService.GetAccountStake(_chainName, _nodeConfigurations.AccountName);
                 var minimumProviderState = Math.Round((decimal)contractInfo.Stake / 10000, 4);
                 if (minimumProviderState > accountStake?.Stake + _stake)
                 {
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Minimum provider stake is {minimumProviderState}, currently staked {accountStake?.Stake} and added {_stake} which is not enough. Please stake {minimumProviderState - accountStake?.Stake}"));
                 }
-
-
+                
                 await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(_chainName, clientInfo.SidechainCreationTimestamp, false);
 
                 if (_stake > 0)
@@ -179,7 +178,7 @@ namespace BlockBase.Node.Commands.Provider
             _chainName = commandData[3];
             if(commandData[4] != "--providerType") return new CommandParseResult(true, CommandUsage);
             if(!Int32.TryParse(commandData[5], out int providerType)) return new CommandParseResult(true, CommandUsage);
-            _providerType = providerType;
+            this._providerType = providerType;
             if(commandData[6] != "--stake") return new CommandParseResult(true, CommandUsage);
             if(!Decimal.TryParse(commandData[7], out decimal stake)) return new CommandParseResult(true, CommandUsage);
             _stake = stake;

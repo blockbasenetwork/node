@@ -5,7 +5,7 @@ using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Logging;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Node.Commands.Utils;
-
+using BlockBase.DataPersistence.Sidechain.Connectors;
 
 namespace BlockBase.Node.Commands.Requester
 {
@@ -15,6 +15,7 @@ namespace BlockBase.Node.Commands.Requester
         private ILogger _logger;
         private RequesterConfigurations _requesterConfigurations;
         private DatabaseKeyManager _databaseKeyManager;
+        private IConnector _connector;
         private bool _isEncrypted;
         private string _encryptionMasterKey;
         private string _encryptionPassword;
@@ -29,14 +30,15 @@ namespace BlockBase.Node.Commands.Requester
 
         public override string CommandUsage => "set secret [--isEncrypted true --encryptedData <encryptedData> || --isEncrypted false --masterKey <encryptedMasterKey> --epassword <encryptionpassword> --fpassword <filepassword> ]";
 
-        public SetSecretCommand(ILogger logger, RequesterConfigurations requesterConfigurations, DatabaseKeyManager databaseKeyManager)
+        public SetSecretCommand(ILogger logger, RequesterConfigurations requesterConfigurations, DatabaseKeyManager databaseKeyManager, IConnector connector)
         {
             _requesterConfigurations = requesterConfigurations;
             _databaseKeyManager = databaseKeyManager;
             _logger = logger;
+            _connector = connector;
         }
 
-        public SetSecretCommand(ILogger logger, RequesterConfigurations requesterConfigurations, DatabaseKeyManager databaseKeyManager, DatabaseSecurityConfigurations databaseSecurityConfigurations) : this(logger, requesterConfigurations, databaseKeyManager)
+        public SetSecretCommand(ILogger logger, RequesterConfigurations requesterConfigurations, DatabaseKeyManager databaseKeyManager, IConnector connector, DatabaseSecurityConfigurations databaseSecurityConfigurations) : this(logger, requesterConfigurations, databaseKeyManager, connector)
         {
             _isEncrypted = databaseSecurityConfigurations.IsEncrypted;
             _encryptionMasterKey = databaseSecurityConfigurations.EncryptionMasterKey;
@@ -56,7 +58,12 @@ namespace BlockBase.Node.Commands.Requester
                 {
                     _databaseKeyManager.SetInitialSecrets(_requesterConfigurations.DatabaseSecurityConfigurations);
                 }
+                _connector.Setup().Wait();
 
+                if (_requesterConfigurations.DatabaseSecurityConfigurations.Use)
+                {
+                    _databaseKeyManager.SetInitialSecrets(_requesterConfigurations.DatabaseSecurityConfigurations);
+                }
                 else
                 {
                     var newConfig = new DatabaseSecurityConfigurations()

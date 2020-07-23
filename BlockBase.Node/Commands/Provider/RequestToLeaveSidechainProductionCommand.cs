@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Configurations;
+using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Provider;
@@ -19,7 +19,7 @@ namespace BlockBase.Node.Commands.Provider
 
         private NodeConfigurations _nodeConfigurations;
 
-        private ISidechainProducerService _sidechainProducerService;
+        private IMongoDbProducerService _mongoDbProducerService;
 
 
 
@@ -34,31 +34,31 @@ namespace BlockBase.Node.Commands.Provider
 
         public override string CommandUsage => "req leave --chain <sidechainName>";
 
-        public RequestToLeaveSidechainProductionCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, ISidechainProducerService sidechainProducerService)
+        public RequestToLeaveSidechainProductionCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
-            _sidechainProducerService = sidechainProducerService;
+            _mongoDbProducerService = mongoDbProducerService;
             _logger = logger;
         }
 
-        public RequestToLeaveSidechainProductionCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, ISidechainProducerService sidechainProducerService, string chainName) : this(logger, mainchainService, nodeConfigurations, sidechainProducerService)
+        public RequestToLeaveSidechainProductionCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, IMongoDbProducerService mongoDbProducerService, string chainName) : this(logger, mainchainService, nodeConfigurations, mongoDbProducerService)
         {
             _chainName = chainName;
         }
 
         public override async Task<CommandExecutionResponse> Execute()
         {
-            //TODO rpinto - to verify that a manual request to leave a sidechain shouldn't delete the database. That has to be done independently
-
             if (string.IsNullOrWhiteSpace(_chainName)) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Please provide a valid sidechain name"));
             _chainName = _chainName.Trim();
 
             try
             {
+                //TODO rpinto - to verify that a manual request to leave a sidechain shouldn't delete the database. That has to be done independently
 
                 var chainContract = await _mainchainService.RetrieveContractState(_chainName);
                 var candidatureTable = await _mainchainService.RetrieveCandidates(_chainName);
+                var clientTable = await _mainchainService.RetrieveClientTable(_chainName);
                 var producersTable = await _mainchainService.RetrieveProducersFromTable(_chainName);
                 if (chainContract == null) return new CommandExecutionResponse(HttpStatusCode.NotFound, new OperationResponse(false, $"Sidechain {_chainName} not found"));
                 if (candidatureTable == null) return new CommandExecutionResponse(HttpStatusCode.NotFound, new OperationResponse(false, $"Unable to retrieve {_chainName} candidature table"));
@@ -71,6 +71,7 @@ namespace BlockBase.Node.Commands.Provider
 
                 _logger.LogDebug($"Sending sidechain exit request for {_chainName}");
                 var trx = await _mainchainService.SidechainExitRequest(_chainName);
+                await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(_chainName, clientTable.SidechainCreationTimestamp, false, LeaveNetworkReasonsConstants.EXIT_REQUEST);
 
 
                 //TODO rpinto - needs to verify if exist request has been sent successfully

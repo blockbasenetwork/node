@@ -25,7 +25,7 @@ namespace BlockBase.Node.Commands.Requester
 
         private ILogger _logger;
 
-        
+
         public override string CommandName => "Check requester configuration";
 
         public override string CommandInfo => "Verifies if node configuration is valid";
@@ -45,12 +45,12 @@ namespace BlockBase.Node.Commands.Requester
 
         public override async Task<CommandExecutionResponse> Execute()
         {
-              try
+            try
             {
 
                 bool fetchedExternalUtcTimeReference = false;
                 TimeSpan timeDifference = TimeSpan.FromSeconds(0);
-                
+
                 DateTime machineUtcDateTime = DateTime.UtcNow;
                 DateTime externalUtcDateTime = DateTime.MinValue;
                 try
@@ -61,7 +61,7 @@ namespace BlockBase.Node.Commands.Requester
 
 
 
-                    if(string.IsNullOrWhiteSpace(result))
+                    if (string.IsNullOrWhiteSpace(result))
                         fetchedExternalUtcTimeReference = false;
 
                     var obj = new { datetime = string.Empty };
@@ -70,7 +70,7 @@ namespace BlockBase.Node.Commands.Requester
 
                     string dateTimeToParse = ((dynamic)jsonResult).datetime;
                     DateTime parsedTime;
-                    if(!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
+                    if (!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
                         fetchedExternalUtcTimeReference = false;
 
                     fetchedExternalUtcTimeReference = true;
@@ -160,7 +160,7 @@ namespace BlockBase.Node.Commands.Requester
                 var postgresPort = _nodeConfigurations.PostgresPort;
                 var postgresUser = _nodeConfigurations.PostgresUser;
 
-                return new CommandExecutionResponse(HttpStatusCode.OK ,new OperationResponse<dynamic>(
+                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<dynamic>(
                     new
                     {
                         fetchedExternalUtcTimeReference,
@@ -196,15 +196,12 @@ namespace BlockBase.Node.Commands.Requester
                         isPostgresLive,
                     }
                     , $"Configuration and connection data retrieved."));
-
             }
             catch (Exception e)
             {
-                return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));
+                return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
-      
-      
-       }
+        }
 
         protected override bool IsCommandAppropratelyStructured(string[] commandData)
         {

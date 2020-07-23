@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using BlockBase.Domain.Configurations;
+using BlockBase.Domain.Enums;
+using BlockBase.Domain.Results;
+using BlockBase.Network.Mainchain;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Provider;
 using Microsoft.Extensions.Logging;
@@ -12,6 +16,8 @@ namespace BlockBase.Node.Commands.Provider
     public class GetProducingSidechainsCommand : AbstractCommand
     {
         private ISidechainProducerService _sidechainProducerService;
+        private NodeConfigurations _nodeConfigurations;
+        private IMainchainService _mainchainService;
 
         private ILogger _logger;
 
@@ -22,10 +28,12 @@ namespace BlockBase.Node.Commands.Provider
 
         public override string CommandUsage => "get chains";
 
-        public GetProducingSidechainsCommand(ILogger logger, ISidechainProducerService sidechainProducerService)
+        public GetProducingSidechainsCommand(ILogger logger, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
         {
             _sidechainProducerService = sidechainProducerService;
+            _mainchainService = mainchainService;
             _logger = logger;
+            _nodeConfigurations = nodeConfigurations;
         }
 
         public override async Task<CommandExecutionResponse> Execute()
@@ -33,8 +41,32 @@ namespace BlockBase.Node.Commands.Provider
            try
             {
                 var poolOfSidechains = _sidechainProducerService.GetSidechainContexts();
+                var producingSidechainsResult = new List<ProducingSidechain>();
 
-                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<List<string>>(poolOfSidechains.Select(s => s.SidechainPool.ClientAccountName).ToList(), $"Get producing sidechains successful."));
+                foreach(var sidechain in poolOfSidechains)
+                {
+                    var warnings = await _mainchainService.RetrieveWarningTable(sidechain.SidechainPool.ClientAccountName);
+                    var blocksCount = await _mainchainService.RetrieveBlockCount(sidechain.SidechainPool.ClientAccountName);
+
+                    var producingSidechain = new ProducingSidechain(){
+                        Name = sidechain.SidechainPool.ClientAccountName,
+                        SidechainState = sidechain.SidechainPool.State,
+                        BlocksProducedInCurrentSettlement = Convert.ToInt32(blocksCount.Where(b => b.Key == _nodeConfigurations.AccountName)?.SingleOrDefault().blocksproduced),
+                        BlocksFailedInCurrentSettlement = Convert.ToInt32(blocksCount.Where(b => b.Key == _nodeConfigurations.AccountName)?.SingleOrDefault().blocksfailed)
+                    };
+
+                    foreach (var warning in warnings.Where(w => w.Producer == _nodeConfigurations.AccountName))
+                    {
+                        producingSidechain.Warnings.Add(new ProducingSidechainWarning(){
+                            WarningType = (WarningTypeEnum)warning.WarningType,
+                            WarningTimestamp = DateTimeOffset.FromUnixTimeSeconds((long)warning.WarningCreationDateInSeconds).DateTime
+                        });
+                    }
+
+                    producingSidechainsResult.Add(producingSidechain);
+                }
+
+                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<List<ProducingSidechain>>(producingSidechainsResult, $"Get producing sidechains successful."));
             }
             catch (Exception e)
             {

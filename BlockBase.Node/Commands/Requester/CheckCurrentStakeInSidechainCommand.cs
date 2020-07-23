@@ -36,14 +36,14 @@ namespace BlockBase.Node.Commands.Requester
 
         public override async Task<CommandExecutionResponse> Execute()
         {
-            try
+             try
             {
                 var sidechainName = _nodeConfigurations.AccountName;
                 var stakeLedger = await _mainchainService.RetrieveAccountStakedSidechains(sidechainName);
                 var stakeRecord = stakeLedger.Where(o => o.Sidechain == sidechainName).FirstOrDefault();
                 var stakeToReturn = stakeRecord != null ? stakeRecord.Stake : "0.0000 BBT";
-                
-                return new CommandExecutionResponse( HttpStatusCode.OK, new OperationResponse<string>(stakeToReturn, "Stake retrieved with success"));
+
+                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<string>(stakeToReturn, "Stake retrieved with success"));
             }
             catch (Exception e)
             {
