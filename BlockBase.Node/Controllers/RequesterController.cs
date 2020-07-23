@@ -56,7 +56,7 @@ namespace BlockBase.Node.Controllers
 
         private ConcurrentVariables _concurrentVariables;
 
-        
+
         public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsManager transactionSender, IMongoDbRequesterService mongoDbRequesterService)
         {
             NodeConfigurations = nodeConfigurations?.Value;
@@ -95,7 +95,7 @@ namespace BlockBase.Node.Controllers
 
                 bool fetchedExternalUtcTimeReference = false;
                 TimeSpan timeDifference = TimeSpan.FromSeconds(0);
-                
+
                 DateTime machineUtcDateTime = DateTime.UtcNow;
                 DateTime externalUtcDateTime = DateTime.MinValue;
                 try
@@ -106,7 +106,7 @@ namespace BlockBase.Node.Controllers
 
 
 
-                    if(string.IsNullOrWhiteSpace(result))
+                    if (string.IsNullOrWhiteSpace(result))
                         fetchedExternalUtcTimeReference = false;
 
                     var obj = new { datetime = string.Empty };
@@ -115,7 +115,7 @@ namespace BlockBase.Node.Controllers
 
                     string dateTimeToParse = ((dynamic)jsonResult).datetime;
                     DateTime parsedTime;
-                    if(!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
+                    if (!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
                         fetchedExternalUtcTimeReference = false;
 
                     fetchedExternalUtcTimeReference = true;
@@ -270,7 +270,7 @@ namespace BlockBase.Node.Controllers
                 var stakeLedger = await _mainchainService.RetrieveAccountStakedSidechains(sidechainName);
                 var stakeRecord = stakeLedger.Where(o => o.Sidechain == sidechainName).FirstOrDefault();
                 var stakeToReturn = stakeRecord != null ? stakeRecord.Stake : "0.0000 BBT";
-                
+
                 return Ok(new OperationResponse<string>(stakeToReturn, "Stake retrieved with success"));
             }
             catch (Exception e)
@@ -363,7 +363,7 @@ namespace BlockBase.Node.Controllers
                 {
                     return BadRequest(new OperationResponse(false, $"Sidechain was already running."));
                 }
-                
+
                 await _sidechainMaintainerManager.Start();
                 return Ok(new OperationResponse(true, "Chain maintenance started."));
             }
@@ -427,14 +427,14 @@ namespace BlockBase.Node.Controllers
                 var account = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
                 var verifyBlockPermission = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
                 var verifyHistoryPermisson = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
-                
+
                 if (verifyBlockPermission != null)
                 {
                     try
                     {
                         await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
                     }
-                    catch (ApiErrorException) 
+                    catch (ApiErrorException)
                     {
                         _logger.LogDebug($"Unlink failed because link does not exist");
                     }
@@ -447,13 +447,13 @@ namespace BlockBase.Node.Controllers
                     {
                         await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
                     }
-                    catch (ApiErrorException) 
+                    catch (ApiErrorException)
                     {
                         _logger.LogDebug($"Unlink failed because link does not exist");
                     }
                     await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
                 }
-            
+
                 var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
 
                 _concurrentVariables.Reset();
@@ -554,7 +554,7 @@ namespace BlockBase.Node.Controllers
             }
         }
 
-        
+
         /// <summary>
         /// Sends a query to be executed
         /// </summary>
@@ -776,9 +776,9 @@ namespace BlockBase.Node.Controllers
                 var reservedSeatsTable = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
                 var sidechainStates = await _mainchainService.RetrieveContractState(sidechainName);
 
-                if(sidechainStates == null)
+                if (sidechainStates == null)
                     return BadRequest(new OperationResponse(false, $"The {sidechainName} sidechain is not created."));
-                
+
 
                 return Ok(new OperationResponse<List<ReservedSeatsTable>>(reservedSeatsTable));
             }
@@ -814,19 +814,21 @@ namespace BlockBase.Node.Controllers
                 var responseString = "";
                 var listToAdd = new List<string>();
 
-                if(sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
+                if (sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
                     return BadRequest(new OperationResponse(false, $"The {sidechainName} sidechain is not in the correct state or is not created."));
-                
-                foreach(var accountToAdd in reservedSeatsToAdd) {
-                    if (!reservedSeatsTable.Any(p => p.Key == accountToAdd) && accountToAdd != null && accountToAdd.Length > 0) {
-                        responseString +=" ["+accountToAdd+"] ";
+
+                foreach (var accountToAdd in reservedSeatsToAdd)
+                {
+                    if (!reservedSeatsTable.Any(p => p.Key == accountToAdd) && accountToAdd != null && accountToAdd.Length > 0)
+                    {
+                        responseString += " [" + accountToAdd + "] ";
                         listToAdd.Add(accountToAdd);
                     }
                 }
 
-                if(listToAdd.Count() == 0) return BadRequest(new OperationResponse(false, $"None of the accounts inserted are eligible to get added to the sidechain reserved seats."));
+                if (listToAdd.Count() == 0) return BadRequest(new OperationResponse(false, $"None of the accounts inserted are eligible to get added to the sidechain reserved seats."));
                 var addReserverSeatTx = await _mainchainService.AddReservedSeats(sidechainName, listToAdd);
-                
+
                 return Ok(new OperationResponse(true, $"Reserved seats successfully added for the accounts{responseString} if they exist in EOSIO network. AddReservedSeats tx: {addReserverSeatTx}"));
             }
             catch (Exception e)
@@ -851,7 +853,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RemoveReservedSeats(List<string> reservedSeatsToRemove)
         {
-            if (reservedSeatsToRemove == null || reservedSeatsToRemove.Count() == 0 ) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
+            if (reservedSeatsToRemove == null || reservedSeatsToRemove.Count() == 0) return BadRequest(new OperationResponse(false, "Please provide a valid account name"));
             try
             {
                 var sidechainName = NodeConfigurations.AccountName;
@@ -860,19 +862,99 @@ namespace BlockBase.Node.Controllers
                 var validAccounts = "";
                 var seatsToRemove = new List<string>();
 
-                if(sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
+                if (sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
                     return BadRequest(new OperationResponse(false, $"The {sidechainName} sidechain is not in the correct state or is not created."));
-                
-                foreach(var accountToRemove in reservedSeatsToRemove) {
-                    if (reservedSeatsTable.Any(p => p.Key == accountToRemove) && accountToRemove.Length >= 1) {
+
+                foreach (var accountToRemove in reservedSeatsToRemove)
+                {
+                    if (reservedSeatsTable.Any(p => p.Key == accountToRemove) && accountToRemove.Length >= 1)
+                    {
                         seatsToRemove.Add(accountToRemove);
                         validAccounts += "[" + accountToRemove + "] ";
                     }
                 }
-                if(seatsToRemove.Count() == 0) return BadRequest(new OperationResponse(false, $"None of the accounts inserted are eligible to get removed from the sidechain reserved seats."));
-                var removeReservedSeatsTx = await _mainchainService.RemoveReservedSeats(sidechainName, seatsToRemove); 
+                if (seatsToRemove.Count() == 0) return BadRequest(new OperationResponse(false, $"None of the accounts inserted are eligible to get removed from the sidechain reserved seats."));
+                var removeReservedSeatsTx = await _mainchainService.RemoveReservedSeats(sidechainName, seatsToRemove);
 
                 return Ok(new OperationResponse(true, $"Accounts {validAccounts}successfully removed from the reserved seats of the sidechain. RemoveReservedSeats tx: {removeReservedSeatsTx}."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+        /// <summary>
+        /// Alter current sidechain configurations
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="maxPaymentPerBlockFullProducer">New value for max payment per block for full producers</param>
+        /// <param name="minPaymentPerBlockFullProducer">New value for min payment per block for full producers</param>
+        /// <param name="maxPaymentPerBlockHistoryProducer">New value for max payment per block for history producers</param>
+        /// <param name="minPaymentPerBlockHistoryProducer">New value for min payment per block for history producers</param>
+        /// <param name="maxPaymentPerBlockValidatorProducer">New value for max payment per block for validator producers</param>
+        /// <param name="minPaymentPerBlockValidatorProducer">New value for min payment per block for validator producers</param>
+        /// <param name="minCandidatureStake">New value for minimum stake to enter candidature</param>
+        /// <param name="numberOfFullProducersRequired">New value for number of full producers required</param>
+        /// <param name="numberOfHistoryProducersRequired">New value for number of history producers required</param>
+        /// <param name="numberOfValidatorProducersRequired">New value for number of validator producers required</param>
+        /// <param name="blockTimeInSeconds">New value for block time in seconds</param>
+        /// <param name="blockSizeInBytes">New value for block size in bytes</param>
+        /// <response code="200">Configuration changes sent with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error sending configuration changes</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Alter current sidechain configurations",
+            Description = "Allows requester to send new configurations to be changed in the sidechain. The changes will take effect one day after inserting them. If sent again before the changes take effect it will override the previous request.",
+            OperationId = "ChangeSidechainConfigurations"
+        )]
+        public async Task<ObjectResult> ChangeSidechainConfigurations(decimal? maxPaymentPerBlockFullProducer, decimal? minPaymentPerBlockFullProducer,
+                                                                      decimal? maxPaymentPerBlockHistoryProducer, decimal? minPaymentPerBlockHistoryProducer,
+                                                                      decimal? maxPaymentPerBlockValidatorProducer, decimal? minPaymentPerBlockValidatorProducer,
+                                                                      decimal? minCandidatureStake, int? numberOfFullProducersRequired,
+                                                                      int? numberOfHistoryProducersRequired, int? numberOfValidatorProducersRequired,
+                                                                      int? blockTimeInSeconds, long? blockSizeInBytes)
+        {
+            try
+            {
+                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(NodeConfigurations.AccountName);
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
+                if (contractSt == null) return BadRequest(new OperationResponse(false, $"Sidechain doesn't exist"));
+                if (contractSt.ConfigTime || contractSt.SecretTime || contractSt.IPSendTime || contractSt.IPReceiveTime) return BadRequest(new OperationResponse(false, $"Sidechain isn't in a state that allows changing configurations"));
+
+                var configurationChanges = new ChangeConfigurationTable();
+
+                configurationChanges.Key = NodeConfigurations.AccountName;
+
+                configurationChanges.BlockTimeDuration = blockTimeInSeconds != null ? Convert.ToUInt32(blockTimeInSeconds.Value) : contractInfo.BlockTimeDuration;
+                configurationChanges.SizeOfBlockInBytes = blockSizeInBytes != null ? Convert.ToUInt64(blockSizeInBytes.Value) : contractInfo.SizeOfBlockInBytes;
+                configurationChanges.NumberOfFullProducersRequired = numberOfFullProducersRequired != null ? Convert.ToUInt32(numberOfFullProducersRequired.Value) : contractInfo.NumberOfFullProducersRequired;
+                configurationChanges.NumberOfHistoryProducersRequired = numberOfValidatorProducersRequired != null ? Convert.ToUInt32(numberOfValidatorProducersRequired.Value) : contractInfo.NumberOfHistoryProducersRequired;
+                configurationChanges.NumberOfValidatorProducersRequired = numberOfValidatorProducersRequired != null ? Convert.ToUInt32(numberOfValidatorProducersRequired.Value) : contractInfo.NumberOfValidatorProducersRequired;
+                configurationChanges.MaxPaymentPerBlockFullProducers = maxPaymentPerBlockFullProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockFullProducer.Value) : contractInfo.MaxPaymentPerBlockFullProducers;
+                configurationChanges.MaxPaymentPerBlockHistoryProducers = maxPaymentPerBlockHistoryProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockHistoryProducer.Value) : contractInfo.MaxPaymentPerBlockHistoryProducers;
+                configurationChanges.MaxPaymentPerBlockValidatorProducers = maxPaymentPerBlockValidatorProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockValidatorProducer.Value) : contractInfo.MaxPaymentPerBlockValidatorProducers;
+                configurationChanges.MinPaymentPerBlockFullProducers = minPaymentPerBlockFullProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockFullProducer.Value) : contractInfo.MinPaymentPerBlockFullProducers;
+                configurationChanges.MinPaymentPerBlockHistoryProducers = minPaymentPerBlockHistoryProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockHistoryProducer.Value) : contractInfo.MinPaymentPerBlockHistoryProducers;
+                configurationChanges.MinPaymentPerBlockValidatorProducers = minPaymentPerBlockValidatorProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockValidatorProducer.Value) : contractInfo.MinPaymentPerBlockValidatorProducers;
+                configurationChanges.Stake = minCandidatureStake != null ? Convert.ToUInt64(10000 * minCandidatureStake.Value) : contractInfo.Stake;
+
+                //Check configurations
+                if (configurationChanges.SizeOfBlockInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
+                    return BadRequest(new OperationResponse(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
+                if (configurationChanges.NumberOfFullProducersRequired + configurationChanges.NumberOfHistoryProducersRequired + configurationChanges.NumberOfValidatorProducersRequired == 0)
+                    return BadRequest(new OperationResponse(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
+                if (configurationChanges.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
+                    return BadRequest(new OperationResponse(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
+
+                var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurationChanges));
+
+                var alterConfigTx = await _mainchainService.AlterConfigurations(NodeConfigurations.AccountName, mappedConfig);
+
+                return Ok(new OperationResponse(true, $"Configuration changes succesfully sent. The changes will take effect after one day. Tx: {alterConfigTx}"));
             }
             catch (Exception e)
             {
