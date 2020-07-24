@@ -443,8 +443,21 @@ namespace BlockBase.Runtime.Network
             catch (Exception ex)
             {
                 _logger.LogError("Could not connect to peer: " + ex.Message);
-                return null;
             }
+
+            //tries to run if connection failed
+            try
+            {
+                var existingPeerConnection = CurrentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint == remoteEndPoint);
+                if (existingPeerConnection != null)
+                    Disconnect(existingPeerConnection);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to disconnect existing peer connection: " + ex.Message);
+            }
+
+            return null;
         }
 
         private void Disconnect(PeerConnection peerConnection)
