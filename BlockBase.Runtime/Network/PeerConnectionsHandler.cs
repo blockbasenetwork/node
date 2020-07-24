@@ -449,7 +449,7 @@ namespace BlockBase.Runtime.Network
             try
             {
                 var existingPeerConnection = _networkService.GetPeerIfExists(remoteEndPoint);
-                _logger.LogInformation($"Connection to {remoteEndPoint.ToString()} already established");
+                if (existingPeerConnection != null) _logger.LogInformation($"Connection to {remoteEndPoint.ToString()} already established");
                 return existingPeerConnection;
             }
             catch (Exception ex)
