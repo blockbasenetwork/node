@@ -57,6 +57,11 @@ namespace BlockBase.Network.Connectors
             return await _connectionsManager.ConnectAsync(remoteEndPoint, localEndPoint);
         }
 
+        public Peer GetPeerIfExists(IPEndPoint remoteEndPoint)
+        {
+            return _connectionsManager.GetPeerIfExists(remoteEndPoint);
+        }
+
         public void Disconnect(Peer peer)
         {
             _connectionsManager.DisconnectPeer(peer);

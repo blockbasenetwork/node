@@ -445,16 +445,16 @@ namespace BlockBase.Runtime.Network
                 _logger.LogError("Could not connect to peer: " + ex.Message);
             }
 
-            //tries to run if connection failed
+            //tries to see if a connection already exists
             try
             {
-                var existingPeerConnection = CurrentPeerConnections.GetEnumerable().SingleOrDefault(p => p.IPEndPoint == remoteEndPoint);
-                if (existingPeerConnection != null)
-                    Disconnect(existingPeerConnection);
+                var existingPeerConnection = _networkService.GetPeerIfExists(remoteEndPoint);
+                _logger.LogInformation($"Connection to {remoteEndPoint.ToString()} already established");
+                return existingPeerConnection;
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to disconnect existing peer connection: " + ex.Message);
+                _logger.LogError("Failed to discover existing peer connection: " + ex.Message);
             }
 
             return null;

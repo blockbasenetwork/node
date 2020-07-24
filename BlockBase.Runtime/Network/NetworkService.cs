@@ -53,6 +53,11 @@ namespace BlockBase.Runtime.Network
             return await TcpConnector.ConnectAsync(endpoint, new IPEndPoint(SystemConfig.IPAddress, SystemConfig.TcpPort));
         }
 
+        public Peer GetPeerIfExists(IPEndPoint endpoint)
+        {
+            return TcpConnector.GetPeerIfExists(endpoint);
+        }
+
         public async Task SendMessageAsync(NetworkMessage message)
         {
             await MessageSender.SendMessage(message);
