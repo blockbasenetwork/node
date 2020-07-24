@@ -72,7 +72,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             
             var latestBlockHeader = await _mainchainService.RetrieveLastBlockFromLastSettlement(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
             
-            _isUpToDate = await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, latestBlockHeader.BlockHash);
+            _isUpToDate = latestBlockHeader != null ? await _mongoDbProducerService.IsBlockInDatabase(_sidechainPool.ClientAccountName, latestBlockHeader.BlockHash) : true;
 
             //check preconditions to continue update
             if(_contractInfo == null) return;
