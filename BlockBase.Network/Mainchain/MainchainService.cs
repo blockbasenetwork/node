@@ -705,7 +705,8 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
                 chain,
-                numberOfBlocks),
+                numberOfBlocks,
+                true),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result;
@@ -810,7 +811,9 @@ namespace BlockBase.Network.Mainchain
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
-                chain),
+                chain, 
+                numberOfBlocks, 
+                true),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
@@ -831,14 +834,14 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).LastOrDefault();
+            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).FirstOrDefault();
 
             return lastSubmittedBlock;
         }
 
         public async Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).LastOrDefault();
+            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).FirstOrDefault();
 
             return lastValidSubmittedBlock;
         }
