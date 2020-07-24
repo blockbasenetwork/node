@@ -36,6 +36,7 @@ namespace BlockBase.DataPersistence.Data
         Task AddPastSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool alreadyLeft = false, string reasonLeft = null);
         Task RemovePastSidechainFromDatabaseAsync(string sidechain, ulong timestamp);
         Task<IList<PastSidechainDB>> GetAllPastSidechainsAsync();
+        Task<PastSidechainDB> GetPastSidechainAsync(string sidechain, ulong timestamp);
 
         Task<TransactionDB> GetTransactionToExecute(string sidechain);
         Task UpdateTransactionToExecute(string sidechain, TransactionDB transaction);

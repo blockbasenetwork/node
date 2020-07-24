@@ -516,6 +516,22 @@ namespace BlockBase.DataPersistence.Data
             }
         }
 
+        public async Task<PastSidechainDB> GetPastSidechainAsync(string sidechain, ulong timestamp)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+
+                var sidechains = recoverDatabase.GetCollection<PastSidechainDB>(MongoDbConstants.PAST_SIDECHAINS_COLLETION_NAME).AsQueryable();
+                var query = from s in sidechains
+                            where s.Sidechain == sidechain && s.Timestamp == timestamp
+                            select s;
+
+                var result = query.ToList();
+                return result.SingleOrDefault();
+            }
+        }
+
         #endregion
 
         public async Task<TransactionDB> GetTransactionToExecute(string sidechain)
