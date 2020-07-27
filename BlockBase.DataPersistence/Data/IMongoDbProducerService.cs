@@ -32,6 +32,7 @@ namespace BlockBase.DataPersistence.Data
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllProducingSidechainsAsync();
+        Task<SidechainDB> GetProducingSidechainAsync(string sidechain, ulong timestamp);
 
         Task AddPastSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool alreadyLeft = false, string reasonLeft = null);
         Task RemovePastSidechainFromDatabaseAsync(string sidechain, ulong timestamp);
