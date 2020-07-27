@@ -134,6 +134,8 @@ namespace BlockBase.Node.Commands.Requester
         {
             var configurations = new ContractInformationTable();
 
+            var numberOfProviders = _requesterConfigurations.FullNodes.RequiredNumber + _requesterConfigurations.HistoryNodes.RequiredNumber + _requesterConfigurations.ValidatorNodes.RequiredNumber;
+
             configurations.Key = _nodeConfigurations.AccountName;
 
             configurations.BlockTimeDuration = _requesterConfigurations.BlockTimeInSeconds;
@@ -149,10 +151,10 @@ namespace BlockBase.Node.Commands.Requester
             configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * _requesterConfigurations.ValidatorNodes.MinPaymentPerBlock);
             configurations.Stake = Convert.ToUInt64(10000 * _requesterConfigurations.MinimumProducerStake);
 
-            configurations.CandidatureTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
-            configurations.SendSecretTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;
-            configurations.SendTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.IpSendingPhaseDurationInSeconds;
-            configurations.ReceiveTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.IpRetrievalPhaseDurationInSeconds;
+            configurations.CandidatureTime = _requesterConfigurations.BlockTimeInSeconds + ((numberOfProviders / 10) * 60);
+            configurations.SendSecretTime = 60 + ((numberOfProviders / 10) * 60);
+            configurations.SendTime = 60 + ((numberOfProviders / 10) * 60);
+            configurations.ReceiveTime = 60 + ((numberOfProviders / 10) * 60);
 
             var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
 
