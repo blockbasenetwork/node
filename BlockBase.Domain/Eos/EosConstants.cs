@@ -239,6 +239,11 @@ namespace BlockBase.Domain.Eos
         }
     }
 
+    public class SmartContractConstants
+    {
+        public const double MIN_PRODUCERS_TO_PRODUCE = 0.70;
+    }
+
     public class LeaveNetworkReasonsConstants
     {
         public const string EXIT_REQUEST = "Exit request";

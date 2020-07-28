@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Eos;
@@ -19,6 +21,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         private ContractInformationTable _contractInfo;
 
+        private bool _hasEnoughCandidates;
+
         public SecretSharingState(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations) : base(logger)
         {
             _mainchainService = mainchainService;
@@ -28,7 +32,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override async Task DoWork()
         {
-            await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _nodeConfigurations.AccountName);
+            if (_hasEnoughCandidates)
+                await _mainchainService.ExecuteChainMaintainerAction(EosMethodNames.START_SECRET_TIME, _nodeConfigurations.AccountName);
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -56,6 +61,20 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
         {
             _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
             _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
+
+            var producers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
+            var candidates = await _mainchainService.RetrieveCandidates(_nodeConfigurations.AccountName);
+
+            var numberOfRequiredProviders = _contractInfo.NumberOfFullProducersRequired + _contractInfo.NumberOfHistoryProducersRequired + _contractInfo.NumberOfValidatorProducersRequired;
+
+            if (producers.Count + candidates.Count >= SmartContractConstants.MIN_PRODUCERS_TO_PRODUCE * numberOfRequiredProviders && candidates.Any())
+            {
+                _hasEnoughCandidates = true;
+            }
+            else
+            {
+                _delay = TimeSpan.FromSeconds(15);
+            }
         }
     }
 }
