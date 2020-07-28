@@ -196,6 +196,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 !CheckIfSidechainGrowthFitsInConfiguredMaximumGrowth(contractInfo, _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB)) return defaultReturnValue;
 
             decimal requestedStake = ConvertBBTValueToDecimalPoint(contractInfo.Stake);
+            decimal maxStakeToPut = (decimal)_providerConfigurations.AutomaticProduction.MaxRatioToStake * requestedStake;
+            decimal stakeToPut = 0;
 
             var maxSidechainGrowthPerMonthInMB = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
 
@@ -218,6 +220,13 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.Full;
                     averagePaymentPerBlock = fitsAndPayments.averagePaymentPerBlock;
+                    stakeToPut = requestedStake;
+                }
+
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
+                {
+                    stakeToPut = maxStakeToPut;
                 }
             }
 
@@ -237,6 +246,13 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.History;
                     averagePaymentPerBlock = fitsAndPayments.averagePaymentPerBlock;
+                    stakeToPut = requestedStake;
+                }
+
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
+                {
+                    stakeToPut = maxStakeToPut;
                 }
             }
 
@@ -252,10 +268,17 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 if (fitsAndPayments.fits && fitsAndPayments.averagePaymentPerBlock >= averagePaymentPerBlock)
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.Validator;
+                    stakeToPut = requestedStake;
+                }
+
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
+                {
+                    stakeToPut = maxStakeToPut;
                 }
             }
 
-            return (producerTypeToCandidate != 0, producerTypeToCandidate, requestedStake, clientInfo.SidechainCreationTimestamp);
+            return (producerTypeToCandidate != 0, producerTypeToCandidate, stakeToPut, clientInfo.SidechainCreationTimestamp);
         }
 
         private (bool fits, decimal averagePaymentPerBlock) CheckIfRequestedProducerTypeFitsMinimumRequirements(decimal maxStakeToMonthlyIncomeRatio, decimal requestedStake, decimal minPaymentExpectedPerBlock, decimal minBBTExpectedPerMB, decimal minPaymentPerBlock, decimal maxPaymentPerBlock, uint blockTimeDurationInSeconds, uint blockSizeInBytes)
