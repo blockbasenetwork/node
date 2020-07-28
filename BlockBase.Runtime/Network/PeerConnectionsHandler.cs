@@ -460,7 +460,7 @@ namespace BlockBase.Runtime.Network
             return null;
         }
 
-        private void Disconnect(PeerConnection peerConnection)
+        public void Disconnect(PeerConnection peerConnection)
         {
             if (peerConnection.Peer == null) return;
             _logger.LogDebug("Disconnect from peer " + peerConnection.Peer.EndPoint.Address + ":" + peerConnection.Peer.EndPoint.Port + ".");
