@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
 using BlockBase.Domain.Blockchain;
@@ -181,7 +182,10 @@ namespace BlockBase.Runtime.Network
         private async Task SendScriptTransactionsToProducer(IEnumerable<Transaction> transactions, PeerConnection peerConnection)
         {
             var data = new List<byte>();
-
+            var sidechainNameBytes = Encoding.UTF8.GetBytes(_nodeConfigurations.AccountName);
+            short lenght = (short)sidechainNameBytes.Length;
+            data.AddRange(BitConverter.GetBytes(lenght));
+            data.AddRange(sidechainNameBytes);
             foreach (var transaction in transactions.Take(MAX_TRANSACTIONS_PER_MESSAGE))
             {
                 var transactionBytes = transaction.ConvertToProto().ToByteArray();
@@ -189,6 +193,8 @@ namespace BlockBase.Runtime.Network
                 data.AddRange(transactionBytes);
             }
             var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
+
+            _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {peerConnection.ConnectionAccountName}");
             await _networkService.SendMessageAsync(message);
         }
 

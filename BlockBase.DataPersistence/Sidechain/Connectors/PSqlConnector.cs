@@ -167,6 +167,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         public async Task DropDefaultDatabase()
         {
             await DropDatabase(DEFAULT_DATABASE_NAME);
+            _hasBeenSetup = false;
         }
 
         public async Task DropDatabase(string databaseName)
@@ -178,7 +179,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 try
                 {
                     await cmd.ExecuteNonQueryAsync();
-                    _hasBeenSetup = false;
                 }
                 catch (Exception)
                 {

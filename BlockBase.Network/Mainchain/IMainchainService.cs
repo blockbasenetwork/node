@@ -11,7 +11,7 @@ namespace BlockBase.Network.Mainchain
         Task<GetInfoResponse> GetInfo();
         Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null);
         Task<GetAccountResponse> GetAccount(string accountName);
-        Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName);
+        Task<AccountStake> GetAccountStake(string sidechain, string accountName);
         Task<string> AddStake(string sidechain, string accountName, string stake);
         Task<string> ClaimStake(string sidechain, string accountName);
         Task<string> AddCandidature(string chain, string accountName, string publicKey, string secretHash, int producerType, int softwareVersion);
@@ -19,6 +19,8 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddSecret(string chain, string accountName, string hash);
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
         Task<string> AddEncryptedIps(string chain, string accountName, List<string> encryptedIps);
+        Task<string> AddReservedSeats(string chain, List<string> seatsToAdd);
+        Task<string> RemoveReservedSeats(string chain, List<string> reservedSeatsToRemove);
         Task<string> NotifyReady(string chain, string accountName);
         Task<string> ProposeBlockVerification(string chain, string accountName, List<string> requestedApprovals, string blockHash);
         Task<string> ApproveTransaction(string proposerName, string proposedTransactionName, string accountName, string proposalHash, string permission = "active");
@@ -26,6 +28,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active");
         Task<string> StartChain(string owner, string publicKey, string permission = "active");
         Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, int minimumSoftwareVersion = 1, string permission = "active");
+        Task<string> AlterConfigurations(string owner, Dictionary<string, object> configurationsToChange, string permission = "active");
         Task<string> EndChain(string owner, string permission = "active");
         Task<string> StartCandidatureTime(string owner, string permission = "active");
         Task<string> PunishProd(string owner, string permission = "active");
@@ -69,5 +72,7 @@ namespace BlockBase.Network.Mainchain
         Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName);
         Task<List<BlackListTable>> RetrieveBlacklistTable(string chain);
         Task<List<WarningTable>> RetrieveWarningTable(string chain);
+
+        void ChangeNetwork();
     }
 }

@@ -17,6 +17,7 @@ namespace BlockBase.Runtime.Network
         Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type);
 
         void DisconnectPeer(Peer peer);
+        Peer GetPeerIfExists(IPEndPoint endpoint);
 
         void Run();
 

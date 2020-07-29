@@ -31,7 +31,7 @@ namespace BlockBase.Network.Mainchain
             NetworkConfigurations = networkConfigurations.Value;
 
             _logger = logger;
-            EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNet);
+            EosStub = new EosStub(TRANSACTION_EXPIRATION, NodeConfigurations.ActivePrivateKey, NetworkConfigurations.EosNetworks);
         }
 
         public async Task<GetInfoResponse> GetInfo()
@@ -65,7 +65,7 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result.Where(b => b.Owner == accountName).ToList();
         }
 
-        public async Task<TokenLedgerTable> GetAccountStake(string sidechain, string accountName)
+        public async Task<AccountStake> GetAccountStake(string sidechain, string accountName)
         {
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<TokenLedgerTable>(
                 NetworkConfigurations.BlockBaseTokenContract,
@@ -74,7 +74,20 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
-            return opResult.Result.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
+            var stakeInTable = opResult.Result.Where(b => b.Sidechain == sidechain && b.Owner == accountName).FirstOrDefault();
+            if (stakeInTable == null) return null;
+
+            decimal stake = 0;
+
+            var stakeString = stakeInTable.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            decimal.TryParse(stakeString, out stake);
+
+            return new AccountStake(){
+                Sidechain = stakeInTable.Sidechain,
+                Owner = stakeInTable.Owner,
+                StakeString = stakeInTable.Stake,
+                Stake = stake
+            };
         }
 
         #region Transactions
@@ -164,6 +177,31 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 accountName,
                 CreateDataForAddEncryptedIps(chain, accountName, encryptedIps)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> AddReservedSeats(string chain, List<string> seatsToAdd) {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_RESERVED_SEATS,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                chain,
+                CreateDataForAddReservedSeats(chain, seatsToAdd)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> RemoveReservedSeats(string chain, List<string> reservedSeatsToRemove)
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.REMOVE_RESERVED_SEATS,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                chain,
+                CreateDataForRemoveReservedSeats(chain, reservedSeatsToRemove)),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
             if (!opResult.Succeeded) throw opResult.Exception;
@@ -278,6 +316,20 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
                 CreateDataForConfigurations(owner, contractInformation, reservedSeats, minimumSoftwareVersion),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> AlterConfigurations(string owner, Dictionary<string, object> configurationsToChange, string permission = "active")
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ALTER_CONFIG,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                owner,
+                CreateDataForAlterConfigurations(owner, configurationsToChange),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -497,7 +549,7 @@ namespace BlockBase.Network.Mainchain
                    EosMethodNames.ADD_HIST_SIG,
                    NetworkConfigurations.BlockBaseOperationsContract,
                    accountName,
-                   CreateDataForSignHistoryValidation(owner, accountName, producerToValidade, byteInHexadecimal, signedTransaction.Signatures.SingleOrDefault()),
+                   CreateDataForSignHistoryValidation(owner, accountName, producerToValidade, byteInHexadecimal, signedTransaction.Signatures.SingleOrDefault(), signedTransaction.PackedTransaction),
                    permission),
                    NetworkConfigurations.MaxNumberOfConnectionRetries
            );
@@ -653,7 +705,8 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
                 chain,
-                numberOfBlocks),
+                numberOfBlocks,
+                true),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result;
@@ -758,7 +811,9 @@ namespace BlockBase.Network.Mainchain
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
-                chain),
+                chain, 
+                numberOfBlocks, 
+                true),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
@@ -779,14 +834,14 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).LastOrDefault();
+            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).FirstOrDefault();
 
             return lastSubmittedBlock;
         }
 
         public async Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).LastOrDefault();
+            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).FirstOrDefault();
 
             return lastValidSubmittedBlock;
         }
@@ -963,6 +1018,24 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
+        private Dictionary<string, object> CreateDataForAddReservedSeats(string chain, List<string> seatsToAdd)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, chain},
+                { EosParameterNames.SEATS_TO_ADD, seatsToAdd }
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForRemoveReservedSeats(string chain, List<string> reservedSeatsToRemove)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, chain},
+                { EosParameterNames.SEATS_TO_REMOVE, reservedSeatsToRemove }
+            };
+        }
+
         private Dictionary<string, object> CreateDataForIAmReady(string chain, string accountName)
         {
             return new Dictionary<string, object>()
@@ -1085,6 +1158,15 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
+        private Dictionary<string, object> CreateDataForAlterConfigurations(string owner, Dictionary<string, object> contractInformation)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.INFO_CHANGE_JSON, contractInformation },
+            };
+        }
+
         private Dictionary<string, object> CreateDataForSidechainExitRequest(string sidechainName)
         {
             return new Dictionary<string, object>()
@@ -1186,14 +1268,15 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForSignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, string signature)
+        private Dictionary<string, object> CreateDataForSignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, string signature, byte[] packedTransaction)
         {
             return new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.PRODUCER, accountName },
                 { EosParameterNames.PRODUCER_TO_VALIDATE, producerToValidade },
-                { EosParameterNames.VERIFY_SIGNATURE, signature}
+                { EosParameterNames.VERIFY_SIGNATURE, signature},
+                { EosParameterNames.PACKED_TRANSACTION, packedTransaction }
             };
 
         }
@@ -1238,12 +1321,18 @@ namespace BlockBase.Network.Mainchain
                 {
                     var apiEx = (ApiErrorException)exception;
                     var details = apiEx.error?.details;
-                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth" || d.method == "tx_duplicate" || d.method == "unsatisfied_authorization" || d.method == "check_authorization"))
+                    if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth" || d.method == "tx_duplicate" || d.method == "unsatisfied_authorization" || d.method == "check_authorization" || d.method == "handle_exception"))
                     {
                         //if it's a message that we may be expecting do a quieter log and stop the loop
                         _logger.LogDebug($"Error sending transaction: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");
                         return new OpResult<T>(exception);
                     }
+                }
+
+                //Will try to change network if the current one isn't able to respond to the requested endpoint
+                if (!(opResult.Exception is ApiErrorException))
+                {
+                    EosStub.ChangeNetwork();
                 }
 
                 await Task.Delay(delayInMilliseconds);
@@ -1259,7 +1348,7 @@ namespace BlockBase.Network.Mainchain
             return new OpResult<T>(exception);
         }
 
-
+        public void ChangeNetwork() => EosStub.ChangeNetwork();
 
         #endregion
     }

@@ -30,6 +30,7 @@ using BlockBase.Node.Filters;
 using BlockBase.Runtime.Provider.AutomaticProduction;
 using Serilog.Events;
 using System.Linq;
+using BlockBase.Node.Commands.Requester;
 
 namespace BlockBase.Api
 {
@@ -157,7 +158,7 @@ namespace BlockBase.Api
                     logConfig = logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code, restrictedToMinimumLevel: LogEventLevel.Information);
                 }
 
-                logConfig = logConfig.WriteTo.File($"logs/BlockBaseNode_{DateTime.UtcNow.ToString("yyyyMMdd-HHmm")}.log");
+                logConfig = logConfig.WriteTo.File($"logs/BlockBaseNode_.log", rollingInterval: RollingInterval.Day);
 
                 Log.Logger = logConfig.CreateLogger();
 
@@ -189,6 +190,8 @@ namespace BlockBase.Api
         {
             _webHostBuider.ConfigureServices((hostContext, services) =>
             {
+                services.AddSingleton<ConfigurationChecker>();
+
                 services.AddSingleton<IConnector, PSqlConnector>();
                 services.AddSingleton<ConcurrentVariables>();
                 services.AddSingleton<BlockRequestsHandler>();
@@ -211,6 +214,8 @@ namespace BlockBase.Api
 
             return this;
         }
+
+        
 
         public ApiWebHostBuilder ConfigureApiSecurity()
         {

@@ -55,7 +55,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             if (state == typeof(NetworkReactionState).Name) return new NetworkReactionState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
             if (state == typeof(ProduceBlockState).Name) return new ProduceBlockState(_logger, _mainchainService, _mongoDbProducerService, _sidechainPool, _nodeConfigurations, _networkConfigurations, _blockSender);
             if (state == typeof(ClaimRewardState).Name) return new ClaimRewardState(_logger, _nodeConfigurations, _mainchainService, _sidechainPool);
-            if (state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool);
+            if (state == typeof(EndState).Name) return new EndState(_logger, _sidechainPool, _mainchainService);
+            if (state == typeof(WaitForEndConfirmationState).Name) return new WaitForEndConfirmationState(_sidechainPool, _logger, _mainchainService, _nodeConfigurations);
             throw new System.NotImplementedException();
         }
     }

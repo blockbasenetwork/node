@@ -1,9 +1,10 @@
 ﻿using BlockBase.Api;
-using BlockBase.Extensions;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Provider;
 using BlockBase.Runtime.Provider.AutomaticProduction;
 using BlockBase.Runtime.Requester;
+using BlockBase.Utils.Extensions;
+using BlockBase.Utils.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -21,12 +22,15 @@ namespace BlockBase.Node
             
             var webHost = CreateWebHostBuilder(args).Build();
 
+            ServiceProvider.Set(webHost.Services);
+
             var networkService = webHost.Services.Get<INetworkService>();
             
             var sidechainMaintainerService = webHost.Services.Get<ISidechainMaintainerManager>();
             var sidechainProducerService = webHost.Services.Get<ISidechainProducerService>();
             var automaticProductionManager = webHost.Services.Get<IAutomaticProductionManager>();
             var pendingTransactionRecovery = webHost.Services.Get<PendingTransactionRecovery>();
+            var configurationChecker = webHost.Services.Get<ConfigurationChecker>();
 
 
             var noRecoverCommandFound = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
@@ -34,6 +38,15 @@ namespace BlockBase.Node
             networkService.Run();
             //TODO rpinto - commented this because I don't want it to start on startup for now - uncomment when ready
             //sidechainMaintainerService.Start();
+
+            //check keys
+            var keyCheck = configurationChecker.CheckKeys();
+            Task.WaitAll(keyCheck);
+            if (!keyCheck.Result) return;
+            
+            //check databases prefix
+            var databasesPrefixCheck = configurationChecker.CheckDatabasesPrefix();
+            if(!databasesPrefixCheck) return;
             
 
             if(noRecoverCommandFound == false)
@@ -45,9 +58,9 @@ namespace BlockBase.Node
 
             //force instantiation of the connection tester
             var connectionTester = webHost.Services.Get<TcpConnectionTester>();
-                
 
-            webHost.Run();
+
+            Task.WaitAll(webHost.RunAsync());
         }
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args)

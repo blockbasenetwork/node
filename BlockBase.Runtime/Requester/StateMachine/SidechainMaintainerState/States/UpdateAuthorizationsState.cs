@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States
 {
-    public class UpdateAuthorizationsState : AbstractMainchainState<StartState, EndState>
+    public class UpdateAuthorizationsState : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
         private bool _inNeedToUpdateAuthorizations;
         private bool _verifyBlockPermissionLinked;
@@ -63,6 +63,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
                 }
             }
 
+            if (_verifyBlockPermission == null) _verifyBlockPermissionLinked = true;
             if (_verifyBlockPermission != null && !_verifyBlockPermissionLinked)
             {
                 try
@@ -76,6 +77,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
                 }
             }
 
+            if (_historyValidatePermission == null) _historyValidatePermissionLinked = true;
             if (_historyValidatePermission != null && !_historyValidatePermissionLinked)
             {
                 try

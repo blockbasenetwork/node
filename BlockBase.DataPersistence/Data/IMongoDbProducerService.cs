@@ -9,10 +9,7 @@ namespace BlockBase.DataPersistence.Data
 {
     public interface IMongoDbProducerService
     {
-        Task CreateDatabasesAndIndexes(string databaseName);
-        Task<IList<TransactionDB>> GetTransactionsByBlockSequenceNumberAsync(string databaseName, ulong blockSequence);
         Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName);
-        Task<Block> GetLastValidSidechainBlockAsync(string databaseName);
         Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
         Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber);
         Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber);
@@ -35,6 +32,12 @@ namespace BlockBase.DataPersistence.Data
         Task RemoveProducingSidechainFromDatabaseAsync(string sidechain);
         Task<bool> CheckIfProducingSidechainAlreadyExists(string sidechain);
         Task<IList<SidechainDB>> GetAllProducingSidechainsAsync();
+        Task<SidechainDB> GetProducingSidechainAsync(string sidechain, ulong timestamp);
+
+        Task AddPastSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool alreadyLeft = false, string reasonLeft = null);
+        Task RemovePastSidechainFromDatabaseAsync(string sidechain, ulong timestamp);
+        Task<IList<PastSidechainDB>> GetAllPastSidechainsAsync();
+        Task<PastSidechainDB> GetPastSidechainAsync(string sidechain, ulong timestamp);
 
         Task<TransactionDB> GetTransactionToExecute(string sidechain);
         Task UpdateTransactionToExecute(string sidechain, TransactionDB transaction);

@@ -114,6 +114,19 @@ namespace Open.P2P.IO
             return _peers.Keys.Any(k => k.Address.ToString() == endpoint.Address.ToString() && k.Port == endpoint.Port);
         }
 
+        public Peer GetPeerIfExists(IPEndPoint endpoint)
+        {
+            var key = _peers.Keys.Where(k => k.Address.ToString() == endpoint.Address.ToString() && k.Port == endpoint.Port).FirstOrDefault();
+
+            if (key != null)
+            {
+                _peers.TryGetValue(key, out var peer);
+                return peer;
+            }
+
+            return null;
+        }
+
         internal async Task<int> ReceiveAsync(byte[] buffer, int offset, int count, IPEndPoint endpoint)
         {
             Guard.NotNull(buffer, "buffer");

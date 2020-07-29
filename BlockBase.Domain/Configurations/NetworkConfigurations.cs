@@ -8,7 +8,7 @@ namespace BlockBase.Domain.Configurations
     {
         public string PublicIpAddress { get; set; }
         public int TcpPort { get; set; }
-        public string EosNet { get; set; }
+        public List<string> EosNetworks { get; set; }
         public uint ConnectionExpirationTimeInSeconds { get; set; }
         public int MaxNumberOfConnectionRetries { get; set; }
         public string BlockBaseOperationsContract { get; set; }

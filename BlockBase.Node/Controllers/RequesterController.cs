@@ -8,7 +8,6 @@ using BlockBase.Domain.Configurations;
 using Microsoft.Extensions.Logging;
 using BlockBase.Network.Mainchain;
 using BlockBase.DataPersistence.Data;
-using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Runtime.Requester;
 using Newtonsoft.Json;
 using BlockBase.Runtime.Network;
@@ -19,17 +18,12 @@ using System.IO;
 using System.Text;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy;
-using BlockBase.Domain.Results;
-using BlockBase.Domain.Pocos;
-using EosSharp.Core.Exceptions;
 using BlockBase.Runtime.Sql;
-using System.Linq;
-using System.Globalization;
 using BlockBase.Node.Filters;
-using BlockBase.Utils.Crypto;
-using System.Reflection;
-using BlockBase.Utils;
+using BlockBase.Node.Commands.Requester;
 using BlockBase.Domain.Eos;
+using BlockBase.Network.Mainchain.Pocos;
+using BlockBase.Domain.Blockchain;
 
 namespace BlockBase.Node.Controllers
 {
@@ -39,10 +33,10 @@ namespace BlockBase.Node.Controllers
     [ServiceFilter(typeof(ApiKeyAttribute))]
     public class RequesterController : ControllerBase
     {
-        private NodeConfigurations NodeConfigurations;
-        private NetworkConfigurations NetworkConfigurations;
-        private RequesterConfigurations RequesterConfigurations;
-        private ApiSecurityConfigurations ApiSecurityConfigurations;
+        private NodeConfigurations _nodeConfigurations;
+        private NetworkConfigurations _networkConfigurations;
+        private RequesterConfigurations _requesterConfigurations;
+        private ApiSecurityConfigurations _apiSecurityConfigurations;
         private readonly ILogger _logger;
         private readonly IMainchainService _mainchainService;
         private ISidechainMaintainerManager _sidechainMaintainerManager;
@@ -53,13 +47,13 @@ namespace BlockBase.Node.Controllers
 
         private ConcurrentVariables _concurrentVariables;
 
-        
+
         public RequesterController(ILogger<RequesterController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, IMainchainService mainchainService, ISidechainMaintainerManager sidechainMaintainerManager, DatabaseKeyManager databaseKeyManager, IConnectionsChecker connectionsChecker, IConnector psqlConnector, ConcurrentVariables concurrentVariables, TransactionsManager transactionSender, IMongoDbRequesterService mongoDbRequesterService)
         {
-            NodeConfigurations = nodeConfigurations?.Value;
-            NetworkConfigurations = networkConfigurations?.Value;
-            RequesterConfigurations = requesterConfigurations?.Value;
-            ApiSecurityConfigurations = apiSecurityConfigurations?.Value;
+            _nodeConfigurations = nodeConfigurations?.Value;
+            _networkConfigurations = networkConfigurations?.Value;
+            _requesterConfigurations = requesterConfigurations?.Value;
+            _apiSecurityConfigurations = apiSecurityConfigurations?.Value;
 
             _logger = logger;
             _mainchainService = mainchainService;
@@ -87,163 +81,31 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> CheckRequesterConfig()
         {
-            try
-            {
+            var command = new CheckRequesterConfig(_logger, _mainchainService, _nodeConfigurations, _networkConfigurations, _connectionsChecker);
+            var result = await command.Execute();
 
-                bool fetchedExternalUtcTimeReference = false;
-                TimeSpan timeDifference = TimeSpan.FromSeconds(0);
-                
-                DateTime machineUtcDateTime = DateTime.UtcNow;
-                DateTime externalUtcDateTime = DateTime.MinValue;
-                try
-                {
-                    var webClient = new WebClient();
-                    var result = webClient.DownloadString(new Uri("http://worldtimeapi.org/api/timezone/Etc/UTC"));
-                    machineUtcDateTime = DateTime.UtcNow;
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+        }
 
+        /// <summary>
+        /// Returns the current staked balance in the sidechain
+        /// </summary>
+        /// <returns>Stake balance</returns>
+        /// <response code="200">Stake retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving staket</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Retrieves the current staked balance in the sidechain",
+            Description = "Used to get the current staked balance in the sidechain",
+            OperationId = "CheckCurrentStakeInSidechain()"
+        )]
+        public async Task<ObjectResult> CheckCurrentStakeInSidechain()
+        {
+            var command = new CheckCurrentStakeInSidechainCommand(_logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
+            var result = await command.Execute();
 
-
-                    if(string.IsNullOrWhiteSpace(result))
-                        fetchedExternalUtcTimeReference = false;
-
-                    var obj = new { datetime = string.Empty };
-
-                    var jsonResult = JsonConvert.DeserializeObject(result, obj.GetType());
-
-                    string dateTimeToParse = ((dynamic)jsonResult).datetime;
-                    DateTime parsedTime;
-                    if(!DateTime.TryParse(dateTimeToParse, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsedTime))
-                        fetchedExternalUtcTimeReference = false;
-
-                    fetchedExternalUtcTimeReference = true;
-                    externalUtcDateTime = parsedTime;
-                    timeDifference = machineUtcDateTime - externalUtcDateTime;
-                }
-                catch
-                {
-
-                }
-
-                string configuredPublicIp = NetworkConfigurations.PublicIpAddress.Trim();
-                string fetchedPublicIp = null;
-                bool fetchedPublicIpSuccessfully = false;
-                bool isConfiguredIPEqualToPublicIP = false;
-
-                try
-                {
-                    var webClient = new WebClient();
-                    var result = webClient.DownloadString(new Uri("https://api.ipify.org"));
-                    fetchedPublicIpSuccessfully = !string.IsNullOrWhiteSpace(result.Trim());
-                    fetchedPublicIp = result.Trim();
-                    isConfiguredIPEqualToPublicIP = configuredPublicIp == fetchedPublicIp;
-                }
-                catch
-                {
-
-                }
-
-
-                var isMongoLive = await _connectionsChecker.IsAbleToConnectToMongoDb();
-                var isPostgresLive = await _connectionsChecker.IsAbleToConnectToPostgres();
-
-                var accountName = NodeConfigurations.AccountName;
-                var activePublicKey = NodeConfigurations.ActivePublicKey;
-
-
-                bool eosAccountDataFetched = false;
-                List<string> currencyBalance = null;
-                long cpuUsed = 0;
-                long cpuLimit = 0;
-                long netUsed = 0;
-                long netLimit = 0;
-                ulong ramUsed = 0;
-                long ramLimit = 0;
-
-                bool activeKeyFoundOnAccount = false;
-                bool activeKeyHasEnoughWeight = false;
-
-                try
-                {
-                    var accountInfo = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
-                    currencyBalance = await _mainchainService.GetCurrencyBalance(NetworkConfigurations.BlockBaseTokenContract, NodeConfigurations.AccountName);
-
-                    eosAccountDataFetched = true;
-                    cpuUsed = accountInfo.cpu_limit.used;
-                    cpuLimit = accountInfo.cpu_limit.max;
-                    netUsed = accountInfo.net_limit.used;
-                    netLimit = accountInfo.net_limit.max;
-                    ramUsed = accountInfo.ram_usage;
-                    ramLimit = accountInfo.ram_quota;
-
-                    var permission = accountInfo.permissions.SingleOrDefault(p => p.perm_name == "active");
-
-                    if (permission != null)
-                    {
-                        var correspondingActiveKey = permission.required_auth?.keys?.SingleOrDefault(k => k.key == activePublicKey);
-                        if (correspondingActiveKey != null)
-                            activeKeyFoundOnAccount = true;
-                        if (correspondingActiveKey != null && correspondingActiveKey.weight >= permission.required_auth.threshold)
-                            activeKeyHasEnoughWeight = true;
-
-                    }
-
-
-                }
-                catch { }
-
-
-
-                var tcpPort = NetworkConfigurations.TcpPort;
-
-                var mongoDbConnectionString = NodeConfigurations.MongoDbConnectionString;
-                var mongoDbPrefix = NodeConfigurations.DatabasesPrefix;
-
-                var postgresHost = NodeConfigurations.PostgresHost;
-                var postgresPort = NodeConfigurations.PostgresPort;
-                var postgresUser = NodeConfigurations.PostgresUser;
-
-                return Ok(new OperationResponse<dynamic>(
-                    new
-                    {
-                        fetchedExternalUtcTimeReference,
-                        machineUtcDateTime,
-                        externalUtcDateTime,
-                        timeDifference,
-
-                        configuredPublicIp,
-                        fetchedPublicIpSuccessfully,
-                        fetchedPublicIp,
-                        isConfiguredIPEqualToPublicIP,
-
-                        tcpPort,
-                        accountName,
-                        eosAccountDataFetched,
-                        activePublicKey,
-                        activeKeyFoundOnAccount,
-                        activeKeyHasEnoughWeight,
-                        currencyBalance,
-                        cpuUsed,
-                        cpuLimit,
-                        netUsed,
-                        netLimit,
-                        ramUsed,
-                        ramLimit,
-
-                        mongoDbConnectionString,
-                        mongoDbPrefix,
-                        isMongoLive,
-                        postgresHost,
-                        postgresPort,
-                        postgresUser,
-                        isPostgresLive,
-                    }
-                    , $"Configuration and connection data retrieved."));
-
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<dynamic>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -261,58 +123,11 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RequestNewSidechain(decimal stake = 0)
         {
-            try
-            {
-                if (await _connector.DoesDefaultDatabaseExist())
-                    return BadRequest(new OperationResponse<string>(false, "You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
+            var command = new RequestNewSidechainCommand(_logger, _connector, _mainchainService, _nodeConfigurations, _requesterConfigurations);
+            command.Stake = stake;
+            var result = await command.Execute();
 
-                _connector.Setup().Wait();
-
-                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-                if (contractSt != null) return BadRequest(new OperationResponse<string>(false, $"Sidechain {NodeConfigurations.AccountName} already exists"));
-
-
-
-                if (stake > 0)
-                {
-                    string stakeToInsert = stake.ToString("F4") + " BBT";
-                    var stakeTransaction = await _mainchainService.AddStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName, stakeToInsert);
-                    _logger.LogInformation("Stake sent to contract. Tx = " + stakeTransaction);
-                    _logger.LogInformation("Stake inserted = " + stakeToInsert);
-                }
-
-                //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
-                var startChainTx = await _mainchainService.StartChain(NodeConfigurations.AccountName, NodeConfigurations.ActivePublicKey);
-                var i = 0;
-
-
-                var configuration = GetSidechainConfigurations();
-                //TODO rpinto - review this while loop
-                while (i < 3)
-                {
-
-                    await Task.Delay(1000);
-
-                    try
-                    {
-                        var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
-                        var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
-                        var configureTx = await _mainchainService.ConfigureChain(NodeConfigurations.AccountName, configuration, RequesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
-                        return Ok(new OperationResponse<string>(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
-                    }
-                    catch (ApiErrorException ex)
-                    {
-                        _logger.LogInformation($"Failed {i + 1} times. Error: {ex.Message}");
-                        i++;
-                    }
-                }
-
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationCanceledException());
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -329,29 +144,31 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> SetSecret()
         {
-            DatabaseSecurityConfigurations config;
+            SetSecretCommand command;
+
             try
             {
-                if (RequesterConfigurations.DatabaseSecurityConfigurations.Use)
-                {
-                    _databaseKeyManager.SetInitialSecrets(RequesterConfigurations.DatabaseSecurityConfigurations);
-                }
+                if (_requesterConfigurations.DatabaseSecurityConfigurations.Use)
+                    command = new SetSecretCommand(_logger, _requesterConfigurations, _databaseKeyManager, _connector);
 
                 else
                 {
+                    DatabaseSecurityConfigurations config;
                     using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
                     {
                         var json = await reader.ReadToEndAsync();
                         config = JsonConvert.DeserializeObject<DatabaseSecurityConfigurations>(json);
                     }
-                    _databaseKeyManager.SetInitialSecrets(config);
+                    command = new SetSecretCommand(_logger, _requesterConfigurations, _databaseKeyManager, _connector, config);
                 }
 
-                return Ok(new OperationResponse<string>(true, "Secret set with success"));
+                var result = await command.Execute();
+
+                return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 
@@ -369,20 +186,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RunSidechainMaintenance()
         {
-            try
-            {
-                if (_sidechainMaintainerManager.IsMaintainerRunning() || _sidechainMaintainerManager.IsProductionRunning())
-                {
-                    return BadRequest(new OperationResponse<string>(false, $"Sidechain was already running."));
-                }
-                
-                await _sidechainMaintainerManager.Start();
-                return Ok(new OperationResponse<string>(true, "Chain maintenance started."));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            var command = new RunSidechainMaintenanceCommand(_logger, _sidechainMaintainerManager);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
 
@@ -400,19 +207,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> PauseSidechain()
         {
-            try
-            {
-                if (!_sidechainMaintainerManager.IsMaintainerRunning() && !_sidechainMaintainerManager.IsProductionRunning())
-                    return BadRequest(new OperationResponse<string>(false, $"The sidechain isn't running."));
+            var command = new PauseSidechainMaintenanceCommand(_logger, _sidechainMaintainerManager);
+            var result = await command.Execute();
 
-                await _sidechainMaintainerManager.Pause();
-
-                return Ok(new OperationResponse<string>(true, $"Sidechain maintenance paused."));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
         /// <summary>
         /// Sends a transaction to the BlockBase Operations Contract to terminate the sidechain and removes sidechain data
@@ -428,54 +226,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> EndSidechain()
         {
-            try
-            {
-                await _sidechainMaintainerManager.End();
+            var command = new EndSidechainCommand(_logger, _sidechainMaintainerManager, _mainchainService, _nodeConfigurations, _concurrentVariables);
+            var result = await command.Execute();
 
-                //TODO rpinto - should all this functionality below be encapsulated inside the sidechainMaintainerManager?
-                var contractSt = await _mainchainService.RetrieveContractState(NodeConfigurations.AccountName);
-                if (contractSt == null) return BadRequest(new OperationResponse<string>(false, $"Sidechain {NodeConfigurations.AccountName} not found"));
-
-                var account = await _mainchainService.GetAccount(NodeConfigurations.AccountName);
-                var verifyBlockPermission = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
-                var verifyHistoryPermisson = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
-                
-                if (verifyBlockPermission != null)
-                {
-                    try
-                    {
-                        await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
-                    }
-                    catch (ApiErrorException) 
-                    {
-                        _logger.LogDebug($"Unlink failed because link does not exist");
-                    }
-                    await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
-                }
-
-                if (verifyHistoryPermisson != null)
-                {
-                    try
-                    {
-                        await _mainchainService.UnlinkAction(NodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
-                    }
-                    catch (ApiErrorException) 
-                    {
-                        _logger.LogDebug($"Unlink failed because link does not exist");
-                    }
-                    await _mainchainService.DeletePermission(NodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
-                }
-            
-                var tx = await _mainchainService.EndChain(NodeConfigurations.AccountName);
-
-                _concurrentVariables.Reset();
-
-                return Ok(new OperationResponse<string>(true, $"Ended sidechain. Tx: {tx}"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
 
@@ -496,21 +250,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> AddStake(double stake)
         {
-            if (stake <= 0)
-            {
-                return BadRequest(new OperationResponse<string>(false, "The stake must be positive"));
-            }
-            try
-            {
-                var stakeString = $"{stake.ToString("F4")} BBT";
-                var trx = await _mainchainService.AddStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName, stakeString);
+            var command = new AddStakeCommand(_logger, _mainchainService, _nodeConfigurations, stake);
+            var result = await command.Execute();
 
-                return Ok(new OperationResponse<string>(true, $"Stake successfully added. Tx = {trx}"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -527,16 +270,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> ClaimStake()
         {
-            try
-            {
-                var trx = await _mainchainService.ClaimStake(NodeConfigurations.AccountName, NodeConfigurations.AccountName);
+            var command = new ClaimStakeCommand(_logger, _mainchainService, _nodeConfigurations);
+            var result = await command.Execute();
 
-                return Ok(new OperationResponse<string>(true, $"Stake successfully claimed. Tx = {trx}"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
 
@@ -552,48 +289,15 @@ namespace BlockBase.Node.Controllers
             Description = "The client can use this method to generate the master key used to encrypt the database data",
             OperationId = "GenerateMasterKey"
         )]
-        public ObjectResult GenerateMasterKey()
+        public async Task<ObjectResult> GenerateMasterKey()
         {
-            try
-            {
-                var key = KeyAndIVGenerator.CreateRandomKey();
+            var command = new GenerateMasterKeyCommand(_logger);
+            var result = await command.Execute();
 
-                return Ok(new OperationResponse<string>(key, $"Master key successfully created. Master Key = {key}"));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
-        private Dictionary<string, object> GetSidechainConfigurations()
-        {
-            var configurations = new ContractInformationTable();
 
-            configurations.Key = NodeConfigurations.AccountName;
-
-            configurations.BlockTimeDuration = RequesterConfigurations.BlockTimeInSeconds;
-            configurations.SizeOfBlockInBytes = RequesterConfigurations.MaxBlockSizeInBytes;
-            configurations.NumberOfFullProducersRequired = RequesterConfigurations.FullNodes.RequiredNumber;
-            configurations.NumberOfHistoryProducersRequired = RequesterConfigurations.HistoryNodes.RequiredNumber;
-            configurations.NumberOfValidatorProducersRequired = RequesterConfigurations.ValidatorNodes.RequiredNumber;
-            configurations.MaxPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.FullNodes.MaxPaymentPerBlock);
-            configurations.MaxPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.HistoryNodes.MaxPaymentPerBlock);
-            configurations.MaxPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.ValidatorNodes.MaxPaymentPerBlock);
-            configurations.MinPaymentPerBlockFullProducers = Convert.ToUInt64(10000 * RequesterConfigurations.FullNodes.MinPaymentPerBlock);
-            configurations.MinPaymentPerBlockHistoryProducers = Convert.ToUInt64(10000 * RequesterConfigurations.HistoryNodes.MinPaymentPerBlock);
-            configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * RequesterConfigurations.ValidatorNodes.MinPaymentPerBlock);
-            configurations.Stake = Convert.ToUInt64(10000 * RequesterConfigurations.MinimumProducerStake);
-
-            configurations.CandidatureTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
-            configurations.SendSecretTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;
-            configurations.SendTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.IpSendingPhaseDurationInSeconds;
-            configurations.ReceiveTime = RequesterConfigurations.SidechainPhasesTimesConfigurations.IpRetrievalPhaseDurationInSeconds;
-
-            var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
-
-            return mappedConfig;
-        }
         /// <summary>
         /// Sends a query to be executed
         /// </summary>
@@ -610,17 +314,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> ExecuteQuery([FromBody] string queryScript)
         {
-            try
-            {
-                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>(false, "Passwords and main key not set."));
-                var queryResults = await _sqlCommandManager.Execute(queryScript);
+            var command = new ExecuteQueryCommand(_logger, _databaseKeyManager, _sqlCommandManager, queryScript);
+            var result = await command.Execute();
 
-                return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<QueryResult>>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -638,21 +335,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetAllTableValues([FromBody] SidebarQueryInfo sidebarQueryInfo)
         {
-            try
-            {
-                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>(false, "Passwords and main key not set."));
-                var query = $"USE {sidebarQueryInfo.DatabaseName}; SELECT {sidebarQueryInfo.TableName}.* FROM {sidebarQueryInfo.TableName}";
-                if (sidebarQueryInfo.Encrypted) query += " ENCRYPTED";
-                query += ";";
+            var command = new GetAllTableValuesCommand(_logger, _databaseKeyManager, _sqlCommandManager, sidebarQueryInfo);
+            var result = await command.Execute();
 
-                var queryResults = await _sqlCommandManager.Execute(query);
-
-                return Ok(new OperationResponse<IList<QueryResult>>(queryResults));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<QueryResult>>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -668,18 +354,13 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to know databases structure",
             OperationId = "GetStructure"
         )]
-        public ObjectResult GetStructure()
+        public async Task<ObjectResult> GetStructure()
         {
-            try
-            {
-                if (!_databaseKeyManager.DataSynced) return BadRequest(new OperationResponse<string>(false, "Passwords and main key not set."));
-                var structure = _sqlCommandManager.GetStructure();
-                return Ok(new OperationResponse<IList<DatabasePoco>>(structure));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<IList<DatabasePoco>>(e));
-            }
+            var command = new GetStructureCommand(_logger, _databaseKeyManager, _sqlCommandManager);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+
         }
 
         /// <summary>
@@ -696,17 +377,10 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RemoveSidechainDatabasesAndKeys()
         {
-            try
-            {
-                if (_sidechainMaintainerManager.IsMaintainerRunning() || _sidechainMaintainerManager.IsProductionRunning())
-                    return BadRequest(new OperationResponse<string>(false, "The sidechain maintenance is running."));
-                await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
-                return Ok(new OperationResponse<string>(true, $"Deleted databases and cleared all data."));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<bool>(e));
-            }
+            var command = new RemoveSidechainDatabasesAndKeysCommand(_logger, _sidechainMaintainerManager, _sqlCommandManager);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
@@ -725,71 +399,175 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetDecryptedNodeIps()
         {
-            try
-            {
-                var sidechainName = NodeConfigurations.AccountName;
+            var command = new GetDecryptedNodeIpsCommand(_logger, _mainchainService, _nodeConfigurations);
+            var result = await command.Execute();
 
-                var contractState = await _mainchainService.RetrieveContractState(sidechainName);
-                var contractInfo = await _mainchainService.RetrieveContractInformation(sidechainName);
-                var ipAddresses = await _mainchainService.RetrieveIPAddresses(sidechainName);
-
-                if (contractState == null) return BadRequest(new OperationResponse<string>(false, $"Contract state not found for {sidechainName}"));
-                if (contractInfo == null) return BadRequest(new OperationResponse<string>(false, $"Contract info not found for {sidechainName}"));
-                if (ipAddresses == null) return BadRequest(new OperationResponse<string>(false, $"IP Addresses table not found for {sidechainName}"));
-
-                if (!ipAddresses.Any() || ipAddresses.Any(t => !t.EncryptedIPs.Any()))
-                    return StatusCode(401, new OperationResponse<string>(false, $"IP Addresses table doesn't have any IPs for {sidechainName}"));
-
-                var ipsToReturn = new Dictionary<string, string>();
-
-                foreach (var ipAddressTable in ipAddresses)
-                {
-                    var encryptedIp = ipAddressTable.EncryptedIPs?.LastOrDefault();
-                    var decryptedIp = AssymetricEncryption.DecryptIP(encryptedIp, NodeConfigurations.ActivePrivateKey, ipAddressTable.PublicKey);
-                    ipsToReturn.Add(ipAddressTable.Key, decryptedIp.ToString());
-                }
-
-                return Ok(new OperationResponse<Dictionary<string, string>>(ipsToReturn));
-            }
-            catch (Exception e)
-            {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
-            }
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
         /// <summary>
-        /// Removes the given accoutn from the sidechain blacklist
+        /// Removes the given account from the sidechain blacklist
         /// </summary>
         /// <returns>Operation success</returns>
         /// <param name="account">Account name to remove from blacklist</param>
-        /// <response code="200">Accoutn removed from blacklist with success</response>
+        /// <response code="200">Account removed from blacklist with success</response>
         /// <response code="400">Invalid parameters</response>
-        /// <response code="500">Error removing accoutn from blacklist</response>
-        [HttpGet]
+        /// <response code="500">Error removing account from blacklist</response>
+        [HttpPost]
         [SwaggerOperation(
-            Summary = "Removes the given accoutn from the sidechain blacklist",
+            Summary = "Removes the given account from the sidechain blacklist",
             Description = "Used to remove from the sidechain blacklist an account that has been previously banned",
             OperationId = "RemoveAccountFromBlacklist"
         )]
         public async Task<ObjectResult> RemoveAccountFromBlacklist(string account)
         {
-            if (string.IsNullOrWhiteSpace(account)) return BadRequest(new OperationResponse<string>(false, "Please provide a valid account name"));
+            var command = new RemoveAccountFromBlacklistCommand(_logger, _mainchainService, _nodeConfigurations, account);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+
+        }
+
+        /// <summary>
+        /// Gets all the current reserved seats in the sidechain
+        /// </summary>
+        /// <returns> List of reserved seats </returns>
+        /// <response code="200">Reserved seats retrieved with success</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="500">Error getting reserved seats information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets all the current reserved seats in the sidechain",
+            Description = "Its used to get all the current account names in the reserved seats of the sidechain.",
+            OperationId = "CheckSidechainReservedSeats"
+        )]
+        public async Task<ObjectResult> CheckSidechainReservedSeats()
+        {
+            var command = new CheckSidechainReservedSeatsCommand(_logger, _mainchainService, _nodeConfigurations);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+        }
+
+        /// <summary>
+        /// Adds a list of account names to the sidechain reserved seats
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="reservedSeatsToAdd">Accounts names to add to the reserved seats of the sidechain</param>
+        /// <response code="200">Accounts added to the sidechain reserved seats with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error adding accounts to the sidechain reserved seats</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Adds a list of account names to the sidechain reserved seats",
+            Description = "Used to add accounts to the reserved seat in the sidechain. This way, the inserted accounts are selected first to produce in the sidechain",
+            OperationId = "AddReservedSeat"
+        )]
+        public async Task<ObjectResult> AddReservedSeat(List<string> reservedSeatsToAdd)
+        {
+            var command = new AddReservedSeatsCommand(_logger, _mainchainService, _nodeConfigurations, reservedSeatsToAdd);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+        }
+
+        /// <summary>
+        /// Removes the given account from the sidechain reserved seats
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="reservedSeatsToRemove">Account names to remove from the sidechain reserved seats</param>
+        /// <response code="200">Accounts removed from sidechain reserved seats with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error removing accounts from reserved seats</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Removes the given accoutn from the sidechain reserved seats",
+            Description = "Used to remove accounts from the sidechain reserved seats.",
+            OperationId = "RemoveReservedSeats"
+        )]
+        public async Task<ObjectResult> RemoveReservedSeats(List<string> reservedSeatsToRemove)
+        {
+            var command = new RemoveReservedSeatsCommand(_logger, _mainchainService, _nodeConfigurations, reservedSeatsToRemove);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+        }
+
+        /// <summary>
+        /// Alter current sidechain configurations
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="maxPaymentPerBlockFullProducer">New value for max payment per block for full producers</param>
+        /// <param name="minPaymentPerBlockFullProducer">New value for min payment per block for full producers</param>
+        /// <param name="maxPaymentPerBlockHistoryProducer">New value for max payment per block for history producers</param>
+        /// <param name="minPaymentPerBlockHistoryProducer">New value for min payment per block for history producers</param>
+        /// <param name="maxPaymentPerBlockValidatorProducer">New value for max payment per block for validator producers</param>
+        /// <param name="minPaymentPerBlockValidatorProducer">New value for min payment per block for validator producers</param>
+        /// <param name="minCandidatureStake">New value for minimum stake to enter candidature</param>
+        /// <param name="numberOfFullProducersRequired">New value for number of full producers required</param>
+        /// <param name="numberOfHistoryProducersRequired">New value for number of history producers required</param>
+        /// <param name="numberOfValidatorProducersRequired">New value for number of validator producers required</param>
+        /// <param name="blockTimeInSeconds">New value for block time in seconds</param>
+        /// <param name="blockSizeInBytes">New value for block size in bytes</param>
+        /// <response code="200">Configuration changes sent with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error sending configuration changes</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Alter current sidechain configurations",
+            Description = "Allows requester to send new configurations to be changed in the sidechain. The changes will take effect one day after inserting them. If sent again before the changes take effect it will override the previous request.",
+            OperationId = "ChangeSidechainConfigurations"
+        )]
+        public async Task<ObjectResult> ChangeSidechainConfigurations(decimal? maxPaymentPerBlockFullProducer, decimal? minPaymentPerBlockFullProducer,
+                                                                      decimal? maxPaymentPerBlockHistoryProducer, decimal? minPaymentPerBlockHistoryProducer,
+                                                                      decimal? maxPaymentPerBlockValidatorProducer, decimal? minPaymentPerBlockValidatorProducer,
+                                                                      decimal? minCandidatureStake, int? numberOfFullProducersRequired,
+                                                                      int? numberOfHistoryProducersRequired, int? numberOfValidatorProducersRequired,
+                                                                      int? blockTimeInSeconds, long? blockSizeInBytes)
+        {
             try
             {
-                var sidechainName = NodeConfigurations.AccountName;
+                var contractSt = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
+                var contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
+                if (contractSt == null) return BadRequest(new OperationResponse(false, $"Sidechain doesn't exist"));
+                if (contractSt.ConfigTime || contractSt.SecretTime || contractSt.IPSendTime || contractSt.IPReceiveTime) return BadRequest(new OperationResponse(false, $"Sidechain isn't in a state that allows changing configurations"));
 
-                var blacklist = await _mainchainService.RetrieveBlacklistTable(sidechainName);
+                var configurationChanges = new ChangeConfigurationTable();
 
-                if (!blacklist.Any(p => p.Key == account))
-                    return BadRequest(new OperationResponse<string>(false, $"Producer {account} isn't in the blacklist for sidechain {sidechainName}"));
+                configurationChanges.Key = _nodeConfigurations.AccountName;
 
-                var trx = await _mainchainService.RemoveBlacklistedProducer(sidechainName, account);
+                configurationChanges.BlockTimeDuration = blockTimeInSeconds != null ? Convert.ToUInt32(blockTimeInSeconds.Value) : contractInfo.BlockTimeDuration;
+                configurationChanges.SizeOfBlockInBytes = blockSizeInBytes != null ? Convert.ToUInt64(blockSizeInBytes.Value) : contractInfo.SizeOfBlockInBytes;
+                configurationChanges.NumberOfFullProducersRequired = numberOfFullProducersRequired != null ? Convert.ToUInt32(numberOfFullProducersRequired.Value) : contractInfo.NumberOfFullProducersRequired;
+                configurationChanges.NumberOfHistoryProducersRequired = numberOfHistoryProducersRequired != null ? Convert.ToUInt32(numberOfHistoryProducersRequired.Value) : contractInfo.NumberOfHistoryProducersRequired;
+                configurationChanges.NumberOfValidatorProducersRequired = numberOfValidatorProducersRequired != null ? Convert.ToUInt32(numberOfValidatorProducersRequired.Value) : contractInfo.NumberOfValidatorProducersRequired;
+                configurationChanges.MaxPaymentPerBlockFullProducers = maxPaymentPerBlockFullProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockFullProducer.Value) : contractInfo.MaxPaymentPerBlockFullProducers;
+                configurationChanges.MaxPaymentPerBlockHistoryProducers = maxPaymentPerBlockHistoryProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockHistoryProducer.Value) : contractInfo.MaxPaymentPerBlockHistoryProducers;
+                configurationChanges.MaxPaymentPerBlockValidatorProducers = maxPaymentPerBlockValidatorProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockValidatorProducer.Value) : contractInfo.MaxPaymentPerBlockValidatorProducers;
+                configurationChanges.MinPaymentPerBlockFullProducers = minPaymentPerBlockFullProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockFullProducer.Value) : contractInfo.MinPaymentPerBlockFullProducers;
+                configurationChanges.MinPaymentPerBlockHistoryProducers = minPaymentPerBlockHistoryProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockHistoryProducer.Value) : contractInfo.MinPaymentPerBlockHistoryProducers;
+                configurationChanges.MinPaymentPerBlockValidatorProducers = minPaymentPerBlockValidatorProducer != null ? Convert.ToUInt64(10000 * minPaymentPerBlockValidatorProducer.Value) : contractInfo.MinPaymentPerBlockValidatorProducers;
+                configurationChanges.Stake = minCandidatureStake != null ? Convert.ToUInt64(10000 * minCandidatureStake.Value) : contractInfo.Stake;
 
-                return Ok(new OperationResponse<string>(true, $"Account {account} successfully removed from blacklist"));
+                //Check configurations
+                if (configurationChanges.SizeOfBlockInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
+                    return BadRequest(new OperationResponse(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
+                if (configurationChanges.NumberOfFullProducersRequired + configurationChanges.NumberOfHistoryProducersRequired + configurationChanges.NumberOfValidatorProducersRequired == 0)
+                    return BadRequest(new OperationResponse(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
+                if (configurationChanges.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
+                    return BadRequest(new OperationResponse(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
+
+                var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurationChanges));
+
+                var alterConfigTx = await _mainchainService.AlterConfigurations(_nodeConfigurations.AccountName, mappedConfig);
+
+                return Ok(new OperationResponse(true, $"Configuration changes succesfully sent. The changes will take effect after one day. Tx: {alterConfigTx}"));
             }
             catch (Exception e)
             {
-                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse<string>(e));
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
 

@@ -64,8 +64,18 @@ namespace BlockBase.Runtime.Network
             }
 
             _logger.LogInformation($"Trying to connect to {remoteEndPoint.Address.ToString()}:{remoteEndPoint.Port}");
-            var peer = await _networkService.ConnectAsync(remoteEndPoint);//, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
-            return peer;
+
+            try
+            {
+                var peer = await _networkService.ConnectAsync(remoteEndPoint);//, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
+                return peer;
+            }
+            catch (Exception)
+            {
+                _networkService.UnSubscribePeerConnectedEvent(TcpConnector_PeerConnected);
+                _networkService.UnSubscribePongReceivedEvent(MessageForwarder_PongMessageReceived);
+                return null;
+            }
         }
 
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)

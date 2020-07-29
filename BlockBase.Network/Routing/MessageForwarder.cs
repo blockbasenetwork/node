@@ -106,7 +106,7 @@ namespace BlockBase.Network.Rounting
 
                 else if (message.NetworkMessageType == NetworkMessageTypeEnum.ConfirmTransactionReception) TransactionConfirmationReceived?.Invoke(ParseTransactionConfirmationMessage(message), message.Sender);
 
-                else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendTransactions) TransactionsReceived?.Invoke(ParseTransactionsMessage(message), message.Sender);
+                else if (message.NetworkMessageType == NetworkMessageTypeEnum.SendTransactions) TransactionsReceived?.Invoke(ParseTransactionsMessage(message.Payload), message.Sender);
             }
         }
 
@@ -117,9 +117,11 @@ namespace BlockBase.Network.Rounting
             return new BlockReceivedEventArgs { ClientAccountName = clientAccountNameAndBlockBytes.Item1, BlockBytes = clientAccountNameAndBlockBytes.Item2 };
         }
 
-        private TransactionsReceivedEventArgs ParseTransactionsMessage(NetworkMessage message)
+        private TransactionsReceivedEventArgs ParseTransactionsMessage(byte[] payload)
         {
-            return new TransactionsReceivedEventArgs { TransactionsBytes = message.Payload, ClientAccountName = message.EosAccount };
+            var clientAccountNameAndTrasactionBytes = ParseClientAccountName(payload);
+
+            return new TransactionsReceivedEventArgs { TransactionsBytes = clientAccountNameAndTrasactionBytes.Item2, ClientAccountName = clientAccountNameAndTrasactionBytes.Item1 };
         }
 
         private TransactionConfirmationReceivedEventArgs ParseTransactionConfirmationMessage(NetworkMessage message)

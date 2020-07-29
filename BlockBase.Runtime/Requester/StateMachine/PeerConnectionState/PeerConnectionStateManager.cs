@@ -39,6 +39,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState
             if(state == typeof(ConnectToPeersState).Name) return new ConnectToPeersState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations,_peerConnectionsHandler);
             if(state == typeof(CheckConnectionState).Name) return new CheckConnectionState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler);
             if(state == typeof(EndState).Name) return new EndState(_logger);
+            if (state == typeof(WaitForEndConfirmationState).Name) return new WaitForEndConfirmationState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
             throw new System.NotImplementedException();
         }
     }

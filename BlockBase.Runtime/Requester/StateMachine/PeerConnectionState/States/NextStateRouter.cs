@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 {
-    public class NextStateRouter : AbstractState<StartState, EndState>
+    public class NextStateRouter : AbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
         private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;

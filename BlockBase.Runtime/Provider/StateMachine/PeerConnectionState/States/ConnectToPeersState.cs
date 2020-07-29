@@ -17,17 +17,15 @@ using static BlockBase.Network.PeerConnection;
 
 namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 {
-    public class ConnectToPeersState : ProviderAbstractState<StartState, EndState>
+    public class ConnectToPeersState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
-        private readonly IMainchainService _mainchainService;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
-        private SidechainPool _sidechainPool;
         private bool _peersConnected;
-        public ConnectToPeersState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool)
+        public ConnectToPeersState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

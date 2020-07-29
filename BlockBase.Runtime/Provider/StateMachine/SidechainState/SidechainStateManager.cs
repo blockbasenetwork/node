@@ -7,7 +7,7 @@ using BlockBase.Runtime.Network;
 using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using BlockBase.Runtime.Common;
-using BlockBase.Runtime.Provider.StateMachine.PeerConectionState;
+using BlockBase.Runtime.Provider.StateMachine.PeerConnectionState;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.States;
 using System.Threading;
 using BlockBase.Runtime.Provider.StateMachine.SidechainState.HistoryValidationState;
@@ -119,14 +119,15 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
         protected override IState BuildState(string state)
         {
             if (state == typeof(StartState).Name) return new StartState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if (state == typeof(CandidatureState).Name) return new CandidatureState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            if (state == typeof(CandidatureState).Name) return new CandidatureState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _inAutomaticMode);
             if (state == typeof(SecretTimeState).Name) return new SecretTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
             if (state == typeof(IPSendTimeState).Name) return new IPSendTimeState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
-            if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
-            if (state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
+            if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler, _mongoDbProducerService);
+            if (state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations, _mongoDbProducerService);
             if (state == typeof(UpdateIpState).Name) return new UpdateIpState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
-            if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService, _sidechainProducerService, _inAutomaticMode);
-
+            if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService, _sidechainProducerService, _mainchainService, _inAutomaticMode);
+            if (state == typeof(WaitForEndConfirmationState).Name) return new WaitForEndConfirmationState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
+            
             return null;
         }
     }

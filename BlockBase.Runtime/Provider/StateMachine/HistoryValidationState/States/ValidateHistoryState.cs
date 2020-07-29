@@ -18,10 +18,9 @@ using Newtonsoft.Json;
 
 namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 {
-    public class ValidateHistoryState : ProviderAbstractState<StartState, EndState>
+    public class ValidateHistoryState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
 
-        private IMainchainService _mainchainService;
         private ContractStateTable _contractState;
         private IMongoDbProducerService _mongoDbProducerService;
         private NodeConfigurations _nodeConfigurations;
@@ -29,7 +28,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
     
         private IList<ProducerInTable> _producerList;
         private IList<MappedHistoryValidation> _historyValidations;
-        private SidechainPool _sidechainPool;
         private string _blockByteInHex;
         private string _blockHashToValidate;
         private EosSharp.Core.Api.v1.Transaction _transaction;
@@ -47,7 +45,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         public ValidateHistoryState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
-            NodeConfigurations nodeConfigurations) : base(logger, sidechainPool)
+            NodeConfigurations nodeConfigurations) : base(logger, sidechainPool, mainchainService)
         {
             _logger = logger;
             _mainchainService = mainchainService;

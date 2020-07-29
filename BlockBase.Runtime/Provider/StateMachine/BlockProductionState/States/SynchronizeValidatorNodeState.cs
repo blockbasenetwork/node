@@ -18,17 +18,15 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
-    public class SynchronizeValidatorNodeState : ProviderAbstractState<StartState, EndState>
+    public class SynchronizeValidatorNodeState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
 
-        private IMainchainService _mainchainService;
         private ContractStateTable _contractStateTable;
         private IMongoDbProducerService _mongoDbProducerService;
         private NodeConfigurations _nodeConfigurations;
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
         private BlockheaderTable _lastValidSubmittedBlockHeader;
-        private SidechainPool _sidechainPool;
         private NetworkConfigurations _networkConfigurations;
         private INetworkService _networkService;
         private bool _isNodeSynchronized;
@@ -39,7 +37,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         public SynchronizeValidatorNodeState(ILogger logger, IMainchainService mainchainService,
             IMongoDbProducerService mongoDbProducerService, SidechainPool sidechainPool,
             NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, INetworkService networkService,
-            TransactionValidationsHandler transactionValidationsHandler) : base(logger, sidechainPool)
+            TransactionValidationsHandler transactionValidationsHandler) : base(logger, sidechainPool, mainchainService)
         {
             _logger = logger;
             _mainchainService = mainchainService;

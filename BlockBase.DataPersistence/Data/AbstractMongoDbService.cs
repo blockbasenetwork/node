@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using System.Linq;
 using MongoDB.Driver.Linq;
 using BlockBase.Domain.Blockchain;
+using System.Text;
 
 namespace BlockBase.DataPersistence.Data
 {
@@ -42,6 +43,25 @@ namespace BlockBase.DataPersistence.Data
 
                 return transactionDBList.Select(t => t.TransactionFromTransactionDB()).ToList();
             }
+        }
+
+        protected string ClearSpecialCharacters(string accountName)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in accountName)
+            {
+                if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+                {
+                    sb.Append(c);
+                }
+                else
+                {
+                    var myByte = (byte) c;
+                    var hex = myByte.ToString("X");
+                    sb.Append(hex);
+                }
+            }
+            return sb.ToString();
         }
     }
 }

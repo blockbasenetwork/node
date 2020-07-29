@@ -13,9 +13,8 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
-    public class IPSendTimeState : ProviderAbstractState<StartState, EndState>
+    public class IPSendTimeState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
-        private readonly IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
         private NetworkConfigurations _networkConfigurations;
         private ContractStateTable _contractStateTable;
@@ -23,9 +22,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private List<IPAddressTable> _ipAddressTable;
         private List<ProducerInTable> _producers;
 
-        private SidechainPool _sidechainPool;
         private bool _hasUpdatedIps;
-        public IPSendTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool)
+        public IPSendTimeState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;

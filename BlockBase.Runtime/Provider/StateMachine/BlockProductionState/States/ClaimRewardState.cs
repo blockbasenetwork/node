@@ -11,17 +11,15 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 {
-    public class ClaimRewardState : ProviderAbstractState<StartState, EndState>
+    public class ClaimRewardState : ProviderAbstractState<StartState, EndState, WaitForEndConfirmationState>
     {
-        private IMainchainService _mainchainService;
-        private SidechainPool _sidechainPool;
         private NodeConfigurations _nodeConfigurations;
         private ContractStateTable _contractStateTable;
         private List<RewardTable> _rewardList;
 
         private bool _hasTriedToRetrieveRewardOnce;
 
-        public ClaimRewardState(ILogger logger, NodeConfigurations nodeConfigurations, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger, sidechainPool)
+        public ClaimRewardState(ILogger logger, NodeConfigurations nodeConfigurations, IMainchainService mainchainService, SidechainPool sidechainPool) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _sidechainPool = sidechainPool;

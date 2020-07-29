@@ -44,6 +44,7 @@ namespace BlockBase.Runtime.Network
         private const int RATING_LOST_FOR_DISCONECT = 10;
         private const int RATING_LOST_FOR_CONNECT_FAILURE = 10;
         private bool _tryingConnection;
+        private bool _incomingConnectionOngoing;
 
         public PeerConnectionsHandler(INetworkService networkService, SystemConfig systemConfig, ILogger<PeerConnectionsHandler> logger, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations)
         {
@@ -176,19 +177,24 @@ namespace BlockBase.Runtime.Network
         private async void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
             int count = 0;
-            while (_tryingConnection)
+
+            while (_tryingConnection || _incomingConnectionOngoing)
             {
                 //polite wait
                 await Task.Delay(1000);
                 count++;
                 _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
-                if(count > 2)
+                if (count > 2)
                 {
                     _tryingConnection = false;
+                    _incomingConnectionOngoing = false;
                     break;
                 }
                 continue;
             }
+
+            _incomingConnectionOngoing = true;
+
             var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
 
@@ -208,9 +214,11 @@ namespace BlockBase.Runtime.Network
 
             else if (peer == null)
             {
-                if(!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
+                if (!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
                     _waitingForApprovalPeers.Add(args.Peer);
             }
+
+            _incomingConnectionOngoing = false;
         }
 
         private void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
@@ -228,9 +236,25 @@ namespace BlockBase.Runtime.Network
             if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
-        private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
+        private async void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
         {
+            int count = 0;
+            while (_incomingConnectionOngoing)
+            {
+                //polite wait
+                await Task.Delay(1000);
+                count++;
+                _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
+                if (count > 2)
+                {
+                    _incomingConnectionOngoing = false;
+                    break;
+                }
+                continue;
+            }
+
             var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.SenderIPEndPoint)).SingleOrDefault();
+
             if (peer == null)
             {
                 _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
@@ -321,6 +345,36 @@ namespace BlockBase.Runtime.Network
             return peersConnected;
         }
 
+        public async Task<List<(bool connectionAlive, PeerConnection peer)>> PingAllConnectionsAndReturnAliveState()
+        {
+            var random = new Random();
+            var peersToReturn = new List<(bool connectionAlive, PeerConnection peer)>();
+
+            foreach (var peer in CurrentPeerConnections)
+            {
+                if (peer.ConnectionState == ConnectionStateEnum.Connected)
+                {
+                    var randomInt = random.Next();
+                    await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
+
+                    var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
+                    if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                    {
+                        var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                        if (randomInt == pongNonce)
+                        {
+                            peersToReturn.Add((true, peer));
+                            continue;
+                        }
+                    }
+                }
+
+                peersToReturn.Add((false, peer));
+            }
+
+            return peersToReturn;
+        }
+
         #endregion Enter Points
 
         #region Auxiliar Methods
@@ -389,11 +443,24 @@ namespace BlockBase.Runtime.Network
             catch (Exception ex)
             {
                 _logger.LogError("Could not connect to peer: " + ex.Message);
-                return null;
             }
+
+            //tries to see if a connection already exists
+            try
+            {
+                var existingPeerConnection = _networkService.GetPeerIfExists(remoteEndPoint);
+                if (existingPeerConnection != null) _logger.LogInformation($"Connection to {remoteEndPoint.ToString()} already established");
+                return existingPeerConnection;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to discover existing peer connection: " + ex.Message);
+            }
+
+            return null;
         }
 
-        private void Disconnect(PeerConnection peerConnection)
+        public void Disconnect(PeerConnection peerConnection)
         {
             if (peerConnection.Peer == null) return;
             _logger.LogDebug("Disconnect from peer " + peerConnection.Peer.EndPoint.Address + ":" + peerConnection.Peer.EndPoint.Port + ".");

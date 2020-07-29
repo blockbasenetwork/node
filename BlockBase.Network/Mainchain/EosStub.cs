@@ -23,16 +23,26 @@ namespace BlockBase.Network.Mainchain
         private Eos _eosConnection;
         private EosConfigurator _eosConfig;
         private readonly string _privateKey;
+        private List<string> _eosNetworks;
 
         public EosStub()
         {
         }
 
-        public EosStub(uint transactionExpirationTimeInSeconds, string privateKey, string network)
+        public EosStub(uint transactionExpirationTimeInSeconds, string privateKey, List<string> networks)
         {
             _transactionExpirationTimeInSeconds = transactionExpirationTimeInSeconds;
             _privateKey = privateKey;
-            _eosConfig = SetConfiguration(network);
+            _eosNetworks = networks;
+            _eosConfig = SetConfiguration(networks.First());
+            _eosConnection = OpenConnectionWithChain();
+        }
+
+        public void ChangeNetwork()
+        {
+            var nextNetworks = _eosNetworks.SkipWhile(n => n != _eosConfig.HttpEndpoint);
+            var nextNetwork = nextNetworks.Count() > 1 ? nextNetworks.ElementAt(1) : _eosNetworks.First();
+            _eosConfig = SetConfiguration(nextNetwork);
             _eosConnection = OpenConnectionWithChain();
         }
 
@@ -78,7 +88,7 @@ namespace BlockBase.Network.Mainchain
             return opResult;
         }
 
-        public async Task<OpResult<List<TPoco>>> GetRowsFromSmartContractTable<TPoco>(string smartContractAccountName, string tableName, string scope = null, int limit = 100)
+        public async Task<OpResult<List<TPoco>>> GetRowsFromSmartContractTable<TPoco>(string smartContractAccountName, string tableName, string scope = null, int limit = 100, bool reverse = false)
         {
             var opResult = await Op.RunAsync(async () => (await _eosConnection.GetTableRows<TPoco>(
                 new GetTableRowsRequest()
@@ -87,7 +97,8 @@ namespace BlockBase.Network.Mainchain
                     code = smartContractAccountName,
                     scope = scope ?? smartContractAccountName,
                     table = tableName,
-                    limit = limit
+                    limit = limit,
+                    reverse = reverse
                 }
             )).rows);
 

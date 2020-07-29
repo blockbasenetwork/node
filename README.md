@@ -119,12 +119,6 @@ Before you can request the network for a new sidechain, you have to configure th
       "EncryptionMasterKey": "",
       "EncryptionPassword": ""
     },
-    "SidechainPhasesTimesConfigurations": { // Leave this section as is. Each one of these phases is crucial for the bootstrap of a sidechain network, and each should be at least one minute long.
-      "CandidaturePhaseDurationInSeconds": 60,
-      "SecretSendingPhaseDurationInSeconds": 60,
-      "IpSendingPhaseDurationInSeconds": 60,
-      "IpRetrievalPhaseDurationInSeconds": 60
-    },
     "ValidatorNodes": {
       "RequiredNumber": 0, // The required number of validator nodes
       "MaxPaymentPerBlock": 0, // The payment in BBT each validator node will receive when he produces a block filled to the max with transactions

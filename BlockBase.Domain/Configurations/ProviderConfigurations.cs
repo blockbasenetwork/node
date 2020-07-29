@@ -17,6 +17,7 @@ namespace BlockBase.Domain.Configurations
         public HistoryFullProviderNodeConfig FullNode { get; set; }
         public int MaxNumberOfSidechains { get; set; }
         public double MaxGrowthPerMonthInMB { get; set; }
+        public double MaxRatioToStake { get; set; }
     }
 
     public class HistoryFullProviderNodeConfig : ProviderNodeConfig

@@ -11,13 +11,12 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.States
 {
-    public class NextStateRouter : AbstractMainchainState<StartState, EndState>
+    public class NextStateRouter : AbstractMainchainState<StartState, EndState, WaitForEndConfirmationState>
     {
         private string _nextState;
         private ContractInformationTable _contractInfo;
         private ContractStateTable _contractState;
         private IMainchainService _mainchainService;
-        private bool _hasEnoughStake;
 
         private NodeConfigurations _nodeConfigurations;
 
@@ -34,7 +33,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
 
         protected override Task<bool> HasConditionsToContinue()
         {
-            return Task.FromResult(_hasEnoughStake && _contractState != null);
+            return Task.FromResult(_contractState != null);
         }
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
@@ -53,8 +52,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
 
             if (_contractState == null || _contractInfo == null) return;
-
-            _hasEnoughStake = await HasEnoughStakeUntilNextSettlement();
 
             _nextState = GetNextSidechainState(_contractInfo, _contractState);
 
@@ -82,22 +79,6 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             if (contractState.IPReceiveTime && IsTimeUpForSidechainPhase(contractInfo.ReceiveEndDate, 0))
                 return typeof(StartProductionState).Name;
             return null;
-        }
-
-        private async Task<bool> HasEnoughStakeUntilNextSettlement()
-        {
-            decimal requesterStake = 0;
-            var accountStake = await _mainchainService.GetAccountStake(_nodeConfigurations.AccountName, _nodeConfigurations.AccountName);
-            if (accountStake == null) return false;
-
-            var stakeString = accountStake.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-            decimal.TryParse(stakeString, out requesterStake);
-
-            var maxPaymentPerBlock = new[] { _contractInfo.MaxPaymentPerBlockFullProducers, _contractInfo.MaxPaymentPerBlockHistoryProducers, _contractInfo.MaxPaymentPerBlockValidatorProducers }.Max();
-            var neededBBT = _contractInfo.BlocksBetweenSettlement * maxPaymentPerBlock;
-            var neededBBTDecimal = Math.Round((decimal)neededBBT / 10000, 4);
-
-            return (requesterStake >= neededBBTDecimal);
         }
 
         private TimeSpan CalculateNextDelay()

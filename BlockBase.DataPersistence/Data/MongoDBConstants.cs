@@ -11,6 +11,7 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
         public static readonly string REQUESTER_TRANSACTIONS_COLLECTION_NAME = "TransactionsToSend";
         public static readonly string PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME = "CurrentTransactionToExecute";
         public static readonly string PRODUCING_SIDECHAINS_COLLECTION_NAME = "ProducingSidechains";
+        public static readonly string PAST_SIDECHAINS_COLLETION_NAME = "PastSidechains";
         public static readonly string MAINTAINED_SIDECHAINS_COLLECTION_NAME = "MaintainedSidechains";
         public const string CREATE_DATABASE = "CreateDatabase";
         public const string CREATE_TABLE = "CreateTable";
