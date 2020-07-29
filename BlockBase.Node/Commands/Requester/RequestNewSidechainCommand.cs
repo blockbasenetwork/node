@@ -151,10 +151,10 @@ namespace BlockBase.Node.Commands.Requester
             configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * _requesterConfigurations.ValidatorNodes.MinPaymentPerBlock);
             configurations.Stake = Convert.ToUInt64(10000 * _requesterConfigurations.MinimumProducerStake);
 
-            configurations.CandidatureTime = _requesterConfigurations.BlockTimeInSeconds + ((numberOfProviders / 10) * 60);
-            configurations.SendSecretTime = 60 + ((numberOfProviders / 10) * 60);
-            configurations.SendTime = 60 + ((numberOfProviders / 10) * 60);
-            configurations.ReceiveTime = 60 + ((numberOfProviders / 10) * 60);
+            configurations.CandidatureTime = 60 + ((numberOfProviders / 5) * 20);
+            configurations.SendSecretTime = 60 + ((numberOfProviders / 5) * 20);
+            configurations.SendTime = 60 + ((numberOfProviders / 5) * 20);
+            configurations.ReceiveTime = 60 + ((numberOfProviders / 5) * 20);
 
             var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
 
