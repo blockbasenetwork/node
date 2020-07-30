@@ -136,7 +136,6 @@ Before you can request the network for a new sidechain, you have to configure th
     },
     "MinimumProducerStake": 0, // The minimum stake each node has to provide as collateral to apply to participation
     "BlockTimeInSeconds": 60, // The time in seconds between the production of each block
-    "NumberOfBlocksBetweenSettlements": 10, // The number of blocks between each settlement. Its during settlements that payments are made
     "MaxBlockSizeInBytes": 1000000, // The maximum size of a block in bytes
     "ReservedProducerSeats": ["producer1eosaccount", "producer2eosaccount"] // A list of EOS accounts you want to pre-select as service providers for your network
   }
@@ -305,21 +304,23 @@ By setting any of the `IsActive` active properties to `true`, when the node star
 {
   "AutomaticProduction": {
     "ValidatorNode": {
-      "IsActive": false, // Determines if the automatic production as a validator is active
-      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
-      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
+      "IsActive": false, // Determines if the automatic production as a validator node is active
+      "MinBBTPerEmptyBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum acceptable ratio of BBT to `stake` to `average monthly income` to receive in BBT
     },
     "HistoryNode": {
-      "IsActive": false, // Determines if the automatic production as a validator is active
-      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
-      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
+      "IsActive": false, // Determines if the automatic production as a history node is active
+      "MinBBTPerEmptyBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MinBBTPerMBRatio": 0, // The minimum amount of BBT required per MB of data added to the block body
+      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum acceptable ratio of BBT to `stake` to `average monthly income` to receive in BBT
       "MaxSidechainGrowthPerMonthInMB":0 // The maximum amount in MB a sidechain may grow per month
     },
     
     "FullNode": {
-      "IsActive": false, // Determines if the automatic production as a validator is active
-      "MinBBTPerBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
-      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum value of `stake` divided by `monthly income` 
+      "IsActive": false, // Determines if the automatic production as a full node is active
+      "MinBBTPerEmptyBlock": 0, // The minimum amount of BBT required per block to participate on the sidechain
+      "MinBBTPerMBRatio": 0, // The minimum amount of BBT required per MB of data added to the block body
+      "MaxStakeToMonthlyIncomeRatio": 0, // The maximum acceptable ratio of BBT to `stake` to `average monthly income` to receive in BBT
       "MaxSidechainGrowthPerMonthInMB":0 // The maximum amount in MB a sidechain may grow per month
     },
     "MaxNumberOfSidechains":0, // The maximum number of sidechains the node will work on simultaneously

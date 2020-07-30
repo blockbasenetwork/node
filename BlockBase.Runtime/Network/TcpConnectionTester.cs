@@ -129,7 +129,6 @@ namespace BlockBase.Runtime.Network
                 _logger.LogInformation($"Received ping message from {sender.Address.ToString()}:{sender.Port} with number: {args.nonce}");
         }
 
-
         private async Task DisconnectAfter(Peer peer, TimeSpan timeSpan)
         {
             try
