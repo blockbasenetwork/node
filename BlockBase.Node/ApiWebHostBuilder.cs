@@ -99,11 +99,13 @@ namespace BlockBase.Api
                 {
                     option.ShutdownTimeout = System.TimeSpan.FromSeconds(3);
                 });
+                
+                var node = configuration.GetSection("NodeConfigurations").GetValue<string>("AccountName");
                 services.AddSwaggerGen(c =>
                 {
-                    c.SwaggerDoc("providerApi", new OpenApiInfo { Title = "Service Provider API", Version = "v0.1" });
-                    c.SwaggerDoc("requesterApi", new OpenApiInfo { Title = "Service Requester API", Version = "v0.1" });
-                    c.SwaggerDoc("networkApi", new OpenApiInfo { Title = "Network API", Version = "v0.1" });
+                    c.SwaggerDoc("providerApi", new OpenApiInfo { Title = "Service Provider API", Version = "v0.1", Description = $"Node Account: {node}" });
+                    c.SwaggerDoc("requesterApi", new OpenApiInfo { Title = "Service Requester API", Version = "v0.1", Description = $"Node Account: {node}" });
+                    c.SwaggerDoc("networkApi", new OpenApiInfo { Title = "Network API", Version = "v0.1", Description = $"Node Account: {node}" });
                     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
                     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                     c.IncludeXmlComments(xmlPath);
