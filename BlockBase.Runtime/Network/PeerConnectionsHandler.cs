@@ -358,7 +358,7 @@ namespace BlockBase.Runtime.Network
                     await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
 
                     var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                    if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                    if (pongResponseTask.Wait(2000))
                     {
                         var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
                         if (randomInt == pongNonce)
