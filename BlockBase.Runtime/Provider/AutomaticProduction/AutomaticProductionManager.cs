@@ -210,7 +210,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             if (
                 _providerConfigurations.AutomaticProduction.FullNode.IsActive
-                && _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB
+                && (_providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
                 && contractInfo.NumberOfFullProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio);
@@ -236,7 +236,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             if (
                 _providerConfigurations.AutomaticProduction.HistoryNode.IsActive
-                && _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB
+                && (_providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
                 && contractInfo.NumberOfHistoryProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio);
@@ -341,14 +341,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 }
             }
 
-            return totalMaximumMonthlyGrowth <= maxTotalGrowthPerMonthInMB;
+            return maxTotalGrowthPerMonthInMB == 0 ? true : totalMaximumMonthlyGrowth <= maxTotalGrowthPerMonthInMB;
         }
 
         private bool CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(int maxNumberOfSidechainsToProduce)
         {
             var currentProducingSidechains = _sidechainKeeper.GetSidechains().Count();
 
-            return currentProducingSidechains < maxNumberOfSidechainsToProduce;
+            return maxNumberOfSidechainsToProduce == 0 ? true : currentProducingSidechains < maxNumberOfSidechainsToProduce;
         }
 
         private decimal GetStakeToMonthlyIncomeRatio(decimal stake, decimal minPaymentPerBlock, decimal maxPaymentPerBlock, uint blockTimeDurationInSeconds)
