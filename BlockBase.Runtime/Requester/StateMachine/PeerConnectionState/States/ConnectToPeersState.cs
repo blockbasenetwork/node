@@ -27,6 +27,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
         private List<ProducerInTable> _producers;
         private IDictionary<string, IPEndPoint> _ipAddresses;
         private SidechainPool _sidechainPool;
+        private bool _hasDoneWorkOnce;
         public ConnectToPeersState(SidechainPool sidechain, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger)
         {
             _mainchainService = mainchainService;
@@ -38,14 +39,13 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            var disconnectedPeersExist = _sidechainPool.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection == null || p.PeerConnection.ConnectionState != ConnectionStateEnum.Connected);
-
-            return Task.FromResult(!disconnectedPeersExist);
+            return Task.FromResult(_hasDoneWorkOnce);
         }
 
         protected override async Task DoWork()
         {
             await _peerConnectionsHandler.ConnectToProducers(_ipAddresses);
+            _hasDoneWorkOnce = true;
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -55,9 +55,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            var disconnectedPeersExist = _sidechainPool.ProducersInPool.GetEnumerable().Any(p => p.PeerConnection == null || p.PeerConnection.ConnectionState != ConnectionStateEnum.Connected);
-
-            return Task.FromResult((!disconnectedPeersExist, typeof(CheckConnectionState).Name));
+            return Task.FromResult((_hasDoneWorkOnce, typeof(CheckConnectionState).Name));
         }
 
         protected override async Task UpdateStatus() 
