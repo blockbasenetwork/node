@@ -362,28 +362,34 @@ namespace BlockBase.Runtime.Network
         {
             var random = new Random();
             var peersToReturn = new List<(bool connectionAlive, PeerConnection peer)>();
+            var checks = new List<Task>();
 
             foreach (var peer in CurrentPeerConnections)
             {
-                if (peer.ConnectionState == ConnectionStateEnum.Connected)
+                checks.Add(Task.Run(async () =>
                 {
-                    var randomInt = random.Next();
-                    await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
-
-                    var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                    if (pongResponseTask.Wait(2000))
+                    if (peer.ConnectionState == ConnectionStateEnum.Connected)
                     {
-                        var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
-                        if (randomInt == pongNonce)
+                        var randomInt = random.Next();
+                        await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
+
+                        var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
+                        if (pongResponseTask.Wait(2000))
                         {
-                            peersToReturn.Add((true, peer));
-                            continue;
+                            var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                            if (randomInt == pongNonce)
+                            {
+                                peersToReturn.Add((true, peer));
+                                return;
+                            }
                         }
                     }
-                }
 
-                peersToReturn.Add((false, peer));
+                    peersToReturn.Add((false, peer));
+                }));
             }
+
+            await Task.WhenAll(checks);
 
             return peersToReturn;
         }
