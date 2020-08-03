@@ -52,20 +52,6 @@ namespace BlockBase.Runtime.Network
                 var blocksToSend = new List<Block>();
                 var data = new List<byte>();
 
-                var historyTables = await _mainchainService.RetrieveHistoryValidation(args.ClientAccountName);
-                if (historyTables != null)
-                {
-                    foreach(var historyTable in historyTables)
-                    {
-                    var blockToValidateSequenceNumber = await GetChosenBlockSequenceNumber(historyTable.BlockHash, args.ClientAccountName);      if (blockToValidateSequenceNumber.HasValue && args.BlocksSequenceNumber.Contains(blockToValidateSequenceNumber.Value))
-                        args.BlocksSequenceNumber.Remove(blockToValidateSequenceNumber.Value);
-                    //Removes validations blocks
-                    if (blockToValidateSequenceNumber.HasValue && args.BlocksSequenceNumber.Contains(blockToValidateSequenceNumber.Value))
-                        args.BlocksSequenceNumber.Remove(blockToValidateSequenceNumber.Value);
-                    }
-                }
-
-
                 foreach (var sequenceNumber in args.BlocksSequenceNumber)
                 {
                     var block = (await _mongoDbProducerService.GetSidechainBlocksSinceSequenceNumberAsync(args.ClientAccountName, sequenceNumber, sequenceNumber)).SingleOrDefault();
