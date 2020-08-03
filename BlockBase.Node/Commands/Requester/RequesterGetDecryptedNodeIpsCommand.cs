@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Node.Commands.Requester
 {
-    public class GetDecryptedNodeIpsCommand : AbstractCommand
+    public class RequesterGetDecryptedNodeIpsCommand : AbstractCommand
     {
         private IMainchainService _mainchainService;
 
@@ -25,9 +25,9 @@ namespace BlockBase.Node.Commands.Requester
 
         public override string CommandInfo => "Retrieves provider ip addresses";
 
-        public override string CommandUsage => "get ips";
+        public override string CommandUsage => "get req ips";
 
-        public GetDecryptedNodeIpsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
+        public RequesterGetDecryptedNodeIpsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -73,7 +73,7 @@ namespace BlockBase.Node.Commands.Requester
 
         protected override bool IsCommandAppropratelyStructured(string[] commandData)
         {
-            return commandData.Length == 2;
+            return commandData.Length == 3;
         }
 
         protected override bool IsCommandRecognizable(string commandStr)
@@ -83,7 +83,7 @@ namespace BlockBase.Node.Commands.Requester
 
         protected override CommandParseResult ParseCommand(string[] commandData)
         {
-            if (commandData.Length == 2) return new CommandParseResult(true, true);
+            if (commandData.Length == 3) return new CommandParseResult(true, true);
             return new CommandParseResult(true, CommandUsage);
         }
 

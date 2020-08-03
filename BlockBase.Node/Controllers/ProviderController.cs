@@ -158,7 +158,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> AddStake(string sidechainName, double stake)
         {
-            var command = new AddStakeCommand(_logger, _mainchainService, _nodeConfigurations, stake, sidechainName);
+            var command = new ProviderAddStakeCommand(_logger, _mainchainService, _nodeConfigurations, stake, sidechainName);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
@@ -180,7 +180,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> ClaimStake(string sidechainName)
         {
-            var command = new ClaimStakeCommand(_logger, _mainchainService, _nodeConfigurations, sidechainName);
+            var command = new ProviderClaimStakeCommand(_logger, _mainchainService, _nodeConfigurations, sidechainName);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
@@ -359,7 +359,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> GetDecryptedNodeIps(string sidechainName)
         {
-            var command = new GetDecryptedNodeIpsCommand(_logger, _mainchainService, _nodeConfigurations, sidechainName);
+            var command = new ProviderGetDecryptedNodeIpsCommand(_logger, _mainchainService, _nodeConfigurations, sidechainName);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
