@@ -85,8 +85,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
                 var stake = await _mainchainService.GetAccountStake(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName);
                 if (stake == null) _hasToAddStake = true;
 
-                var minimumProviderState = Math.Round((decimal)_contractInfo.Stake / 10000, 4);
-                if (stake.Stake < minimumProviderState) _hasToAddStake = true;
+                var minimumProviderStake = Math.Round((decimal)_contractInfo.Stake / 10000, 4);
+                _hasToAddStake = stake?.Stake < minimumProviderStake;
             }
 
             var timeDiff = _contractInfo.CandidatureEndDate - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
