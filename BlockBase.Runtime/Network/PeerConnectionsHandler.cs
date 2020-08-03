@@ -71,28 +71,35 @@ namespace BlockBase.Runtime.Network
 
         public async Task ConnectToProducers(IDictionary<string, IPEndPoint> producersIPs)
         {
+            var connectionTasks = new List<Task>();
+
             foreach (var producerIP in producersIPs)
             {
-                try
+                connectionTasks.Add(Task.Run(async () =>
                 {
-                    var peerConnection = AddIfNotExistsPeerConnection(producerIP.Value, producerIP.Key);
-                    if (peerConnection.ConnectionState == ConnectionStateEnum.Connected) continue;
-                    var peer = await ConnectAsync(producerIP.Value);
-                    if (peer != null)
+                    try
                     {
-                        peerConnection.ConnectionState = ConnectionStateEnum.Connected;
-                        await SendIdentificationMessage(producerIP.Value);
+                        var peerConnection = AddIfNotExistsPeerConnection(producerIP.Value, producerIP.Key);
+                        if (peerConnection.ConnectionState == ConnectionStateEnum.Connected) return;
+                        var peer = await ConnectAsync(producerIP.Value);
+                        if (peer != null)
+                        {
+                            peerConnection.ConnectionState = ConnectionStateEnum.Connected;
+                            await SendIdentificationMessage(producerIP.Value);
+                        }
+                        else
+                        {
+                            CurrentPeerConnections.Remove(peerConnection);
+                        }
                     }
-                    else
+                    catch (Exception e)
                     {
-                        CurrentPeerConnections.Remove(peerConnection);
+                        _logger.LogError("Couldn't connect to peer.", e);
                     }
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError("Couldn't connect to peer.", e);
-                }
+                }));
             }
+
+            await Task.WhenAll(connectionTasks);
         }
 
         public void AddKnownSidechain(SidechainPool sidechain)
@@ -113,10 +120,17 @@ namespace BlockBase.Runtime.Network
             producersWhoIAmSupposedToBeConnected = producersWhoIAmSupposedToBeConnected.Where(p => !CurrentPeerConnections.GetEnumerable().Any(c => c.IPEndPoint == p.PeerConnection?.IPEndPoint && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)).ToList();
 
             if (producersWhoIAmSupposedToBeConnected.Any()) _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
+
+            var connectionTasks = new List<Task>();
+            _tryingConnection = true;
+
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
             {
-                await ConnectToProducer(sidechain, producer);
+                connectionTasks.Add(ConnectToProducer(sidechain, producer));
             }
+            await Task.WhenAll(connectionTasks);
+
+            _tryingConnection = false;
         }
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
@@ -126,11 +140,7 @@ namespace BlockBase.Runtime.Network
             if (producer.ProducerInfo.IPEndPoint != null)
             {
                 try
-
                 {
-                    _tryingConnection = true;
-
-
                     producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                     var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
@@ -153,12 +163,10 @@ namespace BlockBase.Runtime.Network
                         Disconnect(producer.PeerConnection);
                     }
                 }
-                finally
+                catch (Exception e)
                 {
-                    _tryingConnection = false;
+                    _logger.LogDebug($"Error connecting to producer {producer.ProducerInfo.AccountName}: {e}");
                 }
-
-
             }
             else
             {
@@ -279,7 +287,6 @@ namespace BlockBase.Runtime.Network
                 _logger.LogDebug("I do not know this provider/client.");
                 Disconnect(peer);
             }
-
             else if (producer.PeerConnection == null || (producer.PeerConnection.ConnectionState != ConnectionStateEnum.Connected && producer.PeerConnection.Rating > MINIMUM_RATING))
             {
                 _logger.LogDebug("Acceptable peer.");
@@ -288,12 +295,10 @@ namespace BlockBase.Runtime.Network
                 producer.PeerConnection.ConnectionState = ConnectionStateEnum.Connected;
                 producer.PeerConnection.Peer = peer;
             }
-
-            else
+            else if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
             {
-                if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected) _logger.LogDebug($"Existing connection found with peer {producer.ProducerInfo.AccountName}");
-                else if (producer.PeerConnection.Rating > MINIMUM_RATING) _logger.LogDebug("Other producer connection reached below the rating threshold.");
-                Disconnect(peer);
+                 _logger.LogDebug($"Existing connection found with peer {producer.ProducerInfo.AccountName}");
+                producer.PeerConnection.Peer = peer;
             }
             _waitingForApprovalPeers.Remove(peer);
         }
@@ -314,26 +319,32 @@ namespace BlockBase.Runtime.Network
             {
                 _checkingConnection = true;
                 var random = new Random();
+                var checks = new List<Task>();
 
                 foreach (var producer in sidechain.ProducersInPool)
                 {
                     if (producer.PeerConnection != null && producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
                     {
-                        var randomInt = random.Next();
-                        await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
-
-                        var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                        if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                        checks.Add(Task.Run(async () =>
                         {
-                            var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
-                            if (randomInt == pongNonce) continue;
-                        }
+                            var randomInt = random.Next();
+                            await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
 
-                        _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
-                        Disconnect(producer.PeerConnection);
-                        peersConnected = false;
+                            var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong, producer.PeerConnection.IPEndPoint);
+                            if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
+                            {
+                                var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                                if (randomInt == pongNonce) return;
+                            }
+
+                            _logger.LogDebug($"No response from {producer.ProducerInfo.AccountName}. Removing connection");
+                            Disconnect(producer.PeerConnection);
+                            peersConnected = false;
+                        }));
                     }
                 }
+
+                await Task.WhenAll(checks);;
             }
             catch (Exception e)
             {
@@ -349,28 +360,34 @@ namespace BlockBase.Runtime.Network
         {
             var random = new Random();
             var peersToReturn = new List<(bool connectionAlive, PeerConnection peer)>();
+            var checks = new List<Task>();
 
             foreach (var peer in CurrentPeerConnections)
             {
-                if (peer.ConnectionState == ConnectionStateEnum.Connected)
+                checks.Add(Task.Run(async () =>
                 {
-                    var randomInt = random.Next();
-                    await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
-
-                    var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                    if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                    if (peer.ConnectionState == ConnectionStateEnum.Connected)
                     {
-                        var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
-                        if (randomInt == pongNonce)
+                        var randomInt = random.Next();
+                        await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
+
+                        var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong, peer.IPEndPoint);
+                        if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
                         {
-                            peersToReturn.Add((true, peer));
-                            continue;
+                            var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                            if (randomInt == pongNonce)
+                            {
+                                peersToReturn.Add((true, peer));
+                                return;
+                            }
                         }
                     }
-                }
 
-                peersToReturn.Add((false, peer));
+                    peersToReturn.Add((false, peer));
+                }));
             }
+
+            await Task.WhenAll(checks);
 
             return peersToReturn;
         }

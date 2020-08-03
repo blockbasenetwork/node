@@ -38,6 +38,8 @@ namespace BlockBase.Network.Mainchain
             _eosConnection = OpenConnectionWithChain();
         }
 
+        public string GetCurentNetwork() => _eosConfig.HttpEndpoint;
+
         public void ChangeNetwork()
         {
             var nextNetworks = _eosNetworks.SkipWhile(n => n != _eosConfig.HttpEndpoint);

@@ -85,7 +85,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
 
                 if (!_hasHistoryValidationBeenActivated)
                 {
-                    //await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
+                    await SendRequestHistoryValidation(_nodeConfigurations.AccountName, _contractInfo, _producerList);
                     _hasHistoryValidationBeenActivated = true;
                 }
 

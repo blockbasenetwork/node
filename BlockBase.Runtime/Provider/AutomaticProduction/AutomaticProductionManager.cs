@@ -89,7 +89,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         _logger.LogDebug("Found chains in candidature");
                         foreach (var chainInCandidature in chainsInCandidature)
                         {
-                            var checkResult = await CheckIfSidechainFitsRules(chainInCandidature.Name);
+                            var checkResult = await CheckIfSidechainFitsRules(chainInCandidature.Name, true);
                             if (checkResult.found && await DoesVersionCheckOut(chainInCandidature.Name) && !IsSidechainRunning(chainInCandidature.Name))
                             {
                                 _logger.LogInformation($"Found sidechain {chainInCandidature.Name} eligible for automatic production");
@@ -124,7 +124,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         var pastSidechain = await _mongoDbProducerService.GetPastSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
                         if (pastSidechain?.ReasonLeft == LeaveNetworkReasonsConstants.EXIT_REQUEST || (sidechainInDb != null && !sidechainInDb.IsAutomatic)) continue;
 
-                        var sidechainStillFitsRules = await CheckIfSidechainFitsRules(sidechainInNode.SidechainPool.ClientAccountName);
+                        var sidechainStillFitsRules = await CheckIfSidechainFitsRules(sidechainInNode.SidechainPool.ClientAccountName, false);
                         if (!sidechainStillFitsRules.found)
                         {
                             var trx = await _mainchainService.SidechainExitRequest(sidechainInNode.SidechainPool.ClientAccountName);
@@ -171,7 +171,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             return trackerSidechains;
         }
 
-        private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(string sidechain)
+        private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(string sidechain, bool checkingToJoin)
         {
             (bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp) defaultReturnValue = (false, 0, 0, 0);
 
@@ -184,12 +184,16 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             var clientInfo = await _mainchainService.RetrieveClientTable(sidechain);
 
             //verify if had access to chain information
-            if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) return defaultReturnValue;
+            if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) 
+                return checkingToJoin ? defaultReturnValue : (true, 0, 0, 0);
 
             if (contractInfo.BlockTimeDuration < 60 && _networkName == EosNetworkNames.MAINNET) return defaultReturnValue;
+            
+            //verify if chain is in candidature time when trying to join
+            if (checkingToJoin && !contractState.CandidatureTime) return defaultReturnValue;
 
             //verify if node isn't in the candidates list nor the producers list
-            if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return defaultReturnValue;
+            if (checkingToJoin && (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName))) return defaultReturnValue;
 
             if (!CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
                 ||
@@ -206,7 +210,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             if (
                 _providerConfigurations.AutomaticProduction.FullNode.IsActive
-                && _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB
+                && (_providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
                 && contractInfo.NumberOfFullProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio);
@@ -232,7 +236,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             if (
                 _providerConfigurations.AutomaticProduction.HistoryNode.IsActive
-                && _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB
+                && (_providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
                 && contractInfo.NumberOfHistoryProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio);
@@ -337,14 +341,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 }
             }
 
-            return totalMaximumMonthlyGrowth <= maxTotalGrowthPerMonthInMB;
+            return maxTotalGrowthPerMonthInMB == 0 ? true : totalMaximumMonthlyGrowth <= maxTotalGrowthPerMonthInMB;
         }
 
         private bool CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(int maxNumberOfSidechainsToProduce)
         {
             var currentProducingSidechains = _sidechainKeeper.GetSidechains().Count();
 
-            return currentProducingSidechains < maxNumberOfSidechainsToProduce;
+            return maxNumberOfSidechainsToProduce == 0 ? true : currentProducingSidechains < maxNumberOfSidechainsToProduce;
         }
 
         private decimal GetStakeToMonthlyIncomeRatio(decimal stake, decimal minPaymentPerBlock, decimal maxPaymentPerBlock, uint blockTimeDurationInSeconds)
