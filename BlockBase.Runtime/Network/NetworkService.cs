@@ -168,11 +168,11 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.TransactionConfirmationReceived -= eventHandler;
         }
 
-        public async Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type)
+        public async Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type, IPEndPoint receiveFrom)
         {
             bool messageValidator(NetworkMessage networkMessage)
             {
-                return true;
+                return (networkMessage.Sender.Address.ToString() == receiveFrom.Address.ToString());
             }
 
             return await MessageForwarder.RegisterMessageEvent(type, messageValidator, null);
