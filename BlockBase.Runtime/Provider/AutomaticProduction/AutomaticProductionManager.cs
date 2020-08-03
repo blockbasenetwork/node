@@ -76,7 +76,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             {
                 try
                 {
-                    if (_sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
+                    if (_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains != 0 && _sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
                     {
                         await Task.Delay(1000);
                         continue;
