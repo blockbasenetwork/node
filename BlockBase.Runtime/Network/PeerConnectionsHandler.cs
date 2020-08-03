@@ -120,10 +120,17 @@ namespace BlockBase.Runtime.Network
             producersWhoIAmSupposedToBeConnected = producersWhoIAmSupposedToBeConnected.Where(p => !CurrentPeerConnections.GetEnumerable().Any(c => c.IPEndPoint == p.PeerConnection?.IPEndPoint && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)).ToList();
 
             if (producersWhoIAmSupposedToBeConnected.Any()) _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
+
+            var connectionTasks = new List<Task>();
+            _tryingConnection = true;
+
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
             {
-                await ConnectToProducer(sidechain, producer);
+                connectionTasks.Add(ConnectToProducer(sidechain, producer));
             }
+            await Task.WhenAll(connectionTasks);
+
+            _tryingConnection = false;
         }
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
@@ -133,11 +140,7 @@ namespace BlockBase.Runtime.Network
             if (producer.ProducerInfo.IPEndPoint != null)
             {
                 try
-
                 {
-                    _tryingConnection = true;
-
-
                     producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
                     var peerConnected = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(producer.ProducerInfo.IPEndPoint)).SingleOrDefault();
 
@@ -160,12 +163,10 @@ namespace BlockBase.Runtime.Network
                         Disconnect(producer.PeerConnection);
                     }
                 }
-                finally
+                catch (Exception e)
                 {
-                    _tryingConnection = false;
+                    _logger.LogDebug($"Error connecting to producer {producer.ProducerInfo.AccountName}: {e}");
                 }
-
-
             }
             else
             {
