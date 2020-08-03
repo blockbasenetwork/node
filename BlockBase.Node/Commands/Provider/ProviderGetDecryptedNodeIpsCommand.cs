@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Node.Commands.Provider
 {
-    public class GetDecryptedNodeIpsCommand : AbstractCommand
+    public class ProviderGetDecryptedNodeIpsCommand : AbstractCommand
     {
         private IMainchainService _mainchainService;
 
@@ -28,16 +28,16 @@ namespace BlockBase.Node.Commands.Provider
 
         public override string CommandInfo => "Retrieves the ip addresses of the specified sidechain nodes";
 
-        public override string CommandUsage => "get nodes ips --chain <sidechainName>";
+        public override string CommandUsage => "get prv ips --chain <sidechainName>";
 
-        public GetDecryptedNodeIpsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
+        public ProviderGetDecryptedNodeIpsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
             _logger = logger;
         }
 
-         public GetDecryptedNodeIpsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, string chainName) : this(logger, mainchainService, nodeConfigurations)
+         public ProviderGetDecryptedNodeIpsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, string chainName) : this(logger, mainchainService, nodeConfigurations)
         {
             _chainName = chainName;
         }
@@ -99,7 +99,7 @@ namespace BlockBase.Node.Commands.Provider
 
         protected override bool IsCommandRecognizable(string commandStr)
         {
-            return commandStr.StartsWith("get nodes ips");
+            return commandStr.StartsWith("get prv ips");
         }
 
         protected override CommandParseResult ParseCommand(string[] commandData)
