@@ -1288,7 +1288,7 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<OpResult<T>> TryAgain<T>(Func<Task<OpResult<T>>> func, int maxTry = 15, Func<OpResult<T>, bool> expectedResult = null, int delayInMilliseconds = 100)
         {
-            var i = 15;
+            var i = maxTry;
             return await TryAgain(func, () => i-- >= 0, expectedResult, delayInMilliseconds);
         }
 
