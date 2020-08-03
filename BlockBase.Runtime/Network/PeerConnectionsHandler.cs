@@ -336,6 +336,7 @@ namespace BlockBase.Runtime.Network
                             var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
                             if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
                             {
+                                _logger.LogError($"Pong Task State: {pongResponseTask.Status.ToString()} | Task result: {pongResponseTask.Result?.Result}");
                                 var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
                                 if (randomInt == pongNonce) return;
                             }
@@ -347,7 +348,7 @@ namespace BlockBase.Runtime.Network
                     }
                 }
 
-                await Task.WhenAll(checks);
+                await Task.WhenAll(checks);;
             }
             catch (Exception e)
             {
@@ -378,6 +379,7 @@ namespace BlockBase.Runtime.Network
                         if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
                         {
                             var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
+                            _logger.LogError($"Pong Task State: {pongResponseTask.Status.ToString()} | Task result: {pongResponseTask.Result?.Result}");
                             if (randomInt == pongNonce)
                             {
                                 peersToReturn.Add((true, peer));
