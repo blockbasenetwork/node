@@ -66,9 +66,8 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             var candidates = await _mainchainService.RetrieveCandidates(_nodeConfigurations.AccountName);
 
             var numberOfRequiredProviders = _contractInfo.NumberOfFullProducersRequired + _contractInfo.NumberOfHistoryProducersRequired + _contractInfo.NumberOfValidatorProducersRequired;
-            var numberOfProducersAndCandidates = producers.Count + candidates.Count;
 
-            if ((_contractState.ProductionTime || numberOfProducersAndCandidates >= SmartContractConstants.MIN_PRODUCERS_TO_PRODUCE * numberOfRequiredProviders) && candidates.Any())
+            if (producers.Count + candidates.Count >= SmartContractConstants.MIN_PRODUCERS_TO_PRODUCE * numberOfRequiredProviders && candidates.Any())
             {
                 _hasEnoughCandidates = true;
             }
