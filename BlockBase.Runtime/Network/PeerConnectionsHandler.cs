@@ -287,7 +287,6 @@ namespace BlockBase.Runtime.Network
                 _logger.LogDebug("I do not know this provider/client.");
                 Disconnect(peer);
             }
-
             else if (producer.PeerConnection == null || (producer.PeerConnection.ConnectionState != ConnectionStateEnum.Connected && producer.PeerConnection.Rating > MINIMUM_RATING))
             {
                 _logger.LogDebug("Acceptable peer.");
@@ -296,12 +295,10 @@ namespace BlockBase.Runtime.Network
                 producer.PeerConnection.ConnectionState = ConnectionStateEnum.Connected;
                 producer.PeerConnection.Peer = peer;
             }
-
-            else
+            else if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
             {
-                if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected) _logger.LogDebug($"Existing connection found with peer {producer.ProducerInfo.AccountName}");
-                else if (producer.PeerConnection.Rating > MINIMUM_RATING) _logger.LogDebug("Other producer connection reached below the rating threshold.");
-                Disconnect(peer);
+                 _logger.LogDebug($"Existing connection found with peer {producer.ProducerInfo.AccountName}");
+                producer.PeerConnection.Peer = peer;
             }
             _waitingForApprovalPeers.Remove(peer);
         }
@@ -336,7 +333,6 @@ namespace BlockBase.Runtime.Network
                             var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong, producer.PeerConnection.IPEndPoint);
                             if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
                             {
-                                _logger.LogError($"Pong Task State: {pongResponseTask.Status.ToString()} | Ping sent: {randomInt} | Task result: {BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0)}");
                                 var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
                                 if (randomInt == pongNonce) return;
                             }
@@ -379,7 +375,6 @@ namespace BlockBase.Runtime.Network
                         if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
                         {
                             var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
-                            _logger.LogError($"Pong Task State: {pongResponseTask.Status.ToString()} | Ping sent: {randomInt} | Task result: {BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0)}");
                             if (randomInt == pongNonce)
                             {
                                 peersToReturn.Add((true, peer));
