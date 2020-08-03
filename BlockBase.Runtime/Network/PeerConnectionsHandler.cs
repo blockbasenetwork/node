@@ -334,7 +334,7 @@ namespace BlockBase.Runtime.Network
                             await SendPingPongMessage(true, producer.PeerConnection.IPEndPoint, randomInt);
 
                             var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                            if (pongResponseTask.Wait((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000))
+                            if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
                             {
                                 var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
                                 if (randomInt == pongNonce) return;
@@ -375,7 +375,7 @@ namespace BlockBase.Runtime.Network
                         await SendPingPongMessage(true, peer.IPEndPoint, randomInt);
 
                         var pongResponseTask = _networkService.ReceiveMessage(NetworkMessageTypeEnum.Pong);
-                        if (pongResponseTask.Wait(2000))
+                        if (await Task.WhenAny(pongResponseTask, Task.Delay((int)_networkConfigurations.ConnectionExpirationTimeInSeconds * 1000)) == pongResponseTask)
                         {
                             var pongNonce = pongResponseTask.Result?.Result != null ? BitConverter.ToInt32(pongResponseTask.Result.Result.Payload, 0) : random.Next();
                             if (randomInt == pongNonce)
