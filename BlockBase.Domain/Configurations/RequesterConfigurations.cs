@@ -18,7 +18,6 @@ namespace BlockBase.Domain.Configurations
         public List<string> ReservedProducerSeats { get; set; }
 
         public DatabaseSecurityConfigurations DatabaseSecurityConfigurations { get; set; }
-        public SidechainPhasesTimesConfigurations SidechainPhasesTimesConfigurations { get; set; }
 
     }
 
@@ -39,13 +38,5 @@ namespace BlockBase.Domain.Configurations
         public bool IsEncrypted { get; set; }
         public string PublicKey { get; set; }
         public string EncryptedData { get; set; }
-    }
-
-    public class SidechainPhasesTimesConfigurations
-    {
-        public uint CandidaturePhaseDurationInSeconds { get; set; }
-        public uint SecretSendingPhaseDurationInSeconds { get; set; }
-        public uint IpSendingPhaseDurationInSeconds { get; set; }
-        public uint IpRetrievalPhaseDurationInSeconds { get; set; }
     }
 }

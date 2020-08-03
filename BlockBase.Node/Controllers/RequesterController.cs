@@ -541,7 +541,7 @@ namespace BlockBase.Node.Controllers
                 configurationChanges.BlockTimeDuration = blockTimeInSeconds != null ? Convert.ToUInt32(blockTimeInSeconds.Value) : contractInfo.BlockTimeDuration;
                 configurationChanges.SizeOfBlockInBytes = blockSizeInBytes != null ? Convert.ToUInt64(blockSizeInBytes.Value) : contractInfo.SizeOfBlockInBytes;
                 configurationChanges.NumberOfFullProducersRequired = numberOfFullProducersRequired != null ? Convert.ToUInt32(numberOfFullProducersRequired.Value) : contractInfo.NumberOfFullProducersRequired;
-                configurationChanges.NumberOfHistoryProducersRequired = numberOfValidatorProducersRequired != null ? Convert.ToUInt32(numberOfValidatorProducersRequired.Value) : contractInfo.NumberOfHistoryProducersRequired;
+                configurationChanges.NumberOfHistoryProducersRequired = numberOfHistoryProducersRequired != null ? Convert.ToUInt32(numberOfHistoryProducersRequired.Value) : contractInfo.NumberOfHistoryProducersRequired;
                 configurationChanges.NumberOfValidatorProducersRequired = numberOfValidatorProducersRequired != null ? Convert.ToUInt32(numberOfValidatorProducersRequired.Value) : contractInfo.NumberOfValidatorProducersRequired;
                 configurationChanges.MaxPaymentPerBlockFullProducers = maxPaymentPerBlockFullProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockFullProducer.Value) : contractInfo.MaxPaymentPerBlockFullProducers;
                 configurationChanges.MaxPaymentPerBlockHistoryProducers = maxPaymentPerBlockHistoryProducer != null ? Convert.ToUInt64(10000 * maxPaymentPerBlockHistoryProducer.Value) : contractInfo.MaxPaymentPerBlockHistoryProducers;

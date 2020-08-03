@@ -242,5 +242,18 @@ namespace BlockBase.Node.Controllers
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
+
+        [HttpPost]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public ObjectResult ManualDisconnect(string ipAddress, int port)
+        {
+            if (!IPAddress.TryParse(ipAddress, out var ipAddr)) return BadRequest(new OperationResponse(false, "Unable to parse the ipAddress"));
+            var peerConnection = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Where(c => c.IPEndPoint.Address == ipAddr && c.IPEndPoint.Port == port).SingleOrDefault();
+
+            if (peerConnection == null) return BadRequest(new OperationResponse(false, "Not connected to this peer"));
+            _peerConnectionsHandler.Disconnect(peerConnection);
+
+            return Ok(new OperationResponse(true, "Disconnected from peer"));
+        }
     }
 }

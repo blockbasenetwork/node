@@ -25,6 +25,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private ContractInformationTable _contractInfo;
         private List<IPAddressTable> _ipAddresses;
         private List<WarningTable> _warnings;
+        private List<BlackListTable> _blacklist;
+        private bool _exitRequested;
 
         private IMongoDbProducerService _mongoDbProducerService;
 
@@ -58,9 +60,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
             var isProducerInTable = _producers.Any(c => c.Key == _nodeConfigurations.AccountName);
+            var isProducerInBlacklist = _blacklist.Any(b => b.Key == _nodeConfigurations.AccountName);
 
             if (_needsToUpdateIps) return Task.FromResult((_needsToUpdateIps, typeof(UpdateIpState).Name));
-            if (!isProducerInTable) return Task.FromResult((true, typeof(EndState).Name));
+            if (!isProducerInTable && !isProducerInBlacklist && !_exitRequested) return Task.FromResult((true, typeof(StartState).Name));
+            if (!isProducerInTable && (isProducerInBlacklist || _exitRequested)) return Task.FromResult((true, typeof(EndState).Name));
             return Task.FromResult((isProducerInTable && _contractStateTable.IPSendTime, typeof(IPSendTimeState).Name));
         }
 
@@ -71,6 +75,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
             _warnings = await _mainchainService.RetrieveWarningTable(_sidechainPool.ClientAccountName);
+            _blacklist = await _mainchainService.RetrieveBlacklistTable(_sidechainPool.ClientAccountName);
             
             //check preconditions to continue update
             if(_contractInfo == null) return;
@@ -79,6 +84,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             _needsToUpdateIps = IsIpUpdateRequired(_ipAddresses.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault().EncryptedIPs);
             await UpdatePastSidechainDbBasedOnWarnings();
 
+            _exitRequested = await CheckIfExitHasBeenRequested();
             _delay = _needsToUpdateIps ? TimeSpan.FromSeconds(0) : TimeSpan.FromSeconds(GetDelayInProductionTime());
         }
 
@@ -133,6 +139,12 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             var reasonLeft = oldestWarning.WarningType == (int)WarningTypeEnum.FailedToProduceBlocks ? LeaveNetworkReasonsConstants.FAILED_TO_PRODUCE_BLOCKS :
                              oldestWarning.WarningType == (int)WarningTypeEnum.FailedToValidateHistory ? LeaveNetworkReasonsConstants.FAILED_TO_VALIDATE_HISTORY : null;
             await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(_sidechainPool.ClientAccountName, _sidechainPool.SidechainCreationTimestamp, false, reasonLeft);
+        }
+
+        private async Task<bool> CheckIfExitHasBeenRequested()
+        {
+            var pastSidechainInDb = await _mongoDbProducerService.GetPastSidechainAsync(_sidechainPool.ClientAccountName, _sidechainPool.SidechainCreationTimestamp);
+            return (pastSidechainInDb != null && pastSidechainInDb.ReasonLeft == LeaveNetworkReasonsConstants.EXIT_REQUEST);
         }
     }
 }

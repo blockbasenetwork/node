@@ -54,10 +54,6 @@ namespace BlockBase.Node.Commands.Requester
         {
             try
             {
-                if (_requesterConfigurations.DatabaseSecurityConfigurations.Use)
-                {
-                    _databaseKeyManager.SetInitialSecrets(_requesterConfigurations.DatabaseSecurityConfigurations);
-                }
                 _connector.Setup().Wait();
 
                 if (_requesterConfigurations.DatabaseSecurityConfigurations.Use)

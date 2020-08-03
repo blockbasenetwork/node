@@ -53,6 +53,11 @@ namespace BlockBase.Runtime.Network
             return await TcpConnector.ConnectAsync(endpoint, new IPEndPoint(SystemConfig.IPAddress, SystemConfig.TcpPort));
         }
 
+        public Peer GetPeerIfExists(IPEndPoint endpoint)
+        {
+            return TcpConnector.GetPeerIfExists(endpoint);
+        }
+
         public async Task SendMessageAsync(NetworkMessage message)
         {
             await MessageSender.SendMessage(message);
@@ -163,11 +168,11 @@ namespace BlockBase.Runtime.Network
             MessageForwarder.TransactionConfirmationReceived -= eventHandler;
         }
 
-        public async Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type)
+        public async Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type, IPEndPoint receiveFrom)
         {
             bool messageValidator(NetworkMessage networkMessage)
             {
-                return true;
+                return (networkMessage.Sender.Address.ToString() == receiveFrom.Address.ToString());
             }
 
             return await MessageForwarder.RegisterMessageEvent(type, messageValidator, null);

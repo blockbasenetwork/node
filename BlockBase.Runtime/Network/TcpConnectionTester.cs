@@ -64,8 +64,18 @@ namespace BlockBase.Runtime.Network
             }
 
             _logger.LogInformation($"Trying to connect to {remoteEndPoint.Address.ToString()}:{remoteEndPoint.Port}");
-            var peer = await _networkService.ConnectAsync(remoteEndPoint);//, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
-            return peer;
+
+            try
+            {
+                var peer = await _networkService.ConnectAsync(remoteEndPoint);//, new IPEndPoint(_systemConfig.IPAddress, _systemConfig.TcpPort));
+                return peer;
+            }
+            catch (Exception)
+            {
+                _networkService.UnSubscribePeerConnectedEvent(TcpConnector_PeerConnected);
+                _networkService.UnSubscribePongReceivedEvent(MessageForwarder_PongMessageReceived);
+                return null;
+            }
         }
 
         private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
@@ -115,10 +125,9 @@ namespace BlockBase.Runtime.Network
         private void MessageForwarder_PingMessageReceived(PingReceivedEventArgs args, IPEndPoint sender)
         {
             //check if the nounce is between 0 and 20 so it doesn't print other ping messages used to maintain connections open
-            if(args.nonce > 0 && args.nonce <= 20)
+            if (args.nonce > 0 && args.nonce <= 20)
                 _logger.LogInformation($"Received ping message from {sender.Address.ToString()}:{sender.Port} with number: {args.nonce}");
         }
-
 
         private async Task DisconnectAfter(Peer peer, TimeSpan timeSpan)
         {
@@ -133,7 +142,7 @@ namespace BlockBase.Runtime.Network
                 await Task.Delay(TimeSpan.FromSeconds(2));
 
                 //if the peer connections handler knows this peer don't force a disconnect
-                if(!_peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Any(p => p.IPEndPoint.Address.ToString() == peer.EndPoint.Address.ToString() && p.IPEndPoint.Port == peer.EndPoint.Port))
+                if (!_peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Any(p => p.IPEndPoint.Address.ToString() == peer.EndPoint.Address.ToString() && p.IPEndPoint.Port == peer.EndPoint.Port))
                     _networkService.DisconnectPeer(peer);
 
                 _logger.LogDebug($"Peer {peer.EndPoint.Address.ToString()}:{peer.EndPoint.Port} disconnected automatically after {timeSpan.TotalSeconds} seconds");

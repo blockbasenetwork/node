@@ -38,6 +38,8 @@ namespace BlockBase.Network.Mainchain
             _eosConnection = OpenConnectionWithChain();
         }
 
+        public string GetCurentNetwork() => _eosConfig.HttpEndpoint;
+
         public void ChangeNetwork()
         {
             var nextNetworks = _eosNetworks.SkipWhile(n => n != _eosConfig.HttpEndpoint);
@@ -88,7 +90,7 @@ namespace BlockBase.Network.Mainchain
             return opResult;
         }
 
-        public async Task<OpResult<List<TPoco>>> GetRowsFromSmartContractTable<TPoco>(string smartContractAccountName, string tableName, string scope = null, int limit = 100)
+        public async Task<OpResult<List<TPoco>>> GetRowsFromSmartContractTable<TPoco>(string smartContractAccountName, string tableName, string scope = null, int limit = 100, bool reverse = false)
         {
             var opResult = await Op.RunAsync(async () => (await _eosConnection.GetTableRows<TPoco>(
                 new GetTableRowsRequest()
@@ -97,7 +99,8 @@ namespace BlockBase.Network.Mainchain
                     code = smartContractAccountName,
                     scope = scope ?? smartContractAccountName,
                     table = tableName,
-                    limit = limit
+                    limit = limit,
+                    reverse = reverse
                 }
             )).rows);
 

@@ -17,6 +17,7 @@ using BlockBase.DataPersistence.Utils;
 using BlockBase.Runtime.Provider;
 using BlockBase.Node.Filters;
 using BlockBase.Node.Commands.Provider;
+using BlockBase.Domain.Results;
 
 namespace BlockBase.Node.Controllers
 {
@@ -227,6 +228,45 @@ namespace BlockBase.Node.Controllers
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+        }
+
+        /// <summary>
+        /// Gets information about all past sidechains
+        /// </summary>
+        /// <returns>Json with information about past sidechains produced by node</returns>
+        /// <response code="200">Successful get</response>
+        /// <response code="500">Error getting information</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets information about all past sidechains",
+            Description = "The provider uses this request to get information about all the past sidechains it has previously produced for",
+            OperationId = "GetPastSidechains"
+        )]
+        public async Task<ObjectResult> GetPastSidechains()
+        {
+            try
+            {
+                var pastSidechains = await _mongoDbProducerService.GetAllPastSidechainsAsync();
+                var pastSidechainsResult = new List<PastSidechain>();
+
+                foreach(var sidechain in pastSidechains.Where(s => s.AlreadyLeft))
+                {
+                    var pastSidechain = new PastSidechain(){
+                        Name = sidechain.Sidechain,
+                        SidechainCreationDate = DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(sidechain.Timestamp)).DateTime,
+                        DateLeft = DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(sidechain.DateLeftTimestamp)).DateTime,
+                        ReasonLeft = sidechain.ReasonLeft
+                    };
+
+                    pastSidechainsResult.Add(pastSidechain);
+                }
+
+                return Ok(new OperationResponse<List<PastSidechain>>(pastSidechainsResult, $"Get past sidechains successful."));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
         }
 
         /// <summary>

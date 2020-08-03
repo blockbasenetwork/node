@@ -14,9 +14,10 @@ namespace BlockBase.Runtime.Network
     {
         Task<Peer> ConnectAsync(IPEndPoint endpoint);
         Task SendMessageAsync(NetworkMessage message);
-        Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type);
+        Task<OpResult<NetworkMessage>> ReceiveMessage(NetworkMessageTypeEnum type, IPEndPoint receiveFrom);
 
         void DisconnectPeer(Peer peer);
+        Peer GetPeerIfExists(IPEndPoint endpoint);
 
         void Run();
 

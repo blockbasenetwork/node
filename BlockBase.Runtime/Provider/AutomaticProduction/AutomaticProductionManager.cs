@@ -76,7 +76,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             {
                 try
                 {
-                    if (_sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
+                    if (_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains != 0 && _sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
                     {
                         await Task.Delay(1000);
                         continue;
@@ -89,7 +89,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         _logger.LogDebug("Found chains in candidature");
                         foreach (var chainInCandidature in chainsInCandidature)
                         {
-                            var checkResult = await CheckIfSidechainFitsRules(chainInCandidature);
+                            var checkResult = await CheckIfSidechainFitsRules(chainInCandidature.Name, true);
                             if (checkResult.found && await DoesVersionCheckOut(chainInCandidature.Name) && !IsSidechainRunning(chainInCandidature.Name))
                             {
                                 _logger.LogInformation($"Found sidechain {chainInCandidature.Name} eligible for automatic production");
@@ -112,6 +112,29 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 catch (Exception e)
                 {
                     _logger.LogError($"Failed to automatically start producing chain with error: {e}");
+                }
+
+                try
+                {
+                    var sidechainsInNode = _sidechainKeeper.GetSidechains();
+
+                    foreach (var sidechainInNode in sidechainsInNode)
+                    {
+                        var sidechainInDb = await _mongoDbProducerService.GetProducingSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
+                        var pastSidechain = await _mongoDbProducerService.GetPastSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
+                        if (pastSidechain?.ReasonLeft == LeaveNetworkReasonsConstants.EXIT_REQUEST || (sidechainInDb != null && !sidechainInDb.IsAutomatic)) continue;
+
+                        var sidechainStillFitsRules = await CheckIfSidechainFitsRules(sidechainInNode.SidechainPool.ClientAccountName, false);
+                        if (!sidechainStillFitsRules.found)
+                        {
+                            var trx = await _mainchainService.SidechainExitRequest(sidechainInNode.SidechainPool.ClientAccountName);
+                            await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp, false, LeaveNetworkReasonsConstants.EXIT_REQUEST);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Failed to check if sidechain still fits rules for production with error: {e}");
                 }
 
                 await Task.Delay(120000);
@@ -148,31 +171,37 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             return trackerSidechains;
         }
 
-        private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(TrackerSidechain sidechain)
+        private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(string sidechain, bool checkingToJoin)
         {
             (bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp) defaultReturnValue = (false, 0, 0, 0);
 
             //gets the candidates first and only then the producers
-            var candidates = await _mainchainService.RetrieveCandidates(sidechain.Name);
-            var producers = await _mainchainService.RetrieveProducersFromTable(sidechain.Name);
+            var candidates = await _mainchainService.RetrieveCandidates(sidechain);
+            var producers = await _mainchainService.RetrieveProducersFromTable(sidechain);
 
-            var contractInfo = await _mainchainService.RetrieveContractInformation(sidechain.Name);
-            var contractState = await _mainchainService.RetrieveContractState(sidechain.Name);
-            var clientInfo = await _mainchainService.RetrieveClientTable(sidechain.Name);
+            var contractInfo = await _mainchainService.RetrieveContractInformation(sidechain);
+            var contractState = await _mainchainService.RetrieveContractState(sidechain);
+            var clientInfo = await _mainchainService.RetrieveClientTable(sidechain);
 
             //verify if had access to chain information
-            if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) return defaultReturnValue;
+            if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) 
+                return checkingToJoin ? defaultReturnValue : (true, 0, 0, 0);
 
             if (contractInfo.BlockTimeDuration < 60 && _networkName == EosNetworkNames.MAINNET) return defaultReturnValue;
+            
+            //verify if chain is in candidature time when trying to join
+            if (checkingToJoin && !contractState.CandidatureTime) return defaultReturnValue;
 
             //verify if node isn't in the candidates list nor the producers list
-            if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return defaultReturnValue;
+            if (checkingToJoin && (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName))) return defaultReturnValue;
 
             if (!CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
                 ||
                 !CheckIfSidechainGrowthFitsInConfiguredMaximumGrowth(contractInfo, _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB)) return defaultReturnValue;
 
             decimal requestedStake = ConvertBBTValueToDecimalPoint(contractInfo.Stake);
+            decimal maxStakeToPut = (decimal)_providerConfigurations.AutomaticProduction.MaxRatioToStake * requestedStake;
+            decimal stakeToPut = 0;
 
             var maxSidechainGrowthPerMonthInMB = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
 
@@ -180,59 +209,80 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             decimal averagePaymentPerBlock = 0;
 
             if (
-                _providerConfigurations.AutomaticProduction.FullNode.IsActive 
-                && _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB
-                && sidechain.FullProducers.RequiredNumberOfProducers > 0)
+                _providerConfigurations.AutomaticProduction.FullNode.IsActive
+                && (_providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
+                && contractInfo.NumberOfFullProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio);
                 decimal minPaymentExpectedPerBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerEmptyBlock);
                 decimal minBBTExpectedPerMB = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerMBRatio);
-                decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers/10000, 4);
-                decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers/10000, 4);
+                decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4);
+                decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers / 10000, 4);
 
                 var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
-                if(fitsAndPayments.fits)
+                if (fitsAndPayments.fits)
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.Full;
                     averagePaymentPerBlock = fitsAndPayments.averagePaymentPerBlock;
+                    stakeToPut = requestedStake;
+                }
+
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
+                {
+                    stakeToPut = maxStakeToPut;
                 }
             }
 
             if (
                 _providerConfigurations.AutomaticProduction.HistoryNode.IsActive
-                && _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB 
-                && sidechain.HistoryProducers.RequiredNumberOfProducers > 0)
+                && (_providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
+                && contractInfo.NumberOfHistoryProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio);
                 decimal minPaymentExpectedPerBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerEmptyBlock);
                 decimal minBBTExpectedPerMB = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerMBRatio);
-                decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers/10000, 4);
-                decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers/10000, 4);
+                decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4);
+                decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers / 10000, 4);
 
                 var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
-                if(fitsAndPayments.fits && fitsAndPayments.averagePaymentPerBlock >= averagePaymentPerBlock)
+                if (fitsAndPayments.fits && fitsAndPayments.averagePaymentPerBlock >= averagePaymentPerBlock)
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.History;
                     averagePaymentPerBlock = fitsAndPayments.averagePaymentPerBlock;
+                    stakeToPut = requestedStake;
+                }
+
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
+                {
+                    stakeToPut = maxStakeToPut;
                 }
             }
 
-            if (_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive && sidechain.ValidatorProducers.RequiredNumberOfProducers > 0)
+            if (_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive && contractInfo.NumberOfValidatorProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MaxStakeToMonthlyIncomeRatio);
                 decimal minPaymentExpectedPerBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerEmptyBlock);
                 decimal minBBTExpectedPerMB = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerMBRatio);
-                decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers/10000, 4);
-                decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers/10000, 4);
+                decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4);
+                decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers / 10000, 4);
 
                 var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
-                if(fitsAndPayments.fits && fitsAndPayments.averagePaymentPerBlock >= averagePaymentPerBlock)
+                if (fitsAndPayments.fits && fitsAndPayments.averagePaymentPerBlock >= averagePaymentPerBlock)
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.Validator;
+                    stakeToPut = requestedStake;
                 }
-            } 
 
-            return (producerTypeToCandidate != 0, producerTypeToCandidate, requestedStake, clientInfo.SidechainCreationTimestamp); 
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
+                {
+                    stakeToPut = maxStakeToPut;
+                }
+            }
+
+            return (producerTypeToCandidate != 0, producerTypeToCandidate, stakeToPut, clientInfo.SidechainCreationTimestamp);
         }
 
         private (bool fits, decimal averagePaymentPerBlock) CheckIfRequestedProducerTypeFitsMinimumRequirements(decimal maxStakeToMonthlyIncomeRatio, decimal requestedStake, decimal minPaymentExpectedPerBlock, decimal minBBTExpectedPerMB, decimal minPaymentPerBlock, decimal maxPaymentPerBlock, uint blockTimeDurationInSeconds, uint blockSizeInBytes)
@@ -246,7 +296,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 decimal minBlockSizeInMB = BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE / 1000000;
                 decimal maxBlockSizeInMB = Convert.ToDecimal(blockSizeInBytes / 1000000);
 
-                var fits =  CheckIfProvidedPaymentsFits(minPaymentPerBlock, maxPaymentPerBlock, minBlockSizeInMB, maxBlockSizeInMB, minPaymentExpectedPerBlock, minBBTExpectedPerMB);
+                var fits = CheckIfProvidedPaymentsFits(minPaymentPerBlock, maxPaymentPerBlock, minBlockSizeInMB, maxBlockSizeInMB, minPaymentExpectedPerBlock, minBBTExpectedPerMB);
                 return (fits, (minPaymentPerBlock + maxPaymentPerBlock) / 2);
             }
 
@@ -291,86 +341,15 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 }
             }
 
-            return totalMaximumMonthlyGrowth <= maxTotalGrowthPerMonthInMB;
+            return maxTotalGrowthPerMonthInMB == 0 ? true : totalMaximumMonthlyGrowth <= maxTotalGrowthPerMonthInMB;
         }
 
         private bool CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(int maxNumberOfSidechainsToProduce)
         {
             var currentProducingSidechains = _sidechainKeeper.GetSidechains().Count();
 
-            return currentProducingSidechains < maxNumberOfSidechainsToProduce;
+            return maxNumberOfSidechainsToProduce == 0 ? true : currentProducingSidechains < maxNumberOfSidechainsToProduce;
         }
-
-        // private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(TrackerSidechain sidechain)
-        // {
-        //     var candidates = await _mainchainService.RetrieveCandidates(sidechain.Name);
-        //     var producers = await _mainchainService.RetrieveProducersFromTable(sidechain.Name);
-        //     var contractInfo = await _mainchainService.RetrieveContractInformation(sidechain.Name);
-        //     var contractState = await _mainchainService.RetrieveContractState(sidechain.Name);
-        //     var clientInfo = await _mainchainService.RetrieveClientTable(sidechain.Name);
-
-        //     if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) return (false, 0, 0, 0);
-        //     if (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName) || !contractState.CandidatureTime) return (false, 0, 0, 0);
-
-        //     var maximumMonthlyGrowth = GetMaximumMonthlyGrowth(contractInfo.SizeOfBlockInBytes, (int)contractInfo.BlockTimeDuration);
-        //     var totalMaximumMonthlyGrowth = maximumMonthlyGrowth;
-
-        //     foreach (var runningSidechain in _sidechainKeeper.GetSidechains().ToList())
-        //     {
-        //         if (runningSidechain.SidechainStateManager.TaskContainer.IsRunning())
-        //         {
-        //             totalMaximumMonthlyGrowth += GetMaximumMonthlyGrowth(runningSidechain.SidechainPool.BlockSizeInBytes, (int)runningSidechain.SidechainPool.BlockTimeDuration);
-        //         }
-        //     }
-
-        //     if (totalMaximumMonthlyGrowth > _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB) return (false, 0, 0, 0);
-
-        //     int producerTypeToCandidate = 0;
-        //     decimal lowestStakeToMonthlyIncomeRatio = decimal.MaxValue;
-        //     decimal stakeToPut = Math.Round((decimal)contractInfo.Stake / 10000, 4);
-
-        //     if (_providerConfigurations.AutomaticProduction.FullNode.IsActive && sidechain.FullProducers.RequiredNumberOfProducers > 0)
-        //     {
-        //         var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockFullProducers, contractInfo.MaxPaymentPerBlockFullProducers, (int)contractInfo.BlockTimeDuration);
-        //         if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
-        //             Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio &&
-        //             Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4) >= (decimal)_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerEmptyBlock &&
-        //             _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB > maximumMonthlyGrowth)
-        //         {
-        //             lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
-        //             producerTypeToCandidate = (int)ProducerTypeEnum.Full;
-        //         }
-        //     }
-
-        //     if (_providerConfigurations.AutomaticProduction.HistoryNode.IsActive && sidechain.HistoryProducers.RequiredNumberOfProducers > 0)
-        //     {
-        //         var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockHistoryProducers, contractInfo.MaxPaymentPerBlockHistoryProducers, (int)contractInfo.BlockTimeDuration);
-        //         if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
-        //             Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio &&
-        //             Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4) >= (decimal)_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerEmptyBlock &&
-        //             _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB > maximumMonthlyGrowth)
-        //         {
-        //             lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
-        //             producerTypeToCandidate = (int)ProducerTypeEnum.History;
-        //         }
-        //     }
-
-        //     if (_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive && sidechain.ValidatorProducers.RequiredNumberOfProducers > 0)
-        //     {
-        //         var stakeToMonthlyIncomeRatio = GetStakeToMonthlyIncomeRatio(stakeToPut, contractInfo.MinPaymentPerBlockValidatorProducers, contractInfo.MaxPaymentPerBlockValidatorProducers, (int)contractInfo.BlockTimeDuration);
-        //         if (lowestStakeToMonthlyIncomeRatio >= stakeToMonthlyIncomeRatio &&
-        //             Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4) >= (decimal)_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerEmptyBlock &&
-        //             Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MaxStakeToMonthlyIncomeRatio) > stakeToMonthlyIncomeRatio)
-        //         {
-        //             lowestStakeToMonthlyIncomeRatio = stakeToMonthlyIncomeRatio;
-        //             producerTypeToCandidate = (int)ProducerTypeEnum.Validator;
-        //         }
-        //     }
-
-        //     if (producerTypeToCandidate == 0) return (false, 0, 0, 0);
-
-        //     return (true, producerTypeToCandidate, stakeToPut, clientInfo.SidechainCreationTimestamp);
-        // }
 
         private decimal GetStakeToMonthlyIncomeRatio(decimal stake, decimal minPaymentPerBlock, decimal maxPaymentPerBlock, uint blockTimeDurationInSeconds)
         {
@@ -378,15 +357,6 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             var blocksPerMonth = (decimal)2592000 / blockTimeDurationInSeconds;
             return (stake / (averagePaymentPerBlock * blocksPerMonth));
         }
-
-        // private decimal GetStakeToMonthlyIncomeRatio(decimal stake, ulong minPaymentPerBlock, ulong maxPaymentPerBlock, int blockTimeDuration)
-        // {
-        //     var convertedMinPaymentPerBlock = Math.Round((decimal)minPaymentPerBlock / 10000, 4);
-        //     var convertedMaxPaymentPerBlock = Math.Round((decimal)maxPaymentPerBlock / 10000, 4);
-        //     var averagePaymentPerBlock = (convertedMinPaymentPerBlock + convertedMaxPaymentPerBlock) / 2;
-        //     var blocksPerMonth = (decimal)2592000 / blockTimeDuration;
-        //     return (stake / (averagePaymentPerBlock * blocksPerMonth));
-        // }
 
         private double GetMaximumMonthlyGrowth(uint blockSizeInBytes, int blockTimeDuration)
         {

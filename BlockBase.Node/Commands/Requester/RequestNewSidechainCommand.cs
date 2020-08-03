@@ -49,60 +49,66 @@ namespace BlockBase.Node.Commands.Requester
 
         public override async Task<CommandExecutionResponse> Execute()
         {
-
-            if (await _connector.DoesDefaultDatabaseExist())
-                return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
-
-            _connector.Setup().Wait();
-
-            var contractSt = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
-            var networkInfo = await _mainchainService.GetInfo();
-            var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
-            if (contractSt != null) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain {_nodeConfigurations.AccountName} already exists"));
-
-            //Check configurations
-            if (_requesterConfigurations.MaxBlockSizeInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
-                return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
-            if (_requesterConfigurations.ValidatorNodes.RequiredNumber + _requesterConfigurations.HistoryNodes.RequiredNumber + _requesterConfigurations.FullNodes.RequiredNumber == 0)
-                return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
-            if (_requesterConfigurations.BlockTimeInSeconds < 60 && networkName == EosNetworkNames.MAINNET)
-                return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
-
-            if (Stake > 0)
+            try
             {
-                string stakeToInsert = Stake.ToString("F4") + " BBT";
-                var stakeTransaction = await _mainchainService.AddStake(_nodeConfigurations.AccountName, _nodeConfigurations.AccountName, stakeToInsert);
-                _logger.LogInformation("Stake sent to contract. Tx = " + stakeTransaction);
-                _logger.LogInformation("Stake inserted = " + stakeToInsert);
+                if (await _connector.DoesDefaultDatabaseExist())
+                    return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
+
+                _connector.Setup().Wait();
+
+                var contractSt = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
+                var networkInfo = await _mainchainService.GetInfo();
+                var networkName = EosNetworkNames.GetNetworkName(networkInfo.chain_id);
+                if (contractSt != null) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain {_nodeConfigurations.AccountName} already exists"));
+
+                //Check configurations
+                if (_requesterConfigurations.MaxBlockSizeInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
+                    return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
+                if (_requesterConfigurations.ValidatorNodes.RequiredNumber + _requesterConfigurations.HistoryNodes.RequiredNumber + _requesterConfigurations.FullNodes.RequiredNumber == 0)
+                    return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
+                if (_requesterConfigurations.BlockTimeInSeconds < 60 && networkName == EosNetworkNames.MAINNET)
+                    return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
+
+                if (Stake > 0)
+                {
+                    string stakeToInsert = Stake.ToString("F4") + " BBT";
+                    var stakeTransaction = await _mainchainService.AddStake(_nodeConfigurations.AccountName, _nodeConfigurations.AccountName, stakeToInsert);
+                    _logger.LogInformation("Stake sent to contract. Tx = " + stakeTransaction);
+                    _logger.LogInformation("Stake inserted = " + stakeToInsert);
+                }
+
+                //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
+                var startChainTx = await _mainchainService.StartChain(_nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey);
+                var i = 0;
+
+
+                var configuration = GetSidechainConfigurations();
+                //TODO rpinto - review this while loop
+                while (i < 3)
+                {
+
+                    await Task.Delay(1000);
+
+                    try
+                    {
+                        var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
+                        var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
+                        var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, _requesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
+                        return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
+                    }
+                    catch (ApiErrorException ex)
+                    {
+                        _logger.LogInformation($"Failed {i + 1} times. Error: {ex.Message}");
+                        i++;
+                    }
+                }
+
+                return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(new OperationCanceledException()));
             }
-
-            //TODO rpinto - if ConfigureChain fails, will StartChain fail if run again, and thus ConfigureChain never be reached?
-            var startChainTx = await _mainchainService.StartChain(_nodeConfigurations.AccountName, _nodeConfigurations.ActivePublicKey);
-            var i = 0;
-
-
-            var configuration = GetSidechainConfigurations();
-            //TODO rpinto - review this while loop
-            while (i < 3)
+            catch (Exception e)
             {
-
-                await Task.Delay(1000);
-
-                try
-                {
-                    var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
-                    var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
-                    var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, _requesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
-                    return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
-                }
-                catch (ApiErrorException ex)
-                {
-                    _logger.LogInformation($"Failed {i + 1} times. Error: {ex.Message}");
-                    i++;
-                }
+                return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
-
-            return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(new OperationCanceledException()));
         }
 
         protected override bool IsCommandAppropratelyStructured(string[] commandData)
@@ -134,6 +140,8 @@ namespace BlockBase.Node.Commands.Requester
         {
             var configurations = new ContractInformationTable();
 
+            var numberOfProviders = _requesterConfigurations.FullNodes.RequiredNumber + _requesterConfigurations.HistoryNodes.RequiredNumber + _requesterConfigurations.ValidatorNodes.RequiredNumber;
+
             configurations.Key = _nodeConfigurations.AccountName;
 
             configurations.BlockTimeDuration = _requesterConfigurations.BlockTimeInSeconds;
@@ -149,10 +157,10 @@ namespace BlockBase.Node.Commands.Requester
             configurations.MinPaymentPerBlockValidatorProducers = Convert.ToUInt64(10000 * _requesterConfigurations.ValidatorNodes.MinPaymentPerBlock);
             configurations.Stake = Convert.ToUInt64(10000 * _requesterConfigurations.MinimumProducerStake);
 
-            configurations.CandidatureTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.CandidaturePhaseDurationInSeconds;
-            configurations.SendSecretTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.SecretSendingPhaseDurationInSeconds;
-            configurations.SendTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.IpSendingPhaseDurationInSeconds;
-            configurations.ReceiveTime = _requesterConfigurations.SidechainPhasesTimesConfigurations.IpRetrievalPhaseDurationInSeconds;
+            configurations.CandidatureTime = 60 + ((numberOfProviders / 5) * 20);
+            configurations.SendSecretTime = 60 + ((numberOfProviders / 5) * 20);
+            configurations.SendTime = 60 + ((numberOfProviders / 5) * 20);
+            configurations.ReceiveTime = 60 + ((numberOfProviders / 5) * 20);
 
             var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
 

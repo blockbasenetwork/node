@@ -705,7 +705,8 @@ namespace BlockBase.Network.Mainchain
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
                 chain,
-                numberOfBlocks),
+                numberOfBlocks,
+                true),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
             if (!opResult.Succeeded) throw opResult.Exception;
             return opResult.Result;
@@ -810,7 +811,9 @@ namespace BlockBase.Network.Mainchain
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
-                chain),
+                chain, 
+                numberOfBlocks, 
+                true),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
             if (!opResult.Succeeded) throw opResult.Exception;
@@ -831,14 +834,14 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).LastOrDefault();
+            var lastSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).FirstOrDefault();
 
             return lastSubmittedBlock;
         }
 
         public async Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks)
         {
-            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).LastOrDefault();
+            var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).FirstOrDefault();
 
             return lastValidSubmittedBlock;
         }
@@ -1285,7 +1288,7 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<OpResult<T>> TryAgain<T>(Func<Task<OpResult<T>>> func, int maxTry = 15, Func<OpResult<T>, bool> expectedResult = null, int delayInMilliseconds = 100)
         {
-            var i = 15;
+            var i = maxTry;
             return await TryAgain(func, () => i-- >= 0, expectedResult, delayInMilliseconds);
         }
 
@@ -1321,7 +1324,7 @@ namespace BlockBase.Network.Mainchain
                     if (details != null && details.Any(d => d.method == "eosio_assert" || d.method == "apply_eosio_linkauth" || d.method == "tx_duplicate" || d.method == "unsatisfied_authorization" || d.method == "check_authorization" || d.method == "handle_exception"))
                     {
                         //if it's a message that we may be expecting do a quieter log and stop the loop
-                        _logger.LogDebug($"Error sending transaction: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");
+                        _logger.LogDebug($"Error sending transaction to Api {EosStub.GetCurentNetwork()}: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");
                         return new OpResult<T>(exception);
                     }
                 }
@@ -1336,8 +1339,8 @@ namespace BlockBase.Network.Mainchain
             }
 
             var errorMessage = exception is ApiErrorException apiException ?
-                        $"Error sending transaction: {apiException.error.name} Message: {apiException.error.details.FirstOrDefault()?.message}" :
-                        $"Error sending transaction";
+                        $"Error sending transaction to Api {EosStub.GetCurentNetwork()}: {apiException.error.name} Message: {apiException.error.details.FirstOrDefault()?.message}" :
+                        $"Error sending transaction to Api {EosStub.GetCurentNetwork()}";
 
             _logger.LogCritical(errorMessage);
             //_logger.LogDebug($"Send Transaction Error Trace: {exception}");
