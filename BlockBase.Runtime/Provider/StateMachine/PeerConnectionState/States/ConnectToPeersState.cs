@@ -25,7 +25,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
         private bool _peersConnected;
-        public ConnectToPeersState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler): base(logger, sidechainPool, mainchainService)
+        public ConnectToPeersState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -42,7 +42,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         protected override async Task DoWork()
         {
             _peerConnectionsHandler.AddKnownSidechain(_sidechainPool);
-            
+
             await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(_sidechainPool);
         }
 
@@ -56,7 +56,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
             return Task.FromResult((_peersConnected, typeof(CheckConnectionState).Name));
         }
 
-        protected override async Task UpdateStatus() 
+        protected override async Task UpdateStatus()
         {
             _producers = await _mainchainService.RetrieveProducersFromTable(_sidechainPool.ClientAccountName);
             _ipAddresses = await _mainchainService.RetrieveIPAddresses(_sidechainPool.ClientAccountName);
@@ -70,7 +70,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
             var numberOfConnections = (int)Math.Ceiling(producersInPoolList.Count / 4.0);
             var producersWhoIAmSupposedToBeConnected = orderedProducersInPool.Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState != ConnectionStateEnum.Connected).ToList();
-            
+
             _peersConnected = !producersWhoIAmSupposedToBeConnected.Any();
 
             _delay = TimeSpan.FromSeconds(_networkConfigurations.ConnectionExpirationTimeInSeconds);
@@ -110,13 +110,21 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
             foreach (var producer in orderedProducersInPool)
             {
-                var producerIndex = orderedProducersInPool.IndexOf(producer);
-                var producerIps = _ipAddresses.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
-                if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
+                try
+                {
+                    var producerIndex = orderedProducersInPool.IndexOf(producer);
+                    var producerIps = _ipAddresses.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
+                    if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
 
-                var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
-                var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
-                producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
+                    var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
+                    var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
+                    producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Failed to decrypt {producer.ProducerInfo.AccountName}'s IP");
+                    _logger.LogDebug($"Error decrypting: {e}");
+                }
             }
         }
 

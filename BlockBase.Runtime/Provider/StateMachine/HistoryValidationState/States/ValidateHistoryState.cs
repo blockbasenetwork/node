@@ -116,7 +116,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
                 if (!_blockBytesPerValidationEntryAccount.ContainsKey(historyValidationTable.Account) && historyValidationTable.Account != _nodeConfigurations.AccountName)
                 {
                     var blockByte = await GetBlockByte(historyValidationTable.BlockHash, _sidechainPool.ClientAccountName);
-                    _logger.LogInformation($"Calculated provider {historyValidationTable.Account} validation block byte: {blockByte}.");
+                    _logger.LogDebug($"Calculated provider {historyValidationTable.Account} validation block byte: {blockByte}.");
                     _blockBytesPerValidationEntryAccount[historyValidationTable.Account] = blockByte;
                 }
             }
