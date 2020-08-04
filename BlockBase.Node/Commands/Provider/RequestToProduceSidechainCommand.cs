@@ -143,7 +143,7 @@ namespace BlockBase.Node.Commands.Provider
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Minimum provider stake is {minimumProviderState}, currently staked {accountStake?.Stake} and added {_stake} which is not enough. Please stake {minimumProviderState - accountStake?.Stake}"));
                 }
                 
-                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(_chainName, clientInfo.SidechainCreationTimestamp, false);
+                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(_chainName, clientInfo.SidechainCreationTimestamp, false, _providerType);
 
                 if (_stake > 0)
                 {

@@ -24,7 +24,8 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         private NetworkConfigurations _networkConfigurations;
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
-        private bool _peersConnected;
+        private bool _allPeersConnected;
+        private bool _hasDoneWorkOnce;
         public ConnectToPeersState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool, mainchainService)
         {
             _mainchainService = mainchainService;
@@ -36,7 +37,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<bool> IsWorkDone()
         {
-            return Task.FromResult(_peersConnected);
+            return Task.FromResult(_allPeersConnected);
         }
 
         protected override async Task DoWork()
@@ -44,6 +45,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
             _peerConnectionsHandler.AddKnownSidechain(_sidechainPool);
 
             await _peerConnectionsHandler.UpdateConnectedProducersInSidechainPool(_sidechainPool);
+            _hasDoneWorkOnce = true;
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -53,7 +55,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((_peersConnected, typeof(CheckConnectionState).Name));
+            return Task.FromResult((_hasDoneWorkOnce, typeof(CheckConnectionState).Name));
         }
 
         protected override async Task UpdateStatus()
@@ -70,8 +72,10 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
             var orderedProducersInPool = ListHelper.GetListSortedCountingBackFromIndex(producersInPoolList, producersInPoolList.FindIndex(m => m.ProducerInfo.AccountName == _nodeConfigurations.AccountName));
             var numberOfConnections = (int)Math.Ceiling(producersInPoolList.Count / 4.0);
             var producersWhoIAmSupposedToBeConnected = orderedProducersInPool.Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState != ConnectionStateEnum.Connected).ToList();
+            var connectedPeers = orderedProducersInPool.Take(numberOfConnections).Where(m => m.PeerConnection == null || m.PeerConnection.ConnectionState == ConnectionStateEnum.Connected).ToList();
 
-            _peersConnected = !producersWhoIAmSupposedToBeConnected.Any();
+            _allPeersConnected = !producersWhoIAmSupposedToBeConnected.Any();
+            if (_allPeersConnected) _hasDoneWorkOnce = true;
 
             _delay = TimeSpan.FromSeconds(_networkConfigurations.ConnectionExpirationTimeInSeconds);
         }
