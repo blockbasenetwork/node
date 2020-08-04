@@ -15,6 +15,9 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
         // [BsonRequired()]
         public ulong Timestamp { get; set; }
 
+        [BsonElement("ProducerType")]
+        public int ProducerType { get; set; }
+
         [BsonElement("IsAutomatic")]
         // [BsonRequired()]
         public bool IsAutomatic { get; set; }

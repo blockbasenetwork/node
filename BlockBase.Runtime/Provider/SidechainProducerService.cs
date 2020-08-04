@@ -66,9 +66,7 @@ namespace BlockBase.Runtime.Provider
         //TODO rpinto - this probably needs to be in a try catch
         public async Task AddSidechainToProducerAndStartIt(string sidechainName, ulong sidechainCreationTimestamp, int producerType, bool automatic)
         {
-
             if (_sidechainKeeper.ContainsKey(sidechainName)) throw new Exception("Sidechain already exists");
-
 
             //TODO rpinto - this operation may fail
             var sidechainPool = await FetchSidechainPoolInfoFromSmartContract(sidechainName);
@@ -115,12 +113,12 @@ namespace BlockBase.Runtime.Provider
             {
                 try
                 {
-                    await AddSidechainToProducerAndStartIt(sidechainDB.Id, sidechainDB.Timestamp, 0, sidechainDB.IsAutomatic);
+                    await AddSidechainToProducerAndStartIt(sidechainDB.Id, sidechainDB.Timestamp, sidechainDB.ProducerType, sidechainDB.IsAutomatic);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogInformation($"Unable to recover {sidechainDB.Id}");
-                    _logger.LogError($"Exception {ex}");
+                    _logger.LogDebug($"Exception {ex}");
                 }
             }
         }
@@ -166,7 +164,6 @@ namespace BlockBase.Runtime.Provider
 
             var selfCandidate = candidatesInTable.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault();
             var selfProducer = producersInTable.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault();
-
 
             if (selfProducer != null)
             {

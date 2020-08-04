@@ -95,7 +95,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                                 _logger.LogInformation($"Found sidechain {chainInCandidature.Name} eligible for automatic production");
 
                                 await DeleteSidechainIfExistsInDb(chainInCandidature.Name);
-                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name, checkResult.sidechainTimestamp, true);
+                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name, checkResult.sidechainTimestamp, true, checkResult.producerType);
 
                                 if (await TryAddStakeIfNecessary(chainInCandidature.Name, checkResult.stakeToPut))
                                 {

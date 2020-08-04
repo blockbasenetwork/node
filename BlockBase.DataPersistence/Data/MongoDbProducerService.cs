@@ -395,13 +395,14 @@ namespace BlockBase.DataPersistence.Data
 
         #region Recover DB
 
-        public async Task AddProducingSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool isAutomatic)
+        public async Task AddProducingSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool isAutomatic, int producerType)
         {
             sidechain = ClearSpecialCharacters(sidechain);
             var sidechainDb = new SidechainDB()
             {
                 Id = sidechain,
                 Timestamp = timestamp,
+                ProducerType = producerType,
                 IsAutomatic = isAutomatic
             };
 
