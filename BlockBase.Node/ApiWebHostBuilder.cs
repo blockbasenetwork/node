@@ -91,7 +91,7 @@ namespace BlockBase.Api
 
                 services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(
-                        simpleParse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.PublicIpAddress),
+                        simpleParse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.GetResolvedIp()),
                         s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.TcpPort
                     )
                 );

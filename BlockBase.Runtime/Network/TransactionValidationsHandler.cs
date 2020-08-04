@@ -91,7 +91,7 @@ namespace BlockBase.Runtime.Network
                     data.ToArray(),
                     TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey,
                     _nodeConfigurations.ActivePublicKey,
-                    _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort,
+                    _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort,
                     _nodeConfigurations.AccountName, sender);
             _logger.LogDebug("Sending confirmation transaction.");
             await _networkService.SendMessageAsync(message);
@@ -119,7 +119,7 @@ namespace BlockBase.Runtime.Network
             _sidechainKeeper.TryGet(clientAccountName, out var sidechainContext);
             foreach (var producer in sidechainContext.SidechainPool.ProducersInPool.GetEnumerable().Where(p => p.PeerConnection != null && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected && p.PeerConnection.IPEndPoint != null))
             {
-                var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
+                var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
 
                 _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {producer.PeerConnection.ConnectionAccountName}");
                 await _networkService.SendMessageAsync(message);

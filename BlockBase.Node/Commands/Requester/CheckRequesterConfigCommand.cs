@@ -82,7 +82,7 @@ namespace BlockBase.Node.Commands.Requester
 
                 }
 
-                string configuredPublicIp = _networkConfigurations.PublicIpAddress.Trim();
+                string configuredPublicIp = _networkConfigurations.GetResolvedIp().Trim();
                 string fetchedPublicIp = null;
                 bool fetchedPublicIpSuccessfully = false;
                 bool isConfiguredIPEqualToPublicIP = false;

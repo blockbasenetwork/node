@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Text;
 
 namespace BlockBase.Domain.Configurations
@@ -16,7 +18,13 @@ namespace BlockBase.Domain.Configurations
 
         public string GetEndPoint()
         {
-            return this.PublicIpAddress + ":" + this.TcpPort;
+            return this.GetResolvedIp() + ":" + this.TcpPort;
+        }
+
+        public string GetResolvedIp()
+        {
+            var resolvedIp = Dns.GetHostEntry(PublicIpAddress).AddressList.First(addr => addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+            return resolvedIp?.ToString() ?? PublicIpAddress;
         }
     }
 }
