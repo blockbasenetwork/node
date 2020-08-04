@@ -445,7 +445,7 @@ namespace BlockBase.DataProxy.Encryption
 
             if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
             {
-                transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+                if (selectStatement.SelectCoreStatement.WhereExpression != null) transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
                 sqlStatements.Add(transformedUpdateRecordStatement);
             }
 
@@ -468,7 +468,7 @@ namespace BlockBase.DataProxy.Encryption
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(deleteRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
             if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
-            transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+            if (transformedDeleteRecordStatement.WhereExpression != null) transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
             sqlStatements.Add(transformedDeleteRecordStatement);
 
             return sqlStatements;
