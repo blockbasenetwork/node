@@ -61,6 +61,7 @@ namespace BlockBase.Runtime.Network
 
             CurrentPeerConnections = new ThreadSafeList<PeerConnection>();
             KnownSidechains = new ThreadSafeList<SidechainPool>();
+            ProcessingQueue = new ConcurrentQueue<Action>();
             _waitingForApprovalPeers = new ThreadSafeList<Peer>();
 
             _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
