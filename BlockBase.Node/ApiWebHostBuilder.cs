@@ -83,15 +83,15 @@ namespace BlockBase.Api
                     IPAddress ipAddress;
                     if (!IPAddress.TryParse(ipAddressString, out ipAddress))
                     {
-                        var addressList = Dns.GetHostEntry(ipAddressString)?.AddressList;
-                        if (addressList != null && addressList.Length > 0) ipAddress = addressList[0];
+                        var ipv4 = Dns.GetHostEntry(ipAddressString)?.AddressList.FirstOrDefault(addr => addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);;
+                        if (ipv4 != null) ipAddress = ipv4;
                     }
                     return ipAddress;
                 };
 
                 services.AddSingleton<SystemConfig>(s =>
                     new SystemConfig(
-                        simpleParse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.GetResolvedIp()),
+                        simpleParse(s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.PublicIpAddress),
                         s.GetRequiredService<IOptions<NetworkConfigurations>>().Value.TcpPort
                     )
                 );
