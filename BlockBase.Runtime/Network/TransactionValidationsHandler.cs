@@ -98,11 +98,11 @@ namespace BlockBase.Runtime.Network
 
             if (containsUnsavedTransactions)
             {
-                await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName);
+                await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName, sender);
             }
         }
 
-        private async Task SendTransactionsToConnectedProviders(IEnumerable<TransactionProto> transactions, string clientAccountName)
+        private async Task SendTransactionsToConnectedProviders(IEnumerable<TransactionProto> transactions, string clientAccountName, IPEndPoint sender)
         {
             var data = new List<byte>();
             var sidechainNameBytes = Encoding.UTF8.GetBytes(clientAccountName);
@@ -120,6 +120,7 @@ namespace BlockBase.Runtime.Network
             _sidechainKeeper.TryGet(clientAccountName, out var sidechainContext);
             foreach (var producer in sidechainContext.SidechainPool.ProducersInPool.GetEnumerable().Where(p => p.PeerConnection != null && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected && p.PeerConnection.IPEndPoint != null))
             {
+                if (producer.PeerConnection.IPEndPoint.Address.ToString() == sender.Address.ToString() && producer.PeerConnection.IPEndPoint.Port == sender.Port) continue;
                 var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
 
                 _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {producer.PeerConnection.ConnectionAccountName}");
