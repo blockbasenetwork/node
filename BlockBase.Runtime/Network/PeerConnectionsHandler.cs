@@ -44,8 +44,6 @@ namespace BlockBase.Runtime.Network
         private const int STARTING_RATING = 100;
         private const int RATING_LOST_FOR_DISCONECT = 10;
         private const int RATING_LOST_FOR_CONNECT_FAILURE = 10;
-        private bool _tryingConnection;
-        private bool _incomingConnectionOngoing;
 
         private TaskContainer ProcessConnectionsTaskContainer;
         private ConcurrentQueue<Action> ProcessingQueue;
@@ -157,15 +155,12 @@ namespace BlockBase.Runtime.Network
             if (producersWhoIAmSupposedToBeConnected.Any()) _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
 
             var connectionTasks = new List<Task>();
-            _tryingConnection = true;
 
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
             {
                 connectionTasks.Add(ConnectToProducer(sidechain, producer));
             }
             await Task.WhenAll(connectionTasks);
-
-            _tryingConnection = false;
         }
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
