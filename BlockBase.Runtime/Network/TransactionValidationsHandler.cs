@@ -116,14 +116,16 @@ namespace BlockBase.Runtime.Network
                 data.AddRange(transactionBytes);
             }
 
+            var sendTransactionTasks = new List<Task>();
             _sidechainKeeper.TryGet(clientAccountName, out var sidechainContext);
             foreach (var producer in sidechainContext.SidechainPool.ProducersInPool.GetEnumerable().Where(p => p.PeerConnection != null && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected && p.PeerConnection.IPEndPoint != null))
             {
                 var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, producer.PeerConnection.IPEndPoint);
 
                 _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {producer.PeerConnection.ConnectionAccountName}");
-                await _networkService.SendMessageAsync(message);
+                sendTransactionTasks.Add(_networkService.SendMessageAsync(message));
             }
+            await Task.WhenAll(sendTransactionTasks);
         }
 
         public async Task<bool> ValidateTransaction(Transaction transaction, string clientAccountName)
