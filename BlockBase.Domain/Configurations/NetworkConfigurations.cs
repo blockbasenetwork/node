@@ -23,6 +23,8 @@ namespace BlockBase.Domain.Configurations
 
         public string GetResolvedIp()
         {
+            if (IPAddress.TryParse(PublicIpAddress, out var address) && address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) return PublicIpAddress;
+            
             var resolvedIp = Dns.GetHostEntry(PublicIpAddress).AddressList.First(addr => addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
             return resolvedIp?.ToString() ?? PublicIpAddress;
         }
