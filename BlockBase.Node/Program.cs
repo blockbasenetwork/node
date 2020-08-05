@@ -95,24 +95,30 @@ namespace BlockBase.Node
             //force instantiation of the connection tester
             var connectionTester = webHost.Services.Get<TcpConnectionTester>();
 
-            var t = Task.Run(() => webHost.RunAsync());
-
-            while (true)
+            if (!Console.IsInputRedirected)
             {
-                var cmd = Console.ReadLine();
-                if(cmd == null) continue;
-                foreach (var command in commandList)
+                var consoleTask = Task.Run(async () =>
                 {
-                    var loadResult = command.TryLoadCommand(cmd);
-                    if (loadResult.Succeeded && loadResult.CommandRecognized)
+                    while (true)
                     {
-                        var result = await command.Execute();
-                        var message = result.OperationResponse.ResponseMessage;
-                        Console.WriteLine("Http status code: " + result.HttpStatusCode + " Operation Response: " + message);
-                        break;
+                        var cmd = Console.ReadLine();
+                        if (cmd == null) continue;
+                        foreach (var command in commandList)
+                        {
+                            var loadResult = command.TryLoadCommand(cmd);
+                            if (loadResult.Succeeded && loadResult.CommandRecognized)
+                            {
+                                var result = await command.Execute();
+                                var message = result.OperationResponse.ResponseMessage;
+                                Console.WriteLine("Http status code: " + result.HttpStatusCode + " Operation Response: " + message);
+                                break;
+                            }
+                        }
                     }
-                }
+                });
             }
+
+            Task.WaitAll(webHost.RunAsync());
         }
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args)
@@ -142,11 +148,11 @@ namespace BlockBase.Node
                 new GetSidechainStateCommand(logger, mainchainService),
                 new GetTopProducersEndpointsCommand(logger),
                 new TestConnectionToPeerCommand(logger, mainchainService, tcpConnectionTester),
-                new RequesterAddStakeCommand(logger, mainchainService, nodeConfigurations), 
+                new RequesterAddStakeCommand(logger, mainchainService, nodeConfigurations),
                 new CheckProviderConfig(logger, mainchainService, nodeConfigurations, networkConfigurations, connectionsChecker),
-                new ClaimAllRewardsCommand(logger, mainchainService, nodeConfigurations), 
+                new ClaimAllRewardsCommand(logger, mainchainService, nodeConfigurations),
                 new ProviderClaimStakeCommand(logger, mainchainService, nodeConfigurations),
-                new DeleteSidechainFromDatabase(logger, sidechainProducerService, mongoDbProducerService), 
+                new DeleteSidechainFromDatabase(logger, sidechainProducerService, mongoDbProducerService),
                 new ProviderGetDecryptedNodeIpsCommand(logger, mainchainService, nodeConfigurations),
                 new GetProducingSidechainsCommand(logger, sidechainProducerService, mainchainService, nodeConfigurations),
                 new GetSidechainNodeSoftwareVersionCommand(logger, mainchainService),
@@ -155,11 +161,11 @@ namespace BlockBase.Node
                 new RemoveCandidatureCommand(logger, mainchainService, nodeConfigurations, sidechainProducerService),
                 new RequestToLeaveSidechainProductionCommand(logger, mainchainService, nodeConfigurations, mongoDbProducerService),
                 new RequestToProduceSidechainCommand(logger, mainchainService, nodeConfigurations, sidechainProducerService, mongoDbProducerService),
-                new AddReservedSeatsCommand(logger, mainchainService, nodeConfigurations), 
+                new AddReservedSeatsCommand(logger, mainchainService, nodeConfigurations),
                 new ProviderAddStakeCommand(logger, mainchainService, nodeConfigurations),
                 new CheckCurrentStakeInSidechainCommand(logger, mainchainService, nodeConfigurations, networkConfigurations),
                 new CheckRequesterConfig(logger, mainchainService, nodeConfigurations, networkConfigurations, connectionsChecker),
-                new CheckSidechainReservedSeatsCommand(logger, mainchainService, nodeConfigurations), 
+                new CheckSidechainReservedSeatsCommand(logger, mainchainService, nodeConfigurations),
                 new RequesterClaimStakeCommand(logger, mainchainService, nodeConfigurations),
                 new EndSidechainCommand(logger, sidechainMaintainerManager, mainchainService, nodeConfigurations, concurrentVariables),
                 new ExecuteQueryCommand(logger, databaseKeyManager, sqlCommandManager),
