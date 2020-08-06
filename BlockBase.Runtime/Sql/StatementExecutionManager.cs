@@ -55,7 +55,7 @@ namespace BlockBase.Runtime.Sql
             _transactionsManager = transactionsManager;
             _mongoDbRequesterService = mongoDbRequesterService;
             _sqlExecutionHelper = new SqlExecutionHelper(connector);
-
+            
         }
 
         public delegate QueryResult CreateQueryResultDelegate(bool success, string statementType, string exceptionMessage = null);

@@ -182,7 +182,7 @@ namespace BlockBase.DataProxy.Encryption
 
                     if (columnInfoRecord != null)
                     {
-                        var dataType = columnInfoRecord.LData.DataType;
+                        var dataType = _encryptor.GetColumnDataType(columnInfoRecord);
 
                         if (dataType.DataTypeName == DataTypeEnum.ENCRYPTED)
                         {
@@ -331,7 +331,7 @@ namespace BlockBase.DataProxy.Encryption
                     foreach (var columnInfoRecord in columnsInfoRecords)
                     {
                         var columnName = columnInfoRecord.KeyName != null ? _encryptor.DecryptName(columnInfoRecord) : "!" + columnInfoRecord.Name;
-                        var column = new FieldPoco(columnName, columnInfoRecord.LData.DataType.DataTypeName.ToString(),  columnInfoRecord.LData.ColumnConstraints?.Select(c => c.ToString()).ToList());
+                        var column = new FieldPoco(columnName, _encryptor.GetColumnDataType(columnInfoRecord).DataTypeName.ToString(), null);
                         table.Fields.Add(column);
                     }
                     database.Tables.Add(table);

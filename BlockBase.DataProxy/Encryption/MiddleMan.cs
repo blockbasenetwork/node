@@ -27,7 +27,7 @@ namespace BlockBase.DataProxy
             }
             return DatabaseKeyManager.AddInfoRecord(name, DatabaseKeyManager.InfoRecordTypeEnum.DatabaseRecord, DatabaseKeyManager.SecretStore.GetSecret(EncryptionConstants.MASTER_KEY), DatabaseKeyManager.SecretStore.GetSecret(EncryptionConstants.MASTER_IV));
         }
-        public InfoRecord CreateColumnInfoRecord(estring name, string parentIV, ColumnDefinition data)
+        public InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data)
         {
             var parentInfoRecord = DatabaseKeyManager.FindInfoRecord(parentIV);
             var parentManageKey = DatabaseKeyManager.GetKeyManageFromInfoRecord(parentInfoRecord);
@@ -42,6 +42,11 @@ namespace BlockBase.DataProxy
         {
             return DatabaseKeyManager.FindChildren(iv, deepFind);
         }
+        public DataType GetColumnDataType(InfoRecord columnInfoRecord)
+        {
+            return DatabaseKeyManager.GetColumnDataType(columnInfoRecord);
+        }
+
         public InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName)
         {
             return DatabaseKeyManager.ChangeInfoRecordName(infoRecord, newName);

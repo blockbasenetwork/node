@@ -130,10 +130,7 @@ namespace BlockBase.DataProxy.Encryption
         private InfoRecord.LocalData CreateLocalData(string data, string name, byte[] ivBytes, byte[] keyManageBytes)
         {
             var localData = new InfoRecord.LocalData();
-            ColumnDefinition columnDefinition = JsonConvert.DeserializeObject<ColumnDefinition>(data);
-            localData.ColumnConstraints = columnDefinition.ColumnConstraints;
-            localData.DataType = columnDefinition.DataType;
-            var dataType = columnDefinition.DataType;
+            DataType dataType = JsonConvert.DeserializeObject<DataType>(data);
             string template = "{0}{1}";
             if (dataType.BucketInfo.EqualityNumberOfBuckets.HasValue)
             {
