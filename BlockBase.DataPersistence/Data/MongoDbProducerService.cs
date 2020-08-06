@@ -365,7 +365,6 @@ namespace BlockBase.DataPersistence.Data
 
                 var transactionQuery = from t in transactionCollection.AsQueryable()
                                        where t.TransactionHash == HashHelper.ByteArrayToFormattedHexaString(transaction.TransactionHash)
-                                       || t.SequenceNumber == transaction.SequenceNumber
                                        select t;
 
                 if (await transactionQuery.SingleOrDefaultAsync() == null) return false;
