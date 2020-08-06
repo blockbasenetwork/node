@@ -139,10 +139,8 @@ namespace BlockBase.Runtime.Network
                         _currentProducers.ClearAndAddRange(producers);
                         await TryToSendTransactions(producers);
                     }
-
-                    await Task.Delay(100000000);
-
-                    await Task.Delay(_transactionsToSend.Count() > 1000 ? _transactionsToSend.Count() * 100 : WAIT_TIME_IN_SECONDS * 1000);
+                    
+                    await Task.Delay(_transactionsToSend.Count() > 1000 ? 100000000 : WAIT_TIME_IN_SECONDS * 1000);
 
                 }
                 catch (Exception e)
