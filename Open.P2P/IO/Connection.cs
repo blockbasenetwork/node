@@ -132,9 +132,8 @@ namespace Open.P2P.IO
             var bufferSize = 32768;
 
             _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
             _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, bufferSize);
-            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendBuffer, bufferSize);
+            //_socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveBuffer, bufferSize);
             await _socket.ConnectAsync(awaitable);
 
             SocketAwaitablePool.Add(awaitable);
