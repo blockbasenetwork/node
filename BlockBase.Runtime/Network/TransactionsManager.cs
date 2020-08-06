@@ -133,15 +133,14 @@ namespace BlockBase.Runtime.Network
             {
                 try
                 {
-
                     if (_transactionsToSend.Count() != 0)
                     {
                         var producers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
                         _currentProducers.ClearAndAddRange(producers);
                         await TryToSendTransactions(producers);
                     }
-
-                    await Task.Delay(WAIT_TIME_IN_SECONDS * 1000);
+                    
+                    await Task.Delay(_transactionsToSend.Count() > 1000 ? 100000000 : WAIT_TIME_IN_SECONDS * 1000);
 
                 }
                 catch (Exception e)
