@@ -62,6 +62,10 @@ namespace BlockBase.Network.IO.Analysis
             var serializedMessage = JsonConvert.SerializeObject(networkMessage.ConvertToDictionary());
             var messageHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedMessage));
 
+            _logger.LogDebug($"Received hash: {HashHelper.ByteArrayToFormattedHexaString(receivedMessageHash)} | Calculated hash: {HashHelper.ByteArrayToFormattedHexaString(messageHash)}");
+            _logger.LogDebug($"Signature with received hash: {SignatureHelper.VerifySignature(networkMessage.PublicKey, receivedSignature, receivedMessageHash)}");
+            _logger.LogDebug($"Signature with calculated hash: {SignatureHelper.VerifySignature(networkMessage.PublicKey, receivedSignature, messageHash)}");
+
             if(!messageHash.SequenceEqual(receivedMessageHash)) throw new FormatException("Wrong message hash.");
             if(!SignatureHelper.VerifySignature(networkMessage.PublicKey, receivedSignature, messageHash)) throw new FormatException("Wrong message signature.");
         }
