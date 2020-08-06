@@ -35,6 +35,7 @@ namespace BlockBase.Runtime.Network
         private NetworkConfigurations _networkConfigurations;
         private readonly int MAX_BYTES_PER_MESSAGE = 500000;
         private readonly int WAIT_TIME_IN_SECONDS = 15;
+        private int _delay;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
         private ThreadSafeList<ProducerInTable> _currentProducers;
@@ -139,8 +140,8 @@ namespace BlockBase.Runtime.Network
                         _currentProducers.ClearAndAddRange(producers);
                         await TryToSendTransactions(producers);
                     }
-                    
-                    await Task.Delay(_transactionsToSend.Count() > 1000 ? 100000000 : WAIT_TIME_IN_SECONDS * 1000);
+
+                    await Task.Delay(_delay);
 
                 }
                 catch (Exception e)
@@ -164,6 +165,7 @@ namespace BlockBase.Runtime.Network
                         sendTasks.Add(SendScriptTransactionsToProducer(transactionToSend, peerConnection));
                 }
             }
+            if (listPeerConnections.Count() > (_currentProducers.Count() / 2) && _transactionsToSend.Count() > 1000) _delay = 10000000;
             await Task.WhenAll(sendTasks);
         }
 
