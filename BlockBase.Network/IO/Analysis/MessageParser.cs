@@ -40,7 +40,7 @@ namespace BlockBase.Network.IO.Analysis
                 //RatingManager.Instance.RecordIPEndPointBehavior(BehaviorTypeEnum.SentMalformedMessage, sender);
                 
                 _logger.LogWarning($"Unable to parse network message from {rawNetworkMessage.IPEndPoint.Address.ToString()}:{rawNetworkMessage.IPEndPoint.Port}");
-                _logger.LogDebug($"Exception {e}")
+                _logger.LogDebug($"Exception {e}");
                 return MessageParsingResultEnum.Failure;
             }
 
