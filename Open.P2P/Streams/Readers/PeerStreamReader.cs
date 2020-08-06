@@ -37,7 +37,7 @@ namespace Open.P2P.Streams.Readers
         protected ArraySegment<byte> Buffer;
         protected int Pos;
         protected int End;
-        protected const int BufferSize = 64;
+        protected const int BufferSize = 8192;
 
         protected PeerStreamReader(Stream stream, IBufferAllocator bufferAllocator)
         {
