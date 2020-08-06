@@ -59,6 +59,12 @@ namespace BlockBase.Runtime.Network
             _logger.LogDebug($"Receiving transaction for sidechain: {args.ClientAccountName}");
             var transactionsProto = SerializationHelper.DeserializeTransactions(args.TransactionsBytes, _logger);
 
+            if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
+            {
+                _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
+                return;
+            }
+
             if (transactionsProto == null) return;
 
             var receivedValidTransactions = new List<ulong>();
@@ -71,7 +77,7 @@ namespace BlockBase.Runtime.Network
                     continue;
 
                 var transaction = new Transaction().SetValuesFromProto(transactionProto);
-                if (await ValidateTransaction(transaction, args.ClientAccountName))
+                if (await ValidateTransaction(transaction, args.ClientAccountName, sidechainContext))
                 {
                     var isTransactionAlreadySaved = await CheckIfAlreadySavedTransactionAndSave(args.ClientAccountName, transaction);
                     if (!isTransactionAlreadySaved && !containsUnsavedTransactions) containsUnsavedTransactions = true;
@@ -107,11 +113,11 @@ namespace BlockBase.Runtime.Network
 
             if (containsUnsavedTransactions)
             {
-                await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName, sender);
+                await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName, sender, sidechainContext);
             }
         }
 
-        private async Task SendTransactionsToConnectedProviders(IEnumerable<TransactionProto> transactions, string clientAccountName, IPEndPoint sender)
+        private async Task SendTransactionsToConnectedProviders(IEnumerable<TransactionProto> transactions, string clientAccountName, IPEndPoint sender, SidechainContext sidechainContext)
         {
             var data = new List<byte>();
             var sidechainNameBytes = Encoding.UTF8.GetBytes(clientAccountName);
@@ -126,7 +132,6 @@ namespace BlockBase.Runtime.Network
             }
 
             var sendTransactionTasks = new List<Task>();
-            _sidechainKeeper.TryGet(clientAccountName, out var sidechainContext);
             foreach (var producer in sidechainContext.SidechainPool.ProducersInPool.GetEnumerable().Where(p => p.PeerConnection != null && p.PeerConnection.ConnectionState == ConnectionStateEnum.Connected && p.PeerConnection.IPEndPoint != null))
             {
                 if (producer.PeerConnection.IPEndPoint.Address.ToString() == sender.Address.ToString() && producer.PeerConnection.IPEndPoint.Port == sender.Port) continue;
@@ -138,14 +143,8 @@ namespace BlockBase.Runtime.Network
             await Task.WhenAll(sendTransactionTasks);
         }
 
-        public async Task<bool> ValidateTransaction(Transaction transaction, string clientAccountName)
+        public async Task<bool> ValidateTransaction(Transaction transaction, string clientAccountName, SidechainContext sidechainContext)
         {
-
-            if (!_sidechainKeeper.TryGet(clientAccountName, out var sidechainContext))
-            {
-                _logger.LogDebug($"Transaction received but sidechain {clientAccountName} is unknown.");
-                return false;
-            }
             if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
             {
                 _logger.LogDebug($"Transaction #{transaction.SequenceNumber} hash not valid.");
@@ -157,10 +156,10 @@ namespace BlockBase.Runtime.Network
                 _logger.LogDebug($"Transaction signature not valid.");
                 return false;
             }
-            var maxBlockSize = (await _mainChainService.RetrieveContractInformation(clientAccountName)).SizeOfBlockInBytes;
+
             var transactionSize = transaction.ConvertToProto().ToByteArray().Count();
 
-            if (transactionSize + BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE > maxBlockSize)
+            if (transactionSize + BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE > sidechainContext.SidechainPool.BlockSizeInBytes)
             {
                 _logger.LogDebug($"Transaction is too big.");
                 return false;
