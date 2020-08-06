@@ -34,12 +34,13 @@ namespace BlockBase.Network.IO.Analysis
                 networkMessage = NetworkMessage.BuildFromPacket(rawNetworkMessage.IPEndPoint, NetworkMessageProto.Parser.ParseFrom(rawNetworkMessage.Bytes));
                 ValidateNetworkMessage(networkMessage);
             }
-            catch
+            catch (Exception e)
             {
                 networkMessage = null;
                 //RatingManager.Instance.RecordIPEndPointBehavior(BehaviorTypeEnum.SentMalformedMessage, sender);
                 
                 _logger.LogWarning($"Unable to parse network message from {rawNetworkMessage.IPEndPoint.Address.ToString()}:{rawNetworkMessage.IPEndPoint.Port}");
+                _logger.LogDebug($"Exception {e}")
                 return MessageParsingResultEnum.Failure;
             }
 
