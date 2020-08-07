@@ -34,7 +34,7 @@ namespace BlockBase.Node
 
         public static async Task Main(string[] args)
         {
-            Console.WriteLine($"Running version: {Assembly.GetEntryAssembly().GetName().Version.ToString(3)}");
+            Console.WriteLine($"Running version: {Assembly.GetEntryAssembly().GetName().Version.ToString()}");
 
             var webHost = CreateWebHostBuilder(args).Build();
 
