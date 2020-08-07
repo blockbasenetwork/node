@@ -16,10 +16,10 @@ namespace BlockBase.DataProxy.Encryption
 
         void RemoveInfoRecord(InfoRecord infoRecord);
 
-        InfoRecord CreateColumnInfoRecord(estring name, string parentIV, ColumnDefinition data);
+        InfoRecord CreateColumnInfoRecord(estring name, string parentIV, DataType data);
         string DecryptName(InfoRecord infoRecord);
 
-
+        DataType GetColumnDataType(InfoRecord columnInfoRecord);
 
         InfoRecord ChangeInfoRecordName(InfoRecord infoRecord, estring newName);
 

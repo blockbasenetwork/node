@@ -411,7 +411,7 @@ namespace BlockBase.DataProxy.Encryption
             {
                 var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnValue.Key, tableInfoRecord.IV);
 
-                var columnDataType = columnInfoRecord.LData.DataType;
+                var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
 
                 if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
                 {
@@ -553,7 +553,7 @@ namespace BlockBase.DataProxy.Encryption
 
             var leftColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.LeftTableNameAndColumnName.ColumnName, leftTableInfoRecord.IV);
 
-            var leftColumnDataType = leftColumnInfoRecord.LData.DataType;
+            var leftColumnDataType = _encryptor.GetColumnDataType(leftColumnInfoRecord);
 
             ComparisonExpression transformedComparisonExpression;
 
@@ -563,7 +563,7 @@ namespace BlockBase.DataProxy.Encryption
                 var rightTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.TableName, databaseIV);
                 var rightColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.ColumnName, rightTableInfoRecord.IV);
 
-                var rightColumnDataType = rightColumnInfoRecord.LData.DataType;;
+                var rightColumnDataType = _encryptor.GetColumnDataType(rightColumnInfoRecord);
                 if (rightColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
 
                 transformedComparisonExpression = new ComparisonExpression(
@@ -649,7 +649,7 @@ namespace BlockBase.DataProxy.Encryption
 
             if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
-            var columnDataType = columnInfoRecord.LData.DataType;
+            var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
 
             estring equalityBktColumnName = columnInfoRecord.LData.EncryptedEqualityColumnName != null ? new estring(columnInfoRecord.LData.EncryptedEqualityColumnName) : null;
             estring rangeBktColumnName = columnInfoRecord.LData.EncryptedRangeColumnName != null ? new estring(columnInfoRecord.LData.EncryptedRangeColumnName) : null;
@@ -702,7 +702,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private Tuple<IList<ColumnDefinition>, InsertRecordStatement> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableIV, string databaseIV)
         {
-            var columnInfoRecord = _encryptor.CreateColumnInfoRecord(columnDefinition.ColumnName, tableIV, columnDefinition);
+            var columnInfoRecord = _encryptor.CreateColumnInfoRecord(columnDefinition.ColumnName, tableIV, columnDefinition.DataType);
 
 
             var transformedColumnDefinition = new ColumnDefinition(
