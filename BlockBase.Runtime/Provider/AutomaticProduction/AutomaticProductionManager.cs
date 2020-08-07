@@ -74,6 +74,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             while (true)
             {
+                var sidechainsInNode = _sidechainKeeper.GetSidechains();
+
                 try
                 {
                     if (_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains != 0 && _sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
@@ -89,6 +91,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         _logger.LogDebug("Found chains in candidature");
                         foreach (var chainInCandidature in chainsInCandidature)
                         {
+                            if (sidechainsInNode.Any(s => s.SidechainPool.ClientAccountName == chainInCandidature.Name)) continue;
                             var checkResult = await CheckIfSidechainFitsRules(chainInCandidature.Name, true);
                             if (checkResult.found && await DoesVersionCheckOut(chainInCandidature.Name) && !IsSidechainRunning(chainInCandidature.Name))
                             {
@@ -116,8 +119,6 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
                 try
                 {
-                    var sidechainsInNode = _sidechainKeeper.GetSidechains();
-
                     foreach (var sidechainInNode in sidechainsInNode)
                     {
                         var sidechainInDb = await _mongoDbProducerService.GetProducingSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
