@@ -116,7 +116,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
                 listEncryptedIps.Add(AssymetricEncryption.EncryptText(endpoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));
             }
 
-            return listEncryptedIps.Except(encryptedIpsInTable).Any();
+            return (listEncryptedIps.Except(encryptedIpsInTable).Any() || encryptedIpsInTable.Except(listEncryptedIps).Any());
         }
 
         private async Task UpdatePastSidechainDbBasedOnWarnings()
