@@ -41,14 +41,14 @@ namespace BlockBase.DataPersistence.Data
                     if (transactionDB != null)
                     {
                         transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
-                        _logger.LogDebug($"::MongoDB:: Updating transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
+                        //_logger.LogDebug($"::MongoDB:: Updating transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
                         await transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB);
                     }
                     else
                     {
                         transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
                         transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
-                        _logger.LogDebug($"::MongoDB:: Adding transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
+                        //_logger.LogDebug($"::MongoDB:: Adding transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
                         await transactionCollection.InsertOneAsync(transactionDB);
                     }
                 }

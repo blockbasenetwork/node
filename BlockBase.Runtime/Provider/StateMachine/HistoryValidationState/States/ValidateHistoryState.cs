@@ -122,6 +122,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             }
 
             _currentProducerHistoryEntry = _historyValidations.Where(e => e.Account == _nodeConfigurations.AccountName).SingleOrDefault();
+            _hasToSubmitBlockByte = _currentProducerHistoryEntry != null ? true : false;
 
             if (_currentProducerHistoryEntry == null) return;
 
@@ -133,8 +134,6 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
             {
                 _blockHashToValidate = _currentProducerHistoryEntry.BlockHash;
             }
-
-            _hasToSubmitBlockByte = _currentProducerHistoryEntry != null ? true : false;
 
             if (_hasToSubmitBlockByte && _blockByteInHex == null)
             {
