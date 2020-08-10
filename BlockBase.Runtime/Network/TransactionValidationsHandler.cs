@@ -111,10 +111,11 @@ namespace BlockBase.Runtime.Network
                 await _networkService.SendMessageAsync(message);
             }
 
-            if (containsUnsavedTransactions)
-            {
-                await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName, sender, sidechainContext);
-            }
+            //TODO: Temporarily remove logic, to replace with asking for transactions
+            // if (containsUnsavedTransactions)
+            // {
+            //     await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName, sender, sidechainContext);
+            // }
         }
 
         private async Task SendTransactionsToConnectedProviders(IEnumerable<TransactionProto> transactions, string clientAccountName, IPEndPoint sender, SidechainContext sidechainContext)
