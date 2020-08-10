@@ -123,9 +123,9 @@ namespace BlockBase.DataProxy.Encryption
                 new DropDatabaseStatement(new estring(infoRecord.Name))
             };
 
+            //Removes all database tables and columns info records
             var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
             _encryptor.RemoveInfoRecord(infoRecord);
-
             foreach (var child in childrenInfoRecords) _encryptor.RemoveInfoRecord(child);
 
             return sqlStatements;
@@ -563,7 +563,7 @@ namespace BlockBase.DataProxy.Encryption
                 var rightTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.TableName, databaseIV);
                 var rightColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.ColumnName, rightTableInfoRecord.IV);
 
-                var rightColumnDataType = rightColumnInfoRecord.LData.DataType;;
+                var rightColumnDataType = rightColumnInfoRecord.LData.DataType; ;
                 if (rightColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
 
                 transformedComparisonExpression = new ComparisonExpression(
@@ -693,9 +693,8 @@ namespace BlockBase.DataProxy.Encryption
                     }
                 }
                 else
-                {
-                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME));
-                }
+                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnValues.Value[i].IsText && (columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)));
+
             }
             return valuesPerColumn;
         }
