@@ -187,7 +187,10 @@ namespace BlockBase.Domain.Database.QueryParser
 
                 for (int j = i; j < context.literal_value().Length; j += context.column_name().Length)
                 {
-                    insertRecordStatement.ValuesPerColumn[columnName].Add(new Value(context.literal_value()[j].GetText().Trim('\'')));
+                    var valueTxt = context.literal_value()[j].GetText().Trim('\'');
+                    Value value = new Value(valueTxt, true);
+                    if(valueTxt.ToLower() == "null") value = new Value("null", false);
+                    insertRecordStatement.ValuesPerColumn[columnName].Add(value);
                 }
             }
             return insertRecordStatement;

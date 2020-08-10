@@ -227,12 +227,12 @@ namespace BlockBase.Runtime.Sql
             int missingNumberOfRows;
             List<IList<string>> resultRows = new List<IList<string>>();
             IList<string> columnNames;
-            while (true)
+            while (true) //marciak - this while runs until the offset and limit are satisfied
             {
                 var resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
                 missingNumberOfRows = _infoPostProcessing.TranslateSelectResults(originalSimpleSelectStatement, transformedSimpleSelectStatement, resultsList, _databaseName, resultRows, out columnNames, extraParsingNotNeeded);
 
-                if (resultsList.Count() == 0 || missingNumberOfRows == 0)
+                if (resultsList.Count() == 0 || missingNumberOfRows == 0) // marciak - no more results or already reached required number of rows
                     break;
 
                 transformedSimpleSelectStatement.Limit = missingNumberOfRows;
