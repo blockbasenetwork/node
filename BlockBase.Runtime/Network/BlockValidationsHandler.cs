@@ -70,7 +70,7 @@ namespace BlockBase.Runtime.Network
                 
                 var blockHashString = HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash);
 
-                if (await AlreadyProcessedThisBlock(databaseName, blockHashString)) return;
+                if (await _mongoDbProducerService.IsBlockInDatabase(databaseName, blockHashString)) return;
                 if (!await IsTimeForThisProducerToProduce(sidechainPool, blockReceived.BlockHeader.Producer)) return;
 
                 var i = 0;
@@ -118,17 +118,6 @@ namespace BlockBase.Runtime.Network
                 sidechainSemaphore.Release();
             }
 
-        }
-
-        private async Task<bool> AlreadyProcessedThisBlock(string sidechain, string blockhash)
-        {
-            if (await _mongoDbProducerService.GetSidechainBlockAsync(sidechain, blockhash) != null)
-            {
-                //_logger.LogDebug("Block already received and its a valid Block.");
-                return true;
-            }
-            //_logger.LogDebug("Blockhash: " + blockhash + " not processed yet.");
-            return false;
         }
 
         private async Task<bool> IsTimeForThisProducerToProduce(SidechainPool sidechainPool, string blockProducer)
