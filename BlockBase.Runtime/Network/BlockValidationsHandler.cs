@@ -83,7 +83,7 @@ namespace BlockBase.Runtime.Network
 
                         if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && ValidateBlockTransactions(blockReceived, sidechainPool, blockBefore?.LastTransactionSequenceNumber ?? 0))
                         {
-                           
+                            _logger.LogDebug($"Adding block {blockReceived.BlockHeader.SequenceNumber} to database");
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
                             
                             await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
@@ -134,6 +134,8 @@ namespace BlockBase.Runtime.Network
                 var blockProto = SerializationHelper.DeserializeBlock(args.BlockBytes, _logger);
                 if (blockProto == null) return;
 
+                _logger.LogDebug($"Received block {blockProto.BlockHeader.SequenceNumber} from {blockProto.BlockHeader.Producer}");
+
                 if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
                 {
                     _logger.LogDebug($"Block received but sidechain {args.ClientAccountName} is unknown.");
@@ -163,6 +165,8 @@ namespace BlockBase.Runtime.Network
                 }
 
                 await HandleReceivedBlock(sidechainPool, blockProto);
+
+                _logger.LogDebug($"Finish handling block {blockProto.BlockHeader.SequenceNumber}");
             }
             catch (Exception e)
             {
