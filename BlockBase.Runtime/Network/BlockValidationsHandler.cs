@@ -213,7 +213,7 @@ namespace BlockBase.Runtime.Network
                 //if already saved block, skip other validations
                 if (await _mongoDbProducerService.IsTransactionInDB(sidechain.ClientAccountName, transaction))
                 {
-                    return true;
+                    continue;
                 }
                 if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
                 {
