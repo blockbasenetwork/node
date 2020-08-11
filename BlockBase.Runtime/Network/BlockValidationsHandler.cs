@@ -79,7 +79,7 @@ namespace BlockBase.Runtime.Network
                         var blockBefore = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement);
                         BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement)).ConvertToBlockHeader();
 
-                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && ValidateBlockTransactions(blockReceived, sidechainPool, blockBefore?.LastTransactionSequenceNumber ?? 0))
+                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool, blockBefore?.LastTransactionSequenceNumber ?? 0))
                         {
                             _logger.LogDebug($"Adding block {blockReceived.BlockHeader.SequenceNumber} to database");
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
@@ -200,7 +200,7 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        private bool ValidateBlockTransactions(Block block, SidechainPool sidechain, ulong lastIncludedTransactionSequenceNumber)
+        private async Task<bool> ValidateBlockTransactions(Block block, SidechainPool sidechain, ulong lastIncludedTransactionSequenceNumber)
         {
             foreach (var transaction in block.Transactions)
             {
@@ -209,6 +209,11 @@ namespace BlockBase.Runtime.Network
                 {
                     _logger.LogDebug($"Block #{block.BlockHeader.SequenceNumber} Transaction #{transaction.SequenceNumber} doesn't follow order from last sequence number #{lastIncludedTransactionSequenceNumber}");
                     return false;
+                }
+                //if already saved block, skip other validations
+                if (await _mongoDbProducerService.IsTransactionInDB(sidechain.ClientAccountName, transaction))
+                {
+                    return true;
                 }
                 if (!ValidationHelper.IsTransactionHashValid(transaction, out byte[] transactionHash))
                 {
