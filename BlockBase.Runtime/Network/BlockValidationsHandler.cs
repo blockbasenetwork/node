@@ -158,7 +158,7 @@ namespace BlockBase.Runtime.Network
                 }
 
                 var blockKey = $"{args.ClientAccountName}|b{blockProto.BlockHeader.SequenceNumber}";
-                if (_blocksBeingHandled.GetEnumerable().Any(b => b == blockKey))
+                if (!_blocksBeingHandled.GetEnumerable().Any(b => b == blockKey))
                 {
                     _blocksBeingHandled.Add(blockKey);
                     await HandleReceivedBlock(sidechainPool, blockProto);
