@@ -21,6 +21,7 @@ using Google.Protobuf;
 using static BlockBase.Network.Rounting.MessageForwarder;
 using BlockBase.Runtime.Helpers;
 using BlockBase.Runtime.Provider;
+using BlockBase.Utils.Threading;
 
 namespace BlockBase.Runtime.Network
 {
@@ -35,7 +36,7 @@ namespace BlockBase.Runtime.Network
         private SidechainKeeper _sidechainKeeper;
         private NetworkConfigurations _networkConfigurations;
         private BlockRequestsHandler _blockSender;
-        private ConcurrentDictionary<string, SemaphoreSlim> _validatorSemaphores;
+        private ThreadSafeList<string> _blocksBeingHandled;
         private string _endPoint;
 
 
@@ -50,7 +51,7 @@ namespace BlockBase.Runtime.Network
             _nodeConfigurations = nodeConfigurations?.Value;
             _endPoint = systemConfig.IPAddress + ":" + systemConfig.TcpPort;
 
-            _validatorSemaphores = new ConcurrentDictionary<string, SemaphoreSlim>();
+            _blocksBeingHandled = new ThreadSafeList<string>();
             _networkService.SubscribeMinedBlockReceivedEvent(MessageForwarder_ProducedBlockReceived);
             _blockSender = blockSender;
         }
@@ -61,13 +62,10 @@ namespace BlockBase.Runtime.Network
             // var sidechainName = sidechainPool.SmartContractAccount;
             var databaseName = sidechainPool.ClientAccountName;
 
-            var sidechainSemaphore = TryGetAndAddSidechainSemaphore(sidechainPool.ClientAccountName);
-
-            await sidechainSemaphore.WaitAsync();
             try
             {
                 var blockReceived = new Block().SetValuesFromProto(blockProtoReceived);
-                
+
                 var blockHashString = HashHelper.ByteArrayToFormattedHexaString(blockReceived.BlockHeader.BlockHash);
 
                 if (await _mongoDbProducerService.IsBlockInDatabase(databaseName, blockHashString)) return;
@@ -85,7 +83,7 @@ namespace BlockBase.Runtime.Network
                         {
                             _logger.LogDebug($"Adding block {blockReceived.BlockHeader.SequenceNumber} to database");
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
-                            
+
                             await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
 
                             // var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
@@ -113,11 +111,6 @@ namespace BlockBase.Runtime.Network
             {
                 _logger.LogCritical($"Block Validator crashed with exception: {e}");
             }
-            finally
-            {
-                sidechainSemaphore.Release();
-            }
-
         }
 
         private async Task<bool> IsTimeForThisProducerToProduce(SidechainPool sidechainPool, string blockProducer)
@@ -134,7 +127,7 @@ namespace BlockBase.Runtime.Network
                 var blockProto = SerializationHelper.DeserializeBlock(args.BlockBytes, _logger);
                 if (blockProto == null) return;
 
-                _logger.LogDebug($"Received block {blockProto.BlockHeader.SequenceNumber} from {blockProto.BlockHeader.Producer}");
+                _logger.LogDebug($"Chain: {args.ClientAccountName} | Received block {blockProto.BlockHeader.SequenceNumber} from {blockProto.BlockHeader.Producer}");
 
                 if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
                 {
@@ -142,7 +135,7 @@ namespace BlockBase.Runtime.Network
                     return;
                 }
 
-                
+
                 var sidechainPool = sidechainContext.SidechainPool;
 
                 var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPool.ClientAccountName)).ProductionTime;
@@ -164,9 +157,18 @@ namespace BlockBase.Runtime.Network
                     return;
                 }
 
-                await HandleReceivedBlock(sidechainPool, blockProto);
-
-                _logger.LogDebug($"Finish handling block {blockProto.BlockHeader.SequenceNumber}");
+                var blockKey = $"{args.ClientAccountName}|b{blockProto.BlockHeader.SequenceNumber}";
+                if (_blocksBeingHandled.GetEnumerable().Any(b => b == blockKey))
+                {
+                    _blocksBeingHandled.Add(blockKey);
+                    await HandleReceivedBlock(sidechainPool, blockProto);
+                    _blocksBeingHandled.Remove(blockKey);
+                    _logger.LogDebug($"Chain: {args.ClientAccountName} | Finish handling block {blockProto.BlockHeader.SequenceNumber}");
+                }
+                else
+                {
+                    _logger.LogDebug($"Chain: {args.ClientAccountName} | Already handling block {blockProto.BlockHeader.SequenceNumber}");
+                }
             }
             catch (Exception e)
             {
@@ -202,6 +204,7 @@ namespace BlockBase.Runtime.Network
         {
             foreach (var transaction in block.Transactions)
             {
+                _logger.LogDebug($"Chain: {sidechain.ClientAccountName} | Validating transaction #{transaction.SequenceNumber}");
                 if (transaction.SequenceNumber != ++lastIncludedTransactionSequenceNumber)
                 {
                     _logger.LogDebug($"Block #{block.BlockHeader.SequenceNumber} Transaction #{transaction.SequenceNumber} doesn't follow order from last sequence number #{lastIncludedTransactionSequenceNumber}");
@@ -220,24 +223,5 @@ namespace BlockBase.Runtime.Network
             }
             return true;
         }
-
-        #region Semaphore Helpers
-
-        private SemaphoreSlim TryGetAndAddSidechainSemaphore(string sidechain)
-        {
-            var semaphoreKeyPair = _validatorSemaphores.FirstOrDefault(s => s.Key == sidechain);
-
-            var defaultKeyValuePair = default(KeyValuePair<string, SemaphoreSlim>);
-            if (semaphoreKeyPair.Equals(defaultKeyValuePair))
-            {
-                var newSemaphore = new SemaphoreSlim(1, 1);
-                _validatorSemaphores.TryAdd(sidechain, newSemaphore);
-
-                return newSemaphore;
-            }
-
-            return semaphoreKeyPair.Value;
-        }
-        #endregion
     }
 }
