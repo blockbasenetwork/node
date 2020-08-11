@@ -1327,6 +1327,10 @@ namespace BlockBase.Network.Mainchain
                         _logger.LogDebug($"Error sending transaction to Api {EosStub.GetCurentNetwork()}: {apiEx.error.name} Message: {apiEx.error.details.FirstOrDefault()?.message}");
                         return new OpResult<T>(exception);
                     }
+                    else
+                    {
+                        EosStub.ChangeNetwork();
+                    }
                 }
 
                 //Will try to change network if the current one isn't able to respond to the requested endpoint
