@@ -47,7 +47,7 @@ namespace BlockBase.DataProxy.Encryption
                     return 0;
                 }
                 else
-                    return originalSqlStatement.Limit ?? 0 + originalSqlStatement.Offset ?? 0 - alreadyReceivedRows.Count();
+                    return originalSqlStatement.Limit ?? 0;
             }
             var encryptedColumnNames = transformedSimpleSelectStatement.SelectCoreStatement.ResultColumns.Select(r => r.TableName.Value + "." + r.ColumnName.Value).ToList();
             finalColumnNames = encryptedColumnNames;
