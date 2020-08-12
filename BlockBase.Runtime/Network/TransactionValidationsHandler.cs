@@ -56,64 +56,73 @@ namespace BlockBase.Runtime.Network
 
         private async void MessageForwarder_TransactionsReceived(MessageForwarder.TransactionsReceivedEventArgs args, IPEndPoint sender)
         {
-            _logger.LogDebug($"Receiving transaction for sidechain: {args.ClientAccountName}");
-            var transactionsProto = SerializationHelper.DeserializeTransactions(args.TransactionsBytes, _logger);
-
-            if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
+            try
             {
-                _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
-                return;
-            }
+                _logger.LogDebug($"Receiving transaction for sidechain: {args.ClientAccountName}");
+                var transactionsProto = SerializationHelper.DeserializeTransactions(args.TransactionsBytes, _logger);
 
-            if (transactionsProto == null) return;
-
-            var receivedValidTransactions = new List<ulong>();
-            var containsUnsavedTransactions = false;
-            _logger.LogInformation($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber} for sidechain {args.ClientAccountName}");
-
-            foreach (var transactionProto in transactionsProto)
-            {
-                if (receivedValidTransactions.Contains(transactionProto.SequenceNumber))
-                    continue;
-
-                var transaction = new Transaction().SetValuesFromProto(transactionProto);
-                if (await ValidateTransaction(transaction, args.ClientAccountName, sidechainContext))
+                if (!_sidechainKeeper.TryGet(args.ClientAccountName, out var sidechainContext))
                 {
-                    var isTransactionAlreadySaved = await CheckIfAlreadySavedTransactionAndSave(args.ClientAccountName, transaction);
-                    if (!isTransactionAlreadySaved && !containsUnsavedTransactions) containsUnsavedTransactions = true;
-                    receivedValidTransactions.Add(transaction.SequenceNumber);
+                    _logger.LogDebug($"Transaction received but sidechain {args.ClientAccountName} is unknown.");
+                    return;
                 }
+
+                if (transactionsProto == null) return;
+
+                var receivedValidTransactions = new List<ulong>();
+                var containsUnsavedTransactions = false;
+                _logger.LogInformation($"Received transaction #{transactionsProto.FirstOrDefault()?.SequenceNumber} to #{transactionsProto.LastOrDefault()?.SequenceNumber} for sidechain {args.ClientAccountName}");
+
+                foreach (var transactionProto in transactionsProto)
+                {
+                    if (receivedValidTransactions.Contains(transactionProto.SequenceNumber))
+                        continue;
+
+                    var transaction = new Transaction().SetValuesFromProto(transactionProto);
+                    if (await ValidateTransaction(transaction, args.ClientAccountName, sidechainContext))
+                    {
+                        var isTransactionAlreadySaved = await CheckIfAlreadySavedTransactionAndSave(args.ClientAccountName, transaction);
+                        if (!isTransactionAlreadySaved && !containsUnsavedTransactions) containsUnsavedTransactions = true;
+                        receivedValidTransactions.Add(transaction.SequenceNumber);
+                    }
+                }
+
+                var lastTransaction = new Transaction().SetValuesFromProto(transactionsProto.Last());
+                var alreadyReceivedTrxAfterLast = await GetConfirmedTransactionsSequeceNumber(lastTransaction, args.ClientAccountName);
+                if (alreadyReceivedTrxAfterLast.Count > 0)
+                    receivedValidTransactions.AddRange(alreadyReceivedTrxAfterLast);
+
+                var data = new List<byte>();
+                foreach (var transactionSequenceNumber in receivedValidTransactions)
+                    data.AddRange(BitConverter.GetBytes(transactionSequenceNumber));
+
+                if (data.Count() == 0)
+                    return;
+
+                var requesterPeer = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Where(p => p.ConnectionAccountName == args.ClientAccountName).FirstOrDefault();
+                if (requesterPeer?.IPEndPoint?.Address.ToString() == sender.Address.ToString() && requesterPeer?.IPEndPoint?.Port == sender.Port)
+                {
+                    var message = new NetworkMessage(
+                        NetworkMessageTypeEnum.ConfirmTransactionReception,
+                        data.ToArray(),
+                        TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey,
+                        _nodeConfigurations.ActivePublicKey,
+                        _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort,
+                        _nodeConfigurations.AccountName, sender);
+                    _logger.LogDebug("Sending confirmation transaction.");
+                    await _networkService.SendMessageAsync(message);
+                }
+
+                //TODO: Temporarily remove logic, to replace with asking for transactions
+                // if (containsUnsavedTransactions)
+                // {
+                //     await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName, sender, sidechainContext);
+                // }
             }
-
-            var lastTransaction = new Transaction().SetValuesFromProto(transactionsProto.Last());
-            var alreadyReceivedTrxAfterLast = await GetConfirmedTransactionsSequeceNumber(lastTransaction, args.ClientAccountName);
-            if (alreadyReceivedTrxAfterLast.Count > 0)
-                receivedValidTransactions.AddRange(alreadyReceivedTrxAfterLast);
-
-            var data = new List<byte>();
-            foreach (var transactionSequenceNumber in receivedValidTransactions)
-                data.AddRange(BitConverter.GetBytes(transactionSequenceNumber));
-
-            if (data.Count() == 0)
-                return;
-
-            var requesterPeer = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Where(p => p.ConnectionAccountName == args.ClientAccountName).FirstOrDefault();
-            if (requesterPeer.IPEndPoint.Address.ToString() == sender.Address.ToString() && requesterPeer.IPEndPoint.Port == sender.Port)
+            catch (Exception e)
             {
-                var message = new NetworkMessage(
-                    NetworkMessageTypeEnum.ConfirmTransactionReception,
-                    data.ToArray(),
-                    TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey,
-                    _nodeConfigurations.ActivePublicKey,
-                    _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort,
-                    _nodeConfigurations.AccountName, sender);
-                _logger.LogDebug("Sending confirmation transaction.");
-                await _networkService.SendMessageAsync(message);
-            }
-
-            if (containsUnsavedTransactions)
-            {
-                await SendTransactionsToConnectedProviders(transactionsProto, args.ClientAccountName, sender, sidechainContext);
+                _logger.LogError("Error handling received transactions");
+                _logger.LogDebug($"Exception: {e}");
             }
         }
 
