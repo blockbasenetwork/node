@@ -35,14 +35,12 @@ namespace BlockBase.DataPersistence.Data
                 await blockheaderCollection.InsertOneAsync(blockHeaderDB);
 
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
-                var replaceTasks = new List<Task>();
                 foreach (var transaction in block.Transactions)
                 {
                     var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
                     transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
-                    replaceTasks.Add(transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB, new UpdateOptions { IsUpsert = true }));
+                    await transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB, new UpdateOptions { IsUpsert = true });
                 }
-                await Task.WhenAll(replaceTasks);
                 await session.CommitTransactionAsync();
             }
         }
