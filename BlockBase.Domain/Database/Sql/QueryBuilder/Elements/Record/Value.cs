@@ -7,11 +7,11 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
     public class Value
     {
         public string ValueToInsert { get; set; }
-        public bool? IsText { get; set; }
+        public bool IsText { get; set; }
 
         public Value() { }
 
-        public Value(string valueToInsert, bool? isText = null)
+        public Value(string valueToInsert, bool isText = false)
         {
             ValueToInsert = valueToInsert;
             IsText = isText;

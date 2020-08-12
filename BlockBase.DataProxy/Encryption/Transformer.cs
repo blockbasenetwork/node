@@ -123,9 +123,9 @@ namespace BlockBase.DataProxy.Encryption
                 new DropDatabaseStatement(new estring(infoRecord.Name))
             };
 
+            //Removes all database tables and columns info records
             var childrenInfoRecords = _encryptor.FindChildren(infoRecord.IV, true);
             _encryptor.RemoveInfoRecord(infoRecord);
-
             foreach (var child in childrenInfoRecords) _encryptor.RemoveInfoRecord(child);
 
             return sqlStatements;
@@ -411,7 +411,7 @@ namespace BlockBase.DataProxy.Encryption
             {
                 var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnValue.Key, tableInfoRecord.IV);
 
-                var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
+                var columnDataType = columnInfoRecord.LData.DataType;
 
                 if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
                 {
@@ -445,7 +445,7 @@ namespace BlockBase.DataProxy.Encryption
 
             if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
             {
-                transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+                if (selectStatement.SelectCoreStatement.WhereExpression != null) transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
                 sqlStatements.Add(transformedUpdateRecordStatement);
             }
 
@@ -468,7 +468,7 @@ namespace BlockBase.DataProxy.Encryption
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(deleteRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
             if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
-            transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+            if (transformedDeleteRecordStatement.WhereExpression != null) transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
             sqlStatements.Add(transformedDeleteRecordStatement);
 
             return sqlStatements;
@@ -553,7 +553,7 @@ namespace BlockBase.DataProxy.Encryption
 
             var leftColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.LeftTableNameAndColumnName.ColumnName, leftTableInfoRecord.IV);
 
-            var leftColumnDataType = _encryptor.GetColumnDataType(leftColumnInfoRecord);
+            var leftColumnDataType = leftColumnInfoRecord.LData.DataType;
 
             ComparisonExpression transformedComparisonExpression;
 
@@ -563,7 +563,7 @@ namespace BlockBase.DataProxy.Encryption
                 var rightTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.TableName, databaseIV);
                 var rightColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.ColumnName, rightTableInfoRecord.IV);
 
-                var rightColumnDataType = _encryptor.GetColumnDataType(rightColumnInfoRecord);
+                var rightColumnDataType = rightColumnInfoRecord.LData.DataType; ;
                 if (rightColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
 
                 transformedComparisonExpression = new ComparisonExpression(
@@ -649,7 +649,7 @@ namespace BlockBase.DataProxy.Encryption
 
             if (columnInfoRecord == null) throw new FieldAccessException("No column with that name.");
 
-            var columnDataType = _encryptor.GetColumnDataType(columnInfoRecord);
+            var columnDataType = columnInfoRecord.LData.DataType;
 
             estring equalityBktColumnName = columnInfoRecord.LData.EncryptedEqualityColumnName != null ? new estring(columnInfoRecord.LData.EncryptedEqualityColumnName) : null;
             estring rangeBktColumnName = columnInfoRecord.LData.EncryptedRangeColumnName != null ? new estring(columnInfoRecord.LData.EncryptedRangeColumnName) : null;
@@ -693,16 +693,15 @@ namespace BlockBase.DataProxy.Encryption
                     }
                 }
                 else
-                {
-                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME));
-                }
+                    valuesPerColumn[new estring(columnInfoRecord.Name)].Add(new Value(columnValues.Value[i].ValueToInsert, columnValues.Value[i].IsText && (columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)));
+
             }
             return valuesPerColumn;
         }
 
         private Tuple<IList<ColumnDefinition>, InsertRecordStatement> GetTransformedColumnDefinition(ColumnDefinition columnDefinition, string tableIV, string databaseIV)
         {
-            var columnInfoRecord = _encryptor.CreateColumnInfoRecord(columnDefinition.ColumnName, tableIV, columnDefinition.DataType);
+            var columnInfoRecord = _encryptor.CreateColumnInfoRecord(columnDefinition.ColumnName, tableIV, columnDefinition);
 
 
             var transformedColumnDefinition = new ColumnDefinition(

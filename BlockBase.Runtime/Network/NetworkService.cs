@@ -172,7 +172,7 @@ namespace BlockBase.Runtime.Network
         {
             bool messageValidator(NetworkMessage networkMessage)
             {
-                return (networkMessage.Sender.Address.ToString() == receiveFrom.Address.ToString());
+                return (networkMessage.Sender.Address.ToString() == receiveFrom.Address.ToString() && receiveFrom.Port == networkMessage.Sender.Port);
             }
 
             return await MessageForwarder.RegisterMessageEvent(type, messageValidator, null);

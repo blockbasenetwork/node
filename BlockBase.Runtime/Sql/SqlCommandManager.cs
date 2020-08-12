@@ -1,11 +1,7 @@
 ﻿using System;
-using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Database.Sql.Generators;
-using BlockBase.Domain.Database.QueryParser;
-using BlockBase.Domain.Database.Sql.QueryParser;
 using BlockBase.DataPersistence.Sidechain.Connectors;
-using Antlr4.Runtime;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using BlockBase.DataProxy;

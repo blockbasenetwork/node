@@ -33,13 +33,13 @@ namespace BlockBase.DataProxy.Encryption
                 alreadyReceivedRows.AddRange(removedExtraColumns);
                 finalColumnNames = columnsToMantain;
 
-                if ( extraParsingNotNeeded ||
+                if (extraParsingNotNeeded || 
                     (!originalSqlStatement.Offset.HasValue &&
                     (!originalSqlStatement.Limit.HasValue || originalSqlStatement.Limit == alreadyReceivedRows.Count())))
                     return 0;
-                
 
-                else if (originalSqlStatement.Offset.HasValue && 
+
+                else if (originalSqlStatement.Offset.HasValue &&
                         (originalSqlStatement.Offset + originalSqlStatement.Limit == alreadyReceivedRows.Count() ||
                         allResults.Count() == 0))
                 {
@@ -74,7 +74,7 @@ namespace BlockBase.DataProxy.Encryption
                 changeRecordStatements.AddRange(additionalUpdateRecordStatements);
             }
 
-            var wrongResults = decryptedResults.Except(filteredResults).ToList(); //these are needed to remove extra results on the first
+            var wrongResults = decryptedResults.Except(filteredResults).ToList(); //marciak - these are needed to remove extra results on the first
 
             if (changeRecordSqlCommand.TransformedSqlStatement.Count == 2)
             {
@@ -182,7 +182,7 @@ namespace BlockBase.DataProxy.Encryption
 
                     if (columnInfoRecord != null)
                     {
-                        var dataType = _encryptor.GetColumnDataType(columnInfoRecord);
+                        var dataType = columnInfoRecord.LData.DataType;
 
                         if (dataType.DataTypeName == DataTypeEnum.ENCRYPTED)
                         {
@@ -331,7 +331,7 @@ namespace BlockBase.DataProxy.Encryption
                     foreach (var columnInfoRecord in columnsInfoRecords)
                     {
                         var columnName = columnInfoRecord.KeyName != null ? _encryptor.DecryptName(columnInfoRecord) : "!" + columnInfoRecord.Name;
-                        var column = new FieldPoco(columnName, _encryptor.GetColumnDataType(columnInfoRecord).DataTypeName.ToString(), null);
+                        var column = new FieldPoco(columnName, columnInfoRecord.LData.DataType.DataTypeName.ToString(), columnInfoRecord.LData.ColumnConstraints?.Select(c => c.ToString()).ToList());
                         table.Fields.Add(column);
                     }
                     database.Tables.Add(table);

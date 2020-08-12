@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Open.P2P;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -43,8 +44,9 @@ namespace BlockBase.Runtime.Network
         private const int STARTING_RATING = 100;
         private const int RATING_LOST_FOR_DISCONECT = 10;
         private const int RATING_LOST_FOR_CONNECT_FAILURE = 10;
-        private bool _tryingConnection;
-        private bool _incomingConnectionOngoing;
+
+        private TaskContainer ProcessConnectionsTaskContainer;
+        private ConcurrentQueue<Action> ProcessingQueue;
 
         public PeerConnectionsHandler(INetworkService networkService, SystemConfig systemConfig, ILogger<PeerConnectionsHandler> logger, IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations)
         {
@@ -57,6 +59,7 @@ namespace BlockBase.Runtime.Network
 
             CurrentPeerConnections = new ThreadSafeList<PeerConnection>();
             KnownSidechains = new ThreadSafeList<SidechainPool>();
+            ProcessingQueue = new ConcurrentQueue<Action>();
             _waitingForApprovalPeers = new ThreadSafeList<Peer>();
 
             _networkService.SubscribePeerConnectedEvent(TcpConnector_PeerConnected);
@@ -68,6 +71,36 @@ namespace BlockBase.Runtime.Network
         }
 
         #region Enter Points
+
+        public TaskContainer StartDequeingTask()
+        {
+            if (ProcessConnectionsTaskContainer != null) return ProcessConnectionsTaskContainer;
+
+            ProcessConnectionsTaskContainer = TaskContainer.Create(RunDequeingTask);
+            ProcessConnectionsTaskContainer.Start();
+            return ProcessConnectionsTaskContainer;
+        }
+
+        public async Task RunDequeingTask()
+        {
+            while (ProcessingQueue.Count() != 0)
+            {
+                try
+                {
+                    var dequeueValid = ProcessingQueue.TryDequeue(out var firstTask);
+                    if (dequeueValid)
+                    {
+                        await Task.Run(firstTask);
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogDebug($"Error running task dequeue: {e}");
+                }
+            }
+
+            ProcessConnectionsTaskContainer = null;
+        }
 
         public async Task ConnectToProducers(IDictionary<string, IPEndPoint> producersIPs)
         {
@@ -122,15 +155,12 @@ namespace BlockBase.Runtime.Network
             if (producersWhoIAmSupposedToBeConnected.Any()) _logger.LogDebug("Connect to producers in Sidechain: " + sidechain.ClientAccountName);
 
             var connectionTasks = new List<Task>();
-            _tryingConnection = true;
 
             foreach (ProducerInPool producer in producersWhoIAmSupposedToBeConnected)
             {
                 connectionTasks.Add(ConnectToProducer(sidechain, producer));
             }
             await Task.WhenAll(connectionTasks);
-
-            _tryingConnection = false;
         }
 
         private async Task ConnectToProducer(SidechainPool sidechain, ProducerInPool producer)
@@ -182,51 +212,35 @@ namespace BlockBase.Runtime.Network
             }
         }
 
-        private async void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
+        private void TcpConnector_PeerConnected(object sender, PeerConnectedEventArgs args)
         {
-            int count = 0;
-
-            while (_tryingConnection || _incomingConnectionOngoing)
+            ProcessingQueue.Enqueue(() =>
             {
-                //polite wait
-                await Task.Delay(1000);
-                count++;
-                _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
-                if (count > 2)
+                var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
+                var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
+
+                if (peerConnection != null)
                 {
-                    _tryingConnection = false;
-                    _incomingConnectionOngoing = false;
-                    break;
+                    if (peerConnection.Rating < MINIMUM_RATING)
+                    {
+                        _logger.LogDebug($"Peer rating ({peerConnection.Rating}) below minimum.");
+                        Disconnect(args.Peer);
+                    }
+                    else
+                    {
+                        peerConnection.ConnectionState = ConnectionStateEnum.Connected;
+                        peerConnection.Peer = args.Peer;
+                    }
                 }
-                continue;
-            }
 
-            _incomingConnectionOngoing = true;
-
-            var peerConnection = CurrentPeerConnections.GetEnumerable().Where(p => p.IPEndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
-            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.Peer.EndPoint)).SingleOrDefault();
-
-            if (peerConnection != null)
-            {
-                if (peerConnection.Rating < MINIMUM_RATING)
+                else if (peer == null)
                 {
-                    _logger.LogDebug($"Peer rating ({peerConnection.Rating}) below minimum.");
-                    Disconnect(args.Peer);
+                    if (!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
+                        _waitingForApprovalPeers.Add(args.Peer);
                 }
-                else
-                {
-                    peerConnection.ConnectionState = ConnectionStateEnum.Connected;
-                    peerConnection.Peer = args.Peer;
-                }
-            }
+            });
 
-            else if (peer == null)
-            {
-                if (!_waitingForApprovalPeers.Contains((p) => p.EndPoint.Address.ToString() == args.Peer.EndPoint.Address.ToString()))
-                    _waitingForApprovalPeers.Add(args.Peer);
-            }
-
-            _incomingConnectionOngoing = false;
+            StartDequeingTask();
         }
 
         private void TcpConnector_PeerDisconnected(object sender, PeerDisconnectedEventArgs args)
@@ -244,63 +258,53 @@ namespace BlockBase.Runtime.Network
             if (peer != null) _waitingForApprovalPeers.Remove(peer);
         }
 
-        private async void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
+        private void MessageForwarder_IdentificationMessageReceived(IdentificationMessageReceivedEventArgs args)
         {
-            int count = 0;
-            while (_incomingConnectionOngoing)
+            ProcessingQueue.Enqueue(() =>
             {
-                //polite wait
-                await Task.Delay(1000);
-                count++;
-                _logger.LogDebug($"Looping thread id {Task.CurrentId} counter {count}");
-                if (count > 2)
+                var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.SenderIPEndPoint)).SingleOrDefault();
+
+                if (peer == null)
                 {
-                    _incomingConnectionOngoing = false;
-                    break;
+                    _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
+                    return;
                 }
-                continue;
-            }
 
-            var peer = _waitingForApprovalPeers.GetEnumerable().Where(p => p.EndPoint.IsEqualTo(args.SenderIPEndPoint)).SingleOrDefault();
+                var sidechainPool = KnownSidechains.GetEnumerable().Where(s => s.ClientAccountName == args.EosAccount).SingleOrDefault();
+                if (sidechainPool != null)
+                {
+                    _logger.LogDebug("Acceptable client connection.");
+                    var peerConnection = AddIfNotExistsPeerConnection(args.SenderIPEndPoint, sidechainPool.ClientAccountName);
+                    peerConnection.ConnectionState = ConnectionStateEnum.Connected;
+                    peerConnection.Peer = peer;
+                    _waitingForApprovalPeers.Remove(peer);
+                    return;
+                }
 
-            if (peer == null)
-            {
-                _logger.LogDebug("There's no peer with this ip waiting for confirmation.");
-                return;
-            }
+                var producer = KnownSidechains.GetEnumerable().SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount)).FirstOrDefault();
 
-            var sidechainPool = KnownSidechains.GetEnumerable().Where(s => s.ClientAccountName == args.EosAccount).SingleOrDefault();
-            if (sidechainPool != null)
-            {
-                _logger.LogDebug("Acceptable client connection.");
-                var peerConnection = AddIfNotExistsPeerConnection(args.SenderIPEndPoint, sidechainPool.ClientAccountName);
-                peerConnection.ConnectionState = ConnectionStateEnum.Connected;
-                peerConnection.Peer = peer;
+                if (producer == null)
+                {
+                    _logger.LogDebug("I do not know this provider/client.");
+                    Disconnect(peer);
+                }
+                else if (producer.PeerConnection == null || (producer.PeerConnection.ConnectionState != ConnectionStateEnum.Connected && producer.PeerConnection.Rating > MINIMUM_RATING))
+                {
+                    _logger.LogDebug("Acceptable peer.");
+                    producer.ProducerInfo.IPEndPoint = peer.EndPoint;
+                    producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
+                    producer.PeerConnection.ConnectionState = ConnectionStateEnum.Connected;
+                    producer.PeerConnection.Peer = peer;
+                }
+                else if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
+                {
+                    _logger.LogDebug($"Existing connection found with peer {producer.ProducerInfo.AccountName}");
+                    producer.PeerConnection.Peer = peer;
+                }
                 _waitingForApprovalPeers.Remove(peer);
-                return;
-            }
+            });
 
-            var producer = KnownSidechains.GetEnumerable().SelectMany(p => p.ProducersInPool.GetEnumerable().Where(m => m.ProducerInfo.AccountName == args.EosAccount)).FirstOrDefault();
-
-            if (producer == null)
-            {
-                _logger.LogDebug("I do not know this provider/client.");
-                Disconnect(peer);
-            }
-            else if (producer.PeerConnection == null || (producer.PeerConnection.ConnectionState != ConnectionStateEnum.Connected && producer.PeerConnection.Rating > MINIMUM_RATING))
-            {
-                _logger.LogDebug("Acceptable peer.");
-                producer.ProducerInfo.IPEndPoint = peer.EndPoint;
-                producer.PeerConnection = AddIfNotExistsPeerConnection(producer.ProducerInfo.IPEndPoint, producer.ProducerInfo.AccountName);
-                producer.PeerConnection.ConnectionState = ConnectionStateEnum.Connected;
-                producer.PeerConnection.Peer = peer;
-            }
-            else if (producer.PeerConnection.ConnectionState == ConnectionStateEnum.Connected)
-            {
-                 _logger.LogDebug($"Existing connection found with peer {producer.ProducerInfo.AccountName}");
-                producer.PeerConnection.Peer = peer;
-            }
-            _waitingForApprovalPeers.Remove(peer);
+            StartDequeingTask();
         }
 
         private async void MessageForwarder_PingMessageReceived(PingReceivedEventArgs args, IPEndPoint sender)
@@ -344,7 +348,7 @@ namespace BlockBase.Runtime.Network
                     }
                 }
 
-                await Task.WhenAll(checks);;
+                await Task.WhenAll(checks); ;
             }
             catch (Exception e)
             {

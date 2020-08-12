@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Node.Commands.Requester
 {
-    public class ClaimStakeCommand : AbstractCommand
+    public class RequesterClaimStakeCommand : AbstractCommand
     {
         private IMainchainService _mainchainService;
 
@@ -21,9 +21,9 @@ namespace BlockBase.Node.Commands.Requester
 
         public override string CommandInfo => "Claims sidechain leftover stake";
 
-        public override string CommandUsage => "claim stake";
+        public override string CommandUsage => "claim req stake";
 
-        public ClaimStakeCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
+        public RequesterClaimStakeCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
@@ -48,26 +48,18 @@ namespace BlockBase.Node.Commands.Requester
 
         protected override bool IsCommandAppropratelyStructured(string[] commandData)
         {
-            return commandData.Length == 2 || commandData.Length == 4;
+            return commandData.Length == 3;
         }
 
         protected override bool IsCommandRecognizable(string commandStr)
         {
-            return commandStr.StartsWith("request sidechain");
+            return commandStr.StartsWith(CommandUsage);
         }
 
         protected override CommandParseResult ParseCommand(string[] commandData)
         {
-            if (commandData.Length == 2) return new CommandParseResult(true, true);
-            if (commandData.Length == 4)
-            {
-                if (commandData[2] != "--stake") return new CommandParseResult(true, CommandUsage);
-                if (!decimal.TryParse(commandData[3], out var stake)) return new CommandParseResult(true, "Unable to parse stake");
-                Stake = stake;
-                return new CommandParseResult(true, true);
-            }
-            
-            return new CommandParseResult(true, CommandUsage);
+            if (commandData.Length != 3) return new CommandParseResult(false, false);
+            return new CommandParseResult(true, true);
         
         }
 

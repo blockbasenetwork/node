@@ -33,8 +33,8 @@ namespace BlockBase.Runtime.Network
         private TaskContainer TaskContainer;
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NetworkConfigurations _networkConfigurations;
-        private readonly int MAX_TRANSACTIONS_PER_MESSAGE = 50;
-        private readonly int WAIT_TIME_IN_SECONDS = 10;
+        private readonly int MAX_BYTES_PER_MESSAGE = 250000;
+        private readonly int WAIT_TIME_IN_SECONDS = 15;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
         private ThreadSafeList<ProducerInTable> _currentProducers;
@@ -133,7 +133,6 @@ namespace BlockBase.Runtime.Network
             {
                 try
                 {
-
                     if (_transactionsToSend.Count() != 0)
                     {
                         var producers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
@@ -155,28 +154,17 @@ namespace BlockBase.Runtime.Network
         {
             var listPeerConnections = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().ToList();
             ListHelper.Shuffle<PeerConnection>(listPeerConnections);
+            var sendTasks = new List<Task>();
             foreach (var peerConnection in listPeerConnections)
             {
                 if (peerConnection.ConnectionState == ConnectionStateEnum.Connected)
                 {
-                    var transactionsSendingTrackPocos = _transactionsToSend.GetEnumerable().Where(p => !p.ProducersAlreadyReceived.GetEnumerable().Contains(peerConnection.ConnectionAccountName)).ToList();
-                    var transactionsToRemove = new List<TransactionSendingTrackPoco>();
-
-                    foreach (var transactionSendingTrack in transactionsSendingTrackPocos)
-                    {
-                        if (transactionSendingTrack.ProducersAlreadyReceived.Count() > Math.Floor((double)(producers.Count() / 2))
-                            && producers.Count() > _numberOfConsecutiveEmptyBlocks)
-                        {
-                            transactionsToRemove.Add(transactionSendingTrack);
-                        }
-                    }
-
-                    transactionsToRemove.ForEach(t => transactionsSendingTrackPocos.Remove(t));
-
-                    if (transactionsSendingTrackPocos.Count != 0)
-                        await SendScriptTransactionsToProducer(transactionsSendingTrackPocos.Select(p => p.Transaction), peerConnection);
+                    var transactionToSend = _transactionsToSend.GetEnumerable().Where(p => !p.ProducersAlreadyReceived.GetEnumerable().Contains(peerConnection.ConnectionAccountName)).Select(p => p.Transaction);
+                    if (transactionToSend.Count() != 0)
+                        sendTasks.Add(SendScriptTransactionsToProducer(transactionToSend, peerConnection));
                 }
             }
+            await Task.WhenAll(sendTasks);
         }
 
         private async Task SendScriptTransactionsToProducer(IEnumerable<Transaction> transactions, PeerConnection peerConnection)
@@ -186,13 +174,14 @@ namespace BlockBase.Runtime.Network
             short lenght = (short)sidechainNameBytes.Length;
             data.AddRange(BitConverter.GetBytes(lenght));
             data.AddRange(sidechainNameBytes);
-            foreach (var transaction in transactions.Take(MAX_TRANSACTIONS_PER_MESSAGE))
+            foreach (var transaction in transactions)
             {
                 var transactionBytes = transaction.ConvertToProto().ToByteArray();
                 data.AddRange(BitConverter.GetBytes(transactionBytes.Count()));
                 data.AddRange(transactionBytes);
+                if (data.Count >= MAX_BYTES_PER_MESSAGE) break;
             }
-            var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
+            var message = new NetworkMessage(NetworkMessageTypeEnum.SendTransactions, data.ToArray(), TransportTypeEnum.Tcp, _nodeConfigurations.ActivePrivateKey, _nodeConfigurations.ActivePublicKey, _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort, _nodeConfigurations.AccountName, peerConnection.IPEndPoint);
 
             _logger.LogDebug($"Sending transactions #{transactions?.First()?.SequenceNumber} to #{transactions?.Last()?.SequenceNumber} to producer {peerConnection.ConnectionAccountName}");
             await _networkService.SendMessageAsync(message);

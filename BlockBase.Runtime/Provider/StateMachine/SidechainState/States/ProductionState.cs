@@ -110,7 +110,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             keysToUse.Add(_sidechainPool.ClientPublicKey);
 
             var listEncryptedIps = new List<string>();
-            var endpoint = _networkConfigurations.PublicIpAddress + ":" + _networkConfigurations.TcpPort;
+            var endpoint = _networkConfigurations.GetResolvedIp() + ":" + _networkConfigurations.TcpPort;
             foreach (string receiverPublicKey in keysToUse)
             {
                 listEncryptedIps.Add(AssymetricEncryption.EncryptText(endpoint, _nodeConfigurations.ActivePrivateKey, receiverPublicKey));

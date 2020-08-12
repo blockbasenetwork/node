@@ -37,20 +37,9 @@ namespace BlockBase.DataPersistence.Data
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
                 foreach (var transaction in block.Transactions)
                 {
-                    var transactionDB = await GetTransactionDBAsync(databaseName, HashHelper.ByteArrayToFormattedHexaString(transaction.TransactionHash));
-                    if (transactionDB != null)
-                    {
-                        transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
-                        _logger.LogDebug($"::MongoDB:: Updating transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
-                        await transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB);
-                    }
-                    else
-                    {
-                        transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
-                        transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
-                        _logger.LogDebug($"::MongoDB:: Adding transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
-                        await transactionCollection.InsertOneAsync(transactionDB);
-                    }
+                    var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
+                    transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
+                    await transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB, new UpdateOptions { IsUpsert = true });
                 }
                 await session.CommitTransactionAsync();
             }
@@ -365,7 +354,6 @@ namespace BlockBase.DataPersistence.Data
 
                 var transactionQuery = from t in transactionCollection.AsQueryable()
                                        where t.TransactionHash == HashHelper.ByteArrayToFormattedHexaString(transaction.TransactionHash)
-                                       || t.SequenceNumber == transaction.SequenceNumber
                                        select t;
 
                 if (await transactionQuery.SingleOrDefaultAsync() == null) return false;
@@ -395,13 +383,14 @@ namespace BlockBase.DataPersistence.Data
 
         #region Recover DB
 
-        public async Task AddProducingSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool isAutomatic)
+        public async Task AddProducingSidechainToDatabaseAsync(string sidechain, ulong timestamp, bool isAutomatic, int producerType)
         {
             sidechain = ClearSpecialCharacters(sidechain);
             var sidechainDb = new SidechainDB()
             {
                 Id = sidechain,
                 Timestamp = timestamp,
+                ProducerType = producerType,
                 IsAutomatic = isAutomatic
             };
 

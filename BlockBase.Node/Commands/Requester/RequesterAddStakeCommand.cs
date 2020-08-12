@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BlockBase.Node.Commands.Requester
 {
-    public class AddStakeCommand : AbstractCommand
+    public class RequesterAddStakeCommand : AbstractCommand
     {
         private IMainchainService _mainchainService;
 
@@ -23,16 +23,16 @@ namespace BlockBase.Node.Commands.Requester
 
         public override string CommandInfo => "Adds stake to sidechain";
 
-        public override string CommandUsage => "add --stake <stakeValue>";
+        public override string CommandUsage => "add req --stake <stakeValue>";
 
-        public AddStakeCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
+        public RequesterAddStakeCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations)
         {
             _mainchainService = mainchainService;
             _nodeConfigurations = nodeConfigurations;
             _logger = logger;
         }
 
-        public AddStakeCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, double stake) : this(logger, mainchainService, nodeConfigurations)
+        public RequesterAddStakeCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, double stake) : this(logger, mainchainService, nodeConfigurations)
         {
             _stake = stake;
         }
@@ -64,15 +64,15 @@ namespace BlockBase.Node.Commands.Requester
 
         protected override bool IsCommandRecognizable(string commandStr)
         {
-            return commandStr.StartsWith("add");
+            return commandStr.StartsWith("add req");
         }
 
         protected override CommandParseResult ParseCommand(string[] commandData)
         {
-            if (commandData.Length == 3)
+            if (commandData.Length == 4)
             {
-                if (commandData[1] != "--stake") return new CommandParseResult(true, CommandUsage);
-                if (!Double.TryParse(commandData[2], out var stake)) return new CommandParseResult(true, "Unable to parse stake");
+                if (commandData[2] != "--stake") return new CommandParseResult(true, CommandUsage);
+                if (!Double.TryParse(commandData[3], out var stake)) return new CommandParseResult(true, "Unable to parse stake");
                 _stake = stake;
                 return new CommandParseResult(true, true);
             }

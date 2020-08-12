@@ -294,12 +294,12 @@ namespace BlockBase.Runtime.Provider
             {
                 try
                 {
-                    _logger.LogDebug($"Adding block #{block.BlockHeader.SequenceNumber} to database.");
+                    _logger.LogDebug($"Adding block #{block.BlockHeader.SequenceNumber} with {block.Transactions.Count} transactions to database.");
                     _lastReceivedDate = DateTime.UtcNow;
                     await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(block, databaseName);
-                    var transactions = await _mongoDbProducerService.GetBlockTransactionsAsync(_sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
                     await _mongoDbProducerService.ConfirmBlock(databaseName, HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash));
                     _missingBlocksSequenceNumber = _missingBlocksSequenceNumber.Where(s => s != block.BlockHeader.SequenceNumber).ToList();
+                    _logger.LogDebug($"Added block #{block.BlockHeader.SequenceNumber} to database");
                 }
                 catch (Exception)
                 {

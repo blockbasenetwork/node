@@ -25,6 +25,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         private List<ProducerInTable> _producers;
         private List<IPAddressTable> _ipAddresses;
         private bool _peersConnected;
+        private bool _hasDoneWorkOnce;
 
         public CheckConnectionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, PeerConnectionsHandler peerConnectionsHandler) : base(logger, sidechainPool, mainchainService)
         {
@@ -43,6 +44,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
         protected override async Task DoWork()
         {
             await _peerConnectionsHandler.ArePeersConnected(_sidechainPool);
+            _hasDoneWorkOnce = true;
         }
 
         protected override Task<bool> HasConditionsToContinue()
@@ -52,7 +54,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
         protected override Task<(bool inConditionsToJump, string nextState)> HasConditionsToJump()
         {
-            return Task.FromResult((!_peersConnected, typeof(ConnectToPeersState).Name));
+            return Task.FromResult((!_peersConnected && _hasDoneWorkOnce, typeof(ConnectToPeersState).Name));
         }
 
         protected override async Task UpdateStatus()

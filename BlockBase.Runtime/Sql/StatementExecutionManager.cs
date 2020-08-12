@@ -4,26 +4,24 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Antlr4.Runtime;
 using BlockBase.DataPersistence.Data;
 using BlockBase.DataPersistence.Data.MongoDbEntities;
 using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.DataProxy.Encryption;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Configurations;
-using BlockBase.Domain.Database.QueryParser;
 using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
-using BlockBase.Domain.Database.Sql.QueryParser;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Network;
 using BlockBase.Runtime.Provider;
 using BlockBase.Utils.Crypto;
+using BlockBase.Utils.Operation;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -55,7 +53,7 @@ namespace BlockBase.Runtime.Sql
             _transactionsManager = transactionsManager;
             _mongoDbRequesterService = mongoDbRequesterService;
             _sqlExecutionHelper = new SqlExecutionHelper(connector);
-            
+
         }
 
         public delegate QueryResult CreateQueryResultDelegate(bool success, string statementType, string exceptionMessage = null);
@@ -68,7 +66,7 @@ namespace BlockBase.Runtime.Sql
 
         public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate createQueryResult)
         {
-
+            OpResult opResult;
             var results = new List<QueryResult>();
             var databasesSemaphores = _concurrentVariables.DatabasesSemaphores;
             foreach (var sqlCommand in builder.SqlCommands)
@@ -129,7 +127,7 @@ namespace BlockBase.Runtime.Sql
                             {
                                 pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            results.Add(createQueryResult(true, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType());
                             break;
 
 
@@ -141,7 +139,8 @@ namespace BlockBase.Runtime.Sql
 
                                 pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            results.Add(createQueryResult(true, genericSqlCommand.OriginalSqlStatement.GetStatementType()));
+
+                            await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, genericSqlCommand.OriginalSqlStatement.GetStatementType());
                             break;
 
                         case DatabaseSqlCommand databaseSqlCommand:
@@ -165,8 +164,9 @@ namespace BlockBase.Runtime.Sql
                                 else
                                     pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
+                            await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, databaseSqlCommand.OriginalSqlStatement.GetStatementType());
                             break;
+                            
                         case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
                             if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
                             {
@@ -205,11 +205,7 @@ namespace BlockBase.Runtime.Sql
                             break;
                     }
 
-                    await AddPendingTransactions(pendingTransactions);
 
-                    var orderedTransactions = pendingTransactions.OrderBy(t => t.SequenceNumber);
-                    foreach (var transaction in orderedTransactions)
-                        await TryToExecutePendingTransaction(transaction);
 
                 }
                 catch (Exception e)
@@ -231,12 +227,12 @@ namespace BlockBase.Runtime.Sql
             int missingNumberOfRows;
             List<IList<string>> resultRows = new List<IList<string>>();
             IList<string> columnNames;
-            while (true)
+            while (true) //marciak - this while runs until the offset and limit are satisfied
             {
                 var resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
                 missingNumberOfRows = _infoPostProcessing.TranslateSelectResults(originalSimpleSelectStatement, transformedSimpleSelectStatement, resultsList, _databaseName, resultRows, out columnNames, extraParsingNotNeeded);
 
-                if (resultsList.Count() == 0 || missingNumberOfRows == 0)
+                if (resultsList.Count() == 0 || missingNumberOfRows == 0) // marciak - no more results or already reached required number of rows
                     break;
 
                 transformedSimpleSelectStatement.Limit = missingNumberOfRows;
@@ -253,9 +249,21 @@ namespace BlockBase.Runtime.Sql
             await _mongoDbRequesterService.AddPendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, transactionsDB);
         }
 
-        private async Task TryToExecutePendingTransaction(Transaction transaction)
+        private async Task<OpResult> TryToExecutePendingTransactions(IList<Transaction> pendingTransactions)
         {
-            var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
+            var orderedTransactions = pendingTransactions.OrderBy(t => t.SequenceNumber);
+            OpResult opResult = null;
+            foreach (var transaction in orderedTransactions)
+            {
+                opResult = await TryToExecutePendingTransaction(transaction);
+                if (!opResult.Succeeded) return opResult;
+            }
+            return opResult;
+        }
+
+        private async Task<OpResult> TryToExecutePendingTransaction(Transaction pendingTransaction)
+        {
+            var transactionDB = new TransactionDB().TransactionDBFromTransaction(pendingTransaction);
             try
             {
                 if (transactionDB.DatabaseName != "")
@@ -265,12 +273,22 @@ namespace BlockBase.Runtime.Sql
 
                 await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, transactionDB);
                 _transactionsManager.AddScriptTransactionToSend(transactionDB.TransactionFromTransactionDB());
+                return new OpResult(true);
             }
-            catch
+            catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, transactionDB);
                 _concurrentVariables.RollbackOneTransactionNumber();
+                return new OpResult(false, e);
             }
+        }
+
+        private async Task SaveAndTryToExecuteTransactions(IList<Transaction> pendingTransactions, IList<QueryResult> results, CreateQueryResultDelegate createQueryResult, string statementType)
+        {
+            await AddPendingTransactions(pendingTransactions);
+            var opResult = await TryToExecutePendingTransactions(pendingTransactions);
+            if (opResult.Succeeded) results.Add(createQueryResult(opResult.Succeeded, statementType));
+            else results.Add(createQueryResult(opResult.Succeeded, statementType, opResult.Exception.Message));
         }
 
         public async Task LoadAndExecutePendingTransaction()

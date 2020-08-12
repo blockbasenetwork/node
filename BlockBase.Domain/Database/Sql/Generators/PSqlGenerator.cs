@@ -311,7 +311,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(Value value)
         {
-            if (value.IsText ?? false) return "'" + value.ValueToInsert + "'";
+            if (value.IsText) return "'" + value.ValueToInsert + "'";
             return value.ValueToInsert;
         }
 

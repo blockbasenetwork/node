@@ -74,6 +74,8 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
             while (true)
             {
+                var sidechainsInNode = _sidechainKeeper.GetSidechains();
+
                 try
                 {
                     if (_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains != 0 && _sidechainKeeper.GetSidechains().Count() >= _providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
@@ -89,13 +91,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                         _logger.LogDebug("Found chains in candidature");
                         foreach (var chainInCandidature in chainsInCandidature)
                         {
+                            if (sidechainsInNode.Any(s => s.SidechainPool.ClientAccountName == chainInCandidature.Name)) continue;
                             var checkResult = await CheckIfSidechainFitsRules(chainInCandidature.Name, true);
                             if (checkResult.found && await DoesVersionCheckOut(chainInCandidature.Name) && !IsSidechainRunning(chainInCandidature.Name))
                             {
                                 _logger.LogInformation($"Found sidechain {chainInCandidature.Name} eligible for automatic production");
 
                                 await DeleteSidechainIfExistsInDb(chainInCandidature.Name);
-                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name, checkResult.sidechainTimestamp, true);
+                                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(chainInCandidature.Name, checkResult.sidechainTimestamp, true, checkResult.producerType);
 
                                 if (await TryAddStakeIfNecessary(chainInCandidature.Name, checkResult.stakeToPut))
                                 {
@@ -116,8 +119,6 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
 
                 try
                 {
-                    var sidechainsInNode = _sidechainKeeper.GetSidechains();
-
                     foreach (var sidechainInNode in sidechainsInNode)
                     {
                         var sidechainInDb = await _mongoDbProducerService.GetProducingSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
