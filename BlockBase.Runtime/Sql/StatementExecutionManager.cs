@@ -66,7 +66,6 @@ namespace BlockBase.Runtime.Sql
 
         public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate createQueryResult)
         {
-            OpResult opResult;
             var results = new List<QueryResult>();
             var databasesSemaphores = _concurrentVariables.DatabasesSemaphores;
             foreach (var sqlCommand in builder.SqlCommands)
