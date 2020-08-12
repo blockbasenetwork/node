@@ -204,7 +204,7 @@ namespace BlockBase.Runtime.Network
         {
             foreach (var transaction in block.Transactions)
             {
-                _logger.LogDebug($"Chain: {sidechain.ClientAccountName} | Validating transaction #{transaction.SequenceNumber}");
+                //_logger.LogDebug($"Chain: {sidechain.ClientAccountName} | Validating transaction #{transaction.SequenceNumber}");
                 if (transaction.SequenceNumber != ++lastIncludedTransactionSequenceNumber)
                 {
                     _logger.LogDebug($"Block #{block.BlockHeader.SequenceNumber} Transaction #{transaction.SequenceNumber} doesn't follow order from last sequence number #{lastIncludedTransactionSequenceNumber}");

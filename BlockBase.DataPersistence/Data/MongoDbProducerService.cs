@@ -35,23 +35,14 @@ namespace BlockBase.DataPersistence.Data
                 await blockheaderCollection.InsertOneAsync(blockHeaderDB);
 
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
+                var replaceTasks = new List<Task>();
                 foreach (var transaction in block.Transactions)
                 {
-                    var transactionDB = await GetTransactionDBAsync(databaseName, HashHelper.ByteArrayToFormattedHexaString(transaction.TransactionHash));
-                    if (transactionDB != null)
-                    {
-                        transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
-                        //_logger.LogDebug($"::MongoDB:: Updating transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
-                        await transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB);
-                    }
-                    else
-                    {
-                        transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
-                        transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
-                        //_logger.LogDebug($"::MongoDB:: Adding transaction #{transaction.SequenceNumber} with block hash {transactionDB.BlockHash}");
-                        await transactionCollection.InsertOneAsync(transactionDB);
-                    }
+                    var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
+                    transactionDB.BlockHash = HashHelper.ByteArrayToFormattedHexaString(block.BlockHeader.BlockHash);
+                    replaceTasks.Add(transactionCollection.ReplaceOneAsync(t => t.TransactionHash == transactionDB.TransactionHash, transactionDB, new UpdateOptions { IsUpsert = true }));
                 }
+                await Task.WhenAll(replaceTasks);
                 await session.CommitTransactionAsync();
             }
         }
