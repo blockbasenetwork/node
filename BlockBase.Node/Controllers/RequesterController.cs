@@ -112,6 +112,7 @@ namespace BlockBase.Node.Controllers
         /// Sends a transaction to BlockBase Operations Contract to request a sidechain for configuration
         /// </summary>
         /// <param name="stake">The amount of BBT the requester wants to stake in this sidechain for payment to service providers</param>
+        /// <param name="blockHeaderToInitialize"></param>
         /// <returns>The success of the transaction</returns>
         /// <response code="200">Chain started with success</response>
         /// <response code="500">Error starting chain</response>
@@ -121,10 +122,11 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to request a new sidechain for storing his databases",
             OperationId = "RequestNewSidechain"
         )]
-        public async Task<ObjectResult> RequestNewSidechain(decimal stake = 0)
+        public async Task<ObjectResult> RequestNewSidechain(decimal stake = 0, [FromBody]BlockHeader blockHeaderToInitialize = null)
         {
             var command = new RequestNewSidechainCommand(_logger, _connector, _mainchainService, _nodeConfigurations, _requesterConfigurations);
             command.Stake = stake;
+            command.BlockHeaderToInitialize = blockHeaderToInitialize;
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
