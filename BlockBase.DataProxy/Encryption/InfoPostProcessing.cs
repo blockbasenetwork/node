@@ -26,14 +26,17 @@ namespace BlockBase.DataProxy.Encryption
         {
             if (!originalSqlStatement.SelectCoreStatement.Encrypted)
             {
+                //marciak - decrypts all results received
                 var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
+                //marciak - filters extra values using original expression
                 var filteredResults = FilterExpression(originalSqlStatement.SelectCoreStatement.WhereExpression, decryptedResults, columnNames);
+                //marciak - removes extra info columns (equality and range columns)
                 var removedExtraColumns = FilterSelectColumns(originalSqlStatement.SelectCoreStatement.ResultColumns, filteredResults, columnNames, databaseName, out IList<string> columnsToMantain);
 
                 alreadyReceivedRows.AddRange(removedExtraColumns);
                 finalColumnNames = columnsToMantain;
 
-                if (extraParsingNotNeeded || 
+                if (extraParsingNotNeeded ||
                     (!originalSqlStatement.Offset.HasValue &&
                     (!originalSqlStatement.Limit.HasValue || originalSqlStatement.Limit == alreadyReceivedRows.Count())))
                     return 0;
@@ -43,15 +46,18 @@ namespace BlockBase.DataProxy.Encryption
                         (originalSqlStatement.Offset + originalSqlStatement.Limit == alreadyReceivedRows.Count() ||
                         allResults.Count() == 0))
                 {
+                    //marciak - removes offset rows
                     alreadyReceivedRows.RemoveRange(0, originalSqlStatement.Offset.Value <= alreadyReceivedRows.Count() ? originalSqlStatement.Offset.Value : alreadyReceivedRows.Count());
                     return 0;
                 }
                 else
                     return originalSqlStatement.Limit ?? 0;
             }
+            //marciak - in encrypted mode, it doesn't guarantee the right offset and limit
             var encryptedColumnNames = transformedSimpleSelectStatement.SelectCoreStatement.ResultColumns.Select(r => r.TableName.Value + "." + r.ColumnName.Value).ToList();
             finalColumnNames = encryptedColumnNames;
-            alreadyReceivedRows.ToList().AddRange(allResults);
+            alreadyReceivedRows.AddRange(allResults);
+
             return 0;
         }
 
@@ -60,22 +66,22 @@ namespace BlockBase.DataProxy.Encryption
             var originalChangeRecordStatement = (IChangeRecordStatement)changeRecordSqlCommand.OriginalSqlStatement;
             var transformedSimpleSelectStatement = (SimpleSelectStatement)changeRecordSqlCommand.TransformedSqlStatement[0];
 
-            var changeRecordStatements = new List<IChangeRecordStatement>();
-
             var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
             var filteredResults = FilterExpression(originalChangeRecordStatement.WhereExpression, decryptedResults, columnNames);
 
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
             var tableInfoRecord = _encryptor.FindInfoRecord(originalChangeRecordStatement.TableName, databaseInfoRecord.IV);
 
+            var changeRecordStatements = new List<IChangeRecordStatement>();
+            //marciak - adding additional updates like ivs and new encrypted values
             if (changeRecordSqlCommand.OriginalSqlStatement is UpdateRecordStatement originalUpdateRecordStatement)
             {
                 var additionalUpdateRecordStatements = GetAdditionalUpdateRecordStatements(originalUpdateRecordStatement, columnNames, tableInfoRecord, filteredResults);
                 changeRecordStatements.AddRange(additionalUpdateRecordStatements);
             }
 
-            var wrongResults = decryptedResults.Except(filteredResults).ToList(); //marciak - these are needed to remove extra results on the first
-
+            //marciak - these are needed to remove wrong results on the first update, EXAMPLE one AND with a non unique column
+            var wrongResults = decryptedResults.Except(filteredResults).ToList();
             if (changeRecordSqlCommand.TransformedSqlStatement.Count == 2)
             {
                 var transformedChangeRecordStatement = (IChangeRecordStatement)changeRecordSqlCommand.TransformedSqlStatement[1];
@@ -95,6 +101,7 @@ namespace BlockBase.DataProxy.Encryption
                                 if (transformedChangeRecordStatement.WhereExpression != null)
                                 {
                                     transformedChangeRecordStatement.WhereExpression.HasParenthesis = true;
+                                    //marciak - this wrong rows are removed by adding AND NOT using IV's   
                                     transformedChangeRecordStatement.WhereExpression = new LogicalExpression(
                                         transformedChangeRecordStatement.WhereExpression,
                                         new ComparisonExpression(new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)),
@@ -146,6 +153,7 @@ namespace BlockBase.DataProxy.Encryption
 
         }
 
+        // marciak - decrypts all row values and saves it to a list of lists
         public IList<IList<string>> DecryptRows(SimpleSelectStatement simpleSelectStatement, IList<IList<string>> allResults, string databaseName, out IList<TableAndColumnName> columnNames)
         {
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
@@ -224,6 +232,7 @@ namespace BlockBase.DataProxy.Encryption
             return databaseInfoRecord.KeyName != null ? _encryptor.DecryptName(databaseInfoRecord) : databaseInfoRecord.Name;
         }
 
+        // marciak - this method is used with the original where expression to eliminate any redundancy create by the buckets
         private IList<IList<string>> FilterExpression(AbstractExpression expression, IList<IList<string>> decryptedResults, IList<TableAndColumnName> columnNames)
         {
             switch (expression)
@@ -251,6 +260,8 @@ namespace BlockBase.DataProxy.Encryption
             return decryptedResults;
 
         }
+
+
         private IList<IList<string>> FilterSelectColumns(IList<ResultColumn> resultColumns, IList<IList<string>> decryptedResults, IList<TableAndColumnName> columnNames, string databaseName, out IList<string> columnsToMantain)
         {
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);

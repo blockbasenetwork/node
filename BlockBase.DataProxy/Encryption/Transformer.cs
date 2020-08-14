@@ -147,6 +147,7 @@ namespace BlockBase.DataProxy.Encryption
                 CreateInsertRecordStatementForInfoTable(tableInfoRecord)
             };
 
+            //marciak - adds the information (like IV and keys) about each column 
             foreach (var columnDef in createTableStatement.ColumnDefinitions)
             {
                 var additionalColAndInfoInserts = GetTransformedColumnDefinition(columnDef, tableInfoRecord.IV, databaseIV);
@@ -336,7 +337,7 @@ namespace BlockBase.DataProxy.Encryption
 
                 if (!resultColumn.AllColumnsfFlag)
                 {
-                    var columnInfoRecord = !resultColumn.AllColumnsfFlag ? GetInfoRecordThrowErrorIfNotExists(resultColumn.ColumnName, tableInfoRecord.IV) : null;
+                    var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(resultColumn.ColumnName, tableInfoRecord.IV);
 
                     transformedSelectStatement.ResultColumns.Add(new ResultColumn()
                     {
@@ -423,7 +424,7 @@ namespace BlockBase.DataProxy.Encryption
 
                     else
                     {
-                        _isSelectStatementNeeded = true;
+                        _isSelectStatementNeeded = true; //marciak - if not unique we need to use buckets so we need to execute a select stament before
                         selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
                         selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
                         selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
@@ -432,7 +433,7 @@ namespace BlockBase.DataProxy.Encryption
 
                 else
                 {
-                    if (columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME) columnValue.Value.IsText = true;
+                    if (columnValue.Value.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnValue.Value.IsText = true;
                     transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
                            new estring(columnInfoRecord.Name),
                            columnValue.Value
@@ -468,7 +469,7 @@ namespace BlockBase.DataProxy.Encryption
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(deleteRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
             if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
-            if (transformedDeleteRecordStatement.WhereExpression != null) transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+            if (selectStatement.SelectCoreStatement.WhereExpression != null) transformedDeleteRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
             sqlStatements.Add(transformedDeleteRecordStatement);
 
             return sqlStatements;
@@ -559,6 +560,7 @@ namespace BlockBase.DataProxy.Encryption
 
             if (comparisonExpression.Value == null)
             {
+                // marciak - it's not possible to compare encrypted data column with another column, because for that it would be needed to get all the other column values and calculate the bucket for each
                 if (leftColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
                 var rightTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.TableName, databaseIV);
                 var rightColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.ColumnName, rightTableInfoRecord.IV);
@@ -573,7 +575,7 @@ namespace BlockBase.DataProxy.Encryption
                 return transformedComparisonExpression;
             }
 
-            if (leftColumnDataType.DataTypeName == DataTypeEnum.TEXT || leftColumnDataType.DataTypeName == DataTypeEnum.DATETIME) comparisonExpression.Value.IsText = true;
+            if (comparisonExpression.Value.ValueToInsert.ToLower() != "null" && (leftColumnDataType.DataTypeName == DataTypeEnum.TEXT || leftColumnDataType.DataTypeName == DataTypeEnum.DATETIME)) comparisonExpression.Value.IsText = true;
 
             transformedComparisonExpression = new ComparisonExpression(
                     new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)),
@@ -592,7 +594,7 @@ namespace BlockBase.DataProxy.Encryption
                     _isSelectStatementNeeded = true;
                 }
 
-
+                // marciak - if = or !=
                 if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Equal || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Different)
                 {
                     if (!isColumnUnique)
@@ -602,6 +604,7 @@ namespace BlockBase.DataProxy.Encryption
                             transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedEqualityColumnName);
                             transformedComparisonExpression.Value = new Value(_encryptor.CreateEqualityBktValue(comparisonExpression.Value.ValueToInsert, leftColumnInfoRecord, leftColumnDataType), true);
                         }
+                        // marciak - range bucket value is used if equality bucket value was not specified
                         else
                         {
                             if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))

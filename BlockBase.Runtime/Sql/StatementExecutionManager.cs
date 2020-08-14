@@ -108,17 +108,17 @@ namespace BlockBase.Runtime.Sql
 
                         case ChangeRecordSqlCommand changeRecordSqlCommand:
                             sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
-                            //_logger.LogDebug(sqlTextToExecute);
+                            // marciak - some updates and deletes require a select statement prior to execution
+                            // marciak - this select will be used to identify the actual rows that will be changed
                             if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
                             {
                                 resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                var finalListOfUpdates = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, resultsList, _databaseName);
+                                var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, resultsList, _databaseName);
 
-                                var changesToExecute = finalListOfUpdates.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
+                                var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
 
                                 foreach (var changeRecordsToExecute in changesToExecute)
                                 {
-                                    //_logger.LogDebug(changeRecordsToExecute);
                                     pendingTransactions.Add(CreateTransaction(changeRecordsToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                                 }
                             }
@@ -221,6 +221,7 @@ namespace BlockBase.Runtime.Sql
 
         private async Task<ResultsAndColumnNamesPoco> ExecuteSelectStatement(Builder builder, SimpleSelectStatement originalSimpleSelectStatement, SimpleSelectStatement transformedSimpleSelectStatement, string sqlTextToExecute)
         {
+            //marciak- if the offset is set it means that the columns are not encrypted or are unique, so there's no extra parsing needed
             var extraParsingNotNeeded = transformedSimpleSelectStatement.Offset.HasValue;
             //_logger.LogDebug(sqlTextToExecute);
             int missingNumberOfRows;
@@ -235,13 +236,14 @@ namespace BlockBase.Runtime.Sql
                     break;
 
                 transformedSimpleSelectStatement.Limit = missingNumberOfRows;
-                transformedSimpleSelectStatement.Offset = resultsList.Count();
+                transformedSimpleSelectStatement.Offset = transformedSimpleSelectStatement.Offset.HasValue ? transformedSimpleSelectStatement.Offset + resultsList.Count() : resultsList.Count();
                 sqlTextToExecute = builder.BuildSimpleSelectStatementString(transformedSimpleSelectStatement, _generator);
             }
             return new ResultsAndColumnNamesPoco(columnNames, resultRows);
 
         }
 
+        //marciak - saves the transactions to the database  
         private async Task AddPendingTransactions(IList<Transaction> transactions)
         {
             var transactionsDB = transactions.Select(t => new TransactionDB().TransactionDBFromTransaction(t)).ToList();
@@ -260,12 +262,13 @@ namespace BlockBase.Runtime.Sql
             return opResult;
         }
 
+        //marciak - tries to execute queries if succeeds moves transactions to executed else removes the transactions
         private async Task<OpResult> TryToExecutePendingTransaction(Transaction pendingTransaction)
         {
             var transactionDB = new TransactionDB().TransactionDBFromTransaction(pendingTransaction);
             try
             {
-                if (transactionDB.DatabaseName != "")
+                if (transactionDB.DatabaseName != "") //marciak - distinguishing between server connection and database connection
                     await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, transactionDB.SequenceNumber);
                 else
                     await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
@@ -284,8 +287,8 @@ namespace BlockBase.Runtime.Sql
 
         private async Task SaveAndTryToExecuteTransactions(IList<Transaction> pendingTransactions, IList<QueryResult> results, CreateQueryResultDelegate createQueryResult, string statementType)
         {
-            await AddPendingTransactions(pendingTransactions);
-            var opResult = await TryToExecutePendingTransactions(pendingTransactions);
+            await AddPendingTransactions(pendingTransactions); 
+            var opResult = await TryToExecutePendingTransactions(pendingTransactions); 
             if (opResult.Succeeded) results.Add(createQueryResult(opResult.Succeeded, statementType));
             else results.Add(createQueryResult(opResult.Succeeded, statementType, opResult.Exception.Message));
         }

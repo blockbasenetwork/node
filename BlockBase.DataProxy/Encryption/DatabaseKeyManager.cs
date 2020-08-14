@@ -307,7 +307,7 @@ namespace BlockBase.DataProxy.Encryption
             return Base32Encoding.ZBase32.GetString(bucket);
         }
 
-
+        //marciak - gets upper bound of the bucket the value N is inserted in
         private int CalculateUpperBound(int N, int min, int max, double value)
         {
             if (value < min || value > max) throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
@@ -322,6 +322,7 @@ namespace BlockBase.DataProxy.Encryption
             throw new ArgumentOutOfRangeException("The value you inserted is out of bounds.");
         }
 
+        //marciak - gets all buckets that may include values superior/inferior to the value N
         private IList<int> CalculateBounds(int N, int min, int max, double upperBound, bool superior)
         {
             var bounds = new List<int>();
