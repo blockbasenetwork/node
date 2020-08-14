@@ -44,7 +44,8 @@ namespace BlockBase.Network.Rounting
             }
             catch (Exception ex)
             {
-                _logger.LogCritical(ex, "MessageSender-SendMessage crashed: " + ex.Message);
+                _logger.LogError($"Unable to send message to: {message.Destination.Address}:{message.Destination.Port}");
+                _logger.LogDebug(ex, "MessageSender-SendMessage crashed: " + ex.Message);
             }
         }
     }

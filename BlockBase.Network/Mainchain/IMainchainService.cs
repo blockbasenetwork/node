@@ -27,7 +27,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> ExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, string permission = "active");
         Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active");
         Task<string> StartChain(string owner, string publicKey, string permission = "active");
-        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, int minimumSoftwareVersion = 1, string permission = "active");
+        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, int minimumSoftwareVersion = 1, Dictionary<string, object> blockHeaderToInitalize = null, string permission = "active");
         Task<string> AlterConfigurations(string owner, Dictionary<string, object> configurationsToChange, string permission = "active");
         Task<string> EndChain(string owner, string permission = "active");
         Task<string> StartCandidatureTime(string owner, string permission = "active");

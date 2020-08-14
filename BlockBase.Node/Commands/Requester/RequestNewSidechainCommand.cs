@@ -46,6 +46,7 @@ namespace BlockBase.Node.Commands.Requester
         }
 
         public decimal Stake { get; set; }
+        public BlockHeader BlockHeaderToInitialize { get; set; }
 
         public override async Task<CommandExecutionResponse> Execute()
         {
@@ -93,7 +94,7 @@ namespace BlockBase.Node.Commands.Requester
                     {
                         var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
                         var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
-                        var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, _requesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
+                        var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, _requesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion, BlockHeaderToInitialize?.ConvertToEosObject());
                         return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
                     }
                     catch (ApiErrorException ex)
