@@ -102,6 +102,7 @@ namespace BlockBase.Runtime.Network
             }
         }
 
+        // marciak - removes already included transactions from database and list to send
         public async Task RemoveIncludedTransactions(uint numberOfIncludedTransactions, ulong lastIncludedTransactionSequenceNumber)
         {
             if (numberOfIncludedTransactions == 0) _numberOfConsecutiveEmptyBlocks++;
@@ -112,6 +113,8 @@ namespace BlockBase.Runtime.Network
             var transactionSendingTrackPocosToRemove = _transactionsToSend.GetEnumerable().Where(t => t.Transaction.SequenceNumber <= lastIncludedTransactionSequenceNumber).ToList();
             foreach (var transactionSendingTrackPocoToRemove in transactionSendingTrackPocosToRemove) _transactionsToSend.Remove(transactionSendingTrackPocoToRemove);
         }
+
+    
         public void AddScriptTransactionToSend(Transaction transaction)
         {
             if (_transactionsToSend.GetEnumerable().Any(t => t.Transaction.TransactionHash.SequenceEqual(transaction.TransactionHash))) return;
