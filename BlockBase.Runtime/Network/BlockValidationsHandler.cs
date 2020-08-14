@@ -76,15 +76,13 @@ namespace BlockBase.Runtime.Network
                 {
                     try
                     {
-                        var blockBefore = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement);
                         BlockHeader blockheader = (await _mainchainService.GetLastSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement)).ConvertToBlockHeader();
+                        var previousBlock = await _mongoDbProducerService.GetBlockHeaderByBlockHashAsync(sidechainPool.ClientAccountName, HashHelper.ByteArrayToFormattedHexaString(blockheader.PreviousBlockHash));
 
-                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool, blockBefore?.LastTransactionSequenceNumber ?? 0))
+                        if (ValidationHelper.ValidateBlockAndBlockheader(blockReceived, sidechainPool, blockheader, _logger, out byte[] trueBlockHash) && await ValidateBlockTransactions(blockReceived, sidechainPool, previousBlock?.LastTransactionSequenceNumber ?? 0))
                         {
                             _logger.LogDebug($"Adding block {blockReceived.BlockHeader.SequenceNumber} to database");
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
-
-                            await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
 
                             // var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
                             // if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
@@ -135,19 +133,14 @@ namespace BlockBase.Runtime.Network
                     return;
                 }
 
-
                 var sidechainPool = sidechainContext.SidechainPool;
-
-                var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPool.ClientAccountName)).ProductionTime;
-
-                if (!isProductionTime)
+                if (!sidechainPool.ProducingBlocks)
                 {
                     _logger.LogDebug($"Mined block received but it's not production time.");
                     return;
                 }
 
-                //TODO rpinto - may throw an exception if currentproduceris null
-                var startProductionTime = (await _mainchainService.RetrieveCurrentProducer(sidechainPool.ClientAccountName)).StartProductionTime;
+                await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProto, _endPoint);
 
                 var lastValidBlockheaderSmartContract = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement);
 

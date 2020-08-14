@@ -254,7 +254,7 @@ namespace BlockBase.DataPersistence.Data
         }
 
 
-        private async Task<BlockheaderDB> GetBlockHeaderByBlockHashAsync(string databaseName, string blockHash)
+        public async Task<BlockheaderDB> GetBlockHeaderByBlockHashAsync(string databaseName, string blockHash)
         {
             databaseName = ClearSpecialCharacters(databaseName);
             using (IClientSession session = await MongoClient.StartSessionAsync())

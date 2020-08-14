@@ -11,6 +11,7 @@ namespace BlockBase.DataPersistence.Data
     {
         Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName);
         Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
+        Task<BlockheaderDB> GetBlockHeaderByBlockHashAsync(string databaseName, string blockHash);
         Task<IList<Block>> GetSidechainBlocksSinceSequenceNumberAsync(string databaseName, ulong beginSequenceNumber, ulong endSequenceNumber);
         Task<IEnumerable<ulong>> GetMissingBlockNumbers(string databaseName, ulong endSequenceNumber);
         Task RemoveBlockFromDatabaseAsync(string databaseName, string blockHash);
