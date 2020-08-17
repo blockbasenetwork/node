@@ -122,7 +122,7 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to request a new sidechain for storing his databases",
             OperationId = "RequestNewSidechain"
         )]
-        public async Task<ObjectResult> RequestNewSidechain(decimal stake = 0, [FromBody]BlockHeader blockHeaderToInitialize)
+        public async Task<ObjectResult> RequestNewSidechain([FromBody]BlockHeader blockHeaderToInitialize, decimal stake = 0)
         {
             var command = new RequestNewSidechainCommand(_logger, _connector, _mainchainService, _nodeConfigurations, _requesterConfigurations);
             command.Stake = stake;
