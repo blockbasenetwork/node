@@ -134,7 +134,8 @@ namespace BlockBase.Runtime.Network
                 }
 
                 var sidechainPool = sidechainContext.SidechainPool;
-                if (!sidechainPool.ProducingBlocks)
+                var isProductionTime = (await _mainchainService.RetrieveContractState(sidechainPool.ClientAccountName)).ProductionTime;
+                if (!isProductionTime)
                 {
                     _logger.LogDebug($"Mined block received but it's not production time.");
                     return;
