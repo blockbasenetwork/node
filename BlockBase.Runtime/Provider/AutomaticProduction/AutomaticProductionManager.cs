@@ -122,8 +122,11 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     foreach (var sidechainInNode in sidechainsInNode)
                     {
                         var sidechainInDb = await _mongoDbProducerService.GetProducingSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
-                        var pastSidechain = await _mongoDbProducerService.GetPastSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
-                        if (pastSidechain?.ReasonLeft == LeaveNetworkReasonsConstants.EXIT_REQUEST || (sidechainInDb != null && !sidechainInDb.IsAutomatic)) continue;
+                        if (!sidechainInDb.IsAutomatic) continue;
+
+                        var producerTables = await _mainchainService.RetrieveProducersFromTable(sidechainInNode.SidechainPool.ClientAccountName);
+                        var producerInTable = producerTables.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+                        if (producerTables == null || producerInTable == null || (long)producerInTable.WorkTimeInSeconds <= ((DateTimeOffset)DateTime.UtcNow.AddDays(1)).ToUnixTimeSeconds()) continue;
 
                         var sidechainStillFitsRules = await CheckIfSidechainFitsRules(sidechainInNode.SidechainPool.ClientAccountName, false);
                         if (!sidechainStillFitsRules.found)
