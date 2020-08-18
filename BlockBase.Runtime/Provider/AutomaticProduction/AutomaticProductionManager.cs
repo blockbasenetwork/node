@@ -122,6 +122,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     foreach (var sidechainInNode in sidechainsInNode)
                     {
                         var sidechainInDb = await _mongoDbProducerService.GetProducingSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
+                        if (sidechainInDb == null) continue;
                         if (!sidechainInDb.IsAutomatic) continue;
 
                         var producerTables = await _mainchainService.RetrieveProducersFromTable(sidechainInNode.SidechainPool.ClientAccountName);
