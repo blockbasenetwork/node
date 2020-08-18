@@ -491,7 +491,7 @@ namespace BlockBase.DataPersistence.Data
                 var existingPastSidechain = sidechainCollection.AsQueryable<PastSidechainDB>().Where(s => s.Sidechain == sidechain && s.Timestamp == timestamp).SingleOrDefault();
                 pastSidechainDb.ReasonLeft = existingPastSidechain?.ReasonLeft;
 
-                await sidechainCollection.ReplaceOneAsync(s => s.Sidechain == sidechain && s.Timestamp == timestamp && s.ReasonLeft == reasonLeft, pastSidechainDb, new UpdateOptions { IsUpsert = true });
+                await sidechainCollection.ReplaceOneAsync(s => s.Sidechain == sidechain && s.Timestamp == timestamp, pastSidechainDb, new UpdateOptions { IsUpsert = true });
             }
         }
 

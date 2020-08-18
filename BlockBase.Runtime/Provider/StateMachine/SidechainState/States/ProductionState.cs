@@ -121,6 +121,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 
         private async Task UpdatePastSidechainDbBasedOnWarnings()
         {
+            var existingPastSidechain = await _mongoDbProducerService.GetPastSidechainAsync(_sidechainPool.ClientAccountName, _sidechainPool.SidechainCreationTimestamp);
+            if (existingPastSidechain != null && existingPastSidechain.ReasonLeft == LeaveNetworkReasonsConstants.EXIT_REQUEST) return;
+
             var warningsForThisProvider = _warnings.Where(w => w.Producer == _nodeConfigurations.AccountName);
 
             if (!warningsForThisProvider.Any())

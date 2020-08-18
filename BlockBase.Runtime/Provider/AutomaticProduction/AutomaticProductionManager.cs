@@ -191,6 +191,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) 
                 return checkingToJoin ? defaultReturnValue : (true, 0, 0, 0);
 
+            //check if it's sidechain that provider had requested exit
+            if (checkingToJoin && await CheckIfIsPastSidechainWithExitRequest(sidechain, clientInfo.SidechainCreationTimestamp)) return defaultReturnValue;
+
             if (contractInfo.BlockTimeDuration < 60 && _networkName == EosNetworkNames.MAINNET) return defaultReturnValue;
             
             //verify if chain is in candidature time when trying to join
@@ -396,6 +399,12 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             {
                 await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(sidechain);
             }
+        }
+
+        private async Task<bool> CheckIfIsPastSidechainWithExitRequest(string sidechain, ulong sidechainCreationTime)
+        {
+            var pastSidechainInDb = await _mongoDbProducerService.GetPastSidechainAsync(sidechain, sidechainCreationTime);
+            return (pastSidechainInDb != null && pastSidechainInDb.ReasonLeft == LeaveNetworkReasonsConstants.EXIT_REQUEST);
         }
     }
 }
