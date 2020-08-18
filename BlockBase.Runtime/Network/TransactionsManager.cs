@@ -34,7 +34,7 @@ namespace BlockBase.Runtime.Network
         private PeerConnectionsHandler _peerConnectionsHandler;
         private NetworkConfigurations _networkConfigurations;
         private readonly int MAX_BYTES_PER_MESSAGE = 250000;
-        private readonly int WAIT_TIME_IN_SECONDS = 30;
+        private readonly int WAIT_TIME_IN_SECONDS = 20;
         private ThreadSafeList<TransactionSendingTrackPoco> _transactionsToSend;
         private IMainchainService _mainchainService;
         private ThreadSafeList<ProducerConfirmationPoco> _currentProducers;
