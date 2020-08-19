@@ -24,7 +24,6 @@ namespace BlockBase.Network.Mainchain
         private readonly ILogger _logger;
         private const int MAX_NUMBER_OF_TRIES = 5;
         private const int TRANSACTION_EXPIRATION = 20;
-        private long NReq;
 
         public MainchainService(IOptions<NetworkConfigurations> networkConfigurations, IOptions<NodeConfigurations> nodeConfigurations, ILogger<MainchainService> logger)
         {
@@ -1304,7 +1303,6 @@ namespace BlockBase.Network.Mainchain
 
             while (goodUntil())
             {
-                _logger.LogDebug($"Number of Requests: {NReq++}");
                 var opResult = await func.Invoke();
 
                 if (opResult.Succeeded && expectedResult == null)
