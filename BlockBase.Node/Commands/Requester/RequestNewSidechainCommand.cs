@@ -52,7 +52,7 @@ namespace BlockBase.Node.Commands.Requester
         {
             try
             {
-                if (await _connector.DoesDefaultDatabaseExist())
+                if (await _connector.DoesDefaultDatabaseExist() && BlockHeaderToInitialize == null)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
 
                 _connector.Setup().Wait();
