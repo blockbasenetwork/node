@@ -71,6 +71,8 @@ namespace BlockBase.Runtime.Network
                 if (await _mongoDbProducerService.IsBlockInDatabase(databaseName, blockHashString)) return;
                 if (!await IsTimeForThisProducerToProduce(sidechainPool, blockReceived.BlockHeader.Producer)) return;
 
+                await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProtoReceived, _endPoint);
+
                 var i = 0;
                 while (i < 3)
                 {
@@ -140,8 +142,6 @@ namespace BlockBase.Runtime.Network
                     _logger.LogDebug($"Mined block received but it's not production time.");
                     return;
                 }
-
-                await _blockSender.SendBlockToSidechainMembers(sidechainPool, blockProto, _endPoint);
 
                 var lastValidBlockheaderSmartContract = await _mainchainService.GetLastValidSubmittedBlockheader(sidechainPool.ClientAccountName, (int)sidechainPool.BlocksBetweenSettlement);
 
