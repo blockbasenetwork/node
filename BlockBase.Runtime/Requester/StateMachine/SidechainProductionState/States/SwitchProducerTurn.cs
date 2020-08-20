@@ -132,7 +132,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
         {
 
-            var validProducers = producers.Where(p => !_warnings.Any(w => w.Producer == p.Key && w.WarningType == EosTableValues.WARNING_PUNISH) && p.ProducerType != 1).ToList();
+            var validProducers = producers.Where(p => !_warnings.Any(w => w.Producer == p.Key && w.WarningType == EosTableValues.WARNING_PUNISH) && p.IsReadyToProduce && p.ProducerType != 1).ToList();
             if (!validProducers.Any()) return;
 
             var blockHeaderList = await _mainchainService.RetrieveBlockheaderList(clientAccountName, validProducers.Count());
