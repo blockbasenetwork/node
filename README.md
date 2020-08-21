@@ -63,7 +63,7 @@ Inside BlockBase.Node/appsettings.json you'll find all the settings you need to 
   "NetworkConfigurations": {
     "PublicIpAddress": "your public ip address", // The public IP address that other producers will connect to
     "TcpPort": 4440, // The TCP port used to connect
-    "EosNet": "http://api.eosn.io", // A Top 21 EOS Network producer endpoint
+    "EosNetworks": ["http://api.eosn.io/", "http://peer1.eoshuobipool.com:8181/"], // A list of top 21 EOS Network producer endpoints to which the node will connect to
     "ConnectionExpirationTimeInSeconds": 15, // (no need to change) Connection expiration time
     "MaxNumberOfConnectionRetries": 3, // (no need to change) Number of connection retries
     "BlockBaseOperationsContract": "blockbaseopr", // (no need to change) The account running the BlockBase operations contract
