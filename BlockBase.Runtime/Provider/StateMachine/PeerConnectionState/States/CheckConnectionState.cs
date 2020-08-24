@@ -119,13 +119,21 @@ namespace BlockBase.Runtime.Provider.StateMachine.PeerConnectionState.States
 
             foreach (var producer in orderedProducersInPool)
             {
-                var producerIndex = orderedProducersInPool.IndexOf(producer);
-                var producerIps = _ipAddresses.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
-                if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
+                try
+                {
+                    var producerIndex = orderedProducersInPool.IndexOf(producer);
+                    var producerIps = _ipAddresses.Where(p => p.Key == producer.ProducerInfo.AccountName).FirstOrDefault();
+                    if (producerIps == null || producer.ProducerInfo.IPEndPoint != null) continue;
 
-                var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
-                var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
-                producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
+                    var listEncryptedIPEndPoints = producerIps.EncryptedIPs;
+                    var encryptedIpEndPoint = listEncryptedIPEndPoints[producerIndex];
+                    producer.ProducerInfo.IPEndPoint = AssymetricEncryption.DecryptIP(encryptedIpEndPoint, _nodeConfigurations.ActivePrivateKey, producer.ProducerInfo.PublicKey);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Unable to decrypt {producer.ProducerInfo.AccountName}'s IP");
+                    _logger.LogDebug($"Error decrypting: {e}");
+                }
             }
         }
     }
