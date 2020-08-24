@@ -60,9 +60,7 @@ namespace BlockBase.Runtime.Sql
 
         public async Task<IList<QueryResult>> ExecuteSqlText(string sqlString, CreateQueryResultDelegate createQueryResult)
         {
-            _logger.LogDebug($"Parsing Sql text: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             var builder = _sqlExecutionHelper.ParseSqlText(sqlString);
-            _logger.LogDebug($"Parsed Sql text: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             return await ExecuteBuilder(builder, createQueryResult);
         }
 
@@ -75,7 +73,6 @@ namespace BlockBase.Runtime.Sql
                 var pendingTransactions = new List<Transaction>();
                 try
                 {
-                    _logger.LogDebug($"Transforming Sql Command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                     _transformer.TransformCommand(sqlCommand);
                     builder.BuildSqlStatementsText(_generator, sqlCommand);
                     string sqlTextToExecute = "";
@@ -93,7 +90,6 @@ namespace BlockBase.Runtime.Sql
                             databasesSemaphores[_databaseName].Wait();
                         }
                     }
-                    _logger.LogDebug($"Transformed Sql command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
                     IList<IList<string>> resultsList;
 
@@ -112,6 +108,7 @@ namespace BlockBase.Runtime.Sql
                             break;
 
                         case ChangeRecordSqlCommand changeRecordSqlCommand:
+                            _logger.LogDebug("Identifying rows that will be changed");
                             sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
                             // marciak - some updates and deletes require a select statement prior to execution
                             // marciak - this select will be used to identify the actual rows that will be changed
@@ -131,6 +128,7 @@ namespace BlockBase.Runtime.Sql
                             {
                                 pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
+                            _logger.LogDebug("Saving and executing transaction");
                             await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType());
                             break;
 
