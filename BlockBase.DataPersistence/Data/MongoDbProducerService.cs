@@ -489,9 +489,16 @@ namespace BlockBase.DataPersistence.Data
                 var sidechainCollection = recoverDatabase.GetCollection<PastSidechainDB>(MongoDbConstants.PAST_SIDECHAINS_COLLETION_NAME);
 
                 var existingPastSidechain = sidechainCollection.AsQueryable<PastSidechainDB>().Where(s => s.Sidechain == sidechain && s.Timestamp == timestamp).SingleOrDefault();
-                if (existingPastSidechain != null) pastSidechainDb.ReasonLeft = existingPastSidechain.ReasonLeft;
 
-                await sidechainCollection.ReplaceOneAsync(s => s.Sidechain == sidechain && s.Timestamp == timestamp, pastSidechainDb, new UpdateOptions { IsUpsert = true });
+                if (existingPastSidechain == null)
+                {
+                    await sidechainCollection.InsertOneAsync(pastSidechainDb);
+                }
+                else
+                {
+                    pastSidechainDb.ReasonLeft = existingPastSidechain.ReasonLeft;
+                    await sidechainCollection.FindOneAndReplaceAsync(s => s.Sidechain == sidechain && s.Timestamp == timestamp, pastSidechainDb);
+                }
             }
         }
 
