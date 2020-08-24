@@ -45,8 +45,6 @@ namespace BlockBase.Runtime.Sql
 
         public async Task<IList<QueryResult>> Execute(string sqlString)
         {
-            Console.WriteLine("");
-            Console.WriteLine(sqlString);
             IList<QueryResult> results = new List<QueryResult>();
 
             try
