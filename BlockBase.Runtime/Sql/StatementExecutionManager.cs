@@ -60,7 +60,9 @@ namespace BlockBase.Runtime.Sql
 
         public async Task<IList<QueryResult>> ExecuteSqlText(string sqlString, CreateQueryResultDelegate createQueryResult)
         {
+            _logger.LogDebug($"Parsing Sql text: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             var builder = _sqlExecutionHelper.ParseSqlText(sqlString);
+            _logger.LogDebug($"Parsed Sql text: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             return await ExecuteBuilder(builder, createQueryResult);
         }
 
@@ -73,6 +75,7 @@ namespace BlockBase.Runtime.Sql
                 var pendingTransactions = new List<Transaction>();
                 try
                 {
+                    _logger.LogDebug($"Transforming Sql Command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                     _transformer.TransformCommand(sqlCommand);
                     builder.BuildSqlStatementsText(_generator, sqlCommand);
                     string sqlTextToExecute = "";
@@ -90,9 +93,11 @@ namespace BlockBase.Runtime.Sql
                             databasesSemaphores[_databaseName].Wait();
                         }
                     }
+                    _logger.LogDebug($"Transformed Sql command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
                     IList<IList<string>> resultsList;
 
+                    _logger.LogDebug($"Executing Sql command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                     switch (sqlCommand)
                     {
                         case ReadQuerySqlCommand readQuerySql:
@@ -204,7 +209,7 @@ namespace BlockBase.Runtime.Sql
                             break;
                     }
 
-
+                    _logger.LogDebug($"Executed Sql command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
 
                 }
                 catch (Exception e)
