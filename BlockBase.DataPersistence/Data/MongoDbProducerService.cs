@@ -497,6 +497,7 @@ namespace BlockBase.DataPersistence.Data
                 else
                 {
                     pastSidechainDb.ReasonLeft = existingPastSidechain.ReasonLeft;
+                    pastSidechainDb._id = existingPastSidechain._id;
                     await sidechainCollection.FindOneAndReplaceAsync(s => s.Sidechain == sidechain && s.Timestamp == timestamp, pastSidechainDb);
                 }
             }
