@@ -183,6 +183,19 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<string> UpdatePublicKey(string chain, string accountName, string publicKey)
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.UPDATE_KEY,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                accountName,
+                CreateDataForUpdatePublicKey(chain, accountName, publicKey)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         public async Task<string> AddReservedSeats(string chain, List<string> seatsToAdd) {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_RESERVED_SEATS,
@@ -1015,6 +1028,16 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.OWNER, chain},
                 { EosParameterNames.NAME, accountName},
                 { EosParameterNames.ENCRYPTED_IPS, encryptedIps }
+            };
+        }
+
+        public Dictionary<string, object> CreateDataForUpdatePublicKey(string chain, string accountName, string publicKey)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, chain },
+                { EosParameterNames.PRODUCER, accountName },
+                { EosParameterNames.PUBLIC_KEY, publicKey }
             };
         }
 

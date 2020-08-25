@@ -61,6 +61,7 @@ namespace BlockBase.Domain.Eos
         public const string ADD_CANDIDATE = "addcandidate";
         public const string ADD_SECRET = "addsecret";
         public const string ADD_ENCRYPTED_IP = "addencryptip";
+        public const string UPDATE_KEY = "updatekey";
         public const string ADD_BLOCK = "addblock";
         public const string VERIFY_BLOCK = "verifyblock";
         public const string ADD_STAKE = "addstake";
