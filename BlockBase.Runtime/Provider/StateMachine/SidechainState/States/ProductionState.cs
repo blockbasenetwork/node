@@ -31,6 +31,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
         private IMongoDbProducerService _mongoDbProducerService;
 
         private bool _needsToUpdateIps;
+        private bool _needsToUpdatePublicKey;
 
         public ProductionState(SidechainPool sidechainPool, ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, NetworkConfigurations networkConfigurations, IMongoDbProducerService mongoDbProducerService) : base(logger, sidechainPool, mainchainService)
         {
@@ -82,6 +83,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             if(!_producers.Any(c => c.Key == _nodeConfigurations.AccountName)) return;
 
             _needsToUpdateIps = IsIpUpdateRequired(_ipAddresses.Where(t => t.Key == _nodeConfigurations.AccountName).SingleOrDefault().EncryptedIPs);
+            _needsToUpdatePublicKey = _producers.Where(p => p.Key == _nodeConfigurations.AccountName).SingleOrDefault().PublicKey != _nodeConfigurations.ActivePublicKey;
             await UpdatePastSidechainDbBasedOnWarnings();
 
             _exitRequested = await CheckIfExitHasBeenRequested();
