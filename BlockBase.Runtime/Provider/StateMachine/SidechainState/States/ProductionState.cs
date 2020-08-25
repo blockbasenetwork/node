@@ -64,6 +64,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             var isProducerInBlacklist = _blacklist.Any(b => b.Key == _nodeConfigurations.AccountName);
 
             if (_needsToUpdateIps) return Task.FromResult((_needsToUpdateIps, typeof(UpdateIpState).Name));
+            if (_needsToUpdatePublicKey) return Task.FromResult((_needsToUpdatePublicKey, typeof(UpdateKeyState).Name));
             if (!isProducerInTable && !isProducerInBlacklist && !_exitRequested) return Task.FromResult((true, typeof(StartState).Name));
             if (!isProducerInTable && (isProducerInBlacklist || _exitRequested)) return Task.FromResult((true, typeof(EndState).Name));
             return Task.FromResult((isProducerInTable && _contractStateTable.IPSendTime, typeof(IPSendTimeState).Name));

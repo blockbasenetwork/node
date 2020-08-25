@@ -125,6 +125,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
             if (state == typeof(IPReceiveState).Name) return new IPReceiveState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _peerConnectionsHandler, _mongoDbProducerService);
             if (state == typeof(ProductionState).Name) return new ProductionState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations, _mongoDbProducerService);
             if (state == typeof(UpdateIpState).Name) return new UpdateIpState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
+            if (state == typeof(UpdateKeyState).Name) return new UpdateKeyState(_sidechain, _logger, _mainchainService, _nodeConfigurations, _networkConfigurations);
             if (state == typeof(EndState).Name) return new EndState(_sidechain, _logger, _mongoDbProducerService, _sidechainProducerService, _mainchainService, _inAutomaticMode);
             if (state == typeof(WaitForEndConfirmationState).Name) return new WaitForEndConfirmationState(_sidechain, _logger, _mainchainService, _nodeConfigurations);
             
