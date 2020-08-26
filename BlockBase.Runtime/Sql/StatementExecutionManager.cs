@@ -68,6 +68,8 @@ namespace BlockBase.Runtime.Sql
         {
             var results = new List<QueryResult>();
             var databasesSemaphores = _concurrentVariables.DatabasesSemaphores;
+            var allPendingTransactions = new List<Transaction>();
+            var pendingTransactionsPerStatementType = new List<(string statementType, List<Transaction> transactions)>();
             foreach (var sqlCommand in builder.SqlCommands)
             {
                 var pendingTransactions = new List<Transaction>();
@@ -93,7 +95,6 @@ namespace BlockBase.Runtime.Sql
 
                     IList<IList<string>> resultsList;
 
-                    _logger.LogDebug($"Executing Sql command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                     switch (sqlCommand)
                     {
                         case ReadQuerySqlCommand readQuerySql:
@@ -129,7 +130,9 @@ namespace BlockBase.Runtime.Sql
                                 pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
                             _logger.LogDebug("Saving and executing transaction");
-                            await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType());
+                            allPendingTransactions.AddRange(pendingTransactions);
+                            pendingTransactionsPerStatementType.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), pendingTransactions));
+                            //await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType());
                             break;
 
 
@@ -142,7 +145,9 @@ namespace BlockBase.Runtime.Sql
                                 pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
 
-                            await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, genericSqlCommand.OriginalSqlStatement.GetStatementType());
+                            allPendingTransactions.AddRange(pendingTransactions);
+                            pendingTransactionsPerStatementType.Add((genericSqlCommand.OriginalSqlStatement.GetStatementType(), pendingTransactions));
+                            //await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, genericSqlCommand.OriginalSqlStatement.GetStatementType());
                             break;
 
                         case DatabaseSqlCommand databaseSqlCommand:
@@ -166,9 +171,11 @@ namespace BlockBase.Runtime.Sql
                                 else
                                     pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, databaseSqlCommand.OriginalSqlStatement.GetStatementType());
+                            allPendingTransactions.AddRange(pendingTransactions);
+                            pendingTransactionsPerStatementType.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), pendingTransactions));
+                            //await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, databaseSqlCommand.OriginalSqlStatement.GetStatementType());
                             break;
-                            
+
                         case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
                             if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
                             {
@@ -203,22 +210,38 @@ namespace BlockBase.Runtime.Sql
                             {
                                 results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), "Condition not fulfilled."));
                             }
-                            _logger.LogDebug("if statement");
                             break;
                     }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Error analyzing sql command.{e}");
+                    results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
+                }
+            }
 
-                    _logger.LogDebug($"Executed Sql command: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-
+            _logger.LogDebug($"Adding pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+            await AddPendingTransactions(allPendingTransactions);
+            _logger.LogDebug($"Added pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+            foreach(var pendingTransactionPerStatement in pendingTransactionsPerStatementType)
+            {
+                try
+                {
+                    _logger.LogDebug($"Executing pending transaction: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+                    await TryToExecuteTransactions(pendingTransactionPerStatement.transactions, results, createQueryResult, pendingTransactionPerStatement.statementType);
+                    _logger.LogDebug($"Executed pending transaction: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                 }
                 catch (Exception e)
                 {
                     _logger.LogError($"Error executing sql command.{e}");
-                    results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
+                    results.Add(createQueryResult(false, pendingTransactionPerStatement.statementType, e.Message));
                 }
             }
+
             if (_databaseName != null)
                 databasesSemaphores[_databaseName].Release();
 
+            _logger.LogError($"Returning SQL results...");
             return results;
         }
 
@@ -290,8 +313,16 @@ namespace BlockBase.Runtime.Sql
 
         private async Task SaveAndTryToExecuteTransactions(IList<Transaction> pendingTransactions, IList<QueryResult> results, CreateQueryResultDelegate createQueryResult, string statementType)
         {
-            await AddPendingTransactions(pendingTransactions); 
-            var opResult = await TryToExecutePendingTransactions(pendingTransactions); 
+            await AddPendingTransactions(pendingTransactions);
+            var opResult = await TryToExecutePendingTransactions(pendingTransactions);
+            if (opResult.Succeeded) results.Add(createQueryResult(opResult.Succeeded, statementType));
+            else results.Add(createQueryResult(opResult.Succeeded, statementType, opResult.Exception.Message));
+        }
+
+        private async Task TryToExecuteTransactions(IList<Transaction> pendingTransactions, IList<QueryResult> results, CreateQueryResultDelegate createQueryResult, string statementType)
+        {
+            //await AddPendingTransactions(pendingTransactions); 
+            var opResult = await TryToExecutePendingTransactions(pendingTransactions);
             if (opResult.Succeeded) results.Add(createQueryResult(opResult.Succeeded, statementType));
             else results.Add(createQueryResult(opResult.Succeeded, statementType, opResult.Exception.Message));
         }
