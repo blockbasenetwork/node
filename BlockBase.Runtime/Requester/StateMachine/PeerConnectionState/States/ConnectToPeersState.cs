@@ -77,7 +77,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.PeerConnectionState.States
             foreach (var table in ipAddressesTables)
             {
                 var producer = table.Key;
-                var producerPublicKey = table.PublicKey;
+                var producerPublicKey = _producers.Where(p => p.Key == producer).SingleOrDefault()?.PublicKey;
                 //TODO rpinto - why a list of IPs and not only one?
                 var encryptedIp = table.EncryptedIPs?.LastOrDefault();
                 if (encryptedIp == null) continue;
