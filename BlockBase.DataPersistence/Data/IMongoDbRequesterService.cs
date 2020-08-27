@@ -12,6 +12,7 @@ namespace BlockBase.DataPersistence.Data
         Task<ulong> GetLastTransactionSequenceNumberDBAsync(string databaseName);
         Task DropRequesterDatabase(string sidechain);
         Task MovePendingTransactionToExecutedAsync(string databaseName, TransactionDB transactions);
+        Task MovePendingTransactionsToExecutedAsync(string databaseName, IList<TransactionDB> transactions);
         Task AddPendingExecutionTransactionsAsync(string databaseName, IList<TransactionDB> transaction);
         Task RemovePendingExecutionTransactionAsync(string databaseName, TransactionDB transaction);
         Task RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, ulong lastIncludedTransactionSequenceNumber);
