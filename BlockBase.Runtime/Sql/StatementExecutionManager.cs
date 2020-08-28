@@ -235,16 +235,19 @@ namespace BlockBase.Runtime.Sql
             //         results.Add(createQueryResult(false, pendingTransactionPerStatement.statementType, e.Message));
             //     }
             // }
-            try
+            if (pendingTransactionsPerStatementType.Any())
             {
-                _logger.LogDebug($"Executing pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-                await TryToExecuteTransactions(pendingTransactionsPerStatementType.SelectMany(p => p.transactions).ToList(), results, createQueryResult, pendingTransactionsPerStatementType.First().statementType);
-                _logger.LogDebug($"Executed pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Error executing sql command.{e}");
-                results.Add(createQueryResult(false, pendingTransactionsPerStatementType.First().statementType, e.Message));
+                try
+                {
+                    _logger.LogDebug($"Executing pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+                    await TryToExecuteTransactions(pendingTransactionsPerStatementType.SelectMany(p => p.transactions).ToList(), results, createQueryResult, pendingTransactionsPerStatementType.First().statementType);
+                    _logger.LogDebug($"Executed pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Error executing sql command.{e}");
+                    results.Add(createQueryResult(false, pendingTransactionsPerStatementType.First().statementType, e.Message));
+                }
             }
 
             if (_databaseName != null)
