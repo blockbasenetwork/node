@@ -146,5 +146,17 @@ namespace BlockBase.DataPersistence.Data
                 await transactionscol.DeleteOneAsync(t => t.TransactionHash == transaction.TransactionHash);
             }
         }
+
+        public async Task RemovePendingExecutionTransactionsAsync(string databaseName, IList<TransactionDB> transactions)
+        {
+            databaseName = ClearSpecialCharacters(databaseName);
+            var orderedTransactions = transactions.OrderBy(t => t.SequenceNumber).ToList();
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                await transactionscol.DeleteManyAsync(t=> t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
+            }
+        }
     }
 }

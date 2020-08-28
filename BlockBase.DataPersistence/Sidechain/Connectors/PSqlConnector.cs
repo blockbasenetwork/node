@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BlockBase.Domain.Database.Info;
 using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
+using BlockBase.DataPersistence.Data.MongoDbEntities;
 
 namespace BlockBase.DataPersistence.Sidechain.Connectors
 {
@@ -292,7 +293,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         {
             var connectionString = _serverConnectionString;
             if (databaseName != "") connectionString = AddDatabaseNameToServerConnectionString(databaseName);
-            else 
+            else
             {
                 var index = sqlCommand.IndexOf("_");
                 sqlCommand = sqlCommand.Insert(index, _dbPrefix);
@@ -310,6 +311,44 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 catch (Exception e)
                 {
                     _logger.LogWarning(e.Message, "Error executing command.");
+                    throw e;
+                }
+                finally
+                {
+                    await conn.CloseAsync();
+                }
+            }
+        }
+
+        public async Task ExecuteCommands(List<string> sqlCommands, string databaseName)
+        {
+            var connectionString = _serverConnectionString;
+            if (databaseName != "") connectionString = AddDatabaseNameToServerConnectionString(databaseName);
+            using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
+            {
+                var transaction = conn.BeginTransaction();
+                try
+                {
+                    await conn.OpenAsync();
+                    foreach (var sqlCommand in sqlCommands)
+                    {
+                        var sqlCommandToExecute = sqlCommand;
+                        if (databaseName == "")
+                        {
+                            var index = sqlCommand.IndexOf("_");
+                            sqlCommandToExecute = sqlCommand.Insert(index, _dbPrefix);
+                        }
+                        using (var command = new NpgsqlCommand(sqlCommandToExecute, conn))
+                        {
+                            await command.ExecuteNonQueryAsync();
+                        }
+                    }
+                    await transaction.CommitAsync();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e.Message, "Error executing command.");
+                    await transaction.RollbackAsync();
                     throw e;
                 }
                 finally
@@ -352,6 +391,49 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 finally
                 {
 
+                    await conn.CloseAsync();
+                }
+            }
+
+        }
+
+        public async Task ExecuteCommandsWithTransactionNumber(List<TransactionDB> transactionsToExecute, string databaseName)
+        {
+            var connectionString = _serverConnectionString;
+
+            connectionString = AddDatabaseNameToServerConnectionString(databaseName);
+            await CreateTransactionInfoTableIfNotExists(databaseName);
+
+            using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                var transaction = conn.BeginTransaction();
+                try
+                {
+
+                    foreach (var transactionToExecute in transactionsToExecute)
+                    {
+                        using (var command1 = new NpgsqlCommand(transactionToExecute.TransactionJson, conn))
+                        {
+                            await command1.ExecuteNonQueryAsync();
+                        }
+
+                        using (var command2 = new NpgsqlCommand($"INSERT INTO {TRANSACTION_INFO_TABLE_NAME} ({SEQUENCE_NUMBER_COLUMN_NAME}) VALUES ( {transactionToExecute.SequenceNumber} );", conn))
+                        {
+                            await command2.ExecuteNonQueryAsync();
+                        }
+                    }
+
+                    await transaction.CommitAsync();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e.Message, "Error executing command.");
+                    await transaction.RollbackAsync();
+                    throw e;
+                }
+                finally
+                {
                     await conn.CloseAsync();
                 }
             }

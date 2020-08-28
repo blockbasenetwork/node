@@ -109,7 +109,6 @@ namespace BlockBase.Runtime.Sql
                             break;
 
                         case ChangeRecordSqlCommand changeRecordSqlCommand:
-                            _logger.LogDebug("Identifying rows that will be changed");
                             sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
                             // marciak - some updates and deletes require a select statement prior to execution
                             // marciak - this select will be used to identify the actual rows that will be changed
@@ -129,7 +128,6 @@ namespace BlockBase.Runtime.Sql
                             {
                                 pendingTransactions.Add(CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey));
                             }
-                            _logger.LogDebug("Saving and executing transaction");
                             allPendingTransactions.AddRange(pendingTransactions);
                             pendingTransactionsPerStatementType.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), pendingTransactions));
                             //await SaveAndTryToExecuteTransactions(pendingTransactions, results, createQueryResult, changeRecordSqlCommand.OriginalSqlStatement.GetStatementType());
@@ -223,19 +221,30 @@ namespace BlockBase.Runtime.Sql
             _logger.LogDebug($"Adding pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
             await AddPendingTransactions(allPendingTransactions);
             _logger.LogDebug($"Added pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-            foreach(var pendingTransactionPerStatement in pendingTransactionsPerStatementType)
+            // foreach (var pendingTransactionPerStatement in pendingTransactionsPerStatementType)
+            // {
+            //     try
+            //     {
+            //         _logger.LogDebug($"Executing pending transaction: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+            //         await TryToExecuteTransactions(pendingTransactionPerStatement.transactions, results, createQueryResult, pendingTransactionPerStatement.statementType);
+            //         _logger.LogDebug($"Executed pending transaction: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+            //     }
+            //     catch (Exception e)
+            //     {
+            //         _logger.LogError($"Error executing sql command.{e}");
+            //         results.Add(createQueryResult(false, pendingTransactionPerStatement.statementType, e.Message));
+            //     }
+            // }
+            try
             {
-                try
-                {
-                    _logger.LogDebug($"Executing pending transaction: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-                    await TryToExecuteTransactions(pendingTransactionPerStatement.transactions, results, createQueryResult, pendingTransactionPerStatement.statementType);
-                    _logger.LogDebug($"Executed pending transaction: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError($"Error executing sql command.{e}");
-                    results.Add(createQueryResult(false, pendingTransactionPerStatement.statementType, e.Message));
-                }
+                _logger.LogDebug($"Executing pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+                await TryToExecuteTransactions(pendingTransactionsPerStatementType.SelectMany(p => p.transactions).ToList(), results, createQueryResult, pendingTransactionsPerStatementType.First().statementType);
+                _logger.LogDebug($"Executed pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error executing sql command.{e}");
+                results.Add(createQueryResult(false, pendingTransactionsPerStatementType.First().statementType, e.Message));
             }
 
             if (_databaseName != null)
@@ -278,13 +287,27 @@ namespace BlockBase.Runtime.Sql
 
         private async Task<OpResult> TryToExecutePendingTransactions(IList<Transaction> pendingTransactions)
         {
-            var orderedTransactions = pendingTransactions.OrderBy(t => t.SequenceNumber);
+            var orderedTransactions = pendingTransactions.OrderBy(t => t.SequenceNumber).ToList();
             OpResult opResult = null;
-            foreach (var transaction in orderedTransactions)
+            while (orderedTransactions.Any())
             {
-                opResult = await TryToExecutePendingTransaction(transaction);
-                if (!opResult.Succeeded) return opResult;
+                var firstTransaction = orderedTransactions.First();
+                var groupedTransactionsByDatabaseName = orderedTransactions.TakeWhile(t => t.DatabaseName == firstTransaction.DatabaseName).ToList();
+                opResult = await TryToExecutePendingTransactionsInBatch(groupedTransactionsByDatabaseName);
+                if (!opResult.Succeeded) break;
+                orderedTransactions = orderedTransactions.Except(groupedTransactionsByDatabaseName).ToList();
             }
+
+            //If fails in batch tries to execute one by one
+            if (!opResult.Succeeded)
+            {
+                foreach (var transaction in orderedTransactions)
+                {
+                    opResult = await TryToExecutePendingTransaction(transaction);
+                    if (!opResult.Succeeded) return opResult;
+                }
+            }
+
             return opResult;
         }
 
@@ -306,6 +329,39 @@ namespace BlockBase.Runtime.Sql
             catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, transactionDB);
+                _concurrentVariables.RollbackOneTransactionNumber();
+                return new OpResult(false, e);
+            }
+        }
+
+        private async Task<OpResult> TryToExecutePendingTransactionsInBatch(List<Transaction> pendingTransactions)
+        {
+            var transactionsToInsertInDb = new List<TransactionDB>();
+            foreach (var transaction in pendingTransactions)
+            {
+                var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
+                transactionsToInsertInDb.Add(transactionDB);
+            }
+
+            try
+            {
+                var databaseName = transactionsToInsertInDb.First().DatabaseName;
+                if (databaseName != "")
+                    await _connector.ExecuteCommandsWithTransactionNumber(transactionsToInsertInDb, databaseName);
+                else
+                    await _connector.ExecuteCommands(transactionsToInsertInDb.Select(t => t.TransactionJson).ToList(), databaseName);
+
+                await _mongoDbRequesterService.MovePendingTransactionsToExecutedAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
+                foreach (var transactionToSend in pendingTransactions)
+                {
+                    _transactionsManager.AddScriptTransactionToSend(transactionToSend);
+                }
+
+                return new OpResult(true);
+            }
+            catch (Exception e)
+            {
+                await _mongoDbRequesterService.RemovePendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
                 _concurrentVariables.RollbackOneTransactionNumber();
                 return new OpResult(false, e);
             }
