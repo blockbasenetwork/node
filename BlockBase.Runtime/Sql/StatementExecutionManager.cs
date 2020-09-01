@@ -313,7 +313,8 @@ namespace BlockBase.Runtime.Sql
             catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, transactionDB);
-                _concurrentVariables.RollbackTransactionNumber();
+                var rollback = _concurrentVariables.RollbackTransactionNumber();
+                _logger.LogInformation($"Rolling back to #{rollback}");
                 return new OpResult(false, e);
             }
         }
@@ -346,7 +347,8 @@ namespace BlockBase.Runtime.Sql
             catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
-                _concurrentVariables.RollbackTransactionNumber();
+                var rollback = _concurrentVariables.RollbackTransactionNumber();
+                _logger.LogInformation($"Rolling back to #{rollback}");
                 return new OpResult(false, e);
             }
         }
@@ -364,6 +366,7 @@ namespace BlockBase.Runtime.Sql
         private Transaction CreateTransaction(string json, string databaseName, string senderPrivateKey)
         {
             var sequenceNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());
+            _logger.LogInformation($"Creating transaction #{sequenceNumber}");
 
             var transaction = new Transaction()
             {
