@@ -212,7 +212,6 @@ namespace BlockBase.Runtime.Sql
             if (_databaseName != null)
                 databasesSemaphores[_databaseName].Release();
 
-            _logger.LogError($"Returning SQL results...");
             return results;
         }
 
@@ -346,9 +345,6 @@ namespace BlockBase.Runtime.Sql
             }
             catch (Exception e)
             {
-                await _mongoDbRequesterService.RemovePendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
-                var rollback = _concurrentVariables.RollbackTransactionNumber();
-                _logger.LogInformation($"Rolling back to #{rollback}");
                 return new OpResult(false, e);
             }
         }
