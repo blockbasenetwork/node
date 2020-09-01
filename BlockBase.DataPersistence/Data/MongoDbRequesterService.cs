@@ -144,7 +144,7 @@ namespace BlockBase.DataPersistence.Data
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                 await transactionscol.DeleteOneAsync(t => t.TransactionHash == transaction.TransactionHash);
-                var update = Builders<TransactionDB>.Update.Inc<int>("SequenceNumber", -1);
+                var update = Builders<TransactionDB>.Update.Inc("SequenceNumber", -1);
                 await transactionscol.UpdateManyAsync(t => t.SequenceNumber > transaction.SequenceNumber, update);
             }
         }
@@ -158,7 +158,7 @@ namespace BlockBase.DataPersistence.Data
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                 await transactionscol.DeleteManyAsync(t=> t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
-                var update = Builders<TransactionDB>.Update.Inc<int>("SequenceNumber", -1);
+                var update = Builders<TransactionDB>.Update.Inc("SequenceNumber", -1);
                 await transactionscol.UpdateManyAsync(t => t.SequenceNumber > orderedTransactions.Last().SequenceNumber, update);
             }
         }
