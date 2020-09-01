@@ -155,11 +155,11 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
             var currentSequenceNumber = transactionToExecute?.SequenceNumber ?? 0;
 
-            var subsequentTransactions = (await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_sidechainPool.ClientAccountName, currentSequenceNumber)).OrderBy(t => t.SequenceNumber);
+            var subsequentTransactions = (await _mongoDbProducerService.GetTransactionsSinceSequenceNumber(_sidechainPool.ClientAccountName, Convert.ToUInt64(currentSequenceNumber))).OrderBy(t => t.SequenceNumber);
 
             foreach (var transaction in subsequentTransactions)
             {
-                if(transaction.SequenceNumber != currentSequenceNumber + 1) return;
+                if(transaction.SequenceNumber != Convert.ToUInt64(currentSequenceNumber) + 1) return;
                 await ExecuteTransaction(transaction);
                 currentSequenceNumber++;
             }
@@ -174,7 +174,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             await _mongoDbProducerService.UpdateTransactionToExecute(_sidechainPool.ClientAccountName, transactionDB);
 
             if (transactionDB.DatabaseName != "")
-                await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, transactionDB.SequenceNumber);
+                await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, Convert.ToUInt64(transactionDB.SequenceNumber));
             else
                 await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
 

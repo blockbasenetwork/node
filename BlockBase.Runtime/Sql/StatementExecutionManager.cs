@@ -302,7 +302,7 @@ namespace BlockBase.Runtime.Sql
             try
             {
                 if (transactionDB.DatabaseName != "") //marciak - distinguishing between server connection and database connection
-                    await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, transactionDB.SequenceNumber);
+                    await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, Convert.ToUInt64(transactionDB.SequenceNumber));
                 else
                     await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
 

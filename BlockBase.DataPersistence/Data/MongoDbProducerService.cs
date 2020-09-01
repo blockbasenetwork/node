@@ -298,7 +298,7 @@ namespace BlockBase.DataPersistence.Data
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
 
                 var transactionQuery = from t in transactionCollection.AsQueryable()
-                                       where t.SequenceNumber == transactionNumber
+                                       where t.SequenceNumber == Convert.ToInt64(transactionNumber)
                                        select t;
 
                 return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).SingleOrDefault();
@@ -315,7 +315,7 @@ namespace BlockBase.DataPersistence.Data
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
 
                 var transactionQuery = from t in transactionCollection.AsQueryable()
-                                       where t.SequenceNumber > transactionNumber
+                                       where t.SequenceNumber > Convert.ToInt64(transactionNumber)
                                        select t;
 
                 return (await transactionQuery.ToListAsync()).Select(t => t.TransactionFromTransactionDB()).ToList();
