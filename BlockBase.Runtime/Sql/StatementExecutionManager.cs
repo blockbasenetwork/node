@@ -313,7 +313,7 @@ namespace BlockBase.Runtime.Sql
             catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, transactionDB);
-                _concurrentVariables.RollbackOneTransactionNumber();
+                _concurrentVariables.RollbackTransactionNumber();
                 return new OpResult(false, e);
             }
         }
@@ -346,7 +346,7 @@ namespace BlockBase.Runtime.Sql
             catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
-                _concurrentVariables.RollbackOneTransactionNumber();
+                _concurrentVariables.RollbackTransactionNumber();
                 return new OpResult(false, e);
             }
         }
