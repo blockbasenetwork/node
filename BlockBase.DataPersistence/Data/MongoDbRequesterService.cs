@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using System.Linq;
 using MongoDB.Driver.Linq;
 using BlockBase.Domain.Blockchain;
+using System;
 
 namespace BlockBase.DataPersistence.Data
 {
@@ -52,14 +53,16 @@ namespace BlockBase.DataPersistence.Data
 
                 var result = await transactionQuery.OrderByDescending(t => t).FirstOrDefaultAsync();
 
-                if(result != 0) return result;
+                if(result != 0) return Convert.ToUInt64(result);
                 
                 transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
 
                 transactionQuery = from t in transactionCollection.AsQueryable()
                                        select t.SequenceNumber;
 
-                return await transactionQuery.OrderByDescending(t => t).FirstOrDefaultAsync();
+                result = await transactionQuery.OrderByDescending(t => t).FirstOrDefaultAsync();
+
+                return Convert.ToUInt64(result);
             }
         }
 
@@ -132,7 +135,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
-                await transactionscol.DeleteManyAsync(t => t.SequenceNumber <= lastIncludedTransactionSequenceNumber);
+                await transactionscol.DeleteManyAsync(t => t.SequenceNumber <= Convert.ToInt64(lastIncludedTransactionSequenceNumber));
             }
         }
 
