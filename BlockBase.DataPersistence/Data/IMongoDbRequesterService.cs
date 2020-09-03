@@ -16,6 +16,7 @@ namespace BlockBase.DataPersistence.Data
         Task AddPendingExecutionTransactionsAsync(string databaseName, IList<TransactionDB> transaction);
         Task RemovePendingExecutionTransactionAsync(string databaseName, TransactionDB transaction);
         Task RemoveAlreadyIncludedTransactionsDBAsync(string databaseName, ulong lastIncludedTransactionSequenceNumber);
+        Task<IList<Transaction>> RollbackAndRetrieveWaitingTransactions(string databaseName, ulong lastIncludedTransactionSequenceNumber);
         Task RemovePendingExecutionTransactionsAsync(string databaseName, IList<TransactionDB> transactions);
 
     }

@@ -9,6 +9,7 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
         public static readonly string PROVIDER_TRANSACTIONS_COLLECTION_NAME = "Transactions";
         public static readonly string REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME = "PendingExecutionTransactions";
         public static readonly string REQUESTER_TRANSACTIONS_COLLECTION_NAME = "TransactionsToSend";
+        public static readonly string REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME = "TransactionsWaitingForIrreversibility";
         public static readonly string PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME = "CurrentTransactionToExecute";
         public static readonly string PRODUCING_SIDECHAINS_COLLECTION_NAME = "ProducingSidechains";
         public static readonly string PAST_SIDECHAINS_COLLETION_NAME = "PastSidechains";

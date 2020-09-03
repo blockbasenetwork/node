@@ -22,7 +22,7 @@ namespace BlockBase.DataPersistence.Data
             databaseName = ClearSpecialCharacters(databaseName);
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
         }
-       
+
         public async Task<IList<TransactionDB>> RetrievePendingTransactions(string databaseName)
         {
             databaseName = ClearSpecialCharacters(databaseName);
@@ -53,12 +53,12 @@ namespace BlockBase.DataPersistence.Data
 
                 var result = await transactionQuery.OrderByDescending(t => t).FirstOrDefaultAsync();
 
-                if(result != 0) return Convert.ToUInt64(result);
-                
+                if (result != 0) return Convert.ToUInt64(result);
+
                 transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
 
                 transactionQuery = from t in transactionCollection.AsQueryable()
-                                       select t.SequenceNumber;
+                                   select t.SequenceNumber;
 
                 result = await transactionQuery.OrderByDescending(t => t).FirstOrDefaultAsync();
 
@@ -92,7 +92,7 @@ namespace BlockBase.DataPersistence.Data
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
-                await pendingExecutionTransactionCollection.DeleteOneAsync(t=> t.TransactionHash == transaction.TransactionHash);
+                await pendingExecutionTransactionCollection.DeleteOneAsync(t => t.TransactionHash == transaction.TransactionHash);
                 var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                 await executedTransactionsCollection.InsertOneAsync(transaction);
                 await session.CommitTransactionAsync();
@@ -108,7 +108,7 @@ namespace BlockBase.DataPersistence.Data
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
-                await pendingExecutionTransactionCollection.DeleteManyAsync(t=> t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
+                await pendingExecutionTransactionCollection.DeleteManyAsync(t => t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
                 var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                 await executedTransactionsCollection.InsertManyAsync(transactions);
                 await session.CommitTransactionAsync();
@@ -123,7 +123,7 @@ namespace BlockBase.DataPersistence.Data
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
-                foreach(var transaction in transactions) await transactionsCollection.InsertOneAsync(transaction);
+                foreach (var transaction in transactions) await transactionsCollection.InsertOneAsync(transaction);
                 await session.CommitTransactionAsync();
             }
         }
@@ -135,7 +135,30 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                var transactionQuery = from t in transactionscol.AsQueryable()
+                                       where t.SequenceNumber <= Convert.ToInt64(lastIncludedTransactionSequenceNumber)
+                                       select t;
+                var waitingTransactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
+                await waitingTransactionscol.InsertManyAsync(transactionQuery.ToList());
                 await transactionscol.DeleteManyAsync(t => t.SequenceNumber <= Convert.ToInt64(lastIncludedTransactionSequenceNumber));
+            }
+        }
+
+        public async Task<IList<Transaction>> RollbackAndRetrieveWaitingTransactions(string databaseName, ulong lastIncludedTransactionSequenceNumber)
+        {
+            databaseName = ClearSpecialCharacters(databaseName);
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var waitingTransactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
+                var transactionQuery = from t in waitingTransactionscol.AsQueryable()
+                                       where t.SequenceNumber > Convert.ToInt64(lastIncludedTransactionSequenceNumber)
+                                       select t;
+                var transactionToSend = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                var transactionsToRetrieve = await transactionQuery.ToListAsync();
+                await transactionToSend.InsertManyAsync(transactionsToRetrieve);
+                await waitingTransactionscol.DeleteManyAsync(t => t.SequenceNumber > Convert.ToInt64(lastIncludedTransactionSequenceNumber));
+                return transactionsToRetrieve.Select(t => t.TransactionFromTransactionDB()).ToList();
             }
         }
 
@@ -160,7 +183,7 @@ namespace BlockBase.DataPersistence.Data
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var transactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
-                await transactionscol.DeleteManyAsync(t=> t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
+                await transactionscol.DeleteManyAsync(t => t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
                 var update = Builders<TransactionDB>.Update.Inc("SequenceNumber", -1);
                 await transactionscol.UpdateManyAsync(t => t.SequenceNumber > orderedTransactions.Last().SequenceNumber, update);
             }
