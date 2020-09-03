@@ -157,7 +157,8 @@ namespace BlockBase.DataPersistence.Data
                                        where t.SequenceNumber <= Convert.ToInt64(lastIncludedTransactionSequenceNumber)
                                        select t;
                 var waitingTransactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
-                await waitingTransactionscol.InsertManyAsync(transactionQuery.ToList());
+                var transactionsToRemove = await transactionQuery.ToListAsync();
+                if (transactionsToRemove.Any()) await waitingTransactionscol.InsertManyAsync(transactionsToRemove);
                 await transactionscol.DeleteManyAsync(t => t.SequenceNumber <= Convert.ToInt64(lastIncludedTransactionSequenceNumber));
             }
         }
@@ -174,7 +175,7 @@ namespace BlockBase.DataPersistence.Data
                                        select t;
                 var transactionToSend = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                 var transactionsToRetrieve = await transactionQuery.ToListAsync();
-                await transactionToSend.InsertManyAsync(transactionsToRetrieve);
+                if (transactionsToRetrieve.Any()) await transactionToSend.InsertManyAsync(transactionsToRetrieve);
                 await waitingTransactionscol.DeleteManyAsync(t => t.SequenceNumber > Convert.ToInt64(lastIncludedTransactionSequenceNumber));
                 return transactionsToRetrieve.Select(t => t.TransactionFromTransactionDB()).ToList();
             }
