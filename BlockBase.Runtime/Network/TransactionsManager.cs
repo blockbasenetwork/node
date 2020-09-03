@@ -117,7 +117,7 @@ namespace BlockBase.Runtime.Network
             foreach (var transactionSendingTrackPocoToRemove in transactionSendingTrackPocosToRemove) _transactionsToSend.Remove(transactionSendingTrackPocoToRemove);
         }
 
-        public async Task RollbackWaitingTransactions(uint numberOfIncludedTransactions, ulong lastIncludedTransactionSequenceNumber)
+        public async Task RollbackWaitingTransactions(ulong lastIncludedTransactionSequenceNumber)
         {
             var transactionsToResend = await _mongoDbRequesterService.RollbackAndRetrieveWaitingTransactions(_nodeConfigurations.AccountName, lastIncludedTransactionSequenceNumber);
 
