@@ -185,7 +185,7 @@ namespace BlockBase.DataPersistence.Data
                                            //all blocks with timestamps earlier than when the last production start time
                                            b.Timestamp < (ulong)lastProductionStartTime
                                            //and unconfirmed
-                                           && b.Confirmed == false
+                                           && (b.SequenceNumber > blockheaderDB.SequenceNumber || !b.Confirmed)
                                            select b;
 
                     //marciak - this is disassociating the transactions from the unconfirmed blocks, so that they can be associated to new blocks
@@ -195,7 +195,7 @@ namespace BlockBase.DataPersistence.Data
                         await transactionCollection.UpdateManyAsync(t => t.BlockHash == blockHeaderDBToRemove.BlockHash, update);
                     }
 
-                    await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && b.Confirmed == false);
+                    await blockHeaderCollection.DeleteManyAsync(b => b.Timestamp < (ulong)lastProductionStartTime && (b.SequenceNumber > blockheaderDB.SequenceNumber || !b.Confirmed));
 
                     var numberOfBlocks = await blockHeaderCollection.CountDocumentsAsync(new BsonDocument());
 
