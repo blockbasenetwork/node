@@ -17,10 +17,28 @@ namespace BlockBase.DataPersistence.Data
         public MongoDbRequesterService(IOptions<NodeConfigurations> nodeConfigurations, ILogger<MongoDbProducerService> logger) : base(nodeConfigurations, logger)
         {
         }
+
         public async Task<IList<Transaction>> RetrieveTransactionsInMempool(string databaseName)
         {
             databaseName = ClearSpecialCharacters(databaseName);
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+        }
+
+        public async Task CreateIndexes(string databaseName)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var indexModel = new CreateIndexModel<TransactionDB>(Builders<TransactionDB>.IndexKeys.Ascending(t => t.SequenceNumber));
+
+                var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                var waitingTransactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
+
+                await pendingExecutionTransactionCollection.Indexes.CreateOneAsync(indexModel);
+                await transactionCollection.Indexes.CreateOneAsync(indexModel);
+                await waitingTransactionscol.Indexes.CreateOneAsync(indexModel);
+            }
         }
 
         public async Task<IList<TransactionDB>> RetrievePendingTransactions(string databaseName)

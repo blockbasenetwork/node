@@ -226,6 +226,7 @@ namespace BlockBase.Runtime.Network
         {
             try
             {
+                await _mongoDbRequesterService.CreateIndexes(_nodeConfigurations.AccountName);
                 var transactions = await _mongoDbRequesterService.RetrieveTransactionsInMempool(_nodeConfigurations.AccountName);
                 foreach (var transaction in transactions)
                     AddScriptTransactionToSend(transaction);
