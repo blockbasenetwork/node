@@ -306,7 +306,7 @@ namespace BlockBase.Runtime.Sql
                     await _connector.ExecuteCommand(pendingTransaction.Json, pendingTransaction.DatabaseName);
 
                 var completedTransaction = HashAndSignTransaction(pendingTransaction);
-                var transactionDB = new TransactionDB().TransactionDBFromTransaction(pendingTransaction);
+                var transactionDB = new TransactionDB().TransactionDBFromTransaction(completedTransaction);
 
                 await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, transactionDB);
                 _transactionsManager.AddScriptTransactionToSend(completedTransaction);
@@ -334,7 +334,7 @@ namespace BlockBase.Runtime.Sql
                 var completeTransactions = HashAndSignTransactions(pendingTransactions);
 
                 var transactionsToInsertInDb = new List<TransactionDB>();
-                foreach (var transaction in pendingTransactions)
+                foreach (var transaction in completeTransactions)
                 {
                     var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
                     transactionsToInsertInDb.Add(transactionDB);
