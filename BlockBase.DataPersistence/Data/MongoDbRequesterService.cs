@@ -93,6 +93,7 @@ namespace BlockBase.DataPersistence.Data
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + sidechain);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                await sidechainDatabase.DropCollectionAsync(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
 
                 if ((await sidechainDatabase.ListCollectionsAsync()).ToList().Count() == 0)
                 {
