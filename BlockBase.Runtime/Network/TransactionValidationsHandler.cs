@@ -87,6 +87,8 @@ namespace BlockBase.Runtime.Network
                     }
                 }
 
+                if (!receivedValidTransactions.Any()) return;
+
                 var lastTransaction = new Transaction().SetValuesFromProto(transactionsProto.Last());
                 var alreadyReceivedTrxAfterLast = await GetConfirmedTransactionsSequeceNumber(lastTransaction, args.ClientAccountName);
                 if (alreadyReceivedTrxAfterLast.Count > 0)
@@ -95,9 +97,6 @@ namespace BlockBase.Runtime.Network
                 var data = new List<byte>();
                 foreach (var transactionSequenceNumber in receivedValidTransactions)
                     data.AddRange(BitConverter.GetBytes(transactionSequenceNumber));
-
-                if (data.Count() == 0)
-                    return;
 
                 var requesterPeer = _peerConnectionsHandler.CurrentPeerConnections.GetEnumerable().Where(p => p.ConnectionAccountName == args.ClientAccountName).FirstOrDefault();
                 if (requesterPeer?.IPEndPoint?.Address.ToString() == sender.Address.ToString() && requesterPeer?.IPEndPoint?.Port == sender.Port)

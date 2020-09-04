@@ -305,7 +305,7 @@ namespace BlockBase.Runtime.Sql
                 else
                     await _connector.ExecuteCommand(pendingTransaction.Json, pendingTransaction.DatabaseName);
 
-                var completedTransaction = HashAndSignTransaction(pendingTransaction);
+                var completedTransaction = ReHashAndSignTransaction(pendingTransaction);
                 var transactionDB = new TransactionDB().TransactionDBFromTransaction(completedTransaction);
 
                 await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, transactionDB);
@@ -331,7 +331,7 @@ namespace BlockBase.Runtime.Sql
                 else
                     await _connector.ExecuteCommands(pendingTransactions.Select(t => t.Json).ToList(), databaseName);
 
-                var completeTransactions = HashAndSignTransactions(pendingTransactions);
+                var completeTransactions = ReHashAndSignTransactions(pendingTransactions);
 
                 var transactionsToInsertInDb = new List<TransactionDB>();
                 foreach (var transaction in completeTransactions)
@@ -389,8 +389,9 @@ namespace BlockBase.Runtime.Sql
             return transaction;
         }
 
-        private Transaction HashAndSignTransaction(Transaction transaction)
+        private Transaction ReHashAndSignTransaction(Transaction transaction)
         {
+            transaction.TransactionHash = new byte[0];
             var serializedTransaction = JsonConvert.SerializeObject(transaction);
             var transactionHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedTransaction));
 
@@ -400,10 +401,11 @@ namespace BlockBase.Runtime.Sql
             return transaction;
         }
 
-        private IList<Transaction> HashAndSignTransactions(IList<Transaction> transactions)
+        private IList<Transaction> ReHashAndSignTransactions(IList<Transaction> transactions)
         {
             foreach (var transaction in transactions)
             {
+                transaction.TransactionHash = new byte[0];
                 var serializedTransaction = JsonConvert.SerializeObject(transaction);
                 var transactionHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedTransaction));
 
