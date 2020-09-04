@@ -111,7 +111,7 @@ namespace BlockBase.DataPersistence.Data
                 session.StartTransaction();
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
-                await pendingExecutionTransactionCollection.DeleteOneAsync(t => t.TransactionHash == transaction.TransactionHash);
+                await pendingExecutionTransactionCollection.DeleteOneAsync(t => t.SequenceNumber == transaction.SequenceNumber);
                 var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                 await executedTransactionsCollection.InsertOneAsync(transaction);
                 await session.CommitTransactionAsync();

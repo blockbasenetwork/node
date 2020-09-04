@@ -121,12 +121,12 @@ namespace BlockBase.Runtime.Sql
 
                                 foreach (var changeRecordsToExecute in changesToExecute)
                                 {
-                                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey)));
+                                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName)));
                                 }
                             }
                             else
                             {
-                                allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey)));
+                                allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
                             }
                             break;
 
@@ -136,7 +136,7 @@ namespace BlockBase.Runtime.Sql
                             {
                                 sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
 
-                                allPendingTransactions.Add((genericSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey)));
+                                allPendingTransactions.Add((genericSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
                             }
                             break;
 
@@ -157,9 +157,9 @@ namespace BlockBase.Runtime.Sql
                             {
                                 sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
                                 if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
-                                    allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, "", _nodeConfigurations.ActivePrivateKey)));
+                                    allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, "")));
                                 else
-                                    allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName, _nodeConfigurations.ActivePrivateKey)));
+                                    allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
                             }
                             break;
 
@@ -298,13 +298,15 @@ namespace BlockBase.Runtime.Sql
         //marciak - tries to execute queries if succeeds moves transactions to executed else removes the transactions
         private async Task<OpResult> TryToExecutePendingTransaction(Transaction pendingTransaction)
         {
-            var transactionDB = new TransactionDB().TransactionDBFromTransaction(pendingTransaction);
             try
             {
-                if (transactionDB.DatabaseName != "") //marciak - distinguishing between server connection and database connection
-                    await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, Convert.ToUInt64(transactionDB.SequenceNumber));
+                if (pendingTransaction.DatabaseName != "") //marciak - distinguishing between server connection and database connection
+                    await _connector.ExecuteCommandWithTransactionNumber(pendingTransaction.Json, pendingTransaction.DatabaseName, pendingTransaction.SequenceNumber);
                 else
-                    await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
+                    await _connector.ExecuteCommand(pendingTransaction.Json, pendingTransaction.DatabaseName);
+
+                var completedTransaction = HashAndSignTransaction(pendingTransaction);
+                var transactionDB = new TransactionDB().TransactionDBFromTransaction(pendingTransaction);
 
                 await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, transactionDB);
                 _transactionsManager.AddScriptTransactionToSend(transactionDB.TransactionFromTransactionDB());
@@ -312,7 +314,7 @@ namespace BlockBase.Runtime.Sql
             }
             catch (Exception e)
             {
-                await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, transactionDB);
+                await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, new TransactionDB().TransactionDBFromTransaction(pendingTransaction));
                 var rollback = _concurrentVariables.RollbackTransactionNumber();
                 _logger.LogDebug($"Rolling back to #{rollback}");
                 return new OpResult(false, e);
@@ -321,20 +323,22 @@ namespace BlockBase.Runtime.Sql
 
         private async Task<OpResult> TryToExecutePendingTransactionsInBatch(List<Transaction> pendingTransactions)
         {
-            var transactionsToInsertInDb = new List<TransactionDB>();
-            foreach (var transaction in pendingTransactions)
-            {
-                var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
-                transactionsToInsertInDb.Add(transactionDB);
-            }
-
             try
             {
-                var databaseName = transactionsToInsertInDb.First().DatabaseName;
+                var databaseName = pendingTransactions.First().DatabaseName;
                 if (databaseName != "")
-                    await _connector.ExecuteCommandsWithTransactionNumber(transactionsToInsertInDb, databaseName);
+                    await _connector.ExecuteCommandsWithTransactionNumber(pendingTransactions, databaseName);
                 else
-                    await _connector.ExecuteCommands(transactionsToInsertInDb.Select(t => t.TransactionJson).ToList(), databaseName);
+                    await _connector.ExecuteCommands(pendingTransactions.Select(t => t.Json).ToList(), databaseName);
+
+                var completeTransactions = HashAndSignTransactions(pendingTransactions);
+
+                var transactionsToInsertInDb = new List<TransactionDB>();
+                foreach (var transaction in pendingTransactions)
+                {
+                    var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
+                    transactionsToInsertInDb.Add(transactionDB);
+                }
 
                 await _mongoDbRequesterService.MovePendingTransactionsToExecutedAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
                 foreach (var transactionToSend in pendingTransactions)
@@ -361,7 +365,7 @@ namespace BlockBase.Runtime.Sql
             }
         }
 
-        private Transaction CreateTransaction(string json, string databaseName, string senderPrivateKey)
+        private Transaction CreateTransaction(string json, string databaseName)
         {
             var sequenceNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());
 
@@ -380,10 +384,34 @@ namespace BlockBase.Runtime.Sql
             var transactionHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedTransaction));
 
             transaction.TransactionHash = transactionHash;
-            transaction.Signature = SignatureHelper.SignHash(senderPrivateKey, transactionHash);
+
             // _logger.LogDebug(transaction.BlockHash.ToString() + ":" + transaction.DatabaseName + ":" + transaction.SequenceNumber + ":" + transaction.Json + ":" + transaction.Signature + ":" + transaction.Timestamp);
             return transaction;
         }
 
+        private Transaction HashAndSignTransaction(Transaction transaction)
+        {
+            var serializedTransaction = JsonConvert.SerializeObject(transaction);
+            var transactionHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedTransaction));
+
+            transaction.TransactionHash = transactionHash;
+            transaction.Signature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, transactionHash);
+
+            return transaction;
+        }
+
+        private IList<Transaction> HashAndSignTransactions(IList<Transaction> transactions)
+        {
+            foreach (var transaction in transactions)
+            {
+                var serializedTransaction = JsonConvert.SerializeObject(transaction);
+                var transactionHash = HashHelper.Sha256Data(Encoding.UTF8.GetBytes(serializedTransaction));
+
+                transaction.TransactionHash = transactionHash;
+                transaction.Signature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, transactionHash);
+            }
+
+            return transactions;
+        }
     }
 }

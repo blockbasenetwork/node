@@ -7,6 +7,7 @@ using BlockBase.Domain.Database.Info;
 using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
 using BlockBase.DataPersistence.Data.MongoDbEntities;
+using BlockBase.Domain.Blockchain;
 
 namespace BlockBase.DataPersistence.Sidechain.Connectors
 {
@@ -397,7 +398,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
         }
 
-        public async Task ExecuteCommandsWithTransactionNumber(List<TransactionDB> transactionsToExecute, string databaseName)
+        public async Task ExecuteCommandsWithTransactionNumber(List<Transaction> transactionsToExecute, string databaseName)
         {
             var connectionString = _serverConnectionString;
 
@@ -413,7 +414,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
                     foreach (var transactionToExecute in transactionsToExecute)
                     {
-                        using (var command1 = new NpgsqlCommand(transactionToExecute.TransactionJson, conn))
+                        using (var command1 = new NpgsqlCommand(transactionToExecute.Json, conn))
                         {
                             await command1.ExecuteNonQueryAsync();
                         }
