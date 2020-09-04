@@ -284,7 +284,11 @@ namespace BlockBase.Runtime.Sql
                 {
                     opResult = await TryToExecutePendingTransaction(transaction.transaction);
                     if (!opResult.Succeeded)
+                    {
+                        var followingTransactions = orderedTransactions.SkipWhile(t => t.transaction.SequenceNumber <= transaction.transaction.SequenceNumber).ToList();
+                        followingTransactions.ForEach(t => t.transaction.SequenceNumber -= 1);
                         results.Add(createQueryResult(opResult.Succeeded, transaction.statementType, opResult.Exception.Message));
+                    }
                 }
             }
 
