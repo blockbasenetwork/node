@@ -219,14 +219,11 @@ namespace BlockBase.Runtime.Sql
         {
             if (transactions.Any())
             {
-                _logger.LogDebug($"Adding pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                 await AddPendingTransactions(transactions.Select(p => p.transaction).ToList());
-                _logger.LogDebug($"Added pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                 try
                 {
-                    _logger.LogDebug($"Executing pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+                    _logger.LogDebug($"Executing transactions #{transactions.First().transaction.SequenceNumber} to # {transactions.Last().transaction.SequenceNumber}");
                     await TryToExecuteTransactions(transactions, results, createQueryResult);
-                    _logger.LogDebug($"Executed pending transactions: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
                 }
                 catch (Exception e)
                 {
@@ -313,7 +310,7 @@ namespace BlockBase.Runtime.Sql
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, transactionDB);
                 var rollback = _concurrentVariables.RollbackTransactionNumber();
-                _logger.LogInformation($"Rolling back to #{rollback}");
+                _logger.LogDebug($"Rolling back to #{rollback}");
                 return new OpResult(false, e);
             }
         }
@@ -345,6 +342,7 @@ namespace BlockBase.Runtime.Sql
             }
             catch (Exception e)
             {
+                _logger.LogDebug($"Failed to execute transactions in batch. Executing manually. Exception {e}");
                 return new OpResult(false, e);
             }
         }
@@ -362,7 +360,6 @@ namespace BlockBase.Runtime.Sql
         private Transaction CreateTransaction(string json, string databaseName, string senderPrivateKey)
         {
             var sequenceNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());
-            _logger.LogInformation($"Creating transaction #{sequenceNumber}");
 
             var transaction = new Transaction()
             {
