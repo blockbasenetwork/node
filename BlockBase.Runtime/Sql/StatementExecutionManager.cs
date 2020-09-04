@@ -309,7 +309,7 @@ namespace BlockBase.Runtime.Sql
                 var transactionDB = new TransactionDB().TransactionDBFromTransaction(pendingTransaction);
 
                 await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, transactionDB);
-                _transactionsManager.AddScriptTransactionToSend(transactionDB.TransactionFromTransactionDB());
+                _transactionsManager.AddScriptTransactionToSend(completedTransaction);
                 return new OpResult(true);
             }
             catch (Exception e)
@@ -341,7 +341,7 @@ namespace BlockBase.Runtime.Sql
                 }
 
                 await _mongoDbRequesterService.MovePendingTransactionsToExecutedAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
-                foreach (var transactionToSend in pendingTransactions)
+                foreach (var transactionToSend in completeTransactions)
                 {
                     _transactionsManager.AddScriptTransactionToSend(transactionToSend);
                 }
