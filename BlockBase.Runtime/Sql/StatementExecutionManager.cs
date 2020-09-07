@@ -67,150 +67,151 @@ namespace BlockBase.Runtime.Sql
         public async Task<IList<QueryResult>> ExecuteBuilder(Builder builder, CreateQueryResultDelegate createQueryResult)
         {
             var results = new List<QueryResult>();
-            var databasesSemaphores = _concurrentVariables.DatabasesSemaphores;
             var allPendingTransactions = new List<(string statementType, Transaction transaction)>();
-            foreach (var sqlCommand in builder.SqlCommands)
+
+            var databaseSemaphore = TryGetAndAddDatabaseSemaphore(_nodeConfigurations.AccountName);
+            await databaseSemaphore.WaitAsync();
+            try
             {
-                try
+                foreach (var sqlCommand in builder.SqlCommands)
                 {
-                    _transformer.TransformCommand(sqlCommand);
-                    builder.BuildSqlStatementsText(_generator, sqlCommand);
-                    string sqlTextToExecute = "";
-                    if (sqlCommand is DatabaseSqlCommand)
+                    try
                     {
-                        if (_databaseName != null)
-                            databasesSemaphores[_databaseName].Release();
+                        _transformer.TransformCommand(sqlCommand);
+                        builder.BuildSqlStatementsText(_generator, sqlCommand);
+                        string sqlTextToExecute = "";
 
-                        _databaseName = ((DatabaseSqlCommand)sqlCommand).DatabaseName;
-
-                        if (_databaseName != null)
+                        if (sqlCommand is DatabaseSqlCommand)
                         {
-                            if (!databasesSemaphores.ContainsKey(_databaseName))
-                                databasesSemaphores[_databaseName] = new SemaphoreSlim(1);
-                            databasesSemaphores[_databaseName].Wait();
+                            _databaseName = ((DatabaseSqlCommand)sqlCommand).DatabaseName;
+                        }
+
+                        IList<IList<string>> resultsList;
+
+                        switch (sqlCommand)
+                        {
+                            case ReadQuerySqlCommand readQuerySql:
+                                await SaveAndExecuteExistingTransactions(allPendingTransactions, results, createQueryResult);
+                                allPendingTransactions = new List<(string statementType, Transaction transaction)>();
+                                var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
+                                var namesAndResults = await ExecuteSelectStatement(
+                                    builder,
+                                    (SimpleSelectStatement)readQuerySql.OriginalSqlStatement,
+                                    transformedSelectStatement,
+                                    readQuerySql.TransformedSqlStatementText[0]);
+
+                                results.Add(new QueryResult(namesAndResults.ResultRows, namesAndResults.ColumnNames));
+                                break;
+
+                            case ChangeRecordSqlCommand changeRecordSqlCommand:
+                                sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
+                                // marciak - some updates and deletes require a select statement prior to execution
+                                // marciak - this select will be used to identify the actual rows that will be changed
+                                if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
+                                {
+                                    resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                                    var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, resultsList, _databaseName);
+
+                                    var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
+
+                                    foreach (var changeRecordsToExecute in changesToExecute)
+                                    {
+                                        allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName)));
+                                    }
+                                }
+                                else
+                                {
+                                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
+                                }
+                                break;
+
+
+                            case GenericSqlCommand genericSqlCommand:
+                                for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
+                                {
+                                    sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
+
+                                    allPendingTransactions.Add((genericSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
+                                }
+                                break;
+
+                            case DatabaseSqlCommand databaseSqlCommand:
+                                if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement)
+                                {
+                                    results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
+                                    continue;
+                                }
+
+                                if (databaseSqlCommand.OriginalSqlStatement is CreateDatabaseStatement)
+                                    await _connector.InsertToDatabasesTable(((CreateDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
+
+                                else if (databaseSqlCommand.OriginalSqlStatement is DropDatabaseStatement)
+                                    await _connector.DeleteFromDatabasesTable(((DropDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
+
+                                for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
+                                {
+                                    sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
+                                    if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
+                                        allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, "")));
+                                    else
+                                        allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
+                                }
+                                break;
+
+                            case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
+                                if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
+                                {
+                                    var databasesList = _infoPostProcessing.GetDatabasesList();
+                                    //_logger.LogDebug("Databases:");
+                                    //foreach (var database in databasesList) _logger.LogDebug(database);
+                                    results.Add(new QueryResult(
+                                        new List<IList<string>>(databasesList.Select(d => new List<string>() { d }).ToList()),
+                                        new List<string>() { "databases" })
+                                    );
+                                }
+
+                                else
+                                {
+                                    var currentDatabase = _infoPostProcessing.DecryptDatabaseName(_databaseName) ?? "none";
+                                    results.Add(new QueryResult(
+                                        new List<IList<string>>() { new List<string>() { currentDatabase } },
+                                        new List<string>() { "current_database" })
+                                    );
+                                }
+                                break;
+
+                            case IfSqlCommand ifSqlCommand:
+                                var originalSimpleSelectStatement = ((IfStatement)ifSqlCommand.OriginalSqlStatement).SimpleSelectStatement;
+                                var transformedSimpleSelectStatement = ((SimpleSelectStatement)(ifSqlCommand.TransformedSqlStatement[0]));
+                                sqlTextToExecute = ifSqlCommand.TransformedSqlStatementText[0];
+                                if ((await ExecuteSelectStatement(builder, originalSimpleSelectStatement, transformedSimpleSelectStatement, sqlTextToExecute)).ResultRows.Count != 0)
+                                {
+                                    results.AddRange(await ExecuteBuilder(((IfStatement)ifSqlCommand.OriginalSqlStatement).Builder, createQueryResult));
+                                }
+                                else
+                                {
+                                    results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), "Condition not fulfilled."));
+                                }
+                                break;
                         }
                     }
-
-                    IList<IList<string>> resultsList;
-
-                    switch (sqlCommand)
+                    catch (Exception e)
                     {
-                        case ReadQuerySqlCommand readQuerySql:
-                            await SaveAndExecuteExistingTransactions(allPendingTransactions, results, createQueryResult);
-                            allPendingTransactions = new List<(string statementType, Transaction transaction)>();
-                            var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
-                            var namesAndResults = await ExecuteSelectStatement(
-                                builder,
-                                (SimpleSelectStatement)readQuerySql.OriginalSqlStatement,
-                                transformedSelectStatement,
-                                readQuerySql.TransformedSqlStatementText[0]);
-
-                            results.Add(new QueryResult(namesAndResults.ResultRows, namesAndResults.ColumnNames));
-                            break;
-
-                        case ChangeRecordSqlCommand changeRecordSqlCommand:
-                            sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
-                            // marciak - some updates and deletes require a select statement prior to execution
-                            // marciak - this select will be used to identify the actual rows that will be changed
-                            if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
-                            {
-                                resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, resultsList, _databaseName);
-
-                                var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
-
-                                foreach (var changeRecordsToExecute in changesToExecute)
-                                {
-                                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName)));
-                                }
-                            }
-                            else
-                            {
-                                allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
-                            }
-                            break;
-
-
-                        case GenericSqlCommand genericSqlCommand:
-                            for (int i = 0; i < genericSqlCommand.TransformedSqlStatement.Count; i++)
-                            {
-                                sqlTextToExecute = genericSqlCommand.TransformedSqlStatementText[i];
-
-                                allPendingTransactions.Add((genericSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
-                            }
-                            break;
-
-                        case DatabaseSqlCommand databaseSqlCommand:
-                            if (databaseSqlCommand.OriginalSqlStatement is UseDatabaseStatement)
-                            {
-                                results.Add(createQueryResult(true, databaseSqlCommand.OriginalSqlStatement.GetStatementType()));
-                                continue;
-                            }
-
-                            if (databaseSqlCommand.OriginalSqlStatement is CreateDatabaseStatement)
-                                await _connector.InsertToDatabasesTable(((CreateDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
-
-                            else if (databaseSqlCommand.OriginalSqlStatement is DropDatabaseStatement)
-                                await _connector.DeleteFromDatabasesTable(((DropDatabaseStatement)databaseSqlCommand.TransformedSqlStatement[0]).DatabaseName.Value);
-
-                            for (int i = 0; i < databaseSqlCommand.TransformedSqlStatement.Count; i++)
-                            {
-                                sqlTextToExecute = databaseSqlCommand.TransformedSqlStatementText[i];
-                                if (databaseSqlCommand.TransformedSqlStatement[i] is ISqlDatabaseStatement)
-                                    allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, "")));
-                                else
-                                    allPendingTransactions.Add((databaseSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
-                            }
-                            break;
-
-                        case ListOrDiscoverCurrentDatabaseCommand listOrDiscoverCurrentDatabase:
-                            if (listOrDiscoverCurrentDatabase.OriginalSqlStatement is ListDatabasesStatement)
-                            {
-                                var databasesList = _infoPostProcessing.GetDatabasesList();
-                                //_logger.LogDebug("Databases:");
-                                //foreach (var database in databasesList) _logger.LogDebug(database);
-                                results.Add(new QueryResult(
-                                    new List<IList<string>>(databasesList.Select(d => new List<string>() { d }).ToList()),
-                                    new List<string>() { "databases" })
-                                );
-                            }
-
-                            else
-                            {
-                                var currentDatabase = _infoPostProcessing.DecryptDatabaseName(_databaseName) ?? "none";
-                                results.Add(new QueryResult(
-                                    new List<IList<string>>() { new List<string>() { currentDatabase } },
-                                    new List<string>() { "current_database" })
-                                );
-                            }
-                            break;
-
-                        case IfSqlCommand ifSqlCommand:
-                            var originalSimpleSelectStatement = ((IfStatement)ifSqlCommand.OriginalSqlStatement).SimpleSelectStatement;
-                            var transformedSimpleSelectStatement = ((SimpleSelectStatement)(ifSqlCommand.TransformedSqlStatement[0]));
-                            sqlTextToExecute = ifSqlCommand.TransformedSqlStatementText[0];
-                            if ((await ExecuteSelectStatement(builder, originalSimpleSelectStatement, transformedSimpleSelectStatement, sqlTextToExecute)).ResultRows.Count != 0)
-                            {
-                                results.AddRange(await ExecuteBuilder(((IfStatement)ifSqlCommand.OriginalSqlStatement).Builder, createQueryResult));
-                            }
-                            else
-                            {
-                                results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), "Condition not fulfilled."));
-                            }
-                            break;
+                        _logger.LogError($"Error analyzing sql command.{e}");
+                        results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
                     }
                 }
-                catch (Exception e)
-                {
-                    _logger.LogError($"Error analyzing sql command.{e}");
-                    results.Add(createQueryResult(false, sqlCommand.OriginalSqlStatement.GetStatementType(), e.Message));
-                }
+
+                await SaveAndExecuteExistingTransactions(allPendingTransactions, results, createQueryResult);
             }
-
-            await SaveAndExecuteExistingTransactions(allPendingTransactions, results, createQueryResult);
-
-            if (_databaseName != null)
-                databasesSemaphores[_databaseName].Release();
+            catch (Exception e)
+            {
+                _logger.LogDebug($"Exception thrown in statement execution: {e}");
+            }
+            finally
+            {
+                databaseSemaphore.Release();
+            }
 
             return results;
         }
@@ -414,6 +415,22 @@ namespace BlockBase.Runtime.Sql
             }
 
             return transactions;
+        }
+
+        private SemaphoreSlim TryGetAndAddDatabaseSemaphore(string database)
+        {
+            var semaphoreKeyPair = _concurrentVariables.DatabasesSemaphores.FirstOrDefault(s => s.Key == database);
+
+            var defaultKeyValuePair = default(KeyValuePair<string, SemaphoreSlim>);
+            if (semaphoreKeyPair.Equals(defaultKeyValuePair))
+            {
+                var newSemaphore = new SemaphoreSlim(1, 1);
+                _concurrentVariables.DatabasesSemaphores.TryAdd(database, newSemaphore);
+
+                return newSemaphore;
+            }
+
+            return semaphoreKeyPair.Value;
         }
     }
 }
