@@ -1,4 +1,5 @@
-﻿using BlockBase.Domain.Blockchain;
+﻿using System;
+using BlockBase.Domain.Blockchain;
 using BlockBase.Utils.Crypto;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -13,7 +14,7 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
 
         [BsonElement("SequenceNumber")]
         [BsonRequired()]
-        public ulong SequenceNumber { get; set; }
+        public long SequenceNumber { get; set; }
 
         [BsonElement("TransactionJson")]
         [BsonRequired()]
@@ -41,7 +42,7 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
             transaction.TransactionHash = HashHelper.FormattedHexaStringToByteArray(TransactionHash);
             transaction.Signature = Signature;
             transaction.Timestamp = Timestamp;
-            transaction.SequenceNumber = SequenceNumber;
+            transaction.SequenceNumber = Convert.ToUInt64(SequenceNumber);
             transaction.BlockHash = HashHelper.FormattedHexaStringToByteArray(BlockHash);
             transaction.Json = TransactionJson;
             transaction.DatabaseName = DatabaseName;
@@ -55,7 +56,7 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
             Signature = transaction.Signature;
             BlockHash = HashHelper.ByteArrayToFormattedHexaString(transaction.BlockHash);
             Timestamp = transaction.Timestamp;
-            SequenceNumber = transaction.SequenceNumber;
+            SequenceNumber = Convert.ToInt64(transaction.SequenceNumber);
             DatabaseName = transaction.DatabaseName;
             return this;
         }

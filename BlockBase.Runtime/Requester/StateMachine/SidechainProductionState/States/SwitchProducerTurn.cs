@@ -53,6 +53,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             if (_lastBlockHeader != null && !_removedIncludedTransactions)
             {
                 //TODO rpinto - to remove included transactions, we have to make sure the requester has already received the produced block by p2p comm
+                await _transactionSender.RollbackWaitingTransactions(_lastBlockHeader.LastTransactionSequenceNumber);
                 await _transactionSender.RemoveIncludedTransactions(_lastBlockHeader.TransactionCount, _lastBlockHeader.LastTransactionSequenceNumber);
                 _removedIncludedTransactions = true;
             }
@@ -132,7 +133,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
         private async Task SendRequestHistoryValidation(string clientAccountName, ContractInformationTable contractInfo, List<ProducerInTable> producers)
         {
 
-            var validProducers = producers.Where(p => !_warnings.Any(w => w.Producer == p.Key && w.WarningType == EosTableValues.WARNING_PUNISH) && p.ProducerType != 1).ToList();
+            var validProducers = producers.Where(p => !_warnings.Any(w => w.Producer == p.Key && w.WarningType == EosTableValues.WARNING_PUNISH) && p.IsReadyToProduce && p.ProducerType != 1).ToList();
             if (!validProducers.Any()) return;
 
             var blockHeaderList = await _mainchainService.RetrieveBlockheaderList(clientAccountName, validProducers.Count());

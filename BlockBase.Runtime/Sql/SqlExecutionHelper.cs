@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Antlr4.Runtime;
 using BlockBase.DataPersistence.Data.MongoDbEntities;
@@ -46,7 +47,7 @@ namespace BlockBase.Runtime.Sql
                 return !await _connector.DoesDatabaseExist(dropDatabaseStatement.DatabaseName.Value);
 
 
-            return await _connector.WasTransactionExecuted(pendingTransaction.DatabaseName, pendingTransaction.SequenceNumber);
+            return await _connector.WasTransactionExecuted(pendingTransaction.DatabaseName, Convert.ToUInt64(pendingTransaction.SequenceNumber));
         }
 
     }

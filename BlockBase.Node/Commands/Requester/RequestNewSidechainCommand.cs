@@ -46,12 +46,13 @@ namespace BlockBase.Node.Commands.Requester
         }
 
         public decimal Stake { get; set; }
+        public BlockHeader BlockHeaderToInitialize { get; set; }
 
         public override async Task<CommandExecutionResponse> Execute()
         {
             try
             {
-                if (await _connector.DoesDefaultDatabaseExist())
+                if (await _connector.DoesDefaultDatabaseExist() && BlockHeaderToInitialize == null)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "You already have databases associated to this requester node. Clear all of the node associated databases and keys with the command RemoveSidechainDatabasesAndKeys or create a new node with a new database prefix."));
 
                 _connector.Setup().Wait();
@@ -93,7 +94,7 @@ namespace BlockBase.Node.Commands.Requester
                     {
                         var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
                         var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
-                        var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, _requesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion);
+                        var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, _requesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion, BlockHeaderToInitialize?.ConvertToEosObject());
                         return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
                     }
                     catch (ApiErrorException ex)

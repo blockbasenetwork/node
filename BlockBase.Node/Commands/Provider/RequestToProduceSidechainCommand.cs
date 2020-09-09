@@ -125,13 +125,14 @@ namespace BlockBase.Node.Commands.Provider
                 if (isPublicKeyAlreadyUsed) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Key {_nodeConfigurations.ActivePublicKey} is already being used by another producer or candidate"));
 
                 var chainExistsInDb = await _mongoDbProducerService.CheckIfProducingSidechainAlreadyExists(_chainName);
+                var firstBlockInBlockHeaderList = (await _mainchainService.RetrieveBlockheaderList(_chainName, (int)contractInfo.BlocksBetweenSettlement)).FirstOrDefault();
                 //if the database exists and he's on the producer table, then nothing should be done
                 if (chainExistsInDb && isProducerInTable)
                 {
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"{_nodeConfigurations.AccountName} is a provider in {_chainName}"));
                 }
                 //if he's not a producer, but is requesting again to be one, and has a database associated, he should delete it first
-                else if (chainExistsInDb)
+                else if (chainExistsInDb && (firstBlockInBlockHeaderList == null || !(await _mongoDbProducerService.IsBlockInDatabase(_chainName, firstBlockInBlockHeaderList.BlockHash))))
                 {
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"There is a database related to this chain. Please delete it"));
                 }
@@ -143,8 +144,11 @@ namespace BlockBase.Node.Commands.Provider
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Minimum provider stake is {minimumProviderState}, currently staked {accountStake?.Stake} and added {_stake} which is not enough. Please stake {minimumProviderState - accountStake?.Stake}"));
                 }
                 
-                await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(_chainName, clientInfo.SidechainCreationTimestamp, false, _providerType);
-
+                if (!chainExistsInDb)
+                {
+                    await _mongoDbProducerService.AddProducingSidechainToDatabaseAsync(_chainName, clientInfo.SidechainCreationTimestamp, false, _providerType);
+                }
+                
                 if (_stake > 0)
                 {
                     var stakeTransaction = await _mainchainService.AddStake(_chainName, _nodeConfigurations.AccountName, _stake.ToString("F4") + " BBT");

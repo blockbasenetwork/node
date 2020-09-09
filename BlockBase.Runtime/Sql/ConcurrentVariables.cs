@@ -46,16 +46,12 @@ namespace BlockBase.Runtime.Sql
                 return _transactionNumber;
             }
         }
-        public ulong RollbackOneTransactionNumber()
+        
+        public ulong RollbackTransactionNumber()
         {
             lock (locker)
             {
-                if (!_hasLoadedData)
-                {
-                    LoadTransactionNumberFromDB().Wait();
-                    _hasLoadedData = true;
-                }
-                _transactionNumber--;
+                LoadTransactionNumberFromDB().Wait();
                 return _transactionNumber;
             }
         }
