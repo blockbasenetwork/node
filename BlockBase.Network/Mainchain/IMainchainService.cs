@@ -67,6 +67,7 @@ namespace BlockBase.Network.Mainchain
         Task<IList<MappedHistoryValidation>> RetrieveHistoryValidation(string chain);
         Task<BlockheaderTable> GetLastSubmittedBlockheader(string chain, int numberOfBlocks);
         Task<BlockheaderTable> GetLastValidSubmittedBlockheader(string chain, int numberOfBlocks);
+        Task<BlockheaderTable> GetLastIrreversibleBlockHeader(string chain, int numberOfBlocks);
         Task<List<BlockCountTable>> RetrieveBlockCount(string chain);
         Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName);
         Task<List<VerifySignature>> RetrieveVerifySignatures(string account);

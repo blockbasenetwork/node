@@ -42,6 +42,13 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<GetBlockResponse> GetEosBlock(string blockNumberOrId)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetBlock(blockNumberOrId), NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         public async Task<List<string>> GetCurrencyBalance(string smartContractName, string accountName, string symbol = null)
         {
             var opResult = await TryAgain(async () => await EosStub.GetCurrencyBalance(smartContractName, accountName, symbol),
@@ -857,6 +864,17 @@ namespace BlockBase.Network.Mainchain
             var lastValidSubmittedBlock = (await RetrieveBlockheaderList(chain, numberOfBlocks)).Where(b => b.IsVerified).FirstOrDefault();
 
             return lastValidSubmittedBlock;
+        }
+
+        public async Task<BlockheaderTable> GetLastIrreversibleBlockHeader(string chain, int numberOfBlocks)
+        {
+            var blockList = await RetrieveBlockheaderList(chain, numberOfBlocks);
+            var networkInfo = await GetInfo();
+            var lastIrreversibleEosBlock = await GetEosBlock(networkInfo.last_irreversible_block_id);
+
+            var irreversibleBlocks = blockList.Where(b => b.Timestamp < ((DateTimeOffset)lastIrreversibleEosBlock.timestamp).ToUnixTimeSeconds());
+            if (irreversibleBlocks.Count() >= 2) irreversibleBlocks = irreversibleBlocks.Skip(1);
+            return irreversibleBlocks.FirstOrDefault();
         }
 
         public async Task<TransactionProposal> RetrieveProposal(string proposerName, string proposalName)

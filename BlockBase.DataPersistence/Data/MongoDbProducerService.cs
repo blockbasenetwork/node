@@ -547,7 +547,7 @@ namespace BlockBase.DataPersistence.Data
 
         #endregion
 
-        public async Task<TransactionDB> GetTransactionToExecute(string sidechain)
+        public async Task<TransactionDB> GetTransactionToExecute(string sidechain, long lastTransactionSequenceNumber)
         {
             sidechain = ClearSpecialCharacters(sidechain);
             using (IClientSession session = await MongoClient.StartSessionAsync())
@@ -556,6 +556,7 @@ namespace BlockBase.DataPersistence.Data
 
                 var transactionCol = database.GetCollection<TransactionDB>(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME).AsQueryable();
                 var query = from t in transactionCol
+                            where t.SequenceNumber <= lastTransactionSequenceNumber
                             select t;
 
                 return await query.SingleOrDefaultAsync();

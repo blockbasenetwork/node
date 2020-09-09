@@ -33,6 +33,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
         private List<ProducerInTable> _producerList;
         private CurrentProducerTable _currentProducer;
         private BlockheaderTable _lastValidSubmittedBlockHeader;
+        private BlockheaderTable _lastIrreversibleValidBlockHeader;
 
         private NetworkConfigurations _networkConfigurations;
         private INetworkService _networkService;
@@ -137,6 +138,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             if (_producerList == null) return;
 
             _lastValidSubmittedBlockHeader = await _mainchainService.GetLastValidSubmittedBlockheader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
+            
+            if (_sidechainPool.ProducerType == ProducerTypeEnum.Full)
+                _lastIrreversibleValidBlockHeader = await _mainchainService.GetLastIrreversibleBlockHeader(_sidechainPool.ClientAccountName, (int)_sidechainPool.BlocksBetweenSettlement);
 
             if (_lastValidSubmittedBlockHeader == null)
                 _isNodeSynchronized = true;
@@ -146,9 +150,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
 
         private async Task ExecutePendingTransactions()
         {
-            if (_lastValidSubmittedBlockHeader == null || _lastValidSubmittedBlockHeader.LastTransactionSequenceNumber == 0) return;
+            if (_lastIrreversibleValidBlockHeader == null || _lastIrreversibleValidBlockHeader.LastTransactionSequenceNumber == 0) return;
 
-            var transactionToExecute = await _mongoDbProducerService.GetTransactionToExecute(_sidechainPool.ClientAccountName);
+            var transactionToExecute = await _mongoDbProducerService.GetTransactionToExecute(_sidechainPool.ClientAccountName, Convert.ToInt64(_lastIrreversibleValidBlockHeader.LastTransactionSequenceNumber));
 
             if (transactionToExecute != null && !await _sqlExecutionHelper.HasTransactionBeenExecuted(transactionToExecute))
                 await ExecuteTransaction(transactionToExecute.TransactionFromTransactionDB());

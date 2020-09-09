@@ -40,7 +40,7 @@ namespace BlockBase.DataPersistence.Data
         Task<IList<PastSidechainDB>> GetAllPastSidechainsAsync();
         Task<PastSidechainDB> GetPastSidechainAsync(string sidechain, ulong timestamp);
 
-        Task<TransactionDB> GetTransactionToExecute(string sidechain);
+        Task<TransactionDB> GetTransactionToExecute(string sidechain, long lastTransactionSequenceNumber);
         Task UpdateTransactionToExecute(string sidechain, TransactionDB transaction);
     }
 }
