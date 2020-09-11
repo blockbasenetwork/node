@@ -203,9 +203,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             //verify if node isn't in the candidates list nor the producers list
             if (checkingToJoin && (candidates.Any(c => c.Key == _nodeConfigurations.AccountName) || producers.Any(p => p.Key == _nodeConfigurations.AccountName))) return defaultReturnValue;
 
-            if (!CheckIfSidechainFitsInMaxNumberOfSidechainsToProduce(_providerConfigurations.AutomaticProduction.MaxNumberOfSidechains)
-                ||
-                !CheckIfSidechainGrowthFitsInConfiguredMaximumGrowth(contractInfo, _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB)) return defaultReturnValue;
+            if (!CheckIfSidechainGrowthFitsInConfiguredMaximumGrowth(contractInfo, _providerConfigurations.AutomaticProduction.MaxGrowthPerMonthInMB)) return defaultReturnValue;
 
             decimal requestedStake = ConvertBBTValueToDecimalPoint(contractInfo.Stake);
             decimal maxStakeToPut = (decimal)_providerConfigurations.AutomaticProduction.MaxRatioToStake * requestedStake;
