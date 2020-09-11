@@ -193,6 +193,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
 
         private async Task TryBroadcastVerifyTransaction(byte[] packedTransaction, List<string> signatures)
         {
+            if (_transaction.expiration < DateTime.UtcNow || _transaction.expiration > DateTime.UtcNow.AddHours(1)) return;
             await _mainchainService.BroadcastTransactionWithSignatures(packedTransaction, signatures);
             _logger.LogInformation("Executed history validation");
         }

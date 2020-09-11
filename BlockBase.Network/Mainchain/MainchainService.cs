@@ -518,7 +518,7 @@ namespace BlockBase.Network.Mainchain
         {
             var transaction = new Transaction()
             {
-                expiration = DateTime.UtcNow.AddHours(10),
+                expiration = DateTime.UtcNow.AddHours(1),
                 actions = new List<EosSharp.Core.Api.v1.Action>()
                 {
                     new EosSharp.Core.Api.v1.Action()
