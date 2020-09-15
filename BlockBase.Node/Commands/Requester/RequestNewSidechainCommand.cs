@@ -168,9 +168,9 @@ namespace BlockBase.Node.Commands.Requester
             return mappedConfig;
         }
 
-        private List<ReservedSeatsTable> ConvertReservedSeatConfig(List<ReservedSeatConfig> reservedSeatsConfig)
+        private List<string> ConvertReservedSeatConfig(List<ReservedSeatConfig> reservedSeatsConfig)
         {
-            var listToReturn = new List<ReservedSeatsTable>();
+            var listToReturn = new List<string>();
 
             foreach(var reservedSeatConfig in reservedSeatsConfig)
             {
@@ -179,7 +179,7 @@ namespace BlockBase.Node.Commands.Requester
                     Key = reservedSeatConfig.Account,
                     ProducerType = Convert.ToUInt32(reservedSeatConfig.ProducerType)
                 };
-                listToReturn.Add(reservedSeat);
+                listToReturn.Add(JsonConvert.SerializeObject(reservedSeat));
             }
 
             return listToReturn;
