@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using BlockBase.Domain.Configurations;
 using BlockBase.Network.Mainchain;
+using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Node.Commands.Utils;
 using Microsoft.Extensions.Logging;
 
@@ -19,7 +20,7 @@ namespace BlockBase.Node.Commands.Requester
 
         private ILogger _logger;
 
-        private IList<string> _reservedSeatsToAdd;
+        private IList<ReservedSeatConfig> _reservedSeatsToAdd;
 
 
         public override string CommandName => "Add reserved seats";
@@ -35,7 +36,7 @@ namespace BlockBase.Node.Commands.Requester
             _logger = logger;
         }
 
-        public AddReservedSeatsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, IList<string> reservedSeatsToAdd) : this(logger, mainchainService, nodeConfigurations)
+        public AddReservedSeatsCommand(ILogger logger, IMainchainService mainchainService, NodeConfigurations nodeConfigurations, IList<ReservedSeatConfig> reservedSeatsToAdd) : this(logger, mainchainService, nodeConfigurations)
         {
 
             _reservedSeatsToAdd = reservedSeatsToAdd;
@@ -52,17 +53,22 @@ namespace BlockBase.Node.Commands.Requester
                 var reservedSeatsTable = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
                 var sidechainStates = await _mainchainService.RetrieveContractState(sidechainName);
                 var responseString = "";
-                var listToAdd = new List<string>();
+                var listToAdd = new List<ReservedSeatsTable>();
 
                 if (sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"The {sidechainName} sidechain is not in the correct state or is not created."));
 
                 foreach (var accountToAdd in _reservedSeatsToAdd)
                 {
-                    if (!reservedSeatsTable.Any(p => p.Key == accountToAdd) && accountToAdd != null && accountToAdd.Length > 0)
+                    if (!reservedSeatsTable.Any(p => p.Key == accountToAdd.Account) && accountToAdd.Account != null && accountToAdd.Account.Length > 0)
                     {
                         responseString += " [" + accountToAdd + "] ";
-                        listToAdd.Add(accountToAdd);
+                        var reservedSeat = new ReservedSeatsTable()
+                        {
+                            Key = accountToAdd.Account,
+                            ProducerType = (uint)accountToAdd.ProducerType
+                        };
+                        listToAdd.Add(reservedSeat);
                     }
                 }
 
@@ -89,12 +95,15 @@ namespace BlockBase.Node.Commands.Requester
 
         protected override CommandParseResult ParseCommand(string[] commandData)
         {
-            _reservedSeatsToAdd = new List<string>();
+            _reservedSeatsToAdd = new List<ReservedSeatConfig>();
             if (commandData.Length > 4)
             {
                 for (var i = 4; i < commandData.Length; i++)
                 {
-                    _reservedSeatsToAdd.Add(commandData[i]);
+                    _reservedSeatsToAdd.Add(new ReservedSeatConfig(){
+                        Account = commandData[i], 
+                        ProducerType = Convert.ToInt32(commandData[i+1])
+                    });
                 }
                 return new CommandParseResult(true, true);
             }

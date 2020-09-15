@@ -488,7 +488,7 @@ namespace BlockBase.Node.Controllers
             Description = "Used to add accounts to the reserved seat in the sidechain. This way, the inserted accounts are selected first to produce in the sidechain",
             OperationId = "AddReservedSeat"
         )]
-        public async Task<ObjectResult> AddReservedSeat(List<string> reservedSeatsToAdd)
+        public async Task<ObjectResult> AddReservedSeat([FromBody]List<ReservedSeatConfig> reservedSeatsToAdd)
         {
             var command = new AddReservedSeatsCommand(_logger, _mainchainService, _nodeConfigurations, reservedSeatsToAdd);
             var result = await command.Execute();

@@ -15,10 +15,9 @@ namespace BlockBase.Domain.Configurations
         public double MinimumProducerStake { get; set; }
         public uint BlockTimeInSeconds { get; set; }
         public uint MaxBlockSizeInBytes { get; set; }
-        public List<string> ReservedProducerSeats { get; set; }
+        public List<ReservedSeatConfig> ReservedProducerSeats { get; set; }
 
         public DatabaseSecurityConfigurations DatabaseSecurityConfigurations { get; set; }
-
     }
 
     public class NodeConfig
@@ -26,6 +25,12 @@ namespace BlockBase.Domain.Configurations
         public uint RequiredNumber { get; set; }
         public double MaxPaymentPerBlock { get; set; }
         public double MinPaymentPerBlock { get; set; }
+    }
+
+    public class ReservedSeatConfig
+    {
+        public string Account { get; set; }
+        public int ProducerType { get; set; }
     }
 
     public class DatabaseSecurityConfigurations

@@ -7,5 +7,8 @@ namespace BlockBase.Network.Mainchain.Pocos
     {
         [JsonProperty(EosAtributeNames.KEY)]
         public string Key { get; set; }
+
+        [JsonProperty(EosAtributeNames.PRODUCER_TYPE)]
+        public uint ProducerType { get; set; }
     }
 }

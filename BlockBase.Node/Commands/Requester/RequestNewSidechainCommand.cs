@@ -94,7 +94,7 @@ namespace BlockBase.Node.Commands.Requester
                     {
                         var minimumSoftwareVersionString = Assembly.GetEntryAssembly().GetName().Version.ToString(3);
                         var minimumSoftwareVersion = VersionHelper.ConvertFromVersionString(minimumSoftwareVersionString);
-                        var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, _requesterConfigurations.ReservedProducerSeats, minimumSoftwareVersion, BlockHeaderToInitialize?.ConvertToEosObject());
+                        var configureTx = await _mainchainService.ConfigureChain(_nodeConfigurations.AccountName, configuration, ConvertReservedSeatConfig(_requesterConfigurations.ReservedProducerSeats), minimumSoftwareVersion, BlockHeaderToInitialize?.ConvertToEosObject());
                         return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Chain successfully created and configured. Start chain tx: {startChainTx}. Configure chain tx: {configureTx}"));
                     }
                     catch (ApiErrorException ex)
@@ -166,6 +166,23 @@ namespace BlockBase.Node.Commands.Requester
             var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurations));
 
             return mappedConfig;
+        }
+
+        private List<ReservedSeatsTable> ConvertReservedSeatConfig(List<ReservedSeatConfig> reservedSeatsConfig)
+        {
+            var listToReturn = new List<ReservedSeatsTable>();
+
+            foreach(var reservedSeatConfig in reservedSeatsConfig)
+            {
+                var reservedSeat = new ReservedSeatsTable()
+                {
+                    Key = reservedSeatConfig.Account,
+                    ProducerType = Convert.ToUInt32(reservedSeatConfig.ProducerType)
+                };
+                listToReturn.Add(reservedSeat);
+            }
+
+            return listToReturn;
         }
     }
 }
