@@ -246,3 +246,4 @@ ModelManifest.xml
 
 .vscode/
 BlockBase.Node/transactionNumber.txt
+BlockBase.Node/appsettings.json
