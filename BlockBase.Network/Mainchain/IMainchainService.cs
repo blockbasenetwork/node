@@ -20,7 +20,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddBlock(string chain, string accountName, Dictionary<string, object> blockHeader);
         Task<string> AddEncryptedIps(string chain, string accountName, List<string> encryptedIps);
         Task<string> UpdatePublicKey(string chain, string accountName, string publicKey);
-        Task<string> AddReservedSeats(string chain, List<string> seatsToAdd);
+        Task<string> AddReservedSeats(string chain, List<Dictionary<string, object>> seatsToAdd);
         Task<string> RemoveReservedSeats(string chain, List<string> reservedSeatsToRemove);
         Task<string> NotifyReady(string chain, string accountName);
         Task<string> ProposeBlockVerification(string chain, string accountName, List<string> requestedApprovals, string blockHash);
@@ -28,7 +28,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> ExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, string permission = "active");
         Task<string> CancelTransaction(string proposerName, string proposedTransactionName, string cancelerName = null, string permission = "active");
         Task<string> StartChain(string owner, string publicKey, string permission = "active");
-        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, int minimumSoftwareVersion = 1, Dictionary<string, object> blockHeaderToInitalize = null, string permission = "active");
+        Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<Dictionary<string, object>> reservedSeats = null, int minimumSoftwareVersion = 1, Dictionary<string, object> blockHeaderToInitalize = null, string permission = "active");
         Task<string> AlterConfigurations(string owner, Dictionary<string, object> configurationsToChange, string permission = "active");
         Task<string> EndChain(string owner, string permission = "active");
         Task<string> StartCandidatureTime(string owner, string permission = "active");

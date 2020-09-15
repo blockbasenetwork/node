@@ -65,7 +65,7 @@ namespace BlockBase.Node.Commands.Requester
                 //Check configurations
                 if (_requesterConfigurations.MaxBlockSizeInBytes <= BlockHeaderSizeConstants.BLOCKHEADER_MAX_SIZE)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Configured block max size is lower than 205 bytes, please increase the size"));
-                if (_requesterConfigurations.ValidatorNodes.RequiredNumber + _requesterConfigurations.HistoryNodes.RequiredNumber + _requesterConfigurations.FullNodes.RequiredNumber == 0)
+                if (_requesterConfigurations.ValidatorNodes.RequiredNumber + _requesterConfigurations.HistoryNodes.RequiredNumber + _requesterConfigurations.FullNodes.RequiredNumber + _requesterConfigurations.ReservedProducerSeats.Count == 0)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Requester configurations need to have at least one provider node requested for sidechain production"));
                 if (_requesterConfigurations.BlockTimeInSeconds < 60 && networkName == EosNetworkNames.MAINNET)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Block time needs to be 60 seconds or higher on Mainnet"));
@@ -168,9 +168,9 @@ namespace BlockBase.Node.Commands.Requester
             return mappedConfig;
         }
 
-        private List<string> ConvertReservedSeatConfig(List<ReservedSeatConfig> reservedSeatsConfig)
+        private List<Dictionary<string, object>> ConvertReservedSeatConfig(List<ReservedSeatConfig> reservedSeatsConfig)
         {
-            var listToReturn = new List<string>();
+            var listToReturn = new List<Dictionary<string, object>>();
 
             foreach(var reservedSeatConfig in reservedSeatsConfig)
             {
@@ -179,7 +179,7 @@ namespace BlockBase.Node.Commands.Requester
                     Key = reservedSeatConfig.Account,
                     ProducerType = Convert.ToUInt32(reservedSeatConfig.ProducerType)
                 };
-                listToReturn.Add(JsonConvert.SerializeObject(reservedSeat));
+                listToReturn.Add(JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(reservedSeat)));
             }
 
             return listToReturn;

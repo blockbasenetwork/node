@@ -53,7 +53,7 @@ namespace BlockBase.Node.Commands.Requester
                 var reservedSeatsTable = await _mainchainService.RetrieveReservedSeatsTable(sidechainName);
                 var sidechainStates = await _mainchainService.RetrieveContractState(sidechainName);
                 var responseString = "";
-                var listToAdd = new List<string>();
+                var listToAdd = new List<Dictionary<string, object>>();
 
                 if (sidechainStates == null || sidechainStates.IPReceiveTime || sidechainStates.IPSendTime || sidechainStates.SecretTime || !sidechainStates.Startchain)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"The {sidechainName} sidechain is not in the correct state or is not created."));
@@ -68,7 +68,7 @@ namespace BlockBase.Node.Commands.Requester
                             Key = accountToAdd.Account,
                             ProducerType = (uint)accountToAdd.ProducerType
                         };
-                        listToAdd.Add(JsonConvert.SerializeObject(reservedSeat));
+                        listToAdd.Add(JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(reservedSeat)));
                     }
                 }
 

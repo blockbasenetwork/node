@@ -204,7 +204,7 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> AddReservedSeats(string chain, List<string> seatsToAdd) {
+        public async Task<string> AddReservedSeats(string chain, List<Dictionary<string, object>> seatsToAdd) {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_RESERVED_SEATS,
                 NetworkConfigurations.BlockBaseOperationsContract,
@@ -330,7 +330,7 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats = null, int minimumSoftwareVersion = 1, Dictionary<string, object> blockHeaderToInitialize = null, string permission = "active")
+        public async Task<string> ConfigureChain(string owner, Dictionary<string, object> contractInformation, List<Dictionary<string, object>> reservedSeats = null, int minimumSoftwareVersion = 1, Dictionary<string, object> blockHeaderToInitialize = null, string permission = "active")
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.CONFIG_CHAIN,
@@ -1060,7 +1060,7 @@ namespace BlockBase.Network.Mainchain
             };
         }
 
-        private Dictionary<string, object> CreateDataForAddReservedSeats(string chain, List<string> seatsToAdd)
+        private Dictionary<string, object> CreateDataForAddReservedSeats(string chain, List<Dictionary<string, object>> seatsToAdd)
         {
             return new Dictionary<string, object>()
             {
@@ -1188,9 +1188,9 @@ namespace BlockBase.Network.Mainchain
         }
 
 
-        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation, List<string> reservedSeats, int minimumSoftwareVersion, Dictionary<string, object> blockHeaderToInitialize = null)
+        private Dictionary<string, object> CreateDataForConfigurations(string owner, Dictionary<string, object> contractInformation, List<Dictionary<string, object>> reservedSeats, int minimumSoftwareVersion, Dictionary<string, object> blockHeaderToInitialize = null)
         {
-            reservedSeats = reservedSeats ?? new List<string>();
+            reservedSeats = reservedSeats ?? new List<Dictionary<string, object>>();
             var config = new Dictionary<string, object>()
             {
                 { EosParameterNames.OWNER, owner },
