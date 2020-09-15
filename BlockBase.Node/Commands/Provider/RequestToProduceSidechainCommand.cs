@@ -83,6 +83,7 @@ namespace BlockBase.Node.Commands.Provider
 
                 var candidates = await _mainchainService.RetrieveCandidates(_chainName);
                 var producers = await _mainchainService.RetrieveProducersFromTable(_chainName);
+                var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(_chainName);
                 var isProducerInTable = producers.Any(c => c.Key == _nodeConfigurations.AccountName);
                 var isCandidateInTable = candidates.Any(c => c.Key == _nodeConfigurations.AccountName);
 
@@ -116,7 +117,10 @@ namespace BlockBase.Node.Commands.Provider
                     }
                 }
 
-                if((contractInfo.NumberOfFullProducersRequired == 0 && _providerType == 3) || (contractInfo.NumberOfHistoryProducersRequired == 0 && _providerType == 2) || (contractInfo.NumberOfValidatorProducersRequired == 0 && _providerType == 1))
+                if(reservedSeats.SingleOrDefault(r => r.Key == _nodeConfigurations.AccountName) == null &&
+                   ((contractInfo.NumberOfFullProducersRequired == 0 && _providerType == 3) || 
+                   (contractInfo.NumberOfHistoryProducersRequired == 0 && _providerType == 2) || 
+                   (contractInfo.NumberOfValidatorProducersRequired == 0 && _providerType == 1)))
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Producer type inserted is not needed in the given sidechain configuration"));
                 if (contractInfo.BlockTimeDuration < 60 && networkName == EosNetworkNames.MAINNET)
                     return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain has block time lower than 60 seconds running on mainnet and can not be joined"));
