@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using EosSharp.Core.Exceptions;
 using EosSharp.Core;
 using EosSharp.Core.Helpers;
+using Newtonsoft.Json;
 
 namespace BlockBase.Network.Mainchain
 {
@@ -1194,7 +1195,7 @@ namespace BlockBase.Network.Mainchain
             {
                 { EosParameterNames.OWNER, owner },
                 { EosParameterNames.CONFIG_INFO_JSON, contractInformation },
-                { EosParameterNames.RESERVED_SEATS, reservedSeats },
+                { EosParameterNames.RESERVED_SEATS, JsonConvert.SerializeObject(reservedSeats) },
                 { EosParameterNames.SOFTWARE_VERSION, minimumSoftwareVersion }
             };
             if (blockHeaderToInitialize != null)
