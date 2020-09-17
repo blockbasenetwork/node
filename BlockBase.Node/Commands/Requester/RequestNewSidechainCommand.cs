@@ -172,6 +172,8 @@ namespace BlockBase.Node.Commands.Requester
         {
             var listToReturn = new List<Dictionary<string, object>>();
 
+            if (reservedSeatsConfig == null) return listToReturn;
+
             foreach(var reservedSeatConfig in reservedSeatsConfig)
             {
                 var reservedSeat = new ReservedSeatsTable()
