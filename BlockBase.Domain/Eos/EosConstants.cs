@@ -221,18 +221,22 @@ namespace BlockBase.Domain.Eos
     {
         public const string MAINNET_ID = "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906";
         public const string JUNGLE_ID = "e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473";
+        public const string JUNGLE3_ID = "2a02a0053e5a8cf73a56ba0fda11e4d92e0238a4a2aa74fccf46d5a910746840";
     }
 
     public class EosNetworkNames
     {
         public const string MAINNET = "Mainnet";
         public const string JUNGLE = "Jungle";
+        public const string JUNGLE3 = "Jungle3";
         public static string GetNetworkName(string networkId)
         {
             switch(networkId)
             {
                 case EosNetworkIds.JUNGLE_ID:
                     return JUNGLE;
+                case EosNetworkIds.JUNGLE3_ID:
+                    return JUNGLE3;
                 case EosNetworkIds.MAINNET_ID:
                     return MAINNET;
                 default:
