@@ -211,7 +211,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RunSidechainMaintenance()
         {
-            var command = new RunSidechainMaintenanceCommand(_logger, _sidechainMaintainerManager);
+            var command = new RunSidechainMaintenanceCommand(_logger, _sidechainMaintainerManager, _mainchainService, _nodeConfigurations);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);

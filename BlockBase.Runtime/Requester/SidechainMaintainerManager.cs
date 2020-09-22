@@ -18,13 +18,10 @@ namespace BlockBase.Runtime.Requester
         private SidechainMaintainerStateManager _sidechainMaintainerStateManager;
         private SidechainProductionStateManager _sidechainProductionStateManager;
         private PeerConnectionStateManager _peerConnectionStateManager;
-
         private IMongoDbRequesterService _mongoDbRequesterService;
-
+        private IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
-
         private SidechainPool _sidechainPool;
-
         private TransactionsManager _transactionsManager;
 
 
@@ -70,12 +67,16 @@ namespace BlockBase.Runtime.Requester
 
         public async Task Start()
         {
-            await _transactionsManager.Setup();
-            
-            if (!IsMaintainerRunning()) TaskContainerMaintainer = _sidechainMaintainerStateManager.Start();
-            if (!IsProductionRunning()) TaskContainerProduction = _sidechainProductionStateManager.Start();
-            if (!IsConnectionsManagerRunning()) TaskContainerConnections = _peerConnectionStateManager.Start();
-            if(!IsTransactionsManagerRunning()) TaskContainerTransactions = _transactionsManager.Start();
+            var sidechainInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
+            if (sidechainInfo != null && sidechainInfo.Key == _nodeConfigurations.AccountName)
+            {
+                await _transactionsManager.Setup();
+
+                if (!IsMaintainerRunning()) TaskContainerMaintainer = _sidechainMaintainerStateManager.Start();
+                if (!IsProductionRunning()) TaskContainerProduction = _sidechainProductionStateManager.Start();
+                if (!IsConnectionsManagerRunning()) TaskContainerConnections = _peerConnectionStateManager.Start();
+                if (!IsTransactionsManagerRunning()) TaskContainerTransactions = _transactionsManager.Start();
+            }
         }
 
         public Task Pause()
@@ -88,9 +89,9 @@ namespace BlockBase.Runtime.Requester
         {
 
             if (IsMaintainerRunning()) TaskContainerMaintainer.CancellationTokenSource.Cancel();
-            if(IsProductionRunning()) TaskContainerProduction.CancellationTokenSource.Cancel();
-            if(IsConnectionsManagerRunning()) TaskContainerConnections.CancellationTokenSource.Cancel();
-            if(IsTransactionsManagerRunning()) TaskContainerTransactions.CancellationTokenSource.Cancel();
+            if (IsProductionRunning()) TaskContainerProduction.CancellationTokenSource.Cancel();
+            if (IsConnectionsManagerRunning()) TaskContainerConnections.CancellationTokenSource.Cancel();
+            if (IsTransactionsManagerRunning()) TaskContainerTransactions.CancellationTokenSource.Cancel();
             await _mongoDbRequesterService.DropRequesterDatabase(_nodeConfigurations.AccountName);
 
         }

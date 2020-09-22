@@ -72,8 +72,6 @@ namespace BlockBase.Node
             var noRecoverCommandFound = args.Where(s => s == "--no-recover").FirstOrDefault() != null;
 
             networkService.Run();
-            //TODO rpinto - commented this because I don't want it to start on startup for now - uncomment when ready
-            //sidechainMaintainerService.Start();
 
             //check keys
             var keyCheck = configurationChecker.CheckKeys();
@@ -90,6 +88,7 @@ namespace BlockBase.Node
                 Task.WaitAll(pendingTransactionRecovery.Run());
                 Task.WaitAll(sidechainProducerService.Run());
                 automaticProductionManager.Start();
+                Task.WaitAll(sidechainMaintainerService.Start());
             }
 
             //force instantiation of the connection tester
@@ -178,7 +177,7 @@ namespace BlockBase.Node
                 new RemoveReservedSeatsCommand(logger, mainchainService, nodeConfigurations),
                 new RemoveSidechainDatabasesAndKeysCommand(logger, sidechainMaintainerManager, sqlCommandManager),
                 new RequestNewSidechainCommand(logger, connector, mainchainService, nodeConfigurations, requesterConfigurations),
-                new RunSidechainMaintenanceCommand(logger, sidechainMaintainerManager),
+                new RunSidechainMaintenanceCommand(logger, sidechainMaintainerManager, mainchainService, nodeConfigurations),
                 new SetSecretCommand(logger, requesterConfigurations, databaseKeyManager, connector)
             };
         }
