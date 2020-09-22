@@ -141,11 +141,12 @@ namespace BlockBase.Runtime.Provider.StateMachine.HistoryValidation.States
                 _logger.LogInformation($"Calculated my validation block byte: {_blockByteInHex}.");
             }
 
-            _hasSubmittedBlockByte = _currentProducerHistoryEntry?.BlockByteInHexadecimal != "" && _currentProducerHistoryEntry?.BlockByteInHexadecimal != null ;
+            _hasSubmittedBlockByte = _currentProducerHistoryEntry?.BlockByteInHexadecimal != "" && _currentProducerHistoryEntry?.BlockByteInHexadecimal != null;
 
             if (_hasSubmittedBlockByte && !_hasEnoughSignatures)
             {
                 _transaction = _currentProducerHistoryEntry.Transaction;
+                _hasSubmittedBlockByte = _transaction.expiration > DateTime.UtcNow && _transaction.expiration < DateTime.UtcNow.AddHours(1);
 
                 var requestedApprovals = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.AccountName).OrderBy(p => p).ToList();
                 var requiredKeys = _sidechainPool.ProducersInPool.GetEnumerable().Select(m => m.ProducerInfo.PublicKey).Distinct().ToList();
