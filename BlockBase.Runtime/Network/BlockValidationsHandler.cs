@@ -86,12 +86,12 @@ namespace BlockBase.Runtime.Network
                             _logger.LogDebug($"Adding block {blockReceived.BlockHeader.SequenceNumber} to database");
                             await _mongoDbProducerService.AddBlockToSidechainDatabaseAsync(blockReceived, databaseName);
 
-                            // var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
-                            // if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
+                            var proposal = await _mainchainService.RetrieveProposal(blockReceived.BlockHeader.Producer, sidechainPool.ClientAccountName);
+                            if (proposal != null) await TryApproveTransaction(blockReceived.BlockHeader.Producer, proposal);
 
-                            var verifySignatures = await _mainchainService.RetrieveVerifySignatures(sidechainPool.ClientAccountName);
-                            var producerVerifySignature = verifySignatures.FirstOrDefault(v => v.Account == blockReceived.BlockHeader.Producer);
-                            if (producerVerifySignature != null) await TryAddSignature(sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, producerVerifySignature.BlockHash, producerVerifySignature.Transaction);
+                            //var verifySignatures = await _mainchainService.RetrieveVerifySignatures(sidechainPool.ClientAccountName);
+                            //var producerVerifySignature = verifySignatures.FirstOrDefault(v => v.Account == blockReceived.BlockHeader.Producer);
+                            //if (producerVerifySignature != null) await TryAddSignature(sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, producerVerifySignature.BlockHash, producerVerifySignature.Transaction);
 
                             break;
                         }
