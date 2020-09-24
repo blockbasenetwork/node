@@ -23,6 +23,7 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddReservedSeats(string chain, List<Dictionary<string, object>> seatsToAdd);
         Task<string> RemoveReservedSeats(string chain, List<string> reservedSeatsToRemove);
         Task<string> NotifyReady(string chain, string accountName);
+        Task<string> VerifyBlock(string chain, string producer, string blockHash);
         Task<string> ProposeBlockVerification(string chain, string accountName, List<string> requestedApprovals, string blockHash);
         Task<string> ApproveTransaction(string proposerName, string proposedTransactionName, string accountName, string proposalHash, string permission = "active");
         Task<string> ExecuteTransaction(string proposerName, string proposedTransactionName, string accountName, string permission = "active");

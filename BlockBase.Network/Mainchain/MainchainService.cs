@@ -242,6 +242,19 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<string> VerifyBlock(string chain, string producer, string blockHash)
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.VERIFY_BLOCK,
+                NetworkConfigurations.BlockBaseOperationsContract,
+                chain,
+                CreateDataForVerifyBlock(chain, producer, blockHash)),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
         public async Task<string> ProposeBlockVerification(string chain, string accountName, List<string> requestedApprovals, string blockHash)
         {
             var opResult = await TryAgain(async () => await EosStub.ProposeTransaction(
