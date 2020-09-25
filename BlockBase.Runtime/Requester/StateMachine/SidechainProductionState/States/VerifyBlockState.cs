@@ -64,6 +64,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             _contractState = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
             _contractInfo = await _mainchainService.RetrieveContractInformation(_nodeConfigurations.AccountName);
             _lastBlockHeader = await _mainchainService.GetLastSubmittedBlockheader(_nodeConfigurations.AccountName, Convert.ToInt32(_contractInfo.BlocksBetweenSettlement));
+            _hasBlockBeenVerified = _lastBlockHeader.IsVerified;
 
             if (_contractState == null || _contractInfo == null) return;
 
