@@ -29,6 +29,7 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState
             if(state == typeof(SwitchProducerTurn).Name) return new SwitchProducerTurn(_logger,_mainchainService, _nodeConfigurations, _transactionsManager);
             if(state == typeof(UpdateAuthorizationsState).Name) return new UpdateAuthorizationsState(_logger, _mainchainService, _nodeConfigurations);
             if(state == typeof(EndState).Name) return new EndState(_logger);
+            if(state == typeof(VerifyBlockState).Name) return new VerifyBlockState(_logger, _mainchainService, _nodeConfigurations);
             if (state == typeof(WaitForEndConfirmationState).Name) return new WaitForEndConfirmationState(_logger, _mainchainService, _nodeConfigurations);
             throw new System.NotImplementedException();
         }
