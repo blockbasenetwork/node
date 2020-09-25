@@ -43,6 +43,7 @@ namespace BlockBase.Runtime.Requester
 
             _mongoDbRequesterService = mongoDbRequesterService;
             _nodeConfigurations = nodeConfigurations.Value;
+            _mainchainService = mainchainService;
         }
 
         public bool IsMaintainerRunning()
