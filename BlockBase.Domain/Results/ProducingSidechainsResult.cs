@@ -9,9 +9,10 @@ namespace BlockBase.Domain.Results
     public class ProducingSidechain
     {
         public string Name { get; set; }
-        public SidechainPoolStateEnum SidechainState { get; set; }
+        public string SidechainState { get; set; }
         public int BlocksProducedInCurrentSettlement { get; set; }
         public int BlocksFailedInCurrentSettlement { get; set; }
+        public string ProviderState { get; set; }
         public List<ProducingSidechainWarning> Warnings { get; set; }
 
         public ProducingSidechain()

@@ -47,10 +47,16 @@ namespace BlockBase.Node.Commands.Provider
                 {
                     var warnings = await _mainchainService.RetrieveWarningTable(sidechain.SidechainPool.ClientAccountName);
                     var blocksCount = await _mainchainService.RetrieveBlockCount(sidechain.SidechainPool.ClientAccountName);
+                    var candidates = await _mainchainService.RetrieveCandidates(sidechain.SidechainPool.ClientAccountName);
+                    var producers = await _mainchainService.RetrieveProducersFromTable(sidechain.SidechainPool.ClientAccountName);
+                    var providerState = candidates.Any(c => c.Key == _nodeConfigurations.AccountName) ? "Candidate" :
+                                        producers.Any(p => p.Key == _nodeConfigurations.AccountName) ? "Producer" :
+                                        "Provider not found in sidechain candidates or producers";
 
                     var producingSidechain = new ProducingSidechain(){
                         Name = sidechain.SidechainPool.ClientAccountName,
-                        SidechainState = sidechain.SidechainPool.State,
+                        ProviderState = providerState,
+                        SidechainState = sidechain.SidechainPool.State.ToString(),
                         BlocksProducedInCurrentSettlement = Convert.ToInt32(blocksCount.Where(b => b.Key == _nodeConfigurations.AccountName)?.SingleOrDefault().blocksproduced),
                         BlocksFailedInCurrentSettlement = Convert.ToInt32(blocksCount.Where(b => b.Key == _nodeConfigurations.AccountName)?.SingleOrDefault().blocksfailed)
                     };
