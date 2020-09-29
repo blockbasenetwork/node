@@ -59,10 +59,13 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainProductionState.Stat
             _lastBlock = await _mainchainService.GetLastSubmittedBlockheader(_nodeConfigurations.AccountName, Convert.ToInt32(_contractInfo.BlocksBetweenSettlement));
 
             var verifySignatures = await _mainchainService.RetrieveVerifySignatures(_nodeConfigurations.AccountName);
-            var blockHash = verifySignatures.Where(v => v.Account == _currentProducer.Producer).SingleOrDefault().BlockHash;
+            var blockHash = verifySignatures.Where(v => v.Account == _currentProducer.Producer).SingleOrDefault()?.BlockHash;
             var producers = await _mainchainService.RetrieveProducersFromTable(_nodeConfigurations.AccountName);
-            _currentProducerHasEnoughSignatures = CheckIfBlockHasMajorityOfSignatures(verifySignatures, blockHash, producers.Count, producers.Select(p => p.PublicKey).ToList());
-
+            if (blockHash != null)
+            {
+                _currentProducerHasEnoughSignatures = CheckIfBlockHasMajorityOfSignatures(verifySignatures, blockHash, producers.Count, producers.Select(p => p.PublicKey).ToList());
+            }
+            
             if(_contractState == null || _contractInfo == null || _currentProducer == null) return;
 
             _nextState = GetNextSidechainState(_contractInfo, _contractState, _currentProducer);
