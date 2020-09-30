@@ -1,0 +1,62 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_1
+    restart: always
+    command: mongod --port 27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+    ports:
+      - 27017:27017
+    networks:
+      - blockbasenetwork
+  postgres:
+    image: postgres
+    container_name: postgres_1
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgresuser
+      POSTGRES_PASSWORD: postgrespassword
+    networks:
+      - blockbasenetwork
+  blockbase:
+    image: blockbase:latest #image name used when building blockbase docker image
+    container_name: blockbase_1
+    restart: always
+    ports:
+      - 4444:4444
+      - 80:80
+      - 443:443
+    ###
+    ### Uncomment and add configurations to override
+    ### 
+    ### To override a configuration from appsettings simply add a line with each configuration section and subsequent child configuration sections and names separated by '__'
+    ###
+    ### Example overriding the PublicIpAddress from appsettings:
+    ### 
+    ### Appsettings:
+    ### "NetworkConfigurations": {
+    ###    "PublicIpAddress": "127.0.0.1",
+    ### 
+    ### Environment variable:
+    ### NodeConfigurations__PublicIpAddress: 127.0.0.1
+    ###
+    #environment:
+      #NetworkConfigurations__PublicIpAddress: 127.0.0.1
+      #NodeConfigurations__MongoDbConnectionString: mongodb://mongo:mongo@mongodb:27017
+      #NodeConfigurations__PostgresHost: postgres
+      #NodeConfigurations__PostgresUser: postgresuser
+      #NodeConfigurations__PostgresPort: 5432
+      #NodeConfigurations__PostgresPassword: postgrespassword
+    depends_on:
+      - mongodb
+      - postgres
+    networks:
+      - blockbasenetwork
+networks:
+  blockbasenetwork:
+    driver: bridge
