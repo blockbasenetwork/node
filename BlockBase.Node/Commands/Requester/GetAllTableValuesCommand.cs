@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Sql;
 using static BlockBase.Node.Controllers.RequesterController;
+using BlockBase.Domain.Requests;
 
 namespace BlockBase.Node.Commands.Requester
 {

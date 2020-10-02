@@ -996,6 +996,17 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<List<AccountPermissionsTable>> RetrieveAccountPermissions(string chain)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<AccountPermissionsTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.ACCOUNT_PERMISSIONS_TABLE,
+                chain),
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
 
         #endregion
 

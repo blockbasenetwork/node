@@ -75,6 +75,7 @@ namespace BlockBase.Network.Mainchain
         Task<List<TokenLedgerTable>> RetrieveAccountStakedSidechains(string accountName);
         Task<List<BlackListTable>> RetrieveBlacklistTable(string chain);
         Task<List<WarningTable>> RetrieveWarningTable(string chain);
+        Task<List<AccountPermissionsTable>> RetrieveAccountPermissions(string chain);
 
         void ChangeNetwork();
     }

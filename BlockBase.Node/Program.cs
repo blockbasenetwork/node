@@ -167,7 +167,7 @@ namespace BlockBase.Node
                 new CheckSidechainReservedSeatsCommand(logger, mainchainService, nodeConfigurations),
                 new RequesterClaimStakeCommand(logger, mainchainService, nodeConfigurations),
                 new EndSidechainCommand(logger, sidechainMaintainerManager, mainchainService, nodeConfigurations, concurrentVariables),
-                new ExecuteQueryCommand(logger, databaseKeyManager, sqlCommandManager),
+                new ExecuteQueryCommand(logger, mainchainService, databaseKeyManager, sqlCommandManager, nodeConfigurations),
                 new GenerateMasterKeyCommand(logger),
                 new GetAllTableValuesCommand(logger, databaseKeyManager, sqlCommandManager),
                 new RequesterGetDecryptedNodeIpsCommand(logger, mainchainService, nodeConfigurations),

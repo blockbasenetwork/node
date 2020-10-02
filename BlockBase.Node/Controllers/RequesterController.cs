@@ -24,6 +24,7 @@ using BlockBase.Node.Commands.Requester;
 using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Domain.Blockchain;
+using BlockBase.Domain.Requests;
 
 namespace BlockBase.Node.Controllers
 {
@@ -337,9 +338,9 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to create databases, update them and delete them",
             OperationId = "ExecuteQuery"
         )]
-        public async Task<ObjectResult> ExecuteQuery([FromBody] string queryScript)
+        public async Task<ObjectResult> ExecuteQuery([FromBody] ExecuteQueryRequest queryRequest)
         {
-            var command = new ExecuteQueryCommand(_logger, _databaseKeyManager, _sqlCommandManager, queryScript);
+            var command = new ExecuteQueryCommand(_logger, _mainchainService, _databaseKeyManager, _sqlCommandManager, _nodeConfigurations, queryRequest);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
@@ -594,13 +595,6 @@ namespace BlockBase.Node.Controllers
             {
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
-        }
-
-        public class SidebarQueryInfo
-        {
-            public bool Encrypted { get; set; }
-            public string DatabaseName { get; set; }
-            public string TableName { get; set; }
         }
     }
 }

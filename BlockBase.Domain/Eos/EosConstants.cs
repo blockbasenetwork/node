@@ -23,6 +23,7 @@ namespace BlockBase.Domain.Eos
         public const string VERIFY_SIGNATURE_TABLE = "verifysig";
         public const string RESERVED_SEATS_TABLE = "reservedseat";
         public const string WARNING_TABLE = "warnings";
+        public const string ACCOUNT_PERMISSIONS_TABLE = "accperm";
     }
 
     public class EosTableValues
@@ -152,6 +153,7 @@ namespace BlockBase.Domain.Eos
         public const string IS_LATEST_BLOCK = "is_latest_block";
         public const string PRODUCER = "producer";
         public const string PUBLIC_KEY = "public_key";
+        public const string PERMISSIONS = "permissions";
         public const string STAKE = "stake";
         public const string SECRET_HASH = "secret_hash";
         public const string SECRET = "secret";
