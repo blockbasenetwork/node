@@ -338,8 +338,11 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to create databases, update them and delete them",
             OperationId = "ExecuteQuery"
         )]
-        public async Task<ObjectResult> ExecuteQuery([FromBody] ExecuteQueryRequest queryRequest)
+        public async Task<ObjectResult> ExecuteQuery([FromBody] string queryScript)
         {
+            var queryRequest = new ExecuteQueryRequest();
+            queryRequest.Query = queryScript;
+            
             var command = new ExecuteQueryCommand(_logger, _mainchainService, _databaseKeyManager, _sqlCommandManager, _nodeConfigurations, queryRequest);
             var result = await command.Execute();
 
