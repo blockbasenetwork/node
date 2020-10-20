@@ -20,5 +20,9 @@ namespace BlockBase.DataPersistence.Data
         Task<IList<Transaction>> RollbackAndRetrieveWaitingTransactions(string databaseName, ulong lastIncludedTransactionSequenceNumber);
         Task RemovePendingExecutionTransactionsAsync(string databaseName, IList<TransactionDB> transactions);
 
+        Task AddBBTValueToDatabaseAsync(double BBTValue);
+        Task<BBTValueDB> GetLatestBBTValue();
+        Task<BBTValueDB> GetPreviousWeekBBTValue();
+
     }
 }

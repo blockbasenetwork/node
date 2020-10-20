@@ -18,6 +18,8 @@ namespace BlockBase.Domain.Configurations
         public List<ReservedSeatConfig> ReservedProducerSeats { get; set; }
 
         public DatabaseSecurityConfigurations DatabaseSecurityConfigurations { get; set; }
+
+        public bool BBTValueAutoConfig { get; set; }
     }
 
     public class NodeConfig

@@ -76,6 +76,7 @@ namespace BlockBase.Network.Mainchain
         Task<List<BlackListTable>> RetrieveBlacklistTable(string chain);
         Task<List<WarningTable>> RetrieveWarningTable(string chain);
         Task<List<AccountPermissionsTable>> RetrieveAccountPermissions(string chain);
+        Task<ChangeConfigurationTable> RetrieveConfigurationChanges(string chain);
 
         void ChangeNetwork();
     }

@@ -14,6 +14,8 @@ namespace BlockBase.DataPersistence.Data.MongoDbEntities
         public static readonly string PRODUCING_SIDECHAINS_COLLECTION_NAME = "ProducingSidechains";
         public static readonly string PAST_SIDECHAINS_COLLETION_NAME = "PastSidechains";
         public static readonly string MAINTAINED_SIDECHAINS_COLLECTION_NAME = "MaintainedSidechains";
+        public static readonly string BBT_VALUE_COLLETION_NAME = "BBTValueHistory";
+        public static readonly string PROVIDER_MIN_VALUES_COLLETION_NAME = "ProviderMinValuesHistory";
         public const string CREATE_DATABASE = "CreateDatabase";
         public const string CREATE_TABLE = "CreateTable";
         public const string CREATE_COLUMN = "CreateColumn";

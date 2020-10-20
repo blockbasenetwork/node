@@ -1007,6 +1007,17 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
+        public async Task<ChangeConfigurationTable> RetrieveConfigurationChanges(string chain)
+        {
+            var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<ChangeConfigurationTable>(
+                NetworkConfigurations.BlockBaseOperationsContract,
+                EosTableNames.CHANGE_CONFIG_TABLE,
+                chain),
+                NetworkConfigurations.MaxNumberOfConnectionRetries);
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result.SingleOrDefault();
+        }
+
 
         #endregion
 

@@ -24,6 +24,7 @@ namespace BlockBase.Domain.Eos
         public const string RESERVED_SEATS_TABLE = "reservedseat";
         public const string WARNING_TABLE = "warnings";
         public const string ACCOUNT_PERMISSIONS_TABLE = "accperm";
+        public const string CHANGE_CONFIG_TABLE = "configchange";
     }
 
     public class EosTableValues

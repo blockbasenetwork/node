@@ -581,5 +581,54 @@ namespace BlockBase.DataPersistence.Data
                 await session.CommitTransactionAsync();
             }
         }
+
+        public async Task AddProviderMinValuesToDatabaseAsync(ProviderMinValuesDB providerminValues)
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var recoverDatabase = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+                var providerMinValuesCol = recoverDatabase.GetCollection<ProviderMinValuesDB>(MongoDbConstants.PROVIDER_MIN_VALUES_COLLETION_NAME);
+                await providerMinValuesCol.InsertOneAsync(providerminValues);
+            }
+        }
+
+        public async Task<ProviderMinValuesDB> GetLatestProviderMinValues()
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var database = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+
+                var providerMinValuesCol = database.GetCollection<ProviderMinValuesDB>(MongoDbConstants.PROVIDER_MIN_VALUES_COLLETION_NAME).AsQueryable();
+                var query = from t in providerMinValuesCol
+                            orderby t.Timestamp
+                            select t;
+
+                return query.LastOrDefault();
+            }
+        }
+
+        public async Task<ProviderMinValuesDB> GetFirstProviderMinValues()
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var database = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+
+                var providerMinValuesCol = database.GetCollection<ProviderMinValuesDB>(MongoDbConstants.PROVIDER_MIN_VALUES_COLLETION_NAME).AsQueryable();
+                var query = from t in providerMinValuesCol
+                            orderby t.Timestamp
+                            select t;
+
+                return query.FirstOrDefault();
+            }
+        }
+
+        public async Task DropProviderMinValues()
+        {
+            using (IClientSession session = await MongoClient.StartSessionAsync())
+            {
+                var database = MongoClient.GetDatabase(_dbPrefix + MongoDbConstants.RECOVER_DATABASE_NAME);
+                await database.DropCollectionAsync(MongoDbConstants.PROVIDER_MIN_VALUES_COLLETION_NAME);
+            }
+        }
     }
 }

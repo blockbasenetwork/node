@@ -18,6 +18,7 @@ namespace BlockBase.Domain.Configurations
         public int MaxNumberOfSidechains { get; set; }
         public double MaxGrowthPerMonthInMB { get; set; }
         public double MaxRatioToStake { get; set; }
+        public bool BBTValueAutoConfig { get; set; }
     }
 
     public class HistoryFullProviderNodeConfig : ProviderNodeConfig

@@ -42,5 +42,14 @@ namespace BlockBase.DataPersistence.Data
 
         Task<TransactionDB> GetTransactionToExecute(string sidechain, long lastTransactionSequenceNumber);
         Task UpdateTransactionToExecute(string sidechain, TransactionDB transaction);
+
+        Task AddBBTValueToDatabaseAsync(double BBTValue);
+        Task<BBTValueDB> GetLatestBBTValue();
+        Task<BBTValueDB> GetPreviousWeekBBTValue();
+
+        Task AddProviderMinValuesToDatabaseAsync(ProviderMinValuesDB providerminValues);
+        Task<ProviderMinValuesDB> GetLatestProviderMinValues();
+        Task<ProviderMinValuesDB> GetFirstProviderMinValues();
+        Task DropProviderMinValues();
     }
 }

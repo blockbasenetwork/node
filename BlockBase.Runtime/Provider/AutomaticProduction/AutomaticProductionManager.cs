@@ -17,6 +17,7 @@ using BlockBase.Utils.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using BlockBase.DataPersistence.Data.MongoDbEntities;
 
 namespace BlockBase.Runtime.Provider.AutomaticProduction
 {
@@ -33,6 +34,13 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
         private NetworkConfigurations _networkConfigurations;
         private ProviderConfigurations _providerConfigurations;
 
+        private decimal _fullNodeMinBBTPerEmptyBlock;
+        private decimal _fullNodeMinBBTPerMBRatio;
+        private decimal _historyNodeMinBBTPerEmptyBlock;
+        private decimal _historyNodeMinBBTPerMBRatio;
+        private decimal _validatorNodeMinBBTPerEmptyBlock;
+        private decimal _validatorNodeMinBBTPerMBRatio;
+
         private ILogger _logger;
 
         public AutomaticProductionManager(ILogger<IAutomaticProductionManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<ProviderConfigurations> providerConfigurations, IMongoDbProducerService mongoDbProducerService, ISidechainProducerService sidechainProducerService, SidechainKeeper sidechainKeeper)
@@ -45,6 +53,13 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             _nodeConfigurations = nodeConfigurations.Value;
             _providerConfigurations = providerConfigurations.Value;
             _networkConfigurations = networkConfigurations.Value;
+
+            _fullNodeMinBBTPerEmptyBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerEmptyBlock);
+            _fullNodeMinBBTPerMBRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerMBRatio);
+            _historyNodeMinBBTPerEmptyBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerEmptyBlock);
+            _historyNodeMinBBTPerMBRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerMBRatio);
+            _validatorNodeMinBBTPerEmptyBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerEmptyBlock);
+            _validatorNodeMinBBTPerMBRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerMBRatio);
 
             _logger = logger;
         }
@@ -64,6 +79,11 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 !_providerConfigurations.AutomaticProduction.HistoryNode.IsActive &&
                 !_providerConfigurations.AutomaticProduction.FullNode.IsActive)
                 return;
+
+            if (_providerConfigurations.AutomaticProduction.BBTValueAutoConfig)
+            {
+                await InitializeProviderMinValues();
+            }
 
             _logger.LogInformation("Automatic Production running. Node will automatically send candidatures to sidechains that meet the required conditions");
 
@@ -142,6 +162,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     _logger.LogError($"Failed to check if sidechain still fits rules for production with error: {e}");
                 }
 
+                if (_providerConfigurations.AutomaticProduction.BBTValueAutoConfig) await UpdateMinValuesBasedOnCurrentValue();
                 await Task.Delay(120000);
             }
         }
@@ -176,6 +197,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             return trackerSidechains;
         }
 
+        private async Task<double> GetCurrentBBTValue()
+        {
+            var request = HttpHelper.ComposeWebRequestGet(BlockBaseNetworkEndpoints.GET_CURRENT_BBT_VALUE);
+            var response = await HttpHelper.CallWebRequest(request);
+
+            return JsonConvert.DeserializeObject<double>(response);
+        }
+
         private async Task<(bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp)> CheckIfSidechainFitsRules(string sidechain, bool checkingToJoin)
         {
             (bool found, int producerType, decimal stakeToPut, ulong sidechainTimestamp) defaultReturnValue = (false, 0, 0, 0);
@@ -189,14 +218,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             var clientInfo = await _mainchainService.RetrieveClientTable(sidechain);
 
             //verify if had access to chain information
-            if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null) 
+            if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null)
                 return checkingToJoin ? defaultReturnValue : (true, 0, 0, 0);
 
             //check if it's sidechain that provider had requested exit
             if (checkingToJoin && await CheckIfIsPastSidechainWithExitRequest(sidechain, clientInfo.SidechainCreationTimestamp)) return defaultReturnValue;
 
             if (contractInfo.BlockTimeDuration < 60 && _networkName == EosNetworkNames.MAINNET) return defaultReturnValue;
-            
+
             //verify if chain is in candidature time when trying to join
             if (checkingToJoin && !contractState.CandidatureTime) return defaultReturnValue;
 
@@ -220,12 +249,10 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 && contractInfo.NumberOfFullProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio);
-                decimal minPaymentExpectedPerBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerEmptyBlock);
-                decimal minBBTExpectedPerMB = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MinBBTPerMBRatio);
                 decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4);
                 decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockFullProducers / 10000, 4);
 
-                var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, _fullNodeMinBBTPerEmptyBlock, _fullNodeMinBBTPerMBRatio, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
                 if (fitsAndPayments.fits)
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.Full;
@@ -233,7 +260,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     stakeToPut = requestedStake;
                 }
 
-                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, _fullNodeMinBBTPerEmptyBlock, _fullNodeMinBBTPerMBRatio, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
                 if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
                 {
                     stakeToPut = maxStakeToPut;
@@ -246,12 +273,10 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 && contractInfo.NumberOfHistoryProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio);
-                decimal minPaymentExpectedPerBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerEmptyBlock);
-                decimal minBBTExpectedPerMB = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MinBBTPerMBRatio);
                 decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4);
                 decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockHistoryProducers / 10000, 4);
 
-                var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, _historyNodeMinBBTPerEmptyBlock, _historyNodeMinBBTPerMBRatio, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
                 if (fitsAndPayments.fits && fitsAndPayments.averagePaymentPerBlock >= averagePaymentPerBlock)
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.History;
@@ -259,7 +284,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     stakeToPut = requestedStake;
                 }
 
-                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, _historyNodeMinBBTPerEmptyBlock, _historyNodeMinBBTPerMBRatio, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
                 if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
                 {
                     stakeToPut = maxStakeToPut;
@@ -269,19 +294,17 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive && contractInfo.NumberOfValidatorProducersRequired > 0)
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MaxStakeToMonthlyIncomeRatio);
-                decimal minPaymentExpectedPerBlock = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerEmptyBlock);
-                decimal minBBTExpectedPerMB = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MinBBTPerMBRatio);
                 decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4);
                 decimal maxPaymentPerBlock = Math.Round((decimal)contractInfo.MaxPaymentPerBlockValidatorProducers / 10000, 4);
 
-                var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                var fitsAndPayments = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, requestedStake, _validatorNodeMinBBTPerEmptyBlock, _validatorNodeMinBBTPerMBRatio, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
                 if (fitsAndPayments.fits && fitsAndPayments.averagePaymentPerBlock >= averagePaymentPerBlock)
                 {
                     producerTypeToCandidate = (int)ProducerTypeEnum.Validator;
                     stakeToPut = requestedStake;
                 }
 
-                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, minPaymentExpectedPerBlock, minBBTExpectedPerMB, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
+                var fitsAndPaymentsForMaxStake = CheckIfRequestedProducerTypeFitsMinimumRequirements(maxStakeToMonthlyIncomeRatio, maxStakeToPut, _validatorNodeMinBBTPerEmptyBlock, _validatorNodeMinBBTPerMBRatio, minPaymentPerBlock, maxPaymentPerBlock, contractInfo.BlockTimeDuration, contractInfo.SizeOfBlockInBytes);
                 if (fitsAndPaymentsForMaxStake.fits && maxStakeToPut > requestedStake)
                 {
                     stakeToPut = maxStakeToPut;
@@ -404,6 +427,86 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
         {
             var pastSidechainInDb = await _mongoDbProducerService.GetPastSidechainAsync(sidechain, sidechainCreationTime);
             return (pastSidechainInDb != null && pastSidechainInDb.ReasonLeft == LeaveNetworkReasonsConstants.EXIT_REQUEST);
+        }
+
+        private async Task InitializeProviderMinValues()
+        {
+            var firstProviderMinValues = await _mongoDbProducerService.GetFirstProviderMinValues();
+
+            if (firstProviderMinValues == null ||
+                _fullNodeMinBBTPerEmptyBlock != firstProviderMinValues.FullNodeMinBBTPerEmptyBlock ||
+                _fullNodeMinBBTPerMBRatio != firstProviderMinValues.FullNodeMinBBTPerMBRatio ||
+                _historyNodeMinBBTPerEmptyBlock != firstProviderMinValues.HistoryNodeMinBBTPerEmptyBlock ||
+                _historyNodeMinBBTPerMBRatio != firstProviderMinValues.HistoryNodeMinBBTPerMBRatio ||
+                _validatorNodeMinBBTPerEmptyBlock != firstProviderMinValues.ValidatorNodeMinBBTPerEmptyBlock ||
+                _validatorNodeMinBBTPerMBRatio != firstProviderMinValues.ValidatorNodeMinBBTPerMBRatio)
+            {
+                await _mongoDbProducerService.DropProviderMinValues();
+
+                var providerMinValuesDB = new ProviderMinValuesDB()
+                {
+                    Timestamp = Convert.ToUInt64(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+                    FullNodeMinBBTPerEmptyBlock = _fullNodeMinBBTPerEmptyBlock,
+                    FullNodeMinBBTPerMBRatio = _fullNodeMinBBTPerMBRatio,
+                    HistoryNodeMinBBTPerEmptyBlock = _historyNodeMinBBTPerEmptyBlock,
+                    HistoryNodeMinBBTPerMBRatio = _historyNodeMinBBTPerMBRatio,
+                    ValidatorNodeMinBBTPerEmptyBlock = _validatorNodeMinBBTPerEmptyBlock,
+                    ValidatorNodeMinBBTPerMBRatio = _validatorNodeMinBBTPerMBRatio
+                };
+
+                await _mongoDbProducerService.AddProviderMinValuesToDatabaseAsync(providerMinValuesDB);
+            }
+            else
+            {
+                var latestProviderMinValues = await _mongoDbProducerService.GetLatestProviderMinValues();
+
+                _fullNodeMinBBTPerEmptyBlock = latestProviderMinValues.FullNodeMinBBTPerEmptyBlock;
+                _fullNodeMinBBTPerMBRatio = latestProviderMinValues.FullNodeMinBBTPerMBRatio;
+                _historyNodeMinBBTPerEmptyBlock = latestProviderMinValues.HistoryNodeMinBBTPerEmptyBlock;
+                _historyNodeMinBBTPerMBRatio = latestProviderMinValues.HistoryNodeMinBBTPerMBRatio;
+                _validatorNodeMinBBTPerEmptyBlock = latestProviderMinValues.ValidatorNodeMinBBTPerEmptyBlock;
+                _validatorNodeMinBBTPerMBRatio = latestProviderMinValues.ValidatorNodeMinBBTPerMBRatio;
+            }
+        }
+
+        private async Task UpdateMinValuesBasedOnCurrentValue()
+        {
+            try
+            {
+                var latestStoredValue = await _mongoDbProducerService.GetLatestBBTValue();
+
+                if (Convert.ToInt64(latestStoredValue.Timestamp) > DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds()) return;
+
+                var tokenCurrentValue = await GetCurrentBBTValue();
+                var convertedPreviousValue = Convert.ToDecimal(latestStoredValue.ValueInUSD);
+                var convertedLatestValue = Convert.ToDecimal(tokenCurrentValue);
+
+                _fullNodeMinBBTPerEmptyBlock = (_fullNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
+                _fullNodeMinBBTPerMBRatio = (_fullNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
+                _historyNodeMinBBTPerEmptyBlock = (_historyNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
+                _historyNodeMinBBTPerMBRatio = (_historyNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
+                _validatorNodeMinBBTPerEmptyBlock = (_validatorNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
+                _validatorNodeMinBBTPerMBRatio = (_validatorNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
+
+                var providerMinValuesDB = new ProviderMinValuesDB()
+                {
+                    Timestamp = Convert.ToUInt64(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+                    FullNodeMinBBTPerEmptyBlock = _fullNodeMinBBTPerEmptyBlock,
+                    FullNodeMinBBTPerMBRatio = _fullNodeMinBBTPerMBRatio,
+                    HistoryNodeMinBBTPerEmptyBlock = _historyNodeMinBBTPerEmptyBlock,
+                    HistoryNodeMinBBTPerMBRatio = _historyNodeMinBBTPerMBRatio,
+                    ValidatorNodeMinBBTPerEmptyBlock = _validatorNodeMinBBTPerEmptyBlock,
+                    ValidatorNodeMinBBTPerMBRatio = _validatorNodeMinBBTPerMBRatio
+                };
+
+                await _mongoDbProducerService.AddProviderMinValuesToDatabaseAsync(providerMinValuesDB);
+                await _mongoDbProducerService.AddBBTValueToDatabaseAsync(tokenCurrentValue);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Failed to update BBT Value");
+                _logger.LogDebug($"Exception: {e}");
+            }
         }
     }
 }

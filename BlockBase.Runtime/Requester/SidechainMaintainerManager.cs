@@ -21,6 +21,7 @@ namespace BlockBase.Runtime.Requester
         private IMongoDbRequesterService _mongoDbRequesterService;
         private IMainchainService _mainchainService;
         private NodeConfigurations _nodeConfigurations;
+        private RequesterConfigurations _requesterConfigurations;
         private SidechainPool _sidechainPool;
         private TransactionsManager _transactionsManager;
 
@@ -32,12 +33,12 @@ namespace BlockBase.Runtime.Requester
         public TaskContainer TaskContainerTransactions { get; private set; }
 
 
-        public SidechainMaintainerManager(ILogger<ISidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, TransactionsManager transactionsManager, IMongoDbRequesterService mongoDbRequesterService, PeerConnectionsHandler peerConnectionsHandler)
+        public SidechainMaintainerManager(ILogger<ISidechainMaintainerManager> logger, IMainchainService mainchainService, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<RequesterConfigurations> requesterConfigurations, TransactionsManager transactionsManager, IMongoDbRequesterService mongoDbRequesterService, PeerConnectionsHandler peerConnectionsHandler)
         {
 
             _transactionsManager = transactionsManager;
             _sidechainPool = new SidechainPool(nodeConfigurations.Value.AccountName);
-            _sidechainMaintainerStateManager = new SidechainMaintainerStateManager(logger, mainchainService, nodeConfigurations.Value);
+            _sidechainMaintainerStateManager = new SidechainMaintainerStateManager(logger, mainchainService, nodeConfigurations.Value, mongoDbRequesterService, requesterConfigurations.Value);
             _sidechainProductionStateManager = new SidechainProductionStateManager(logger, mainchainService, nodeConfigurations.Value, transactionsManager);
             _peerConnectionStateManager = new PeerConnectionStateManager(_sidechainPool, peerConnectionsHandler, nodeConfigurations.Value, networkConfigurations.Value, logger, mainchainService);
 
