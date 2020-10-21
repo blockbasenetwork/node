@@ -105,11 +105,11 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
             try
             {
                 var latestStoredBBTValue = await _mongoDbRequesterService.GetLatestBBTValue();
-                if (Convert.ToInt64(latestStoredBBTValue.Timestamp) < DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds())
+                if (latestStoredBBTValue == null || Convert.ToInt64(latestStoredBBTValue.Timestamp) < DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds())
                 {
                     var currentBBTValue = await GetCurrentBBTValue();
                     await _mongoDbRequesterService.AddBBTValueToDatabaseAsync(currentBBTValue);
-                    _timeForConfigAutoUpdate = true;
+                    if (latestStoredBBTValue != null) _timeForConfigAutoUpdate = true;
                 }
             }
             catch (Exception e)
