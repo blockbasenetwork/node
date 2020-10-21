@@ -600,10 +600,10 @@ namespace BlockBase.DataPersistence.Data
 
                 var providerMinValuesCol = database.GetCollection<ProviderMinValuesDB>(MongoDbConstants.PROVIDER_MIN_VALUES_COLLETION_NAME).AsQueryable();
                 var query = from t in providerMinValuesCol
-                            orderby t.Timestamp
+                            orderby t.Timestamp descending
                             select t;
 
-                return query.LastOrDefault();
+                return query.FirstOrDefault();
             }
         }
 

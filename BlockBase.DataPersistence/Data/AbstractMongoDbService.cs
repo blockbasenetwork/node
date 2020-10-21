@@ -51,10 +51,10 @@ namespace BlockBase.DataPersistence.Data
 
                 var bbtValuesCol = database.GetCollection<BBTValueDB>(MongoDbConstants.BBT_VALUE_COLLETION_NAME).AsQueryable();
                 var query = from t in bbtValuesCol
-                            orderby t.Timestamp
+                            orderby t.Timestamp descending
                             select t;
 
-                return query.LastOrDefault();
+                return query.FirstOrDefault();
             }
         }
 
@@ -67,10 +67,10 @@ namespace BlockBase.DataPersistence.Data
                 var bbtValuesCol = database.GetCollection<BBTValueDB>(MongoDbConstants.BBT_VALUE_COLLETION_NAME).AsQueryable();
                 var query = from t in bbtValuesCol
                             where t.Timestamp < Convert.ToUInt64(DateTimeOffset.UtcNow.AddDays(-7).ToUnixTimeSeconds())
-                            orderby t.Timestamp
+                            orderby t.Timestamp descending
                             select t;
 
-                return query.LastOrDefault();
+                return query.FirstOrDefault();
             }
         }
 
