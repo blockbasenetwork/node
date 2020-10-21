@@ -78,12 +78,19 @@ namespace BlockBase.Runtime.Requester.StateMachine.SidechainMaintainerState.Stat
                 configurationChanges.NumberOfHistoryProducersRequired = _contractInfoTable.NumberOfHistoryProducersRequired;
                 configurationChanges.NumberOfValidatorProducersRequired = _contractInfoTable.NumberOfValidatorProducersRequired;
 
-                configurationChanges.MaxPaymentPerBlockFullProducers = (_contractInfoTable.MaxPaymentPerBlockFullProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
-                configurationChanges.MaxPaymentPerBlockHistoryProducers = (_contractInfoTable.MaxPaymentPerBlockHistoryProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
-                configurationChanges.MaxPaymentPerBlockValidatorProducers = (_contractInfoTable.MaxPaymentPerBlockValidatorProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
-                configurationChanges.MinPaymentPerBlockFullProducers = (_contractInfoTable.MinPaymentPerBlockFullProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
-                configurationChanges.MinPaymentPerBlockHistoryProducers = (_contractInfoTable.MinPaymentPerBlockHistoryProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
-                configurationChanges.MinPaymentPerBlockValidatorProducers = (_contractInfoTable.MinPaymentPerBlockValidatorProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
+                var maxPaymentPerBlockFullProducers = (_contractInfoTable.MaxPaymentPerBlockFullProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
+                var maxPaymentPerBlockHistoryProducers = (_contractInfoTable.MaxPaymentPerBlockHistoryProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
+                var maxPaymentPerBlockValidatorProducers = (_contractInfoTable.MaxPaymentPerBlockValidatorProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
+                var minPaymentPerBlockFullProducers = (_contractInfoTable.MinPaymentPerBlockFullProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
+                var minPaymentPerBlockHistoryProducers = (_contractInfoTable.MinPaymentPerBlockHistoryProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
+                var minPaymentPerBlockValidatorProducers = (_contractInfoTable.MinPaymentPerBlockValidatorProducers * convertedPreviousBBTValue) / convertedLatestBBTValue;
+
+                configurationChanges.MaxPaymentPerBlockFullProducers = maxPaymentPerBlockFullProducers >= 1 ? maxPaymentPerBlockFullProducers : 1;
+                configurationChanges.MaxPaymentPerBlockHistoryProducers = maxPaymentPerBlockHistoryProducers >= 1 ? maxPaymentPerBlockHistoryProducers : 1;
+                configurationChanges.MaxPaymentPerBlockValidatorProducers = maxPaymentPerBlockValidatorProducers >= 1 ? maxPaymentPerBlockValidatorProducers : 1;
+                configurationChanges.MinPaymentPerBlockFullProducers = minPaymentPerBlockFullProducers >= 1 ? minPaymentPerBlockFullProducers : 1;
+                configurationChanges.MinPaymentPerBlockHistoryProducers = minPaymentPerBlockHistoryProducers >= 1 ? minPaymentPerBlockHistoryProducers : 1;
+                configurationChanges.MinPaymentPerBlockValidatorProducers = minPaymentPerBlockValidatorProducers >= 1 ? minPaymentPerBlockValidatorProducers : 1;
                 configurationChanges.Stake = (_contractInfoTable.Stake * convertedPreviousBBTValue) / convertedLatestBBTValue;
 
                 var mappedConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(configurationChanges));
