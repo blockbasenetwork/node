@@ -467,6 +467,14 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 _validatorNodeMinBBTPerEmptyBlock = latestProviderMinValues.ValidatorNodeMinBBTPerEmptyBlock;
                 _validatorNodeMinBBTPerMBRatio = latestProviderMinValues.ValidatorNodeMinBBTPerMBRatio;
             }
+
+            var latestStoredValue = await _mongoDbProducerService.GetLatestBBTValue();
+
+            if (latestStoredValue == null)
+            {
+                var tokenCurrentValue = await GetCurrentBBTValue();
+                await _mongoDbProducerService.AddBBTValueToDatabaseAsync(tokenCurrentValue);
+            }
         }
 
         private async Task UpdateMinValuesBasedOnCurrentValue()
