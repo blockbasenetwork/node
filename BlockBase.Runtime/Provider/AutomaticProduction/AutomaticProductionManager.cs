@@ -489,12 +489,12 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 var convertedPreviousValue = Convert.ToDecimal(latestStoredValue.ValueInUSD);
                 var convertedLatestValue = Convert.ToDecimal(tokenCurrentValue);
 
-                _fullNodeMinBBTPerEmptyBlock = (_fullNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
-                _fullNodeMinBBTPerMBRatio = (_fullNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
-                _historyNodeMinBBTPerEmptyBlock = (_historyNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
-                _historyNodeMinBBTPerMBRatio = (_historyNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
-                _validatorNodeMinBBTPerEmptyBlock = (_validatorNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
-                _validatorNodeMinBBTPerMBRatio = (_validatorNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
+                if (_fullNodeMinBBTPerEmptyBlock != 0) _fullNodeMinBBTPerEmptyBlock = (_fullNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
+                if (_fullNodeMinBBTPerMBRatio != 0) _fullNodeMinBBTPerMBRatio = (_fullNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
+                if (_historyNodeMinBBTPerEmptyBlock != 0) _historyNodeMinBBTPerEmptyBlock = (_historyNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
+                if (_historyNodeMinBBTPerMBRatio != 0) _historyNodeMinBBTPerMBRatio = (_historyNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
+                if (_validatorNodeMinBBTPerEmptyBlock != 0) _validatorNodeMinBBTPerEmptyBlock = (_validatorNodeMinBBTPerEmptyBlock * convertedPreviousValue) / convertedLatestValue;
+                if (_validatorNodeMinBBTPerMBRatio != 0) _validatorNodeMinBBTPerMBRatio = (_validatorNodeMinBBTPerMBRatio * convertedPreviousValue) / convertedLatestValue;
 
                 var providerMinValuesDB = new ProviderMinValuesDB()
                 {
