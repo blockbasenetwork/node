@@ -51,7 +51,13 @@ namespace BlockBase.Node
                 c.SwaggerEndpoint("/swagger/networkApi/swagger.json", "Network API V0.1");
                 c.RoutePrefix = string.Empty;
             });
-            //app.UseMvc();
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+            });
         }
     }
 }
