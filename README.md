@@ -32,7 +32,7 @@ Each node has to have an EOS account associated to it. We recommend using a new 
 
 ## Software Prerequisites
 The BlockBase node software is built with C# and runs on the .NET Core Platform, and uses MongoBD and PostgreSQL to store its data. Before running the node, you should install:
-1. .NET Core SDK 2.1 (The current version of BlockBase doesn't run on 3.1)
+1. .NET Core SDK 3.1
 
 2. The latest version of MongoDB Server (It should work fine with versions equal or after 4.2)
 
