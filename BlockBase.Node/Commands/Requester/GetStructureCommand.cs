@@ -33,17 +33,17 @@ namespace BlockBase.Node.Commands.Requester
 
         public decimal Stake { get; set; }
 
-        public override async Task<CommandExecutionResponse> Execute()
+        public override Task<CommandExecutionResponse> Execute()
         {
             try
             {
-                if (!_databaseKeyManager.DataSynced) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Passwords and main key not set."));
+                if (!_databaseKeyManager.DataSynced) return Task.FromResult(new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Passwords and main key not set.")));
                 var structure = _sqlCommandManager.GetStructure();
-                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<IList<DatabasePoco>>(structure));
+                return Task.FromResult(new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<IList<DatabasePoco>>(structure)));
             }
             catch (Exception e)
             {
-                return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e));
+                return Task.FromResult(new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e)));
             }
         }
 

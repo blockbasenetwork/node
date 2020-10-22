@@ -50,7 +50,7 @@ namespace BlockBase.Node.Commands.Requester
 
         public decimal Stake { get; set; }
 
-        public override async Task<CommandExecutionResponse> Execute()
+        public override Task<CommandExecutionResponse> Execute()
         {
             try
             {
@@ -73,11 +73,11 @@ namespace BlockBase.Node.Commands.Requester
                     _databaseKeyManager.SetInitialSecrets(newConfig);
                 }
 
-                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, "Secret set with success"));
+                return Task.FromResult(new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, "Secret set with success")));
             }
             catch (Exception e)
             {
-                return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e));
+                return Task.FromResult(new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e)));
             }
         }
 

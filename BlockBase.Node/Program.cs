@@ -32,7 +32,7 @@ namespace BlockBase.Node
     public class Program
     {
 
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             Console.WriteLine($"Running version: {Assembly.GetEntryAssembly().GetName().Version.ToString()}");
 

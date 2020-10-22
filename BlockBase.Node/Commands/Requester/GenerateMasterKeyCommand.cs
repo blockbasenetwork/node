@@ -26,17 +26,17 @@ namespace BlockBase.Node.Commands.Requester
         }
 
 
-        public override async Task<CommandExecutionResponse> Execute()
+        public override Task<CommandExecutionResponse> Execute()
         {
             try
             {
                 var key = KeyAndIVGenerator.CreateRandomKey();
 
-                return new CommandExecutionResponse( HttpStatusCode.OK, new OperationResponse<string>(key, $"Master key successfully created. Master Key = {key}"));
+                return Task.FromResult(new CommandExecutionResponse( HttpStatusCode.OK, new OperationResponse<string>(key, $"Master key successfully created. Master Key = {key}")));
             }
             catch (Exception e)
             {
-                return new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e));
+                return Task.FromResult(new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(e)));
             }
 
         }
