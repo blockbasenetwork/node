@@ -84,7 +84,7 @@ namespace BlockBase.Api
                     IPAddress ipAddress;
                     if (!IPAddress.TryParse(ipAddressString, out ipAddress))
                     {
-                        var ipv4 = Dns.GetHostEntry(ipAddressString)?.AddressList.FirstOrDefault(addr => addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);;
+                        var ipv4 = Dns.GetHostEntry(ipAddressString)?.AddressList.FirstOrDefault(addr => addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork); ;
                         if (ipv4 != null) ipAddress = ipv4;
                     }
                     return ipAddress;
@@ -100,7 +100,10 @@ namespace BlockBase.Api
                 {
                     option.ShutdownTimeout = System.TimeSpan.FromSeconds(3);
                 });
-                
+                services.AddControllersWithViews().AddNewtonsoftJson(options =>
+                   options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
+                );
+
                 var node = configuration.GetSection("NodeConfigurations").GetValue<string>("AccountName");
                 services.AddSwaggerGen(c =>
                 {
@@ -218,7 +221,7 @@ namespace BlockBase.Api
             return this;
         }
 
-        
+
 
         public ApiWebHostBuilder ConfigureApiSecurity()
         {
