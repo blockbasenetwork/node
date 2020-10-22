@@ -10,6 +10,7 @@ using MongoDB.Driver.Linq;
 using BlockBase.Domain.Blockchain;
 using System.Text;
 using System;
+using MongoDB.Bson;
 
 namespace BlockBase.DataPersistence.Data
 {
@@ -104,12 +105,17 @@ namespace BlockBase.DataPersistence.Data
                 }
                 else
                 {
-                    var myByte = (byte) c;
+                    var myByte = (byte)c;
                     var hex = myByte.ToString("X");
                     sb.Append(hex);
                 }
             }
             return sb.ToString();
+        }
+
+        protected bool IsReplicaSet()
+        {
+            return MongoClient.Cluster.Description.Type == MongoDB.Driver.Core.Clusters.ClusterType.ReplicaSet;
         }
     }
 }
