@@ -9,6 +9,7 @@ namespace BlockBase.DataPersistence.Data
 {
     public interface IMongoDbProducerService
     {
+        Task CreateCollections(string databaseName);
         Task AddBlockToSidechainDatabaseAsync(Block block, string databaseName);
         Task<Block> GetSidechainBlockAsync(string sidechain, string blockhash);
         Task<BlockheaderDB> GetBlockHeaderByBlockHashAsync(string databaseName, string blockHash);

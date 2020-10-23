@@ -76,6 +76,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState
         protected override async Task Run()
         {
             var currentState = BuildState(typeof(StartState).Name);
+            await _mongoDbProducerService.CreateCollections(_sidechain.ClientAccountName);
 
             while (true)
             {

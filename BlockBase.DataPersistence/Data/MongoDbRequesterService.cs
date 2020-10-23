@@ -24,12 +24,16 @@ namespace BlockBase.DataPersistence.Data
             return await RetrieveTransactionsInMempool(databaseName, MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
         }
 
-        public async Task CreateIndexes(string databaseName)
+        public async Task CreateCollectionsAndIndexes(string databaseName)
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 var indexModel = new CreateIndexModel<TransactionDB>(Builders<TransactionDB>.IndexKeys.Ascending(t => t.SequenceNumber));
+
+                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
 
                 var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                 var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
@@ -106,16 +110,16 @@ namespace BlockBase.DataPersistence.Data
             databaseName = ClearSpecialCharacters(databaseName);
             using (var session = await MongoClient.StartSessionAsync())
             {
-                //TODO: Refactor
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+
                 if (IsReplicaSet())
                 {
                     session.StartTransaction();
                     try
                     {
-                        var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                        var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                         await pendingExecutionTransactionCollection.DeleteOneAsync(session, t => t.SequenceNumber == transaction.SequenceNumber);
-                        var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                         await executedTransactionsCollection.InsertOneAsync(session, transaction);
                         await session.CommitTransactionAsync();
                     }
@@ -127,10 +131,7 @@ namespace BlockBase.DataPersistence.Data
                 }
                 else
                 {
-                    var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                    var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                     await pendingExecutionTransactionCollection.DeleteOneAsync(t => t.SequenceNumber == transaction.SequenceNumber);
-                    var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                     await executedTransactionsCollection.InsertOneAsync(transaction);
                 }
             }
@@ -142,16 +143,16 @@ namespace BlockBase.DataPersistence.Data
             var orderedTransactions = transactions.OrderBy(t => t.SequenceNumber).ToList();
             using (var session = await MongoClient.StartSessionAsync())
             {
-                //TODO: Refactor
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+
                 if (IsReplicaSet())
                 {
                     session.StartTransaction();
                     try
                     {
-                        var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                        var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                         await pendingExecutionTransactionCollection.DeleteManyAsync(session, t => t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
-                        var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                         await executedTransactionsCollection.InsertManyAsync(session, transactions);
                         await session.CommitTransactionAsync();
                     }
@@ -163,10 +164,7 @@ namespace BlockBase.DataPersistence.Data
                 }
                 else
                 {
-                    var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                    var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                     await pendingExecutionTransactionCollection.DeleteManyAsync(t => t.SequenceNumber >= orderedTransactions.First().SequenceNumber && t.SequenceNumber <= orderedTransactions.Last().SequenceNumber);
-                    var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
                     await executedTransactionsCollection.InsertManyAsync(transactions);
                 }
             }
@@ -177,14 +175,14 @@ namespace BlockBase.DataPersistence.Data
             databaseName = ClearSpecialCharacters(databaseName);
             using (var session = await MongoClient.StartSessionAsync())
             {
-                //TODO: Refactor
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+
                 if (IsReplicaSet())
                 {
                     session.StartTransaction();
                     try
                     {
-                        var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                        var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                         foreach (var transaction in transactions) await transactionsCollection.InsertOneAsync(session, transaction);
                         await session.CommitTransactionAsync();
                     }
@@ -196,8 +194,6 @@ namespace BlockBase.DataPersistence.Data
                 }
                 else
                 {
-                    var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                    var transactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                     foreach (var transaction in transactions) await transactionsCollection.InsertOneAsync(transaction);
                 }
             }
