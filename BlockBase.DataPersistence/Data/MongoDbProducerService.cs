@@ -26,10 +26,18 @@ namespace BlockBase.DataPersistence.Data
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
-                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
-                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME);
+                try
+                {
+                    var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                    await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
+                    await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
+                    await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Failed to create collections");
+                    _logger.LogDebug($"Exception {e}");
+                }
             }
         }
 
