@@ -28,20 +28,31 @@ namespace BlockBase.DataPersistence.Data
         {
             using (IClientSession session = await MongoClient.StartSessionAsync())
             {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                var indexModel = new CreateIndexModel<TransactionDB>(Builders<TransactionDB>.IndexKeys.Ascending(t => t.SequenceNumber));
+                try
+                {
+                    var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                    var indexModel = new CreateIndexModel<TransactionDB>(Builders<TransactionDB>.IndexKeys.Ascending(t => t.SequenceNumber));
 
-                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
-                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
-                await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
+                    if (!(await CollectionExistsAsync(databaseName, MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME)))
+                        await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                    if (!(await CollectionExistsAsync(databaseName, MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME)))
+                        await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                    if (!(await CollectionExistsAsync(databaseName, MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME)))
+                        await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
 
-                var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
-                var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
-                var waitingTransactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
+                    var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
+                    var transactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
+                    var waitingTransactionscol = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_WAITING_FOR_IRREVERSIBILITY_TRANSACTIONS_COLLECTION_NAME);
 
-                await pendingExecutionTransactionCollection.Indexes.CreateOneAsync(indexModel);
-                await transactionCollection.Indexes.CreateOneAsync(indexModel);
-                await waitingTransactionscol.Indexes.CreateOneAsync(indexModel);
+                    await pendingExecutionTransactionCollection.Indexes.CreateOneAsync(indexModel);
+                    await transactionCollection.Indexes.CreateOneAsync(indexModel);
+                    await waitingTransactionscol.Indexes.CreateOneAsync(indexModel);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Failed to create collections and indexes");
+                    _logger.LogDebug($"Exception {e}");
+                }
             }
         }
 

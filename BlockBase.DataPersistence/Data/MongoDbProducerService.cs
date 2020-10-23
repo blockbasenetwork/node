@@ -29,9 +29,13 @@ namespace BlockBase.DataPersistence.Data
                 try
                 {
                     var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
-                    await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
-                    await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
-                    await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME);
+
+                    if (!(await CollectionExistsAsync(databaseName, MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME)))
+                        await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
+                    if (!(await CollectionExistsAsync(databaseName, MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME)))
+                        await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
+                    if (!(await CollectionExistsAsync(databaseName, MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME)))
+                        await sidechainDatabase.CreateCollectionAsync(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME);
                 }
                 catch (Exception e)
                 {
@@ -500,6 +504,7 @@ namespace BlockBase.DataPersistence.Data
                 var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.BLOCKHEADERS_COLLECTION_NAME);
                 await sidechainDatabase.DropCollectionAsync(MongoDbConstants.PROVIDER_TRANSACTIONS_COLLECTION_NAME);
+                await sidechainDatabase.DropCollectionAsync(MongoDbConstants.PROVIDER_CURRENT_TRANSACTION_TO_EXECUTE_COLLECTION_NAME);
 
                 if ((await sidechainDatabase.ListCollectionsAsync()).ToList().Count() == 0)
                 {

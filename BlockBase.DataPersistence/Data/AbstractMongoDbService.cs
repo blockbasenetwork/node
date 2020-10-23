@@ -117,5 +117,12 @@ namespace BlockBase.DataPersistence.Data
         {
             return MongoClient.Cluster.Description.Type == MongoDB.Driver.Core.Clusters.ClusterType.ReplicaSet;
         }
+
+        protected async Task<bool> CollectionExistsAsync(string databaseName, string collectionName)
+        {
+            var filter = new BsonDocument("name", collectionName);
+            var collections = await MongoClient.GetDatabase(_dbPrefix + databaseName).ListCollectionsAsync(new ListCollectionsOptions { Filter = filter });
+            return await collections.AnyAsync();
+        }
     }
 }
