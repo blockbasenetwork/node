@@ -42,19 +42,19 @@ namespace BlockBase.DataProxy.Encryption
             var encryptionMasterKey = "";
             var encryptionPassword = "";
 
-            
+
 
             if (!config.IsEncrypted)
             {
                 filePassword = config.FilePassword;
                 encryptionMasterKey = config.EncryptionMasterKey;
                 encryptionPassword = config.EncryptionPassword;
-                
+
                 //Encrypting data:
                 //var encryptedData =  Base32Encoding.ZBase32.GetString(AssymetricEncryptionHelper.EncryptData(_nodeConfigurations.ActivePublicKey, 
                 //private_key, 
                 //Encoding.UTF8.GetBytes(filePassword + ":" + encryptionMasterKey + ":" + encryptionPassword)));
-           
+
             }
             else
             {
@@ -76,8 +76,8 @@ namespace BlockBase.DataProxy.Encryption
         {
             var infoRecords = await _connector.GetInfoRecords();
 
-            if(infoRecords == null || infoRecords.Count == 0)
-            _logger.LogDebug("No info records found to sync");
+            if (infoRecords == null || infoRecords.Count == 0)
+                _logger.LogDebug("No info records found to sync");
 
             LoadInfoRecordsToRecordManager(infoRecords);
         }
@@ -164,20 +164,35 @@ namespace BlockBase.DataProxy.Encryption
         public byte[] GetKeyNameFromInfoRecord(InfoRecord infoRecord)
         {
             var key = SecretStore.GetSecret(infoRecord.IV);
-            if (key == null) return null;
+            if (key == null)
+            {
+                _logger.LogError($"Didn't find key for IV: {infoRecord.IV}");
+                return null;
+            }
             byte[] decryptedKeyNameData;
             try
             {
                 decryptedKeyNameData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyName), key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
-                return decryptedKeyNameData;
-            }
 
+                if (decryptedKeyNameData.Count() != 32)
+                {
+                    decryptedKeyNameData = GetKeyNameFromDerivateKey(key, infoRecord);
+                }
+            }
             catch (System.Security.Cryptography.CryptographicException)
             {
-                var derivatedKeyRead = KeyAndIVGenerator.CreateDerivateKey(key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
-                decryptedKeyNameData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyName), derivatedKeyRead, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
-                return decryptedKeyNameData;
+                decryptedKeyNameData = GetKeyNameFromDerivateKey(key, infoRecord);
             }
+
+            return decryptedKeyNameData;
+        }
+
+        private byte[] GetKeyNameFromDerivateKey(byte[] key, InfoRecord infoRecord)
+        {
+            var derivatedKeyRead = KeyAndIVGenerator.CreateDerivateKey(key, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
+            var decryptedKeyNameData = AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(infoRecord.KeyName), derivatedKeyRead, Base32Encoding.ZBase32.ToBytes(infoRecord.IV));
+
+            return decryptedKeyNameData;
         }
 
         private void LoadInfoRecordsToRecordManager(IList<InfoRecord> infoRecords)
@@ -368,7 +383,16 @@ namespace BlockBase.DataProxy.Encryption
         {
             var keyName = GetKeyNameFromInfoRecord(infoRecord);
             string recordName = infoRecord.Name.Substring(1);
-            return Encoding.Unicode.GetString(AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(recordName), keyName, Base32Encoding.ZBase32.ToBytes(infoRecord.IV)));
+            try
+            {
+                return Encoding.Unicode.GetString(AES256.DecryptWithCBC(Base32Encoding.ZBase32.ToBytes(recordName), keyName, Base32Encoding.ZBase32.ToBytes(infoRecord.IV)));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"KeyName: {keyName} Failed to decrypt inforecord: {recordName}");
+                _logger.LogDebug($"Exception {e}");
+                return null;
+            }
         }
 
         public enum InfoRecordTypeEnum
