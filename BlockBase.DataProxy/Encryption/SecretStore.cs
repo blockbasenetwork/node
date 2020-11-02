@@ -15,7 +15,7 @@ namespace BlockBase.DataProxy.Encryption
     public class SecretStore : ISecretStore
     {
         private Dictionary<string, byte[]> _secretStoreDict = new Dictionary<string, byte[]>();
-        private static readonly string KEYS_FILE_NAME = "keys.txt";
+        private static readonly string KEYS_FILE_NAME = "keys";
         private ILogger _logger;
         private byte[] _key;
         private byte[] _iv;
