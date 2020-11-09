@@ -52,13 +52,13 @@ namespace BlockBase.Node.Commands.Requester
         {
             try
             {
-                // var accountPermissions = await _mainchainService.RetrieveAccountPermissions(_nodeConfigurations.AccountName);
+                var accountPermissions = await _mainchainService.RetrieveAccountPermissions(_nodeConfigurations.AccountName);
 
-                // var accountPublicKey = accountPermissions.FirstOrDefault(a => a.Key == _queryRequest.Account)?.PublicKey;
-                // if (accountPublicKey == null) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Permission for this account not found"));
+                var accountPublicKey = accountPermissions.FirstOrDefault(a => a.Key == _queryRequest.Account)?.PublicKey;
+                if (accountPublicKey == null) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Permission for this account not found"));
 
-                // var isSignatureValid = SignatureHelper.VerifySignature(accountPublicKey, _queryRequest.Signature, Encoding.UTF8.GetBytes(_queryRequest.Query));
-                // if (!isSignatureValid) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Signature not valid"));
+                var isSignatureValid = SignatureHelper.VerifySignature(accountPublicKey, _queryRequest.Signature, Encoding.UTF8.GetBytes(_queryRequest.Query));
+                if (!isSignatureValid) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Signature not valid"));
 
                 if (!_databaseKeyManager.DataSynced) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Passwords and main key not set."));
                 

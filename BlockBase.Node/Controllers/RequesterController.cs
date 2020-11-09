@@ -327,7 +327,7 @@ namespace BlockBase.Node.Controllers
         /// <summary>
         /// Sends a query to be executed
         /// </summary>
-        /// <param name="queryScript">The query to execute</param>
+        /// <param name="queryRequest">The query to execute</param>
         /// <returns> Success or list of results </returns>
         /// <response code="200">Query executed with success</response>
         /// <response code="400">Query invalid</response>
@@ -338,11 +338,8 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to create databases, update them and delete them",
             OperationId = "ExecuteQuery"
         )]
-        public async Task<ObjectResult> ExecuteQuery([FromBody] string queryScript)
-        {
-            var queryRequest = new ExecuteQueryRequest();
-            queryRequest.Query = queryScript;
-            
+        public async Task<ObjectResult> ExecuteQuery([FromBody] ExecuteQueryRequest queryRequest)
+        {   
             var command = new ExecuteQueryCommand(_logger, _mainchainService, _databaseKeyManager, _sqlCommandManager, _nodeConfigurations, queryRequest);
             var result = await command.Execute();
 
