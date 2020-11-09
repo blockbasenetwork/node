@@ -90,7 +90,8 @@ namespace BlockBase.Network.Mainchain
             var stakeString = stakeInTable.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
             decimal.TryParse(stakeString, out stake);
 
-            return new AccountStake(){
+            return new AccountStake()
+            {
                 Sidechain = stakeInTable.Sidechain,
                 Owner = stakeInTable.Owner,
                 StakeString = stakeInTable.Stake,
@@ -204,7 +205,8 @@ namespace BlockBase.Network.Mainchain
             return opResult.Result;
         }
 
-        public async Task<string> AddReservedSeats(string chain, List<Dictionary<string, object>> seatsToAdd) {
+        public async Task<string> AddReservedSeats(string chain, List<Dictionary<string, object>> seatsToAdd)
+        {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_RESERVED_SEATS,
                 NetworkConfigurations.BlockBaseOperationsContract,
@@ -578,7 +580,7 @@ namespace BlockBase.Network.Mainchain
         public async Task<string> SignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, Transaction transaction, string permission = "active")
         {
             var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
-            
+
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                    EosMethodNames.ADD_HIST_SIG,
                    NetworkConfigurations.BlockBaseOperationsContract,
@@ -688,6 +690,34 @@ namespace BlockBase.Network.Mainchain
                 EosAtributeNames.EOSIO,
                 owner,
                 CreateDataForDeleteAuthorization(owner, permissionToDelete),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> AddAccountPermission(string owner, string accountToAdd, string accountPublicKey, string permissions, string permission)
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.ADD_ACCOUNT_PERMISSION,
+                EosAtributeNames.EOSIO,
+                owner,
+                CreateDataForAddAccountPermission(owner, accountToAdd, accountPublicKey, permissions),
+                permission),
+                NetworkConfigurations.MaxNumberOfConnectionRetries
+            );
+            if (!opResult.Succeeded) throw opResult.Exception;
+            return opResult.Result;
+        }
+
+        public async Task<string> RemoveAccountPermission(string owner, string accountToRemove, string permission)
+        {
+            var opResult = await TryAgain(async () => await EosStub.SendTransaction(
+                EosMethodNames.REMOVE_ACCOUNT_PERMISSION,
+                EosAtributeNames.EOSIO,
+                owner,
+                CreateDataForRemoveAccountPermission(owner, accountToRemove),
                 permission),
                 NetworkConfigurations.MaxNumberOfConnectionRetries
             );
@@ -845,8 +875,8 @@ namespace BlockBase.Network.Mainchain
             var opResult = await TryAgain(async () => await EosStub.GetRowsFromSmartContractTable<BlockheaderTable>(
                 NetworkConfigurations.BlockBaseOperationsContract,
                 EosTableNames.BLOCKHEADERS_TABLE_NAME,
-                chain, 
-                numberOfBlocks, 
+                chain,
+                numberOfBlocks,
                 true),
                 NetworkConfigurations.MaxNumberOfConnectionRetries);
 
@@ -1361,6 +1391,26 @@ namespace BlockBase.Network.Mainchain
                 { EosParameterNames.PACKED_TRANSACTION, packedTransaction }
             };
 
+        }
+
+        private Dictionary<string, object> CreateDataForAddAccountPermission(string owner, string accountToAdd, string accountPublicKey, string permissions)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.ACCOUNT, accountToAdd },
+                { EosParameterNames.PUBLIC_KEY, accountPublicKey },
+                { EosParameterNames.PERMISSIONS, permissions}
+            };
+        }
+
+        private Dictionary<string, object> CreateDataForRemoveAccountPermission(string owner, string accountToRemove)
+        {
+            return new Dictionary<string, object>()
+            {
+                { EosParameterNames.OWNER, owner },
+                { EosParameterNames.ACCOUNT, accountToRemove }
+            };
         }
 
 

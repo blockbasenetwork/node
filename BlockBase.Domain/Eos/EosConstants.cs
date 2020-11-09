@@ -86,6 +86,8 @@ namespace BlockBase.Domain.Eos
         public const string REMOVE_BLACKLISTED = "removeblisted";
         public const string ADD_RESERVED_SEATS = "addreseats";
         public const string REMOVE_RESERVED_SEATS = "rreservseats";
+        public const string ADD_ACCOUNT_PERMISSION = "addaccperm";
+        public const string REMOVE_ACCOUNT_PERMISSION = "remaccperm";
     }
 
     public class EosParameterNames
@@ -120,6 +122,7 @@ namespace BlockBase.Domain.Eos
         public const string CONTRACT = "contract";
         public const string ACCOUNT = "account";
         public const string PERMISSION = "permission";
+        public const string PERMISSIONS = "permissions";
         public const string PARENT = "parent";
         public const string AUTH = "auth";
         public const string CODE = "code";

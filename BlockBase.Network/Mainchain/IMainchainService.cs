@@ -51,6 +51,8 @@ namespace BlockBase.Network.Mainchain
         Task<string> AddVerifyTransactionAndSignature(string owner, string accountName, string blockHash, string verifySignature, byte[] verifyBlockTransaction, string permission = "active");
         Task<string> UnlinkAction(string owner, string actionToUnlink, string permission = "active");
         Task<string> DeletePermission(string owner, string permissionToDelete, string permission = "active");
+        Task<string> AddAccountPermission(string owner, string accountToAdd, string accountPublicKey, string permissions = "", string permission = "active");
+        Task<string> RemoveAccountPermission(string owner, string accoutnToRemove, string permission = "active");
 
         Task<ClientTable> RetrieveClientTable(string chain);
         Task<List<ProducerInTable>> RetrieveProducersFromTable(string chain);

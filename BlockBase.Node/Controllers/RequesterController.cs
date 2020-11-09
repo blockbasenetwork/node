@@ -599,5 +599,70 @@ namespace BlockBase.Node.Controllers
                 return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
             }
         }
+
+        /// <summary>
+        /// Adds an account and public key and permissions to execute queries in the BlockBase Database
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="accountToAdd">Account name for the permissions to add</param>
+        /// <param name="accountPublicKey">Account public key for the permissions to add</param>
+        /// <response code="200">Permissions added successfully</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error adding permissions</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Adds an account and public key and permissions to execute queries in the BlockBase Database",
+            Description = "Used to add account permissions",
+            OperationId = "AddAccountPermission"
+        )]
+        public async Task<ObjectResult> AddAccountPermission(string accountToAdd, string accountPublicKey)
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(accountToAdd))
+                    return BadRequest(new OperationResponse(false, $"Account name needed to add."));
+                if (String.IsNullOrEmpty(accountPublicKey))
+                    return BadRequest(new OperationResponse(false, $"Account public key needed to add."));
+
+                var trx = await _mainchainService.AddAccountPermission(_nodeConfigurations.AccountName, accountToAdd, accountPublicKey);
+
+                return Ok(new OperationResponse(true, $"Permission added successfully. Tx: {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+        /// <summary>
+        /// Removes an account from the permissions to execute queries in the BlockBase Database
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="accountToRemove">Account name for the permissions to remove</param>
+        /// <response code="200">Permission removed successfully</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error removing permissions</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Removes an account from the permissions to execute queries in the BlockBase Database",
+            Description = "Used to remove account permissions",
+            OperationId = "RemoveAccountPermission"
+        )]
+        public async Task<ObjectResult> RemoveAccountPermission(string accountToRemove)
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(accountToRemove))
+                    return BadRequest(new OperationResponse(false, $"Account name needed to remove."));
+
+                var trx = await _mainchainService.RemoveAccountPermission(_nodeConfigurations.AccountName, accountToRemove);
+
+                return Ok(new OperationResponse(true, $"Permission removed successfully. Tx: {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
     }
 }
