@@ -701,7 +701,7 @@ namespace BlockBase.Network.Mainchain
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.ADD_ACCOUNT_PERMISSION,
-                EosAtributeNames.EOSIO,
+                NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
                 CreateDataForAddAccountPermission(owner, accountToAdd, accountPublicKey, permissions),
                 permission),
@@ -715,7 +715,7 @@ namespace BlockBase.Network.Mainchain
         {
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                 EosMethodNames.REMOVE_ACCOUNT_PERMISSION,
-                EosAtributeNames.EOSIO,
+                NetworkConfigurations.BlockBaseOperationsContract,
                 owner,
                 CreateDataForRemoveAccountPermission(owner, accountToRemove),
                 permission),
