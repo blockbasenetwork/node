@@ -38,6 +38,8 @@ The BlockBase node software is built with C# and runs on the .NET Core Platform,
 
 3. The latest version of PostgreSQL (It should work fine with versions equal or after 12)
 
+**Note: Although standalone instances of MongoDB are supported, we recommend using a replica set.**
+
 ## Downloading the code
 To download the code follow these steps:
 1. Create a folder where the code will be downloaded to
