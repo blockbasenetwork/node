@@ -21,8 +21,9 @@ namespace BlockBase.Node.Commands.Requester
         private NodeConfigurations _nodeConfigurations;
         private IMainchainService _mainchainService;
         private ConcurrentVariables _concurrentVariables;
-         
 
+        public bool EndSidechain { get; set; }
+        public string SidechainName { get; set; }
 
         public override string CommandName => "End sidechain";
 
@@ -45,23 +46,26 @@ namespace BlockBase.Node.Commands.Requester
         {
             try
             {
+                if (!EndSidechain) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Set endSidechain to true in order to end the sidechain"));
+                if (SidechainName != _nodeConfigurations.AccountName) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain name not correct"));
+
                 await _sidechainMaintainerManager.End();
 
                 //TODO rpinto - should all this functionality below be encapsulated inside the sidechainMaintainerManager?
                 var contractSt = await _mainchainService.RetrieveContractState(_nodeConfigurations.AccountName);
-                if (contractSt == null) return new CommandExecutionResponse( HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain {_nodeConfigurations.AccountName} not found"));
+                if (contractSt == null) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, $"Sidechain {_nodeConfigurations.AccountName} not found"));
 
                 var account = await _mainchainService.GetAccount(_nodeConfigurations.AccountName);
                 var verifyBlockPermission = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_BLOCK_PERMISSION).FirstOrDefault();
                 var verifyHistoryPermisson = account.permissions.Where(p => p.perm_name == EosMsigConstants.VERIFY_HISTORY_PERMISSION).FirstOrDefault();
-                
+
                 if (verifyBlockPermission != null)
                 {
                     try
                     {
                         await _mainchainService.UnlinkAction(_nodeConfigurations.AccountName, EosMsigConstants.VERIFY_BLOCK_PERMISSION);
                     }
-                    catch (ApiErrorException) 
+                    catch (ApiErrorException)
                     {
                         _logger.LogDebug($"Unlink failed because link does not exist");
                     }
@@ -74,18 +78,18 @@ namespace BlockBase.Node.Commands.Requester
                     {
                         await _mainchainService.UnlinkAction(_nodeConfigurations.AccountName, EosMethodNames.HISTORY_VALIDATE);
                     }
-                    catch (ApiErrorException) 
+                    catch (ApiErrorException)
                     {
                         _logger.LogDebug($"Unlink failed because link does not exist");
                     }
                     await _mainchainService.DeletePermission(_nodeConfigurations.AccountName, EosMsigConstants.VERIFY_HISTORY_PERMISSION);
                 }
-            
+
                 var tx = await _mainchainService.EndChain(_nodeConfigurations.AccountName);
 
                 _concurrentVariables.Reset();
 
-                return new CommandExecutionResponse( HttpStatusCode.OK, new OperationResponse(true, $"Ended sidechain. Tx: {tx}"));
+                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Ended sidechain. Tx: {tx}"));
             }
             catch (Exception e)
             {

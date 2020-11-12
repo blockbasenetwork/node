@@ -250,9 +250,11 @@ namespace BlockBase.Node.Controllers
             Description = "The requester uses this service to terminate permanently a given sidechain",
             OperationId = "EndSidechain"
         )]
-        public async Task<ObjectResult> EndSidechain()
+        public async Task<ObjectResult> EndSidechain(bool endSidechain, string sidechain)
         {
             var command = new EndSidechainCommand(_logger, _sidechainMaintainerManager, _mainchainService, _nodeConfigurations, _concurrentVariables);
+            command.EndSidechain = endSidechain;
+            command.SidechainName = sidechain;
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
