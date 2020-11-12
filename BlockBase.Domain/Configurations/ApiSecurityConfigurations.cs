@@ -6,5 +6,6 @@ namespace BlockBase.Domain.Configurations
     {
         public bool Use { get; set; }
         public string ApiKey { get; set; }
+        public bool ExecuteQuerySkipEndpointAuth { get; set; }
     }
 }

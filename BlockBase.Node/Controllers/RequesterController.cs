@@ -333,6 +333,7 @@ namespace BlockBase.Node.Controllers
         /// <response code="400">Query invalid</response>
         /// <response code="500">Error executing query</response>
         [HttpPost]
+        [SkipAuthentication]
         [SwaggerOperation(
             Summary = "Sends query to be executed",
             Description = "The requester uses this service to create databases, update them and delete them",
