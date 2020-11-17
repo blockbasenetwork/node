@@ -25,6 +25,7 @@ using BlockBase.Domain.Eos;
 using BlockBase.Network.Mainchain.Pocos;
 using BlockBase.Domain.Blockchain;
 using BlockBase.Domain.Requests;
+using BlockBase.Utils.Crypto;
 
 namespace BlockBase.Node.Controllers
 {
@@ -342,7 +343,7 @@ namespace BlockBase.Node.Controllers
             OperationId = "ExecuteQuery"
         )]
         public async Task<ObjectResult> ExecuteQuery([FromBody] ExecuteQueryRequest queryRequest)
-        {   
+        {
             var command = new ExecuteQueryCommand(_logger, _mainchainService, _databaseKeyManager, _sqlCommandManager, _nodeConfigurations, queryRequest);
             var result = await command.Execute();
 
@@ -492,7 +493,7 @@ namespace BlockBase.Node.Controllers
             Description = "Used to add accounts to the reserved seat in the sidechain. This way, the inserted accounts are selected first to produce in the sidechain",
             OperationId = "AddReservedSeat"
         )]
-        public async Task<ObjectResult> AddReservedSeat([FromBody]List<ReservedSeatConfig> reservedSeatsToAdd)
+        public async Task<ObjectResult> AddReservedSeat([FromBody] List<ReservedSeatConfig> reservedSeatsToAdd)
         {
             var command = new AddReservedSeatsCommand(_logger, _mainchainService, _nodeConfigurations, reservedSeatsToAdd);
             var result = await command.Execute();
@@ -658,6 +659,41 @@ namespace BlockBase.Node.Controllers
                 var trx = await _mainchainService.RemoveAccountPermission(_nodeConfigurations.AccountName, accountToRemove);
 
                 return Ok(new OperationResponse(true, $"Permission removed successfully. Tx: {trx}"));
+            }
+            catch (Exception e)
+            {
+                return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e));
+            }
+        }
+
+        /// <summary>
+        /// Signs a query with the configured node account name and private key
+        /// </summary>
+        /// <returns>Operation success</returns>
+        /// <param name="queryToSign">Query string to be signed</param>
+        /// <response code="200">Query signed successfully</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error removing permissions</response>
+        [HttpPost]
+        [SwaggerOperation(
+            Summary = "Signs a query with the configured node account name and private key",
+            Description = "Signs a query with the configured node account name and private key",
+            OperationId = "SignQuery"
+        )]
+        public ObjectResult SignQuery(string queryToSign)
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(queryToSign))
+                    return BadRequest(new OperationResponse(false, $"Query cannot be empty."));
+
+                var signature = SignatureHelper.SignHash(_nodeConfigurations.ActivePrivateKey, Encoding.UTF8.GetBytes(queryToSign));
+                var queryRequest = new ExecuteQueryRequest();
+                queryRequest.Query = queryToSign;
+                queryRequest.Account = _nodeConfigurations.AccountName;
+                queryRequest.Signature = signature;
+
+                return Ok(new OperationResponse<ExecuteQueryRequest>(queryRequest, $"Query successfully signed with {_nodeConfigurations.AccountName} private key"));
             }
             catch (Exception e)
             {

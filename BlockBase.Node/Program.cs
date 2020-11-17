@@ -94,28 +94,28 @@ namespace BlockBase.Node
             //force instantiation of the connection tester
             var connectionTester = webHost.Services.Get<TcpConnectionTester>();
 
-            if (!Console.IsInputRedirected)
-            {
-                var consoleTask = Task.Run(async () =>
-                {
-                    while (true)
-                    {
-                        var cmd = Console.ReadLine();
-                        if (cmd == null) continue;
-                        foreach (var command in commandList)
-                        {
-                            var loadResult = command.TryLoadCommand(cmd);
-                            if (loadResult.Succeeded && loadResult.CommandRecognized)
-                            {
-                                var result = await command.Execute();
-                                var message = result.OperationResponse.ResponseMessage;
-                                Console.WriteLine("Http status code: " + result.HttpStatusCode + " Operation Response: " + message);
-                                break;
-                            }
-                        }
-                    }
-                });
-            }
+            // if (!Console.IsInputRedirected)
+            // {
+            //     var consoleTask = Task.Run(async () =>
+            //     {
+            //         while (true)
+            //         {
+            //             var cmd = Console.ReadLine();
+            //             if (cmd == null) continue;
+            //             foreach (var command in commandList)
+            //             {
+            //                 var loadResult = command.TryLoadCommand(cmd);
+            //                 if (loadResult.Succeeded && loadResult.CommandRecognized)
+            //                 {
+            //                     var result = await command.Execute();
+            //                     var message = result.OperationResponse.ResponseMessage;
+            //                     Console.WriteLine("Http status code: " + result.HttpStatusCode + " Operation Response: " + message);
+            //                     break;
+            //                 }
+            //             }
+            //         }
+            //     });
+            // }
 
             Task.WaitAll(webHost.RunAsync());
         }
