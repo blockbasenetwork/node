@@ -350,11 +350,29 @@ A service provider will get rewarded in BBT for providing sidechains. These rewa
 
 # Querying BlockBase sidechains
 
-To query a BlockBase sidechain, you need to send the query to the following node endpoint of the service requester:
+First of all, you need to add an authorized account and key to run queries on the BlockBase sidechain, to do so, use the following service requester endpoint:
 
-_`apiendpoint`_`/api/Query/ExecuteQuery/`
+_`apiendpoint`_`/api/Requester/AddAccountPermission`
 
-With the query string inside the body of the POST request.
+Fill the _accountToAdd_ and _accountPublicKey_ parameters with the desired values and send the request. We recommend to add the service requester account and public key when starting a new sidechain.
+
+To run a query, it needs to be signed by an account with permissions. You can sign with the current running node account through the following endpoint:
+
+_`apiendpoint`_`/api/Requester/SignQuery`
+
+By sending a query string in the body of the request, it will return the following structure:
+
+```js
+{
+  "query": "string", //Query that has been signed
+  "account": "string", //Account that signed it
+  "signature": "string" //Query signature
+}
+```
+
+Afterwards, you just need to send the same structure in the request body to the following service requester endpoint:
+
+_`apiendpoint`_`/api/Requester/ExecuteQuery/`
 
 ### Query Examples
 

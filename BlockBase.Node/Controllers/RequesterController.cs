@@ -680,7 +680,7 @@ namespace BlockBase.Node.Controllers
             Description = "Signs a query with the configured node account name and private key",
             OperationId = "SignQuery"
         )]
-        public ObjectResult SignQuery(string queryToSign)
+        public ObjectResult SignQuery([FromBody] string queryToSign)
         {
             try
             {
