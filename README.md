@@ -139,7 +139,11 @@ Before you can request the network for a new sidechain, you have to configure th
     "MinimumProducerStake": 0, // The minimum stake each node has to provide as collateral to apply to participation
     "BlockTimeInSeconds": 60, // The time in seconds between the production of each block
     "MaxBlockSizeInBytes": 1000000, // The maximum size of a block in bytes
-    "ReservedProducerSeats": ["producer1eosaccount", "producer2eosaccount"] // A list of EOS accounts you want to pre-select as service providers for your network
+    "ReservedProducerSeats": [{
+      "Account": "account",
+      "ProducerType": 2
+    }], // A list of EOS accounts you want to pre-select as service providers for your network
+    "BBTValueAutoConfig": false // Activate automatic changes of BBT values based on changes on token value in USD (experimental feature)
   }
 }
 ```
@@ -325,8 +329,10 @@ By setting any of the `IsActive` active properties to `true`, when the node star
       "MaxStakeToMonthlyIncomeRatio": 0, // The maximum acceptable ratio of BBT to `stake` to `average monthly income` to receive in BBT
       "MaxSidechainGrowthPerMonthInMB":0 // The maximum amount in MB a sidechain may grow per month
     },
+    "MaxRatioToStake": 1.0, // The ratio of stake the node will stake in comparison to the minimum requested
     "MaxNumberOfSidechains":0, // The maximum number of sidechains the node will work on simultaneously
-    "MaxGrowthPerMonthInMB":0 // The maximum growth in MB per month that all sidechains may contribute to
+    "MaxGrowthPerMonthInMB":0, // The maximum growth in MB per month that all sidechains may contribute to
+    "BBTValueAutoConfig": false // Activate automatic changes of BBT values based on changes on token value in USD (experimental feature)
   }
 }
 ```
