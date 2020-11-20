@@ -9,6 +9,7 @@ using Cryptography.ECDSA;
 using EosSharp.Core.Exceptions;
 using EosSharp.Core.Api.v1;
 using System.Text.RegularExpressions;
+using BlockBase.Utils.Crypto;
 
 namespace BlockBase.Node
 {
@@ -54,13 +55,17 @@ namespace BlockBase.Node
         public async Task<bool> CheckKeys()
         {
             var privateKeyBytes = CryptoHelper.GetPrivateKeyBytesWithoutCheckSum(_nodeConfigurations.ActivePrivateKey);
-            var publicKey = CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true));
+            var publicKey = _nodeConfigurations.ActivePublicKey.Contains("EOS") ? 
+                            CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true)) :
+                            CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true), "K1", "PUB_K1_");
 
             if (publicKey != _nodeConfigurations.ActivePublicKey)
             {
-                _logger.LogCritical($"The configured key private key {_nodeConfigurations.ActivePrivateKey} doesn't match the configured public key {_nodeConfigurations.ActivePublicKey}");
+                _logger.LogCritical($"The configured key private key doesn't match the configured public key {_nodeConfigurations.ActivePublicKey}");
                 return false;
             }
+
+            var publicKeyBytes = EosKeyHelper.GetPublicKeyBytesWithoutCheckSum(_nodeConfigurations.ActivePublicKey);
 
             var account = await TryGetAccount();
             if (account == null)

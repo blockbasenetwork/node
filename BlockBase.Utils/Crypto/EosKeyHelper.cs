@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using Cryptography.ECDSA;
 using EosSharp.Core.Helpers;
@@ -16,24 +18,26 @@ namespace BlockBase.Utils.Crypto
     {
         private static readonly int PUBLIC_KEY_LENGHT = 33;
         private static readonly string EOS_PREFIX = "EOS";
+        private static readonly string PUB_K1_PREFIX = "PUB_K1_";
         private static readonly int CHECKSUM_LENGHT = 4;
         private static X9ECParameters ecParams = ECNamedCurveTable.GetByName("secp256k1");
         private static ECDomainParameters domainParams = new ECDomainParameters(ecParams.Curve, ecParams.G, ecParams.N, ecParams.H, ecParams.GetSeed());
         private static Org.BouncyCastle.Math.EC.ECCurve curve = ecParams.Curve;
 
 
-        internal static byte[] GetPublicKeyBytesWithoutCheckSum(string publicKeyString)
+        public static byte[] GetPublicKeyBytesWithoutCheckSum(string publicKeyString)
         {
-            Regex regex = new Regex(@"\bEOS\S*");
+            Regex regex = new Regex(@"\bEOS\S*|\bPUB_K1_\S*");
             Match match = regex.Match(publicKeyString);
             if (!match.Success) throw new FormatException("Invalid public key prefix.");
 
-            publicKeyString = publicKeyString.Substring(EOS_PREFIX.Length);
-            var publicKeyBytesWithChecksum = Base58.Decode(publicKeyString);
+            var publicKeySubstring = publicKeyString.Contains("EOS") ? publicKeyString.Substring(EOS_PREFIX.Length) : publicKeyString.Substring(PUB_K1_PREFIX.Length);
+            var publicKeyBytesWithChecksum = Base58.Decode(publicKeySubstring);
             var publicKeyBytesWithoutChecksum = publicKeyBytesWithChecksum.Take(PUBLIC_KEY_LENGHT).ToArray();
 
             var receivedChecksum = publicKeyBytesWithChecksum.TakeLast(CHECKSUM_LENGHT).ToArray();
-            var checksum = Ripemd160Manager.GetHash(publicKeyBytesWithoutChecksum).Take(CHECKSUM_LENGHT).ToArray();
+            var keyToCheck = publicKeyString.Contains("EOS") ? publicKeyBytesWithoutChecksum : SerializationHelper.Combine(new List<byte[]>() { publicKeyBytesWithoutChecksum, Encoding.UTF8.GetBytes("K1") });
+            var checksum = Ripemd160Manager.GetHash(keyToCheck).Take(CHECKSUM_LENGHT).ToArray();
 
             if (!receivedChecksum.SequenceEqual(checksum)) throw new FormatException("Invalid public key checksum.");
 
@@ -54,7 +58,7 @@ namespace BlockBase.Utils.Crypto
             return new ECPrivateKeyParameters(d, domainParams);
         }
 
-         internal static AsymmetricCipherKeyPair GenerateAssymetricKeyPairs()
+        internal static AsymmetricCipherKeyPair GenerateAssymetricKeyPairs()
         {
             var curve = ECNamedCurveTable.GetByName("secp256k1");
             var domainParams = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H, curve.GetSeed());
