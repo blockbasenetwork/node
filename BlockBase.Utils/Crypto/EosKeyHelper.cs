@@ -25,7 +25,7 @@ namespace BlockBase.Utils.Crypto
         private static Org.BouncyCastle.Math.EC.ECCurve curve = ecParams.Curve;
 
 
-        public static byte[] GetPublicKeyBytesWithoutCheckSum(string publicKeyString)
+        internal static byte[] GetPublicKeyBytesWithoutCheckSum(string publicKeyString)
         {
             Regex regex = new Regex(@"\bEOS\S*|\bPUB_K1_\S*");
             Match match = regex.Match(publicKeyString);
@@ -41,7 +41,7 @@ namespace BlockBase.Utils.Crypto
 
             if (!receivedChecksum.SequenceEqual(checksum)) throw new FormatException("Invalid public key checksum.");
 
-            return keyToCheck;
+            return publicKeyBytesWithoutChecksum;
         }
 
         internal static ECPublicKeyParameters GetECPublicKeyParametersFromString(string publicKeyString)

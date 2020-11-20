@@ -14,6 +14,7 @@ using EosSharp.Core.Exceptions;
 using EosSharp.Core;
 using EosSharp.Core.Helpers;
 using Newtonsoft.Json;
+using Cryptography.ECDSA;
 
 namespace BlockBase.Network.Mainchain
 {
@@ -631,7 +632,9 @@ namespace BlockBase.Network.Mainchain
                 }
             };
 
-            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+            var privateKeyBytes = CryptoHelper.GetPrivateKeyBytesWithoutCheckSum(NodeConfigurations.ActivePrivateKey);
+            var publicKey = CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true));
+            var signedTransaction = await EosStub.SignTransaction(transaction, publicKey);
             return await AddVerifyTransactionAndSignature(owner, accountName, blockHash, signedTransaction.Signatures.FirstOrDefault(), signedTransaction.PackedTransaction);
         }
 
