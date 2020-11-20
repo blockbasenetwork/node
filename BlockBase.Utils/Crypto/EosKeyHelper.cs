@@ -41,7 +41,7 @@ namespace BlockBase.Utils.Crypto
 
             if (!receivedChecksum.SequenceEqual(checksum)) throw new FormatException("Invalid public key checksum.");
 
-            return publicKeyBytesWithoutChecksum;
+            return keyToCheck;
         }
 
         internal static ECPublicKeyParameters GetECPublicKeyParametersFromString(string publicKeyString)

@@ -65,8 +65,6 @@ namespace BlockBase.Node
                 return false;
             }
 
-            var publicKeyBytes = EosKeyHelper.GetPublicKeyBytesWithoutCheckSum(_nodeConfigurations.ActivePublicKey);
-
             var account = await TryGetAccount();
             if (account == null)
             {
