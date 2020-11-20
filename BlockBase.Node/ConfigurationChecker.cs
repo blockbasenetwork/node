@@ -55,11 +55,11 @@ namespace BlockBase.Node
         public async Task<bool> CheckKeys()
         {
             var privateKeyBytes = CryptoHelper.GetPrivateKeyBytesWithoutCheckSum(_nodeConfigurations.ActivePrivateKey);
-            var publicKey = _nodeConfigurations.ActivePublicKey.Contains("EOS") ? 
-                            CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true)) :
-                            CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true), "K1", "PUB_K1_");
+            var publicKeyEosFormat = CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true));
+            var publicKeyK1Format = CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true), "K1", "PUB_K1_");
 
-            if (publicKey != _nodeConfigurations.ActivePublicKey)
+            if ((_nodeConfigurations.ActivePublicKey.Contains("EOS") && _nodeConfigurations.ActivePublicKey != publicKeyEosFormat) ||
+                (_nodeConfigurations.ActivePublicKey.Contains("PUB_K1") && _nodeConfigurations.ActivePublicKey != publicKeyK1Format))
             {
                 _logger.LogCritical($"The configured key private key doesn't match the configured public key {_nodeConfigurations.ActivePublicKey}");
                 return false;
@@ -74,8 +74,10 @@ namespace BlockBase.Node
                 return false;
             }
 
-            var keyInAccount = account.permissions.Where(p => p.perm_name == "active").FirstOrDefault().required_auth.keys.Where(k => k.key == publicKey).FirstOrDefault();
-            if (keyInAccount == null)
+            var keys = account.permissions.Where(p => p.perm_name == "active").FirstOrDefault().required_auth.keys;
+            var keyInAccountEosFormat = keys.Where(k => k.key == publicKeyEosFormat).FirstOrDefault();
+            var keyInAccountK1Format = keys.Where(k => k.key == publicKeyK1Format).FirstOrDefault();
+            if (keyInAccountK1Format == null && keyInAccountEosFormat == null)
             {
                 _logger.LogCritical($"The configured key pair wasn't found in the active permission for account {_nodeConfigurations.AccountName}");
                 return false;
