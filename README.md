@@ -332,7 +332,8 @@ By setting any of the `IsActive` active properties to `true`, when the node star
     "MaxRatioToStake": 1.0, // The ratio of stake the node will stake in comparison to the minimum requested
     "MaxNumberOfSidechains":0, // The maximum number of sidechains the node will work on simultaneously
     "MaxGrowthPerMonthInMB":0, // The maximum growth in MB per month that all sidechains may contribute to
-    "BBTValueAutoConfig": false // Activate automatic changes of BBT values based on changes on token value in USD (experimental feature)
+    "BBTValueAutoConfig": false, // Activate automatic changes of BBT values based on changes on token value in USD (experimental feature)
+    "AutomaticExitRequest": false // If set to true, it will send an exit request automatically to chains that don't fit the automatic production criteria anymore
   }
 }
 ```

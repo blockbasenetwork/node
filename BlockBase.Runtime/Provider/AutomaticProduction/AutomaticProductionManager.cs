@@ -137,29 +137,32 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                     _logger.LogError($"Failed to automatically start producing chain with error: {e}");
                 }
 
-                try
+                if (_providerConfigurations.AutomaticProduction.AutomaticExitRequest)
                 {
-                    foreach (var sidechainInNode in sidechainsInNode)
+                    try
                     {
-                        var sidechainInDb = await _mongoDbProducerService.GetProducingSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
-                        if (sidechainInDb == null) continue;
-                        if (!sidechainInDb.IsAutomatic) continue;
-
-                        var producerTables = await _mainchainService.RetrieveProducersFromTable(sidechainInNode.SidechainPool.ClientAccountName);
-                        var producerInTable = producerTables.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
-                        if (producerTables == null || producerInTable == null || (long)producerInTable.WorkTimeInSeconds <= ((DateTimeOffset)DateTime.UtcNow.AddDays(1)).ToUnixTimeSeconds()) continue;
-
-                        var sidechainStillFitsRules = await CheckIfSidechainFitsRules(sidechainInNode.SidechainPool.ClientAccountName, false);
-                        if (!sidechainStillFitsRules.found)
+                        foreach (var sidechainInNode in sidechainsInNode)
                         {
-                            var trx = await _mainchainService.SidechainExitRequest(sidechainInNode.SidechainPool.ClientAccountName);
-                            await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp, false, LeaveNetworkReasonsConstants.EXIT_REQUEST);
+                            var sidechainInDb = await _mongoDbProducerService.GetProducingSidechainAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp);
+                            if (sidechainInDb == null) continue;
+                            if (!sidechainInDb.IsAutomatic) continue;
+
+                            var producerTables = await _mainchainService.RetrieveProducersFromTable(sidechainInNode.SidechainPool.ClientAccountName);
+                            var producerInTable = producerTables.Where(p => p.Key == _nodeConfigurations.AccountName).FirstOrDefault();
+                            if (producerTables == null || producerInTable == null || (long)producerInTable.WorkTimeInSeconds <= ((DateTimeOffset)DateTime.UtcNow.AddDays(1)).ToUnixTimeSeconds()) continue;
+
+                            var sidechainStillFitsRules = await CheckIfSidechainFitsRules(sidechainInNode.SidechainPool.ClientAccountName, false);
+                            if (!sidechainStillFitsRules.found)
+                            {
+                                var trx = await _mainchainService.SidechainExitRequest(sidechainInNode.SidechainPool.ClientAccountName);
+                                await _mongoDbProducerService.AddPastSidechainToDatabaseAsync(sidechainInNode.SidechainPool.ClientAccountName, sidechainInNode.SidechainPool.SidechainCreationTimestamp, false, LeaveNetworkReasonsConstants.EXIT_REQUEST);
+                            }
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError($"Failed to check if sidechain still fits rules for production with error: {e}");
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Failed to check if sidechain still fits rules for production with error: {e}");
+                    }
                 }
 
                 if (_providerConfigurations.AutomaticProduction.BBTValueAutoConfig) await UpdateMinValuesBasedOnCurrentValue();

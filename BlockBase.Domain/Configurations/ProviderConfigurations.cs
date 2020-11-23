@@ -19,6 +19,7 @@ namespace BlockBase.Domain.Configurations
         public double MaxGrowthPerMonthInMB { get; set; }
         public double MaxRatioToStake { get; set; }
         public bool BBTValueAutoConfig { get; set; }
+        public bool AutomaticExitRequest { get; set; }
     }
 
     public class HistoryFullProviderNodeConfig : ProviderNodeConfig
