@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Requester;
 using BlockBase.Runtime.Sql;
-
+using BlockBase.DataProxy.Encryption;
 
 namespace BlockBase.Node.Commands.Requester
 {
@@ -15,6 +15,7 @@ namespace BlockBase.Node.Commands.Requester
         private ILogger _logger;
         private SqlCommandManager _sqlCommandManager;
         ISidechainMaintainerManager _sidechainMaintainerManager;
+        private DatabaseKeyManager _databaseKeyManager;
 
 
         public override string CommandName => "Remove sidechain databases and keys";
@@ -23,11 +24,12 @@ namespace BlockBase.Node.Commands.Requester
 
         public override string CommandUsage => "remove data";
 
-        public RemoveSidechainDatabasesAndKeysCommand(ILogger logger, ISidechainMaintainerManager sidechainMaintainerManager, SqlCommandManager sqlCommandManager)
+        public RemoveSidechainDatabasesAndKeysCommand(ILogger logger, ISidechainMaintainerManager sidechainMaintainerManager, SqlCommandManager sqlCommandManager,  DatabaseKeyManager databaseKeyManager)
         {
             _logger = logger;
             _sqlCommandManager = sqlCommandManager;
             _sidechainMaintainerManager = sidechainMaintainerManager;
+            _databaseKeyManager = databaseKeyManager;
         }
 
         public decimal Stake { get; set; }
@@ -38,6 +40,9 @@ namespace BlockBase.Node.Commands.Requester
             {
                 if (_sidechainMaintainerManager.IsMaintainerRunning() || _sidechainMaintainerManager.IsProductionRunning())
                     return new CommandExecutionResponse( HttpStatusCode.BadRequest, new OperationResponse(false, "The sidechain maintenance is running."));
+
+                if (!_databaseKeyManager.DataSynced) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Passwords and main key not set."));
+
                 await _sqlCommandManager.RemoveSidechainDatabasesAndKeys();
                 return new CommandExecutionResponse( HttpStatusCode.OK, new OperationResponse(true, $"Deleted databases and cleared all data."));
             }

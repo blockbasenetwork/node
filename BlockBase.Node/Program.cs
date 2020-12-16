@@ -175,7 +175,7 @@ namespace BlockBase.Node
                 new PauseSidechainMaintenanceCommand(logger, sidechainMaintainerManager),
                 new RemoveAccountFromBlacklistCommand(logger, mainchainService, nodeConfigurations),
                 new RemoveReservedSeatsCommand(logger, mainchainService, nodeConfigurations),
-                new RemoveSidechainDatabasesAndKeysCommand(logger, sidechainMaintainerManager, sqlCommandManager),
+                new RemoveSidechainDatabasesAndKeysCommand(logger, sidechainMaintainerManager, sqlCommandManager, databaseKeyManager),
                 new RequestNewSidechainCommand(logger, connector, mainchainService, nodeConfigurations, requesterConfigurations),
                 new RunSidechainMaintenanceCommand(logger, sidechainMaintainerManager, mainchainService, nodeConfigurations),
                 new SetSecretCommand(logger, requesterConfigurations, databaseKeyManager, connector)
