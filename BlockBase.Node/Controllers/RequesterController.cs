@@ -407,7 +407,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> RemoveSidechainDatabasesAndKeys()
         {
-            var command = new RemoveSidechainDatabasesAndKeysCommand(_logger, _sidechainMaintainerManager, _sqlCommandManager);
+            var command = new RemoveSidechainDatabasesAndKeysCommand(_logger, _sidechainMaintainerManager, _sqlCommandManager, _databaseKeyManager);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
