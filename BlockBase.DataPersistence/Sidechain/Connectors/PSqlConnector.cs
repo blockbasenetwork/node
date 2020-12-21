@@ -206,7 +206,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                     var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {
-                        var val = dbList[0].ToString();
+                        var val = reader[0].ToString();
                         _logger.LogDebug($"Checking Database for drop: {val}");
                         dbList.Add(val);
                     }
