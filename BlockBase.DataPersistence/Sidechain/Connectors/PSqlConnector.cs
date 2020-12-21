@@ -206,6 +206,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                     while (await dbList.ReadAsync())
                     {
                         var val = dbList[0].ToString();
+                        _logger.LogDebug($"Checking Database for drop: {val}");
                         if (val.StartsWith(_dbPrefix + "_" + sidechainName))
                         {
                             NpgsqlCommand dropCmd = new NpgsqlCommand($"DROP DATABASE {val};", conn);
@@ -213,14 +214,16 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                             {
                                 await dropCmd.ExecuteNonQueryAsync();
                             }
-                            catch (Exception)
+                            catch (Exception ex)
                             {
+                                _logger.LogError($"Error dropping sidechain databases: {ex}");
                             }
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    _logger.LogError($"Error dropping sidechain databases: {ex}");
                 }
                 finally
                 {

@@ -73,8 +73,9 @@ namespace BlockBase.Node.Commands.Provider
                 {
                     _logger.LogDebug($"Removing sidechain {_chainName} data from database");
                     await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(_chainName);
-                    await _connector.DropSidechainDatabases(_chainName);
                 }
+
+                await _connector.DropSidechainDatabases(_chainName);
 
                 var responseMessage = chainExistsInPool && _force ? "Successfully stopped chain production. " : "Chain not being produced. ";
                 responseMessage += chainExistsInDb ? "Successfully removed chain from database." : "Chain not found in database.";
