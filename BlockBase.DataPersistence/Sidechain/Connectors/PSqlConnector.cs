@@ -218,7 +218,6 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 finally
                 {
                     cmd.Dispose();
-                    await conn.CloseAsync();
                 }
 
                 foreach (var database in dbList)
@@ -234,8 +233,14 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                         {
                             _logger.LogError($"Error dropping sidechain databases: {ex}");
                         }
+                        finally
+                        {
+                            dropCmd.Dispose();
+                        }
                     }
                 }
+
+                await conn.CloseAsync();
             }
         }
 
