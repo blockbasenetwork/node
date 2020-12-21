@@ -198,27 +198,17 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
             {
                 await conn.OpenAsync();
+                var dbList = new List<string>();
 
                 NpgsqlCommand cmd = new NpgsqlCommand($"SELECT datname FROM pg_database WHERE datistemplate = false;", conn);
                 try
                 {
-                    var dbList = await cmd.ExecuteReaderAsync();
-                    while (await dbList.ReadAsync())
+                    var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
                     {
                         var val = dbList[0].ToString();
                         _logger.LogDebug($"Checking Database for drop: {val}");
-                        if (val.StartsWith(_dbPrefix + "_" + sidechainName))
-                        {
-                            NpgsqlCommand dropCmd = new NpgsqlCommand($"DROP DATABASE {val};", conn);
-                            try
-                            {
-                                await dropCmd.ExecuteNonQueryAsync();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError($"Error dropping sidechain databases: {ex}");
-                            }
-                        }
+                        dbList.Add(val);
                     }
                 }
                 catch (Exception ex)
@@ -229,6 +219,22 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 {
                     cmd.Dispose();
                     await conn.CloseAsync();
+                }
+
+                foreach (var database in dbList)
+                {
+                    if (database.StartsWith(_dbPrefix + "_" + sidechainName))
+                    {
+                        NpgsqlCommand dropCmd = new NpgsqlCommand($"DROP DATABASE {database};", conn);
+                        try
+                        {
+                            await dropCmd.ExecuteNonQueryAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Error dropping sidechain databases: {ex}");
+                        }
+                    }
                 }
             }
         }
