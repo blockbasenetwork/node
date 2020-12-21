@@ -218,29 +218,32 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                 finally
                 {
                     cmd.Dispose();
+                    await conn.CloseAsync();
                 }
 
-                foreach (var database in dbList)
+                await conn.OpenAsync();
+                try
                 {
-                    if (database.StartsWith(_dbPrefix + "_" + sidechainName))
+                    foreach (var database in dbList)
                     {
-                        NpgsqlCommand dropCmd = new NpgsqlCommand($"DROP DATABASE {database};", conn);
-                        try
+                        if (database.StartsWith(_dbPrefix + "_" + sidechainName))
                         {
+                            NpgsqlCommand dropCmd = new NpgsqlCommand($"DROP DATABASE {database};", conn);
+
                             await dropCmd.ExecuteNonQueryAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError($"Error dropping sidechain databases: {ex}");
-                        }
-                        finally
-                        {
                             dropCmd.Dispose();
+
                         }
                     }
                 }
-
-                await conn.CloseAsync();
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error dropping sidechain databases: {ex}");
+                }
+                finally
+                {
+                    await conn.CloseAsync();
+                }
             }
         }
 
