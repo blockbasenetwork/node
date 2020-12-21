@@ -18,6 +18,7 @@ using BlockBase.Runtime.Provider;
 using BlockBase.Node.Filters;
 using BlockBase.Node.Commands.Provider;
 using BlockBase.Domain.Results;
+using BlockBase.DataPersistence.Sidechain.Connectors;
 
 namespace BlockBase.Node.Controllers
 {
@@ -35,8 +36,9 @@ namespace BlockBase.Node.Controllers
         private readonly IMainchainService _mainchainService;
         private IMongoDbProducerService _mongoDbProducerService;
         private IConnectionsChecker _connectionsChecker;
+        private IConnector _connector;
 
-        public ProviderController(ILogger<ProviderController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker)
+        public ProviderController(ILogger<ProviderController> logger, IOptions<NodeConfigurations> nodeConfigurations, IOptions<NetworkConfigurations> networkConfigurations, IOptions<ApiSecurityConfigurations> apiSecurityConfigurations, ISidechainProducerService sidechainProducerService, IMainchainService mainchainService, IMongoDbProducerService mongoDbProducerService, IConnectionsChecker connectionsChecker, IConnector psqlConnector)
         {
             _nodeConfigurations = nodeConfigurations?.Value;
             _networkConfigurations = networkConfigurations?.Value;
@@ -47,7 +49,7 @@ namespace BlockBase.Node.Controllers
             _mainchainService = mainchainService;
             _mongoDbProducerService = mongoDbProducerService;
             _connectionsChecker = connectionsChecker;
-
+            _connector = psqlConnector;
         }
 
         /// <summary>
@@ -285,7 +287,7 @@ namespace BlockBase.Node.Controllers
         )]
         public async Task<ObjectResult> DeleteSidechainFromDatabase(string sidechainName, bool force = false)
         {
-            var command = new DeleteSidechainFromDatabase(_logger, _sidechainProducerService, _mongoDbProducerService, sidechainName, force);
+            var command = new DeleteSidechainFromDatabase(_logger, _sidechainProducerService, _mongoDbProducerService, sidechainName, force, _connector);
             var result = await command.Execute();
 
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);

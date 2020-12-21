@@ -13,9 +13,9 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         Task<bool> TestConnection();
         Task Setup();
         Task<IList<InfoRecord>> GetInfoRecords();
-        Task ExecuteCommand(string sqlCommand, string databaseName);
+        Task ExecuteCommand(string sqlCommand, string databaseName, string sidechainName = null);
         Task ExecuteCommands(List<string> sqlCommands, string databaseName);
-        Task ExecuteCommandWithTransactionNumber(string sqlCommand, string databaseName, ulong transactionNumer);
+        Task ExecuteCommandWithTransactionNumber(string sqlCommand, string databaseName, ulong transactionNumer, string sidechainName = null);
         Task ExecuteCommandsWithTransactionNumber(List<Transaction> transactionsToExecute, string databaseName);
         Task<bool> WasTransactionExecuted(string databaseName, ulong transactionNumer);
         Task<IList<IList<string>>> ExecuteQuery(string sqlQuery, string databaseName);
@@ -23,6 +23,7 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
         Task DeleteFromDatabasesTable(string databaseName);
         Task DropDefaultDatabase();
         Task DropDatabase(string databaseName);
+        Task DropSidechainDatabases(string sidechainName);
         Task<bool> DoesDefaultDatabaseExist();
         Task<bool> DoesDatabaseExist(string databaseName);
     }

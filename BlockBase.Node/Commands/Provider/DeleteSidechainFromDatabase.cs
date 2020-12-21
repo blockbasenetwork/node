@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using BlockBase.DataPersistence.Data;
+using BlockBase.DataPersistence.Sidechain.Connectors;
 using BlockBase.Node.Commands.Utils;
 using BlockBase.Runtime.Provider;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,8 @@ namespace BlockBase.Node.Commands.Provider
         private IMongoDbProducerService _mongoDbProducerService;
 
         private ILogger _logger;
+        
+        private IConnector _connector;
 
         private string _chainName;
 
@@ -26,14 +29,15 @@ namespace BlockBase.Node.Commands.Provider
 
         public override string CommandUsage => "rm data --chain <sidechainName> --force <true/false>";
 
-        public DeleteSidechainFromDatabase(ILogger logger, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService)
+        public DeleteSidechainFromDatabase(ILogger logger, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService, IConnector psqlConnector)
         {
             _sidechainProducerService = sidechainProducerService;
             _mongoDbProducerService = mongoDbProducerService;
             _logger = logger;
+            _connector = psqlConnector;
         }
 
-        public DeleteSidechainFromDatabase(ILogger logger, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService, string sidechainName, bool force) : this(logger, sidechainProducerService, mongoDbProducerService)
+        public DeleteSidechainFromDatabase(ILogger logger, ISidechainProducerService sidechainProducerService, IMongoDbProducerService mongoDbProducerService, string sidechainName, bool force, IConnector psqlConnector) : this(logger, sidechainProducerService, mongoDbProducerService, psqlConnector)
         {
             _chainName = sidechainName;
             _force = force;
@@ -69,6 +73,7 @@ namespace BlockBase.Node.Commands.Provider
                 {
                     _logger.LogDebug($"Removing sidechain {_chainName} data from database");
                     await _mongoDbProducerService.RemoveProducingSidechainFromDatabaseAsync(_chainName);
+                    await _connector.DropSidechainDatabases(_chainName);
                 }
 
                 var responseMessage = chainExistsInPool && _force ? "Successfully stopped chain production. " : "Chain not being produced. ";

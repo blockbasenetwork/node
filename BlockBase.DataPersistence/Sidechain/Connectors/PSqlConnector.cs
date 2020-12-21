@@ -193,6 +193,43 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             }
         }
 
+        public async Task DropSidechainDatabases(string sidechainName)
+        {
+            using (NpgsqlConnection conn = new NpgsqlConnection(_serverConnectionString))
+            {
+                await conn.OpenAsync();
+
+                NpgsqlCommand cmd = new NpgsqlCommand($"SELECT datname FROM pg_database WHERE datistemplate = false;", conn);
+                try
+                {
+                    var dbList = await cmd.ExecuteReaderAsync();
+                    while (await dbList.ReadAsync())
+                    {
+                        var val = dbList[0].ToString();
+                        if (val.StartsWith(_dbPrefix + "_" + sidechainName))
+                        {
+                            NpgsqlCommand dropCmd = new NpgsqlCommand($"DROP DATABASE {val};", conn);
+                            try
+                            {
+                                await dropCmd.ExecuteNonQueryAsync();
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                }
+                finally
+                {
+                    cmd.Dispose();
+                    await conn.CloseAsync();
+                }
+            }
+        }
+
 
         private async Task CreateDatabasesTableIfNotExists()
         {
@@ -224,10 +261,10 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             }
         }
 
-        private async Task CreateTransactionInfoTableIfNotExists(string databaseName)
+        private async Task CreateTransactionInfoTableIfNotExists(string databaseName, string sidechainName = null)
         {
             bool tableExists = false;
-            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(databaseName)))
+            using (NpgsqlConnection conn = new NpgsqlConnection(AddDatabaseNameToServerConnectionString(databaseName, sidechainName)))
             {
                 await conn.OpenAsync();
                 string cmdText = $"select * from information_schema.tables where table_name ='{TRANSACTION_INFO_TABLE_NAME}';";
@@ -290,14 +327,15 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             return results;
         }
 
-        public async Task ExecuteCommand(string sqlCommand, string databaseName)
+        public async Task ExecuteCommand(string sqlCommand, string databaseName, string sidechainName = null)
         {
             var connectionString = _serverConnectionString;
-            if (databaseName != "") connectionString = AddDatabaseNameToServerConnectionString(databaseName);
+            if (databaseName != "") connectionString = AddDatabaseNameToServerConnectionString(databaseName, sidechainName);
             else
             {
                 var index = sqlCommand.IndexOf("_");
-                sqlCommand = sqlCommand.Insert(index, _dbPrefix);
+                var dbPrefix = sidechainName == null ? _dbPrefix : _dbPrefix + "_" + sidechainName;
+                sqlCommand = sqlCommand.Insert(index, dbPrefix);
             }
             using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
             {
@@ -359,12 +397,12 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             }
         }
 
-        public async Task ExecuteCommandWithTransactionNumber(string sqlCommand, string databaseName, ulong transactionNumer)
+        public async Task ExecuteCommandWithTransactionNumber(string sqlCommand, string databaseName, ulong transactionNumer, string sidechainName = null)
         {
             var connectionString = _serverConnectionString;
 
-            connectionString = AddDatabaseNameToServerConnectionString(databaseName);
-            await CreateTransactionInfoTableIfNotExists(databaseName);
+            connectionString = AddDatabaseNameToServerConnectionString(databaseName, sidechainName);
+            await CreateTransactionInfoTableIfNotExists(databaseName, sidechainName);
 
             using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
             {
@@ -493,9 +531,10 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             return records;
         }
 
-        private string AddDatabaseNameToServerConnectionString(string databaseName)
+        private string AddDatabaseNameToServerConnectionString(string databaseName, string sidechainName = null)
         {
-            return _serverConnectionString + ";Database=" + _dbPrefix + databaseName + ";Pooling=false";
+            var dbPrefix = sidechainName == null ? _dbPrefix : _dbPrefix + "_" + sidechainName;
+            return _serverConnectionString + ";Database=" + dbPrefix + databaseName + ";Pooling=false";
         }
 
 

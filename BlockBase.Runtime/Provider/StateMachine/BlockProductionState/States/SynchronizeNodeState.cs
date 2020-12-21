@@ -178,9 +178,9 @@ namespace BlockBase.Runtime.Provider.StateMachine.BlockProductionState.States
             await _mongoDbProducerService.UpdateTransactionToExecute(_sidechainPool.ClientAccountName, transactionDB);
 
             if (transactionDB.DatabaseName != "")
-                await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, Convert.ToUInt64(transactionDB.SequenceNumber));
+                await _connector.ExecuteCommandWithTransactionNumber(transactionDB.TransactionJson, transactionDB.DatabaseName, Convert.ToUInt64(transactionDB.SequenceNumber), _sidechainPool.ClientAccountName);
             else
-                await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName);
+                await _connector.ExecuteCommand(transactionDB.TransactionJson, transactionDB.DatabaseName, _sidechainPool.ClientAccountName);
 
         }
 

@@ -151,7 +151,7 @@ namespace BlockBase.Node
                 new CheckProviderConfig(logger, mainchainService, nodeConfigurations, networkConfigurations, connectionsChecker),
                 new ClaimAllRewardsCommand(logger, mainchainService, nodeConfigurations),
                 new ProviderClaimStakeCommand(logger, mainchainService, nodeConfigurations),
-                new DeleteSidechainFromDatabase(logger, sidechainProducerService, mongoDbProducerService),
+                new DeleteSidechainFromDatabase(logger, sidechainProducerService, mongoDbProducerService, connector),
                 new ProviderGetDecryptedNodeIpsCommand(logger, mainchainService, nodeConfigurations),
                 new GetProducingSidechainsCommand(logger, sidechainProducerService, mainchainService, nodeConfigurations),
                 new GetSidechainNodeSoftwareVersionCommand(logger, mainchainService),
