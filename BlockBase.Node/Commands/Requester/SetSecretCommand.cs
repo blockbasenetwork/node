@@ -62,6 +62,12 @@ namespace BlockBase.Node.Commands.Requester
                 }
                 else
                 {
+                    if (string.IsNullOrEmpty(_encryptionMasterKey) ||
+                        string.IsNullOrEmpty(_encryptionPassword) ||
+                        string.IsNullOrEmpty(_encryptedData) ||
+                        string.IsNullOrEmpty(_filePassword))
+                        return Task.FromResult(new CommandExecutionResponse(HttpStatusCode.InternalServerError, new OperationResponse(false, "Failed to read database security configuration in body.")));
+                    
                     var newConfig = new DatabaseSecurityConfigurations()
                     {
                         IsEncrypted = _isEncrypted,

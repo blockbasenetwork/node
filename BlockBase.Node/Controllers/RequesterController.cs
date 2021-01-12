@@ -181,11 +181,19 @@ namespace BlockBase.Node.Controllers
                 else
                 {
                     DatabaseSecurityConfigurations config;
-                    using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
+                    try
                     {
-                        var json = await reader.ReadToEndAsync();
-                        config = JsonConvert.DeserializeObject<DatabaseSecurityConfigurations>(json);
+                        using (StreamReader reader = new StreamReader(Request.Body, Encoding.UTF8))
+                        {
+                            var json = await reader.ReadToEndAsync();
+                            config = JsonConvert.DeserializeObject<DatabaseSecurityConfigurations>(json);
+                        }
                     }
+                    catch (Exception e)
+                    {
+                        return StatusCode((int)HttpStatusCode.InternalServerError, new OperationResponse(e, "Failed to read database security configuration in body."));
+                    }
+
                     command = new SetSecretCommand(_logger, _requesterConfigurations, _databaseKeyManager, _connector, config);
                 }
 
