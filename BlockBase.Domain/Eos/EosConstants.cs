@@ -262,4 +262,16 @@ namespace BlockBase.Domain.Eos
         public const string FAILED_TO_PRODUCE_BLOCKS = "Failed to produce blocks";
         public const string FAILED_TO_VALIDATE_HISTORY = "Failed to validate sidechain history";
     }
+
+    public class SidechainStatesConstants
+    {
+        public const string CANDIDATURE = "Candidature";
+        public const string CONFIGURATION = "Configuration";
+        public const string IP_RECEIVE_TIME = "Receive IP";
+        public const string IP_SEND_TIME = "Send IP";
+        public const string SECRET_TIME = "Send Secret";
+        public const string PRODUCTION_TIME = "Production";
+        public const string STARTING = "Starting";
+        public const string STATE_NOT_FOUND = "-";
+    }
 }
