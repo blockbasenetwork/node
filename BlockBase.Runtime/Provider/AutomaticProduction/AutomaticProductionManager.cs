@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using BlockBase.DataPersistence.Data.MongoDbEntities;
+using System.Globalization;
 
 namespace BlockBase.Runtime.Provider.AutomaticProduction
 {
@@ -184,7 +185,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (accountStake?.Stake >= stake) return true;
             if (bbtBalance >= stake)
             {
-                await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
+                await _mainchainService.AddStake(sidechain, _nodeConfigurations.AccountName, stake.ToString("F4", CultureInfo.InvariantCulture) + " BBT");
                 return true;
             }
 

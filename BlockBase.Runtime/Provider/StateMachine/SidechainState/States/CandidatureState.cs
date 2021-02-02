@@ -12,6 +12,7 @@ using BlockBase.Runtime.Common;
 using System;
 using System.Reflection;
 using BlockBase.Utils;
+using System.Globalization;
 
 namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
 {
@@ -43,7 +44,7 @@ namespace BlockBase.Runtime.Provider.StateMachine.SidechainState.States
             if (_hasToAddStake)
             {
                 var stake = Math.Round((decimal)_contractInfo.Stake / 10000, 4);
-                var stakeTransaction = await _mainchainService.AddStake(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, stake.ToString("F4") + " BBT");
+                var stakeTransaction = await _mainchainService.AddStake(_sidechainPool.ClientAccountName, _nodeConfigurations.AccountName, stake.ToString("F4", CultureInfo.InvariantCulture) + " BBT");
             
                 _logger.LogInformation($"Sent stake to chain {_sidechainPool.ClientAccountName} Tx: {stakeTransaction}");
             }

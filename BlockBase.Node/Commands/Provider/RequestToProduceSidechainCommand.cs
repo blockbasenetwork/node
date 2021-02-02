@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -155,9 +156,9 @@ namespace BlockBase.Node.Commands.Provider
                 
                 if (_stake > 0)
                 {
-                    var stakeTransaction = await _mainchainService.AddStake(_chainName, _nodeConfigurations.AccountName, _stake.ToString("F4") + " BBT");
+                    var stakeTransaction = await _mainchainService.AddStake(_chainName, _nodeConfigurations.AccountName, _stake.ToString("F4", CultureInfo.InvariantCulture) + " BBT");
                     _logger.LogInformation("Sent stake to contract. Tx = " + stakeTransaction);
-                    _logger.LogInformation("Stake inserted = " + _stake.ToString("F4") + " BBT");
+                    _logger.LogInformation("Stake inserted = " + _stake.ToString("F4", CultureInfo.InvariantCulture) + " BBT");
                 }
 
                 await _sidechainProducerService.AddSidechainToProducerAndStartIt(_chainName, clientInfo.SidechainCreationTimestamp, _providerType, false);

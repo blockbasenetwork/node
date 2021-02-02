@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 using BlockBase.Domain.Configurations;
@@ -51,7 +52,7 @@ namespace BlockBase.Node.Commands.Provider
                 var chainContract = await _mainchainService.RetrieveContractState(_chainName);
                 if (chainContract == null) return new CommandExecutionResponse(HttpStatusCode.NotFound, new OperationResponse(false, $"Sidechain {_chainName} not found"));
 
-                var stakeString = $"{_stake.ToString("F4")} BBT";
+                var stakeString = $"{_stake.ToString("F4", CultureInfo.InvariantCulture)} BBT";
                 var trx = await _mainchainService.AddStake(_chainName, _nodeConfigurations.AccountName, stakeString);
 
                 return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Stake successfully added. Tx = {trx}"));

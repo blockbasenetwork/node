@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -72,7 +73,7 @@ namespace BlockBase.Node.Commands.Requester
 
                 if (Stake > 0)
                 {
-                    string stakeToInsert = Stake.ToString("F4") + " BBT";
+                    string stakeToInsert = Stake.ToString("F4", CultureInfo.InvariantCulture) + " BBT";
                     var stakeTransaction = await _mainchainService.AddStake(_nodeConfigurations.AccountName, _nodeConfigurations.AccountName, stakeToInsert);
                     _logger.LogInformation("Stake sent to contract. Tx = " + stakeTransaction);
                     _logger.LogInformation("Stake inserted = " + stakeToInsert);
