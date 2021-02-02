@@ -6,7 +6,7 @@ using BlockBase.Node.Commands.Utils;
 using BlockBase.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace BlockBase.Node.Commands.Provider
+namespace BlockBase.Node.Commands.Network
 {
     public class GetSidechainNodeSoftwareVersionCommand : AbstractCommand
     {
@@ -42,7 +42,7 @@ namespace BlockBase.Node.Commands.Provider
             {
                 var versionInContract = await _mainchainService.RetrieveSidechainNodeVersion(_chainName);
 
-                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse(true, $"Sidechain {_chainName} is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)}"));
+                return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<int>(versionInContract.SoftwareVersion, $"Sidechain {_chainName} is running version {VersionHelper.ConvertFromVersionInt(versionInContract.SoftwareVersion)}"));
             }
             catch (Exception e)
             {

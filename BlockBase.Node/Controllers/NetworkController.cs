@@ -198,6 +198,27 @@ namespace BlockBase.Node.Controllers
             return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
         }
 
+        /// <summary>
+        /// Gets the sidechain node software version
+        /// </summary>
+        /// <param name="chainName">Name of the Sidechain</param>
+        /// <returns>Sidechain node software version</returns>
+        /// <response code="200">Node software version retrieved with success</response>
+        /// <response code="400">Invalid parameters</response>
+        /// <response code="500">Error retrieving node software version</response>
+        [HttpGet]
+        [SwaggerOperation(
+            Summary = "Gets the sidechain node software version",
+            Description = "Gets the version the sidechain node software is running. Useful for knowing which version the node should be running in order to send candidature",
+            OperationId = "GetSidechainNodeSoftwareVersion"
+        )]
+        public async Task<ObjectResult> GetSidechainNodeSoftwareVersion(string chainName)
+        {
+            var command = new GetSidechainNodeSoftwareVersionCommand(_logger, _mainchainService, chainName);
+            var result = await command.Execute();
+
+            return StatusCode((int)result.HttpStatusCode, result.OperationResponse);
+        }
 
         /// <summary>
         /// Tries to establish a connection to another node. Lasts for 20 seconds
