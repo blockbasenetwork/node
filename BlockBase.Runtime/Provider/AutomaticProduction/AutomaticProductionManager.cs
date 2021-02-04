@@ -179,7 +179,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (bbtBalanceTable != null)
             {
                 var bbtBalanceString = bbtBalanceTable.FirstOrDefault()?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                decimal.TryParse(bbtBalanceString, out bbtBalance);
+                decimal.TryParse(bbtBalanceString, NumberStyles.Any, CultureInfo.InvariantCulture, out bbtBalance);
             }
 
             if (accountStake?.Stake >= stake) return true;
