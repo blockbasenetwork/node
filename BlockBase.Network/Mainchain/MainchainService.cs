@@ -15,6 +15,7 @@ using EosSharp.Core;
 using EosSharp.Core.Helpers;
 using Newtonsoft.Json;
 using Cryptography.ECDSA;
+using System.Globalization;
 
 namespace BlockBase.Network.Mainchain
 {
@@ -89,7 +90,7 @@ namespace BlockBase.Network.Mainchain
             decimal stake = 0;
 
             var stakeString = stakeInTable.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-            decimal.TryParse(stakeString, out stake);
+            decimal.TryParse(stakeString, NumberStyles.Any, CultureInfo.InvariantCulture, out stake);
 
             return new AccountStake()
             {
