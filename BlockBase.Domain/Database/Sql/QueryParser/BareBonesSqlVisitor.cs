@@ -203,19 +203,20 @@ namespace BlockBase.Domain.Database.QueryParser
             var updateRecordStatement = new UpdateRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
-                ColumnNamesAndUpdateValues = new Dictionary<estring, Value>()
+                ColumnNamesAndUpdateValues = new Dictionary<estring, AbstractExpression>()
             };
 
             if (context.K_WHERE() != null)
             {
-                updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+                updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr().Last());
             }
 
-            for (int i = 0; i < context.literal_value().Length; i++)
+            for (int i = 0; i < context.expr().Length - 1; i++)
             {
                 updateRecordStatement.ColumnNamesAndUpdateValues.Add(
                     (estring)Visit(context.column_name()[i].complex_name()),
-                    new Value(context.literal_value()[i].GetText().Trim('\''))
+                    (AbstractExpression)Visit(context.expr()[i])
+                    //new Value(context.expr()[i].GetText().Trim('\''))
                     );
             }
 
@@ -391,6 +392,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitExpr(ExprContext expr)
         {
+            //TODO: Add Case expression
             ThrowIfParserHasException(expr);
 
             if (expr.K_AND() != null && expr.expr().Length == 2)
@@ -455,7 +457,8 @@ namespace BlockBase.Domain.Database.QueryParser
                 return exprWithParenthesis;
             }
 
-            return null;
+            //If nothing else than it is literal value expression
+            return new LiteralValueExpression(new Value(expr.literal_value().GetText().Trim('\''), expr.literal_value().GetText().Contains("'")));
         }
 
         public override object VisitOrdering_term(Ordering_termContext orderingTermContext)

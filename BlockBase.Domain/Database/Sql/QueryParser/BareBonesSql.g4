@@ -65,9 +65,7 @@ insert_stmt:
 	);
 
 update_stmt:
-	K_UPDATE table_name K_SET column_name '=' literal_value (
-		',' column_name '=' literal_value
-	)* (K_WHERE expr)?;
+	K_UPDATE table_name K_SET column_name '=' expr (',' column_name '=' expr)* (K_WHERE expr)?;
 
 delete_stmt: K_DELETE K_FROM table_name ( K_WHERE expr)?;
 
@@ -142,10 +140,17 @@ column_constraint: (K_CONSTRAINT name)? (
 	);
 
 expr:  
-	table_name '.' column_name operator literal_value
+	literal_value
+	| table_name '.' column_name operator literal_value
 	| table_column_name operator table_column_name
 	| expr (K_AND | K_OR) expr
-	| '(' expr ')';
+	| '(' expr ')'
+	| expr K_NOT? K_IN ( '(' ( expr ( ',' expr )*
+                          )? 
+                      ')'
+                    | ( database_name '.' )? table_name )
+	| K_CASE expr? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END;
+
 
 
 

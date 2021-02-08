@@ -397,6 +397,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private IList<ISqlStatement> GetTransformedUpdateRecordStatement(UpdateRecordStatement updateRecordStatement, string databaseIV)
         {
+            //TODO: UPDATE FOR OTHER EXPRESSIONS IN VALUE
             _isSelectStatementNeeded = false;
             var sqlStatements = new List<ISqlStatement>();
 
@@ -413,13 +414,14 @@ namespace BlockBase.DataProxy.Encryption
                 var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnValue.Key, tableInfoRecord.IV);
 
                 var columnDataType = columnInfoRecord.LData.DataType;
+                var columnLiteralValue = (LiteralValueExpression)columnValue.Value;
 
                 if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
                 {
                     if (columnInfoRecord.LData.EncryptedIVColumnName == null)
                         transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
                            new estring(columnInfoRecord.Name),
-                           new Value(_encryptor.EncryptUniqueValue(columnValue.Value.ValueToInsert, columnInfoRecord), true)
+                           new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(columnLiteralValue.LiteralValue.ValueToInsert, columnInfoRecord), true))
                            );
 
                     else
@@ -433,7 +435,7 @@ namespace BlockBase.DataProxy.Encryption
 
                 else
                 {
-                    if (columnValue.Value.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnValue.Value.IsText = true;
+                    if (columnLiteralValue.LiteralValue.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnLiteralValue.LiteralValue.IsText = true;
                     transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
                            new estring(columnInfoRecord.Name),
                            columnValue.Value
@@ -799,9 +801,9 @@ namespace BlockBase.DataProxy.Encryption
         {
             return new UpdateRecordStatement(
                     INFO_TABLE_NAME,
-                    new Dictionary<estring, Value>() {
-                        { NAME, new Value(name, true) },
-                        { KEY_NAME, keyName != null ? new Value(keyName, true) : new Value("null", false) }
+                    new Dictionary<estring, AbstractExpression>() {
+                        { NAME, new LiteralValueExpression(new Value(name, true)) },
+                        { KEY_NAME, keyName != null ? new LiteralValueExpression(new Value(keyName, true)) : new LiteralValueExpression(new Value("null", false)) }
                     },
                     new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, IV),
                         new Value(iv, true),

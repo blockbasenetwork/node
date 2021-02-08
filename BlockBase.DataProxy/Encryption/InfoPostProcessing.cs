@@ -135,9 +135,9 @@ namespace BlockBase.DataProxy.Encryption
                     var additionalUpdateRecordStatement = new UpdateRecordStatement();
                     additionalUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
-                    var encryptedValue = new Value(_encryptor.EncryptNormalValue(columnValue.Value.ValueToInsert, columnInfoRecord, out string generatedIV), true);
-                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), encryptedValue);
-                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new Value(generatedIV, true));
+                    var encryptedValue = new Value(_encryptor.EncryptNormalValue(((LiteralValueExpression)columnValue.Value).LiteralValue.ValueToInsert, columnInfoRecord, out string generatedIV), true);
+                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), new LiteralValueExpression(encryptedValue));
+                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new LiteralValueExpression(new Value(generatedIV, true)));
 
                     var oldIV = row[ivIndexColumn];
                     additionalUpdateRecordStatement.WhereExpression = new ComparisonExpression(

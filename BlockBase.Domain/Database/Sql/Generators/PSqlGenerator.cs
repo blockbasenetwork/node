@@ -92,6 +92,8 @@ namespace BlockBase.Domain.Database.Sql.Generators
             var psqlString = "UPDATE " + updateRecordStatement.TableName.Value + " SET ";
 
             var first = true;
+
+            //TODO BUilD FROM CASE EXPRESSION
             foreach (var keyValuePair in updateRecordStatement.ColumnNamesAndUpdateValues)
             {
                 if (first) first = false;
@@ -252,6 +254,8 @@ namespace BlockBase.Domain.Database.Sql.Generators
                 exprString = BuildString(logicalExpression.LeftExpression) + " "
                    + logicalExpression.LogicalOperator + " "
                    + BuildString(logicalExpression.RightExpression);
+
+            //TODO ADD IN EXPRESSION
 
             if (expression.HasParenthesis) return "(" + exprString + ")";
             else return exprString;
