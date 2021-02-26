@@ -255,7 +255,11 @@ namespace BlockBase.Domain.Database.Sql.Generators
                    + logicalExpression.LogicalOperator + " "
                    + BuildString(logicalExpression.RightExpression);
 
-            //TODO ADD IN EXPRESSION
+            else if (expression is LiteralValueExpression literalValueExpression)
+                exprString = "'" + literalValueExpression.LiteralValue.ValueToInsert + "'";
+
+            else if (expression is CaseExpression caseExpression) { }
+                //TODO add case expression 
 
             if (expression.HasParenthesis) return "(" + exprString + ")";
             else return exprString;

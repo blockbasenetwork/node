@@ -414,32 +414,75 @@ namespace BlockBase.DataProxy.Encryption
                 var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnValue.Key, tableInfoRecord.IV);
 
                 var columnDataType = columnInfoRecord.LData.DataType;
-                var columnLiteralValue = (LiteralValueExpression)columnValue.Value;
+                
 
-                if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                if (columnValue.Value is CaseExpression)
                 {
-                    if (columnInfoRecord.LData.EncryptedIVColumnName == null)
+                    var columnCaseExpression = (CaseExpression)columnValue.Value;
+                    if(columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                    {
+                        if(columnInfoRecord.LData.EncryptedIVColumnName == null)
+                        {
+                            var listOfWhenThenExpressions = new List<WhenThenExpression>();
+                            foreach(var whenThenExpression in columnCaseExpression.WhenThenExpressions)
+                            {
+                                var encryptedWhenThenExpression = new WhenThenExpression(
+                                    whenThenExpression.WhenExpression,
+                                    new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(whenThenExpression.ThenExpression.LiteralValue.ValueToInsert,columnInfoRecord), true))
+                                );
+                                listOfWhenThenExpressions.Add(encryptedWhenThenExpression);
+                            }
+                            var elseExpression = new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(columnCaseExpression.ElseExpression.LiteralValue.ValueToInsert, columnInfoRecord), true));
+                            transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                            new estring(columnInfoRecord.Name),
+                            new CaseExpression(listOfWhenThenExpressions, elseExpression)  
+                            );
+                        }
+                        else
+                        {
+                            _isSelectStatementNeeded = true; 
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+                            selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
+                        }
+                    }
+                    else
+                    {
+                        //if (columnCaseExpression.LiteralValue.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnLiteralValue.LiteralValue.IsText = true;
                         transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
-                           new estring(columnInfoRecord.Name),
-                           new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(columnLiteralValue.LiteralValue.ValueToInsert, columnInfoRecord), true))
-                           );
+                            new estring(columnInfoRecord.Name),
+                            columnValue.Value
+                            );
+                    }
+                } 
+                else 
+                {
+                    var columnLiteralValue = (LiteralValueExpression)columnValue.Value;
+                    if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                    {
+                        if (columnInfoRecord.LData.EncryptedIVColumnName == null)
+                            transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                            new estring(columnInfoRecord.Name),
+                            new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(columnLiteralValue.LiteralValue.ValueToInsert, columnInfoRecord), true))
+                            );
+
+                        else
+                        {
+                            _isSelectStatementNeeded = true; //marciak - if not unique we need to use buckets so we need to execute a select stament before
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+                            selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
+                        }
+                    }
 
                     else
                     {
-                        _isSelectStatementNeeded = true; //marciak - if not unique we need to use buckets so we need to execute a select stament before
-                        selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
-                        selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
-                        selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
+                        if (columnLiteralValue.LiteralValue.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnLiteralValue.LiteralValue.IsText = true;
+                        transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                            new estring(columnInfoRecord.Name),
+                            columnValue.Value
+                            );
                     }
-                }
-
-                else
-                {
-                    if (columnLiteralValue.LiteralValue.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnLiteralValue.LiteralValue.IsText = true;
-                    transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
-                           new estring(columnInfoRecord.Name),
-                           columnValue.Value
-                           );
                 }
             }
 

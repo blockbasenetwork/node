@@ -211,11 +211,13 @@ namespace BlockBase.Domain.Database.QueryParser
                 updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr().Last());
             }
 
-            for (int i = 0; i < context.expr().Length - 1; i++)
+            var expressions = context.expr();
+            var expressionLength = context.K_WHERE() != null ? expressions.Length-1 : expressions.Length;
+            for (int i = 0; i < expressionLength; i++)
             {
                 updateRecordStatement.ColumnNamesAndUpdateValues.Add(
                     (estring)Visit(context.column_name()[i].complex_name()),
-                    (AbstractExpression)Visit(context.expr()[i])
+                    (AbstractExpression)Visit(expressions[i])
                     //new Value(context.expr()[i].GetText().Trim('\''))
                     );
             }
@@ -392,9 +394,7 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitExpr(ExprContext expr)
         {
-            //TODO: Add Case expression
             ThrowIfParserHasException(expr);
-
             if (expr.K_AND() != null && expr.expr().Length == 2)
             {
                 return new LogicalExpression()
@@ -413,6 +413,31 @@ namespace BlockBase.Domain.Database.QueryParser
                     LeftExpression = (AbstractExpression)Visit(expr.expr()[0]),
                     RightExpression = (AbstractExpression)Visit(expr.expr()[1])
                 };
+            }
+
+            var exprLength = expr.expr().Length;
+            if (expr.K_CASE() != null && exprLength >= 2){
+                var whenThenExpressions = new List<WhenThenExpression>();
+                for(var expressionIndex = 0; expressionIndex < exprLength; expressionIndex = expressionIndex + 2){
+                    if(exprLength%2 != 0 && expressionIndex == exprLength - 1) continue;
+                    var newWhenThenExpression = new WhenThenExpression{
+                        WhenExpression = (ComparisonExpression)Visit(expr.expr()[expressionIndex]),
+                        ThenExpression = (LiteralValueExpression)Visit(expr.expr()[expressionIndex+1])
+                    };
+                    whenThenExpressions.Add(newWhenThenExpression);
+                }
+                if(exprLength%2 != 0){
+                    return new CaseExpression(){
+                        WhenThenExpressions = whenThenExpressions,
+                        ElseExpression = (LiteralValueExpression)Visit(expr.expr().Last())
+                    };
+                } else {
+                    return new CaseExpression(){
+                        WhenThenExpressions = whenThenExpressions,
+                        ElseExpression = null
+                    };
+                }
+                
             }
 
             var exprString = expr.GetText();

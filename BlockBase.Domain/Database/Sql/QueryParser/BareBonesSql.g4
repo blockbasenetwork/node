@@ -149,7 +149,7 @@ expr:
                           )? 
                       ')'
                     | ( database_name '.' )? table_name )
-	| K_CASE expr? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END;
+	| K_CASE table_column_name? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END;
 
 
 
@@ -223,7 +223,12 @@ keyword:
 	| K_UPDATE
 	| K_USING
 	| K_VALUES
-	| K_WHERE;
+	| K_WHERE
+	| K_CASE
+	| K_WHEN
+	| K_THEN
+	| K_ELSE
+	| K_END;
 
 name: complex_name;
 
@@ -343,6 +348,12 @@ K_UPDATE: U P D A T E;
 K_USING: U S I N G;
 K_VALUES: V A L U E S;
 K_WHERE: W H E R E;
+
+K_CASE: C A S E;
+K_WHEN: W H E N;
+K_THEN: T H E N;
+K_END: E N D;
+K_ELSE: E L S E;
 
 IDENTIFIER:
 	'"' (~'"' | '""')* '"'
