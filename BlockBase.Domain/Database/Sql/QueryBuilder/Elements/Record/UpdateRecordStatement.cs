@@ -11,6 +11,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
         public Dictionary<estring, AbstractExpression> ColumnNamesAndUpdateValues { get; set; }
 
         public AbstractExpression WhereExpression { get; set; }
+        public AbstractExpression CaseExpression { get; set; }
 
         public UpdateRecordStatement()
         {
@@ -23,6 +24,13 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
             ColumnNamesAndUpdateValues = columnNamesAndUpdateValues;
             WhereExpression = whereClause;
         }
+
+        /*public UpdateRecordStatement(estring tableName, Dictionary<estring, AbstractExpression> columnNamesAndUpdateValues, AbstractExpression caseExpression)
+        {
+            TableName = tableName;
+            ColumnNamesAndUpdateValues = columnNamesAndUpdateValues;
+            CaseExpression = caseExpression;
+        }*/
 
         public ISqlStatement Clone()
         {

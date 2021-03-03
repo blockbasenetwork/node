@@ -143,6 +143,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(SelectCoreStatement selectCoreStatement)
         {
+            //TODO build string for case statement
             var psqlString = "SELECT ";
 
             if (selectCoreStatement.DistinctFlag) psqlString += "DISTINCT ";

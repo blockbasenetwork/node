@@ -256,7 +256,6 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitSelect_core(Select_coreContext context)
         {
-            
             ThrowIfParserHasException(context);
             var selectCoreStatement = new SelectCoreStatement();
             if (context.K_DISTINCT() != null) selectCoreStatement.DistinctFlag = true;
@@ -270,7 +269,12 @@ namespace BlockBase.Domain.Database.QueryParser
                 selectCoreStatement.TablesOrSubqueries.Add((TableOrSubquery)Visit(tableOrSubqueryContext));
             }
             if (context.join_clause() != null) selectCoreStatement.JoinClause = (JoinClause)Visit(context.join_clause());
-            if (context.expr() != null) selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+            if (context.expr().Length != 0){
+                if(context.expr(0).K_CASE() != null) 
+                    selectCoreStatement.CaseExpression = (AbstractExpression)Visit(context.expr(0));
+                else 
+                    selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr(0));
+            }
             if (context.K_ENCRYPTED() != null) selectCoreStatement.Encrypted = true;
             return selectCoreStatement;
         }

@@ -85,7 +85,7 @@ simple_select_stmt:
 	)?;
 
 select_core:
-	K_SELECT ( K_DISTINCT )? result_column (',' result_column)* 
+	K_SELECT ( K_DISTINCT )? result_column (',' expr? result_column)* 
      K_FROM (table_or_subquery (',' table_or_subquery)* | join_clause)
 	 (K_WHERE expr | K_ENCRYPTED)?;
 

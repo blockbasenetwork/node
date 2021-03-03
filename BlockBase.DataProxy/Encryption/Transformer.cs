@@ -329,6 +329,7 @@ namespace BlockBase.DataProxy.Encryption
         }
         private ISqlStatement GetTransformedSelectCoreStatement(SelectCoreStatement selectCoreStatement, string databaseIV)
         {
+            //TODO transform for case statement
             var transformedSelectStatement = new SelectCoreStatement();
 
             foreach (var resultColumn in selectCoreStatement.ResultColumns)
@@ -390,6 +391,8 @@ namespace BlockBase.DataProxy.Encryption
 
             transformedSelectStatement.TablesOrSubqueries = selectCoreStatement.TablesOrSubqueries.Select(t => GetTransformedTableOrSubquery(t, databaseIV)).ToList();
 
+            transformedSelectStatement.CaseExpression = GetTransformedExpression(selectCoreStatement.CaseExpression, databaseIV, transformedSelectStatement);
+
             transformedSelectStatement.WhereExpression = GetTransformedExpression(selectCoreStatement.WhereExpression, databaseIV, transformedSelectStatement);
 
             return transformedSelectStatement;
@@ -441,6 +444,7 @@ namespace BlockBase.DataProxy.Encryption
                         else
                         {
                             _isSelectStatementNeeded = true; 
+                            selectStatement.SelectCoreStatement.AddCaseExpression(columnCaseExpression);
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
                             selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
@@ -485,8 +489,10 @@ namespace BlockBase.DataProxy.Encryption
                     }
                 }
             }
-
+            
+            selectStatement.SelectCoreStatement.CaseExpression = GetTransformedExpression(updateRecordStatement.CaseExpression, databaseIV, selectStatement.SelectCoreStatement);
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
+            
             if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
             if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
