@@ -11,7 +11,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public IList<TableOrSubquery> TablesOrSubqueries { get; set; }
         public JoinClause JoinClause { get; set; }
         public AbstractExpression WhereExpression { get; set; }
-        public AbstractExpression CaseExpression { get; set; }
+        public Dictionary<AbstractExpression, ResultColumn> CaseExpressions { get; set; }
         public bool DistinctFlag { get; set; }
         public bool Encrypted{ get; set; }
 
@@ -32,7 +32,6 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
                 TablesOrSubqueries = TablesOrSubqueries.Select(t => t.Clone()).ToList(),
                 JoinClause = JoinClause?.Clone(),
                 WhereExpression = WhereExpression?.Clone(),
-                CaseExpression = CaseExpression?.Clone(),
                 DistinctFlag = DistinctFlag,
                 Encrypted = Encrypted
             };
@@ -63,10 +62,10 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
             WhereExpression = expression;
         }
 
-        public void AddCaseExpression(CaseExpression expression)
+        /*public void AddCaseExpression(CaseExpression expression)
         {
-            CaseExpression = expression;
-        }
+            CaseExpressions = expression;
+        }*/
 
         public string GetStatementType()
         {

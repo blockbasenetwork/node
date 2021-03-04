@@ -269,11 +269,15 @@ namespace BlockBase.Domain.Database.QueryParser
                 selectCoreStatement.TablesOrSubqueries.Add((TableOrSubquery)Visit(tableOrSubqueryContext));
             }
             if (context.join_clause() != null) selectCoreStatement.JoinClause = (JoinClause)Visit(context.join_clause());
+            var listSelectCaseExpressions = new Dictionary<AbstractExpression, ResultColumn>();
             if (context.expr().Length != 0){
-                if(context.expr(0).K_CASE() != null) 
-                    selectCoreStatement.CaseExpression = (AbstractExpression)Visit(context.expr(0));
-                else 
-                    selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr(0));
+                foreach(var contextExpr in context.expr()){
+                    if(contextExpr.K_CASE() != null) 
+                        listSelectCaseExpressions.Add((AbstractExpression)Visit(contextExpr), new ResultColumn());
+                    else 
+                        selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr(0));
+                        continue;
+                }
             }
             if (context.K_ENCRYPTED() != null) selectCoreStatement.Encrypted = true;
             return selectCoreStatement;
