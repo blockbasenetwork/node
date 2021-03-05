@@ -85,7 +85,7 @@ simple_select_stmt:
 	)?;
 
 select_core:
-	K_SELECT ( K_DISTINCT )? result_column (',' expr? result_column)* 
+	K_SELECT ( K_DISTINCT )? result_column (',' (result_column | case_expr))* 
      K_FROM (table_or_subquery (',' table_or_subquery)* | join_clause)
 	 (K_WHERE expr | K_ENCRYPTED)?;
 
@@ -151,8 +151,8 @@ expr:
                     | ( database_name '.' )? table_name )
 	| K_CASE table_column_name? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END;
 
-
-
+case_expr:
+	K_CASE table_column_name? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END result_column?;
 
 foreign_key_clause:
 	K_REFERENCES foreign_table (

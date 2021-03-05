@@ -270,14 +270,15 @@ namespace BlockBase.Domain.Database.QueryParser
             }
             if (context.join_clause() != null) selectCoreStatement.JoinClause = (JoinClause)Visit(context.join_clause());
             var listSelectCaseExpressions = new Dictionary<AbstractExpression, ResultColumn>();
-            if (context.expr().Length != 0){
-                foreach(var contextExpr in context.expr()){
-                    if(contextExpr.K_CASE() != null) 
-                        listSelectCaseExpressions.Add((AbstractExpression)Visit(contextExpr), new ResultColumn());
-                    else 
-                        selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr(0));
-                        continue;
+            if (context.case_expr().Length != 0){
+                foreach(var contextExpr in context.case_expr()){
+                    if(contextExpr.K_CASE() != null) {
+                        selectCoreStatement.CaseExpressions.Add((AbstractExpression)Visit(contextExpr));
+                    }
                 }
+            }
+            if (context.expr() != null){
+                selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
             }
             if (context.K_ENCRYPTED() != null) selectCoreStatement.Encrypted = true;
             return selectCoreStatement;
@@ -398,6 +399,34 @@ namespace BlockBase.Domain.Database.QueryParser
             var max = Int32.Parse(bucketRangeContext.NUMERIC_LITERAL()[2].GetText());
 
             return new Tuple<int, int, int>(size, min, max);
+        }
+
+        public override object VisitCase_expr(Case_exprContext caseExpr)
+        {
+            ThrowIfParserHasException(caseExpr);
+            var exprLength = caseExpr.expr().Length;
+            var whenThenExpressions = new List<WhenThenExpression>();
+            for(var expressionIndex = 0; expressionIndex < exprLength; expressionIndex = expressionIndex + 2){
+                if(exprLength%2 != 0 && expressionIndex == exprLength - 1) continue;
+                var newWhenThenExpression = new WhenThenExpression{
+                    WhenExpression = (ComparisonExpression)Visit(caseExpr.expr()[expressionIndex]),
+                    ThenExpression = (LiteralValueExpression)Visit(caseExpr.expr()[expressionIndex+1])
+                };
+                whenThenExpressions.Add(newWhenThenExpression);
+            }
+            if(caseExpr.K_ELSE() !=null){ //TODO: VERIFICAR MELHOR SE TEM RESULT COLUMN
+                return new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr()[exprLength-1]),
+                    ResultColumn = (ResultColumn)Visit(caseExpr.expr().Last())
+                };
+            } else {
+                return new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = null,
+                    ResultColumn = (ResultColumn)Visit(caseExpr.expr().Last())
+                };
+            }
         }
 
         public override object VisitExpr(ExprContext expr)

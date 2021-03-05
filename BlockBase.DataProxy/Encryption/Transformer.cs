@@ -331,20 +331,35 @@ namespace BlockBase.DataProxy.Encryption
         {
             //TODO transform for case statement
             var transformedSelectStatement = new SelectCoreStatement();
+            var listOfResultColumnsFromCaseExpressions = new List<ResultColumn>();
+            var listOfCaseExpressions = new List<CaseExpression>();
+            foreach(var abstractExpression in selectCoreStatement.CaseExpressions){
+                var caseExpression = abstractExpression as CaseExpression;
+                listOfResultColumnsFromCaseExpressions.Add(caseExpression.ResultColumn);
+                listOfCaseExpressions.Add(caseExpression);
+            }
 
             foreach (var resultColumn in selectCoreStatement.ResultColumns)
             {
                 var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(resultColumn.TableName, databaseIV);
-                if(selectCoreStatement.CaseExpressions.Values.ToList().Contains(resultColumn)){
-                    
-                    var caseExpression = selectCoreStatement.CaseExpressions.FirstOrDefault(x => x.Value.Equals(resultColumn)).Key as CaseExpression;
+                if(listOfResultColumnsFromCaseExpressions.Contains(resultColumn)){
+                    if (!resultColumn.AllColumnsfFlag)
+                    {
+                        var caseExpression = listOfCaseExpressions.FirstOrDefault(x => x.ResultColumn.Equals(resultColumn));
 
-                    foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
-                        if(GetInfoRecordThrowErrorIfNotExists(whenThenExpression.WhenExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV)!= null){
-                            
+                        foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                            var columnInfoRecord = GetInfoRecordReturnNullIfNotExists(whenThenExpression.WhenExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
+                            if(columnInfoRecord != null){
+                                transformedSelectStatement.ResultColumns.Add(new ResultColumn(){
+                                    TableName = new estring(tableInfoRecord.Name),
+                                    ColumnName = new estring(columnInfoRecord.Name),
+                                    AllColumnsfFlag = false
+                                });
+                            }
                         }
                     }
-                } else {
+                } 
+                else {
                     /*var caseExpression = selectCoreStatement.CaseExpression as CaseExpression;
                     foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
                         columnNames.Add(whenThenExpression.WhenExpression.LeftTableNameAndColumnName.ColumnName);
@@ -906,6 +921,13 @@ namespace BlockBase.DataProxy.Encryption
         {
             var infoRecord = _encryptor.FindInfoRecord(name, parentIV);
             if (infoRecord == null) throw new Exception("Relation '" + name.Value + "' does not exist.");
+            return infoRecord;
+        }
+
+        private InfoRecord GetInfoRecordReturnNullIfNotExists(estring name, string parentIV)
+        {
+            var infoRecord = _encryptor.FindInfoRecord(name, parentIV);
+            if (infoRecord == null) return null;
             return infoRecord;
         }
 

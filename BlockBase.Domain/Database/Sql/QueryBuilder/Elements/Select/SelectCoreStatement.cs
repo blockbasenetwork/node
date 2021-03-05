@@ -11,7 +11,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public IList<TableOrSubquery> TablesOrSubqueries { get; set; }
         public JoinClause JoinClause { get; set; }
         public AbstractExpression WhereExpression { get; set; }
-        public Dictionary<AbstractExpression, ResultColumn> CaseExpressions { get; set; }
+        public IList<AbstractExpression> CaseExpressions { get; set; }
         public bool DistinctFlag { get; set; }
         public bool Encrypted{ get; set; }
 
