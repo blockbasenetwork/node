@@ -333,13 +333,20 @@ namespace BlockBase.DataProxy.Encryption
             var transformedSelectStatement = new SelectCoreStatement();
             var listOfResultColumnsFromCaseExpressions = new List<ResultColumn>();
             var listOfCaseExpressions = new List<CaseExpression>();
-            foreach(var abstractExpression in selectCoreStatement.CaseExpressions){
-                var caseExpression = abstractExpression as CaseExpression;
-                listOfResultColumnsFromCaseExpressions.Add(caseExpression.ResultColumn);
-                listOfCaseExpressions.Add(caseExpression);
+            var listOfAllResultColumns = new List<ResultColumn>();
+
+            if(selectCoreStatement.CaseExpressions.Count != 0){
+                foreach(var abstractExpression in selectCoreStatement.CaseExpressions){
+                    var caseExpression = abstractExpression as CaseExpression;
+                    listOfResultColumnsFromCaseExpressions.Add(caseExpression.ResultColumn);
+                    listOfCaseExpressions.Add(caseExpression);
+                }
             }
 
-            foreach (var resultColumn in selectCoreStatement.ResultColumns)
+            listOfAllResultColumns.AddRange(selectCoreStatement.ResultColumns);
+            listOfAllResultColumns.AddRange(listOfResultColumnsFromCaseExpressions);
+
+            foreach (var resultColumn in listOfAllResultColumns)
             {
                 var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(resultColumn.TableName, databaseIV);
                 if(listOfResultColumnsFromCaseExpressions.Contains(resultColumn)){
@@ -360,10 +367,6 @@ namespace BlockBase.DataProxy.Encryption
                     }
                 } 
                 else {
-                    /*var caseExpression = selectCoreStatement.CaseExpression as CaseExpression;
-                    foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
-                        columnNames.Add(whenThenExpression.WhenExpression.LeftTableNameAndColumnName.ColumnName);
-                    }*/
 
                     if (!resultColumn.AllColumnsfFlag)
                     {
@@ -420,6 +423,9 @@ namespace BlockBase.DataProxy.Encryption
 
             if (selectCoreStatement.JoinClause != null) transformedSelectStatement.JoinClause = GetTransformedJoinClause(selectCoreStatement.JoinClause, databaseIV);
 
+            foreach(var caseExpression in listOfCaseExpressions){
+                transformedSelectStatement.CaseExpressions.Add(GetTransformedExpression(caseExpression, databaseIV, transformedSelectStatement));
+            }
             transformedSelectStatement.TablesOrSubqueries = selectCoreStatement.TablesOrSubqueries.Select(t => GetTransformedTableOrSubquery(t, databaseIV)).ToList();
 
             //transformedSelectStatement.CaseExpression = GetTransformedExpression(selectCoreStatement.CaseExpression, databaseIV, transformedSelectStatement);
@@ -624,6 +630,27 @@ namespace BlockBase.DataProxy.Encryption
                         HasParenthesis = logicalExpression.HasParenthesis
                     };
                     return newLogicalExpression;
+                case CaseExpression caseExpression:
+                    
+                    var listOfWhenThenExpressions = new List<WhenThenExpression>();
+                    foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                        listOfWhenThenExpressions.Add(GetTransformedExpression(whenThenExpression, databaseIV, transformedSelectCoreStatement) as WhenThenExpression);
+                    }
+                    var newCaseExpression = new CaseExpression(){
+                        WhenThenExpressions = listOfWhenThenExpressions,
+                        ElseExpression = GetTransformedExpression(caseExpression.ElseExpression, databaseIV, transformedSelectCoreStatement) as LiteralValueExpression,
+                        ResultColumn = caseExpression.ResultColumn  // am i supposed to transform the result column? 
+                    };
+
+                    return newCaseExpression;
+                case WhenThenExpression whenThenExpression:
+                    var newWhenThenExpression = new WhenThenExpression
+                    {
+                        WhenExpression = GetTransformedComparisonExpression(whenThenExpression.WhenExpression, databaseIV, transformedSelectCoreStatement) as ComparisonExpression,
+                        ThenExpression = GetTransformedExpression(whenThenExpression.ThenExpression, databaseIV, transformedSelectCoreStatement) as LiteralValueExpression,
+                        HasParenthesis = whenThenExpression.HasParenthesis
+                    };
+                    return newWhenThenExpression;
             }
             return null;
         }

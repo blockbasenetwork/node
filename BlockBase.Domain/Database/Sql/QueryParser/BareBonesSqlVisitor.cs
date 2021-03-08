@@ -414,17 +414,31 @@ namespace BlockBase.Domain.Database.QueryParser
                 };
                 whenThenExpressions.Add(newWhenThenExpression);
             }
-            if(caseExpr.K_ELSE() !=null){ //TODO: VERIFICAR MELHOR SE TEM RESULT COLUMN
+            var auxLog = (ResultColumn)Visit(caseExpr.result_column()); //REMOVE  - auxilar for debug
+            if(caseExpr.K_ELSE() !=null && caseExpr.result_column() != null){ 
                 return new CaseExpression(){
                     WhenThenExpressions = whenThenExpressions,
-                    ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr()[exprLength-1]),
-                    ResultColumn = (ResultColumn)Visit(caseExpr.expr().Last())
+                    ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr().LastOrDefault()),
+                    ResultColumn = (ResultColumn)Visit(caseExpr.result_column())
+                };
+            } else if(caseExpr.result_column() != null && caseExpr.K_ELSE() ==null){
+                var auxExpression = new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = null,
+                    ResultColumn = (ResultColumn)Visit(caseExpr.result_column())
+                };
+                return auxExpression;
+            } else if(caseExpr.result_column() == null && caseExpr.K_ELSE() != null){
+                return new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr().LastOrDefault()),
+                    ResultColumn = null
                 };
             } else {
                 return new CaseExpression(){
                     WhenThenExpressions = whenThenExpressions,
                     ElseExpression = null,
-                    ResultColumn = (ResultColumn)Visit(caseExpr.expr().Last())
+                    ResultColumn = null
                 };
             }
         }

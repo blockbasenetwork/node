@@ -21,6 +21,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
             DistinctFlag = false;
             ResultColumns = new List<ResultColumn>();
             TablesOrSubqueries = new List<TableOrSubquery>();
+            CaseExpressions = new List<AbstractExpression>();
         }
 
         public SelectCoreStatement Clone()
