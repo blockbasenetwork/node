@@ -358,8 +358,8 @@ namespace BlockBase.DataProxy.Encryption
                             var columnInfoRecord = GetInfoRecordReturnNullIfNotExists(whenThenExpression.WhenExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
                             if(columnInfoRecord != null){
                                 transformedSelectStatement.ResultColumns.Add(new ResultColumn(){
-                                    TableName = new estring(tableInfoRecord.Name),
-                                    ColumnName = new estring(columnInfoRecord.Name),
+                                    TableName = resultColumn.TableName,
+                                    ColumnName = resultColumn.ColumnName,
                                     AllColumnsfFlag = false
                                 });
                             }
@@ -618,6 +618,8 @@ namespace BlockBase.DataProxy.Encryption
         {
             switch (expression)
             {
+                case LiteralValueExpression literalValueExpression: //TODO Need to transform 
+                    return literalValueExpression;
                 case ComparisonExpression comparisonExpression:
                     return GetTransformedComparisonExpression(comparisonExpression, databaseIV, transformedSelectCoreStatement);
 

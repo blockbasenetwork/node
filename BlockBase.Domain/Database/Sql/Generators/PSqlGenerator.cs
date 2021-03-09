@@ -151,6 +151,19 @@ namespace BlockBase.Domain.Database.Sql.Generators
             for (int i = 0; i < selectCoreStatement.ResultColumns.Count; i++)
             {
                 if (i != 0) psqlString += ", ";
+                if(selectCoreStatement.CaseExpressions.Count != 0){
+                    foreach(var expression in selectCoreStatement.CaseExpressions){
+                        var caseExpression = expression as CaseExpression;
+                        var whenThenExpressionsList = new List<WhenThenExpression>();
+                        whenThenExpressionsList.AddRange(caseExpression.WhenThenExpressions);
+                        var caseFromResultColumn = whenThenExpressionsList.Find(e => e.WhenExpression.LeftTableNameAndColumnName.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName) 
+                        && e.WhenExpression.LeftTableNameAndColumnName.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName));
+                        if(caseFromResultColumn != null){
+                            psqlString += BuildString(caseExpression);
+                        }
+                        
+                    }
+                }
                 psqlString += BuildString(selectCoreStatement.ResultColumns[i]);
             }
 
@@ -259,8 +272,19 @@ namespace BlockBase.Domain.Database.Sql.Generators
             else if (expression is LiteralValueExpression literalValueExpression)
                 exprString = "'" + literalValueExpression.LiteralValue.ValueToInsert + "'";
 
-            else if (expression is CaseExpression caseExpression) { }
-                //TODO add case expression 
+            else if (expression is CaseExpression caseExpression) {
+                exprString = " CASE ";
+                foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                    exprString += BuildString(whenThenExpression);
+                }
+                if(caseExpression.ElseExpression != null){
+                    exprString += " ELSE " +BuildString(caseExpression.ElseExpression);
+                }
+                exprString += " END ";
+            }
+            else if (expression is WhenThenExpression whenThenExpression)
+                exprString = " WHEN " + BuildString(whenThenExpression.WhenExpression) + " THEN "  +BuildString(whenThenExpression.ThenExpression);
+                
 
             if (expression.HasParenthesis) return "(" + exprString + ")";
             else return exprString;
