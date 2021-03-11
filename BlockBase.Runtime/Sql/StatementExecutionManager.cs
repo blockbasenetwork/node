@@ -13,6 +13,7 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
@@ -91,12 +92,20 @@ namespace BlockBase.Runtime.Sql
                         switch (sqlCommand)
                         {
                             case ReadQuerySqlCommand readQuerySql:
+                                var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
+                                var simpleSelectStatement = (SimpleSelectStatement)readQuerySql.OriginalSqlStatement;
+                                if(simpleSelectStatement.SelectCoreStatement.CaseExpressions!= null){
+                                    foreach(var expression in transformedSelectStatement.SelectCoreStatement.CaseExpressions){
+                                        var caseExpression = expression as CaseExpression;
+                                        simpleSelectStatement.SelectCoreStatement.ResultColumns.Add(caseExpression.ResultColumn);
+                                    }
+                                } 
                                 await SaveAndExecuteExistingTransactions(allPendingTransactions, results, createQueryResult);
                                 allPendingTransactions = new List<(string statementType, Transaction transaction)>();
-                                var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
+                                
                                 var namesAndResults = await ExecuteSelectStatement(
                                     builder,
-                                    (SimpleSelectStatement)readQuerySql.OriginalSqlStatement,
+                                    simpleSelectStatement,//(SimpleSelectStatement)readQuerySql.OriginalSqlStatement,
                                     transformedSelectStatement,
                                     readQuerySql.TransformedSqlStatementText[0]);
 

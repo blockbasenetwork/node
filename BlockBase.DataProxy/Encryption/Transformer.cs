@@ -356,12 +356,13 @@ namespace BlockBase.DataProxy.Encryption
 
                         foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
                             var columnInfoRecord = GetInfoRecordReturnNullIfNotExists(whenThenExpression.WhenExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
-                            if(columnInfoRecord != null){
-                                transformedSelectStatement.ResultColumns.Add(new ResultColumn(){
+                            var newResultColumn = new ResultColumn(){
                                     TableName = resultColumn.TableName,
                                     ColumnName = resultColumn.ColumnName,
                                     AllColumnsfFlag = false
-                                });
+                                };
+                            if(columnInfoRecord != null && !transformedSelectStatement.ResultColumns.Contains(newResultColumn)){
+                                transformedSelectStatement.ResultColumns.Add(newResultColumn);
                             }
                         }
                     }

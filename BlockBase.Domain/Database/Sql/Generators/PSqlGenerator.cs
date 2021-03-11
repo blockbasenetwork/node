@@ -150,6 +150,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
             for (int i = 0; i < selectCoreStatement.ResultColumns.Count; i++)
             {
+                var isCase = false;
                 if (i != 0) psqlString += ", ";
                 if(selectCoreStatement.CaseExpressions.Count != 0){
                     foreach(var expression in selectCoreStatement.CaseExpressions){
@@ -158,12 +159,16 @@ namespace BlockBase.Domain.Database.Sql.Generators
                         whenThenExpressionsList.AddRange(caseExpression.WhenThenExpressions);
                         var caseFromResultColumn = whenThenExpressionsList.Find(e => e.WhenExpression.LeftTableNameAndColumnName.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName) 
                         && e.WhenExpression.LeftTableNameAndColumnName.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName));
-                        if(caseFromResultColumn != null){
+                        if(caseExpression.ResultColumn.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName)
+                        && caseExpression.ResultColumn.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName)){
                             psqlString += BuildString(caseExpression);
+                            psqlString += selectCoreStatement.ResultColumns[i].ColumnName.Value;
+                            isCase = true;
                         }
                         
                     }
                 }
+                if(isCase) continue;
                 psqlString += BuildString(selectCoreStatement.ResultColumns[i]);
             }
 
@@ -273,7 +278,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
                 exprString = "'" + literalValueExpression.LiteralValue.ValueToInsert + "'";
 
             else if (expression is CaseExpression caseExpression) {
-                exprString = " CASE ";
+                exprString = " CASE";
                 foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
                     exprString += BuildString(whenThenExpression);
                 }
