@@ -353,17 +353,19 @@ namespace BlockBase.DataProxy.Encryption
                     if (!resultColumn.AllColumnsfFlag)
                     {
                         var caseExpression = listOfCaseExpressions.FirstOrDefault(x => x.ResultColumn.Equals(resultColumn));
-
+                        var columnInfoRecordIsNotNull = false;
                         foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
                             var columnInfoRecord = GetInfoRecordReturnNullIfNotExists(whenThenExpression.WhenExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
-                            var newResultColumn = new ResultColumn(){
-                                    TableName = resultColumn.TableName,
-                                    ColumnName = resultColumn.ColumnName,
-                                    AllColumnsfFlag = false
-                                };
-                            if(columnInfoRecord != null && !transformedSelectStatement.ResultColumns.Contains(newResultColumn)){
-                                transformedSelectStatement.ResultColumns.Add(newResultColumn);
-                            }
+                            
+                            columnInfoRecordIsNotNull = columnInfoRecord != null;
+                        }
+                        var newResultColumn = new ResultColumn(){
+                            TableName = resultColumn.TableName,
+                            ColumnName = resultColumn.ColumnName,
+                            AllColumnsfFlag = false
+                        };
+                        if(columnInfoRecordIsNotNull  && !transformedSelectStatement.ResultColumns.Contains(newResultColumn)){
+                            transformedSelectStatement.ResultColumns.Add(newResultColumn);
                         }
                     }
                 } 
