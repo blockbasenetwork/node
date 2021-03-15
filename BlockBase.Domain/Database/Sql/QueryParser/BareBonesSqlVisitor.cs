@@ -221,6 +221,9 @@ namespace BlockBase.Domain.Database.QueryParser
                     //new Value(context.expr()[i].GetText().Trim('\''))
                     );
             }
+            if(context.case_expr() != null){
+                updateRecordStatement.CaseExpression = (AbstractExpression)Visit(context.case_expr());
+            }
 
             return updateRecordStatement;
         }
@@ -414,7 +417,6 @@ namespace BlockBase.Domain.Database.QueryParser
                 };
                 whenThenExpressions.Add(newWhenThenExpression);
             }
-            var auxLog = (ResultColumn)Visit(caseExpr.result_column()); //REMOVE  - auxilar for debug
             if(caseExpr.K_ELSE() !=null && caseExpr.result_column() != null){ 
                 return new CaseExpression(){
                     WhenThenExpressions = whenThenExpressions,
@@ -432,13 +434,21 @@ namespace BlockBase.Domain.Database.QueryParser
                 return new CaseExpression(){
                     WhenThenExpressions = whenThenExpressions,
                     ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr().LastOrDefault()),
-                    ResultColumn = null
+                    ResultColumn = new ResultColumn(){
+                        TableName = whenThenExpressions.FirstOrDefault().WhenExpression.LeftTableNameAndColumnName.TableName,
+                        ColumnName = new estring("caseColumn"),
+                        AllColumnsfFlag = false
+                    }
                 };
             } else {
                 return new CaseExpression(){
                     WhenThenExpressions = whenThenExpressions,
                     ElseExpression = null,
-                    ResultColumn = null
+                    ResultColumn = new ResultColumn(){
+                        TableName = whenThenExpressions.FirstOrDefault().WhenExpression.LeftTableNameAndColumnName.TableName,
+                        ColumnName = new estring("caseColumn"),
+                        AllColumnsfFlag = false
+                    }
                 };
             }
         }
@@ -467,29 +477,29 @@ namespace BlockBase.Domain.Database.QueryParser
             }
 
             var exprLength = expr.expr().Length;
-            if (expr.K_CASE() != null && exprLength >= 2){
-                var whenThenExpressions = new List<WhenThenExpression>();
-                for(var expressionIndex = 0; expressionIndex < exprLength; expressionIndex = expressionIndex + 2){
-                    if(exprLength%2 != 0 && expressionIndex == exprLength - 1) continue;
-                    var newWhenThenExpression = new WhenThenExpression{
-                        WhenExpression = (ComparisonExpression)Visit(expr.expr()[expressionIndex]),
-                        ThenExpression = (LiteralValueExpression)Visit(expr.expr()[expressionIndex+1])
-                    };
-                    whenThenExpressions.Add(newWhenThenExpression);
-                }
-                if(exprLength%2 != 0){
-                    return new CaseExpression(){
-                        WhenThenExpressions = whenThenExpressions,
-                        ElseExpression = (LiteralValueExpression)Visit(expr.expr().Last())
-                    };
-                } else {
-                    return new CaseExpression(){
-                        WhenThenExpressions = whenThenExpressions,
-                        ElseExpression = null
-                    };
-                }
+            // if (expr.K_CASE() != null && exprLength >= 2){
+            //     var whenThenExpressions = new List<WhenThenExpression>();
+            //     for(var expressionIndex = 0; expressionIndex < exprLength; expressionIndex = expressionIndex + 2){
+            //         if(exprLength%2 != 0 && expressionIndex == exprLength - 1) continue;
+            //         var newWhenThenExpression = new WhenThenExpression{
+            //             WhenExpression = (ComparisonExpression)Visit(expr.expr()[expressionIndex]),
+            //             ThenExpression = (LiteralValueExpression)Visit(expr.expr()[expressionIndex+1])
+            //         };
+            //         whenThenExpressions.Add(newWhenThenExpression);
+            //     }
+            //     if(exprLength%2 != 0){
+            //         return new CaseExpression(){
+            //             WhenThenExpressions = whenThenExpressions,
+            //             ElseExpression = (LiteralValueExpression)Visit(expr.expr().Last())
+            //         };
+            //     } else {
+            //         return new CaseExpression(){
+            //             WhenThenExpressions = whenThenExpressions,
+            //             ElseExpression = null
+            //         };
+            //     }
                 
-            }
+            // }
 
             var exprString = expr.GetText();
             if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null

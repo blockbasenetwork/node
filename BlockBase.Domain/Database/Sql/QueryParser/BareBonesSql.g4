@@ -65,7 +65,7 @@ insert_stmt:
 	);
 
 update_stmt:
-	K_UPDATE table_name K_SET column_name '=' expr (',' column_name '=' expr)* (K_WHERE expr)?;
+	K_UPDATE table_name K_SET column_name '=' ( expr | case_expr ) (',' column_name '=' expr)* (K_WHERE expr)?;
 
 delete_stmt: K_DELETE K_FROM table_name ( K_WHERE expr)?;
 
@@ -148,8 +148,7 @@ expr:
 	| expr K_NOT? K_IN ( '(' ( expr ( ',' expr )*
                           )? 
                       ')'
-                    | ( database_name '.' )? table_name )
-	| K_CASE table_column_name? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END;
+                    | ( database_name '.' )? table_name );
 
 case_expr:
 	K_CASE table_column_name? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END result_column?;
