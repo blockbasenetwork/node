@@ -452,8 +452,10 @@ namespace BlockBase.DataProxy.Encryption
 
             transformedUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
-            if(updateRecordStatement.CaseExpression != null){
-                selectStatement.SelectCoreStatement.CaseExpressions.Add(updateRecordStatement.CaseExpression);
+            foreach(var expression in updateRecordStatement.CaseExpressions){
+                var caseExpression = expression as CaseExpression;
+                selectStatement.SelectCoreStatement.CaseExpressions.Add(caseExpression);
+                selectStatement.SelectCoreStatement.ResultColumns.Add(caseExpression.ResultColumn);
             }
 
             foreach (var columnValue in updateRecordStatement.ColumnNamesAndUpdateValues) //TODO remove or put case values in columnname?
@@ -488,7 +490,6 @@ namespace BlockBase.DataProxy.Encryption
                         else
                         {
                             _isSelectStatementNeeded = true; 
-                            selectStatement.SelectCoreStatement.CaseExpressions.Add(columnCaseExpression);
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
                             selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
@@ -534,7 +535,6 @@ namespace BlockBase.DataProxy.Encryption
                 }
             }
             
-            selectStatement.SelectCoreStatement.CaseExpressions.Add(updateRecordStatement.CaseExpression);
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
             
             if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);

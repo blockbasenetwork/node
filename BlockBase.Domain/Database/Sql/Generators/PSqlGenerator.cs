@@ -165,7 +165,6 @@ namespace BlockBase.Domain.Database.Sql.Generators
                             psqlString += selectCoreStatement.ResultColumns[i].ColumnName.Value;
                             isCase = true;
                         }
-                        
                     }
                 }
                 if(isCase) continue;

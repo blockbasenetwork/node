@@ -65,7 +65,7 @@ insert_stmt:
 	);
 
 update_stmt:
-	K_UPDATE table_name K_SET column_name '=' ( expr | case_expr ) (',' column_name '=' expr)* (K_WHERE expr)?;
+	K_UPDATE table_name K_SET column_name '=' ( expr | case_expr ) (',' column_name '=' ( expr | case_expr ))* (K_WHERE expr)?;
 
 delete_stmt: K_DELETE K_FROM table_name ( K_WHERE expr)?;
 
@@ -85,7 +85,7 @@ simple_select_stmt:
 	)?;
 
 select_core:
-	K_SELECT ( K_DISTINCT )? result_column (',' (result_column | case_expr))* 
+	K_SELECT ( K_DISTINCT )? (result_column | case_expr) (',' (result_column | case_expr))* 
      K_FROM (table_or_subquery (',' table_or_subquery)* | join_clause)
 	 (K_WHERE expr | K_ENCRYPTED)?;
 

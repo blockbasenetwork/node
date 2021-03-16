@@ -221,8 +221,13 @@ namespace BlockBase.Domain.Database.QueryParser
                     //new Value(context.expr()[i].GetText().Trim('\''))
                     );
             }
-            if(context.case_expr() != null){
-                updateRecordStatement.CaseExpression = (AbstractExpression)Visit(context.case_expr());
+            var caseExpressions = context.case_expr();
+            for(int i = 0; i < caseExpressions.Length; i++){
+                updateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                    (estring)Visit(context.column_name()[i].complex_name()),
+                    (AbstractExpression)Visit(caseExpressions[i])
+                );
+                updateRecordStatement.CaseExpressions.Add((AbstractExpression)Visit(caseExpressions[i]));
             }
 
             return updateRecordStatement;
@@ -272,7 +277,6 @@ namespace BlockBase.Domain.Database.QueryParser
                 selectCoreStatement.TablesOrSubqueries.Add((TableOrSubquery)Visit(tableOrSubqueryContext));
             }
             if (context.join_clause() != null) selectCoreStatement.JoinClause = (JoinClause)Visit(context.join_clause());
-            var listSelectCaseExpressions = new Dictionary<AbstractExpression, ResultColumn>();
             if (context.case_expr().Length != 0){
                 foreach(var contextExpr in context.case_expr()){
                     if(contextExpr.K_CASE() != null) {

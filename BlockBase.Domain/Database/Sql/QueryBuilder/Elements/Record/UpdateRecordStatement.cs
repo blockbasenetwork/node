@@ -11,11 +11,12 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
         public Dictionary<estring, AbstractExpression> ColumnNamesAndUpdateValues { get; set; }
 
         public AbstractExpression WhereExpression { get; set; }
-        public AbstractExpression CaseExpression { get; set; }
+        public IList<AbstractExpression> CaseExpressions { get; set; }
 
         public UpdateRecordStatement()
         {
             ColumnNamesAndUpdateValues = new Dictionary<estring, AbstractExpression>();
+            CaseExpressions = new List<AbstractExpression>();
         }
 
         public UpdateRecordStatement(estring tableName, Dictionary<estring, AbstractExpression> columnNamesAndUpdateValues, AbstractExpression whereClause)
