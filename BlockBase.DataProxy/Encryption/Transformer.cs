@@ -335,16 +335,19 @@ namespace BlockBase.DataProxy.Encryption
             var listOfCaseExpressions = new List<CaseExpression>();
             var listOfAllResultColumns = new List<ResultColumn>();
 
+            listOfAllResultColumns.AddRange(selectCoreStatement.ResultColumns);
+
             if(selectCoreStatement.CaseExpressions.Count != 0){
                 foreach(var abstractExpression in selectCoreStatement.CaseExpressions){
                     var caseExpression = abstractExpression as CaseExpression;
+                    if(!listOfAllResultColumns.Contains(caseExpression.ResultColumn)){
+                        listOfAllResultColumns.Add(caseExpression.ResultColumn);
+        
+                    }
                     listOfResultColumnsFromCaseExpressions.Add(caseExpression.ResultColumn);
                     listOfCaseExpressions.Add(caseExpression);
                 }
             }
-
-            listOfAllResultColumns.AddRange(selectCoreStatement.ResultColumns);
-            listOfAllResultColumns.AddRange(listOfResultColumnsFromCaseExpressions);
 
             foreach (var resultColumn in listOfAllResultColumns)
             {
@@ -374,15 +377,17 @@ namespace BlockBase.DataProxy.Encryption
                     if (!resultColumn.AllColumnsfFlag)
                     {
 
-                        var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(resultColumn.ColumnName, tableInfoRecord.IV);
-                        transformedSelectStatement.ResultColumns.Add(new ResultColumn()
-                        {
-                            TableName = new estring(tableInfoRecord.Name),
-                            ColumnName = new estring(columnInfoRecord.Name),
-                            AllColumnsfFlag = false
-                        });
+                        var columnInfoRecord = GetInfoRecordReturnNullIfNotExists(resultColumn.ColumnName, tableInfoRecord.IV);
 
-                        if (columnInfoRecord.LData.EncryptedIVColumnName != null)
+                        if(columnInfoRecord != null){
+                            transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                            {
+                                TableName = new estring(tableInfoRecord.Name),
+                                ColumnName = new estring(columnInfoRecord.Name),
+                                AllColumnsfFlag = false
+                            });
+
+                            if (columnInfoRecord.LData.EncryptedIVColumnName != null)
                         {
 
                             transformedSelectStatement.ResultColumns.Add(new ResultColumn()
@@ -392,8 +397,7 @@ namespace BlockBase.DataProxy.Encryption
                                 AllColumnsfFlag = false
                             });
                         }
-                        
-                        
+                        }
                     }
 
                     else
@@ -451,9 +455,11 @@ namespace BlockBase.DataProxy.Encryption
             var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(updateRecordStatement.TableName, databaseIV);
 
             transformedUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
+            
 
             foreach(var expression in updateRecordStatement.CaseExpressions){
                 var caseExpression = expression as CaseExpression;
+                selectStatement.SelectCoreStatement.CaseEncryptedFlag = true;
                 selectStatement.SelectCoreStatement.CaseExpressions.Add(caseExpression);
                 selectStatement.SelectCoreStatement.ResultColumns.Add(caseExpression.ResultColumn);
             }
@@ -537,11 +543,21 @@ namespace BlockBase.DataProxy.Encryption
             
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
             
+            if(selectStatement.SelectCoreStatement.CaseEncryptedFlag) 
+            {
+                selectStatement.SelectCoreStatement = (SelectCoreStatement)GetTransformedSelectCoreStatement(selectStatement.SelectCoreStatement, databaseIV);
+            }
+
             if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
             if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
             {
                 if (selectStatement.SelectCoreStatement.WhereExpression != null) transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+                if (selectStatement.SelectCoreStatement.CaseExpressions.Count != 0) 
+                {
+                    (transformedUpdateRecordStatement.CaseExpressions as List<AbstractExpression>).AddRange(selectStatement.SelectCoreStatement.CaseExpressions);
+
+                }
                 sqlStatements.Add(transformedUpdateRecordStatement);
             }
 

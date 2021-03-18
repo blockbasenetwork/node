@@ -13,11 +13,13 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public AbstractExpression WhereExpression { get; set; }
         public IList<AbstractExpression> CaseExpressions { get; set; }
         public bool DistinctFlag { get; set; }
+        public bool CaseEncryptedFlag {get; set;}
         public bool Encrypted{ get; set; }
 
         public SelectCoreStatement()
         {
             Encrypted = false;
+            CaseEncryptedFlag = false;
             DistinctFlag = false;
             ResultColumns = new List<ResultColumn>();
             TablesOrSubqueries = new List<TableOrSubquery>();
@@ -33,6 +35,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
                 TablesOrSubqueries = TablesOrSubqueries.Select(t => t.Clone()).ToList(),
                 JoinClause = JoinClause?.Clone(),
                 WhereExpression = WhereExpression?.Clone(),
+                CaseEncryptedFlag = CaseEncryptedFlag,
                 DistinctFlag = DistinctFlag,
                 Encrypted = Encrypted
             };
