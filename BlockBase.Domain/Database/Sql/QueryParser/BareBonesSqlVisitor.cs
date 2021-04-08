@@ -413,6 +413,8 @@ namespace BlockBase.Domain.Database.QueryParser
             ThrowIfParserHasException(caseExpr);
             var exprLength = caseExpr.expr().Length;
             var whenThenExpressions = new List<WhenThenExpression>();
+            
+            
             for(var expressionIndex = 0; expressionIndex < exprLength; expressionIndex = expressionIndex + 2){
                 if(exprLength%2 != 0 && expressionIndex == exprLength - 1) continue;
                 var newWhenThenExpression = new WhenThenExpression{
@@ -421,6 +423,14 @@ namespace BlockBase.Domain.Database.QueryParser
                 };
                 whenThenExpressions.Add(newWhenThenExpression);
             }
+            estring tableName = null;
+            if(whenThenExpressions.FirstOrDefault().WhenExpression is ComparisonExpression comparisonExpression){
+                tableName = comparisonExpression.LeftTableNameAndColumnName.TableName;
+            }else if(whenThenExpressions.FirstOrDefault().WhenExpression  is LogicalExpression logicalExpression){
+                var leftExpression = logicalExpression.LeftExpression as ComparisonExpression;
+                tableName = leftExpression.LeftTableNameAndColumnName.TableName;
+            }
+            var tableNameWhen = whenThenExpressions.FirstOrDefault().WhenExpression as ComparisonExpression;
             if(caseExpr.K_ELSE() !=null && caseExpr.result_column() != null){ 
                 return new CaseExpression(){
                     WhenThenExpressions = whenThenExpressions,
@@ -439,7 +449,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     WhenThenExpressions = whenThenExpressions,
                     ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr().LastOrDefault()),
                     ResultColumn = new ResultColumn(){
-                        TableName = whenThenExpressions.FirstOrDefault().WhenExpression.LeftTableNameAndColumnName.TableName,
+                        TableName = tableName,
                         ColumnName = new estring("caseColumn"),
                         AllColumnsfFlag = false
                     }
@@ -449,7 +459,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     WhenThenExpressions = whenThenExpressions,
                     ElseExpression = null,
                     ResultColumn = new ResultColumn(){
-                        TableName = whenThenExpressions.FirstOrDefault().WhenExpression.LeftTableNameAndColumnName.TableName,
+                        TableName = tableName,
                         ColumnName = new estring("caseColumn"),
                         AllColumnsfFlag = false
                     }

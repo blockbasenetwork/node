@@ -157,8 +157,8 @@ namespace BlockBase.Domain.Database.Sql.Generators
                         var caseExpression = expression as CaseExpression;
                         var whenThenExpressionsList = new List<WhenThenExpression>();
                         whenThenExpressionsList.AddRange(caseExpression.WhenThenExpressions);
-                        var caseFromResultColumn = whenThenExpressionsList.Find(e => e.WhenExpression.LeftTableNameAndColumnName.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName) 
-                        && e.WhenExpression.LeftTableNameAndColumnName.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName));
+                        //var caseFromResultColumn = whenThenExpressionsList.Find(e => e.WhenExpression.LeftTableNameAndColumnName.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName) 
+                        //&& e.WhenExpression.LeftTableNameAndColumnName.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName));
                         if(caseExpression.ResultColumn.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName)
                         && caseExpression.ResultColumn.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName)){
                             psqlString += BuildString(caseExpression);
@@ -189,6 +189,40 @@ namespace BlockBase.Domain.Database.Sql.Generators
            
             if (selectCoreStatement.WhereExpression != null)
                 psqlString += " WHERE " + BuildString(selectCoreStatement.WhereExpression);
+
+            return psqlString;
+        }
+
+        public string BuildStringToSimpleSelectStatement(UpdateRecordStatement updateRecordStatement){
+            var psqlString = "SELECT ";
+
+            var commaAuxiliar = 0;
+
+            foreach(var entry in updateRecordStatement.ColumnNamesAndUpdateValues){
+                if(commaAuxiliar!=0) psqlString += ", ";
+                commaAuxiliar++;
+                var caseExpression = entry.Value as CaseExpression;
+                var commaWhenAuxiliar = 0;
+                foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                    ComparisonExpression whenExpression = null;
+                    if(whenThenExpression.WhenExpression is ComparisonExpression comparisonExpression){
+                        whenExpression = comparisonExpression;
+                    }else if(whenThenExpression.WhenExpression is LogicalExpression logicalExpression){
+                        var leftExpression = logicalExpression.LeftExpression as ComparisonExpression;
+                        whenExpression = leftExpression;
+                    }
+                    if(commaWhenAuxiliar!= 0) psqlString += ", ";
+                    commaWhenAuxiliar++;
+                    var resultColumn = whenExpression.LeftTableNameAndColumnName;
+                    psqlString += BuildString(new ResultColumn(resultColumn.TableName,resultColumn.ColumnName));
+                }
+                if(entry.Key != null){
+                    psqlString += ", " +BuildString(new ResultColumn(updateRecordStatement.TableName, new estring(entry.Key.Value)));
+                }
+                psqlString += ", " +BuildString(caseExpression);
+            }
+
+            psqlString += "FROM " +updateRecordStatement.TableName.Value +";";
 
             return psqlString;
         }

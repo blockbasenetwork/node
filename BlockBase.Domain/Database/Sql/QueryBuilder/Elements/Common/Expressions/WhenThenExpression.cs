@@ -8,12 +8,12 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions
     public class WhenThenExpression : AbstractExpression
     {
         public bool HasParenthesis { get; set; }
-        public ComparisonExpression WhenExpression { get; set; }
+        public AbstractExpression WhenExpression { get; set; }
         public LiteralValueExpression ThenExpression { get; set; }
 
         public WhenThenExpression() { }
 
-        public WhenThenExpression(ComparisonExpression whenExpression, LiteralValueExpression thenExpression,  bool? hasParenthesis = null)
+        public WhenThenExpression(AbstractExpression whenExpression, LiteralValueExpression thenExpression,  bool? hasParenthesis = null)
         {
             WhenExpression = whenExpression;
             ThenExpression = thenExpression;

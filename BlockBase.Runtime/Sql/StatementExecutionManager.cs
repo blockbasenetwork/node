@@ -94,7 +94,7 @@ namespace BlockBase.Runtime.Sql
                             case ReadQuerySqlCommand readQuerySql:
                                 var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
                                 var simpleSelectStatement = (SimpleSelectStatement)readQuerySql.OriginalSqlStatement;
-                                if(simpleSelectStatement.SelectCoreStatement.CaseExpressions!= null){
+                                if(simpleSelectStatement.SelectCoreStatement.CaseExpressions.Count != 0){
                                     foreach(var expression in transformedSelectStatement.SelectCoreStatement.CaseExpressions){
                                         var caseExpression = expression as CaseExpression;
                                         simpleSelectStatement.SelectCoreStatement.ResultColumns.Add(caseExpression.ResultColumn);
@@ -114,6 +114,7 @@ namespace BlockBase.Runtime.Sql
 
                             case ChangeRecordSqlCommand changeRecordSqlCommand:
                                 sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
+                                var updateRecordStatement = changeRecordSqlCommand.OriginalSqlStatement as UpdateRecordStatement;
                                 // marciak - some updates and deletes require a select statement prior to execution
                                 // marciak - this select will be used to identify the actual rows that will be changed
                                 if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
@@ -128,7 +129,19 @@ namespace BlockBase.Runtime.Sql
                                         allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName)));
                                     }
                                 }
-                                else
+                                else if(updateRecordStatement.CaseExpressions.Count != 0 && changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)// TODO need to decrypt rows in case the update statement is used with a CASE statement
+                                {
+                                    var transformedUpdateRecordStatement = changeRecordSqlCommand.TransformedSqlStatement[0] as UpdateRecordStatement;
+                                    resultsList = await _connector.ExecuteQuery(_generator.BuildStringToSimpleSelectStatement(transformedUpdateRecordStatement), _databaseName);
+                                    var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, resultsList, _databaseName);
+                                     var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
+
+                                    foreach (var changeRecordsToExecute in changesToExecute)
+                                    {
+                                        allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName)));
+                                    }
+                                } 
+                                else 
                                 {
                                     allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
                                 }
