@@ -12,6 +12,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.ComparisonExpression;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.LogicalExpression;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -94,11 +95,39 @@ namespace BlockBase.DataProxy.Encryption
                     CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedDeleteRecordStatement(deleteRecordStatement, _databaseInfoRecord.IV);
                     break;
+                case BeginStatement beginStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = GetTransformedBeginStatement(beginStatement, _databaseInfoRecord.IV);
+                    break;
+                case CommitStatement commitStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = GetTransformedCommitStatement(commitStatement, _databaseInfoRecord.IV);
+                    break;
+                case RollbackStatement rollbackStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = GetTransformedRollbackStatement(rollbackStatement, _databaseInfoRecord.IV);
+                    break;
 
             }
         }
         #region Transform SqlStatements
 
+        private List<ISqlStatement> GetTransformedBeginStatement(BeginStatement beginStatement, string databaseIV){
+            return new List<ISqlStatement>(){
+                new BeginStatement()
+            };
+        }
+
+        private List<ISqlStatement> GetTransformedCommitStatement(CommitStatement commitStatement, string databaseIV){
+            return new List<ISqlStatement>(){
+                new CommitStatement()
+            };
+        }
+        private List<ISqlStatement> GetTransformedRollbackStatement(RollbackStatement rollbackStatement, string databaseIV){
+            return new List<ISqlStatement>(){
+                new RollbackStatement()
+            };
+        }
         private ISqlStatement GetTransformedIfStatment(IfStatement ifStatement, string databaseIV)
         {
             return GetTransformedSimpleSelectStatement(ifStatement.SimpleSelectStatement, databaseIV);

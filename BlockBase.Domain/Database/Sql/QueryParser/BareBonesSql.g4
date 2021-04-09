@@ -26,11 +26,20 @@ sql_stmt: (
 		| current_database_stmt
 		| list_databases_stmt
 		| if_stmt
+		| begin_stmt
+		| commit_stmt
+		| rollback_stmt
 	);
 
 use_database_stmt: K_USE database_name;
 
 current_database_stmt: K_CURRENT_DATABASE;
+
+begin_stmt: K_BEGIN;
+
+commit_stmt: K_COMMIT;
+
+rollback_stmt: K_ROLLBACK;
 
 list_databases_stmt: K_LIST_DATABASES;
 
@@ -227,7 +236,10 @@ keyword:
 	| K_WHEN
 	| K_THEN
 	| K_ELSE
-	| K_END;
+	| K_END
+	| K_BEGIN
+	| K_COMMIT
+	| K_ROLLBACK;
 
 name: complex_name;
 
@@ -353,6 +365,10 @@ K_WHEN: W H E N;
 K_THEN: T H E N;
 K_END: E N D;
 K_ELSE: E L S E;
+
+K_BEGIN: B E G I N;
+K_COMMIT: C O M M I T;
+K_ROLLBACK: R O L L B A C K;
 
 IDENTIFIER:
 	'"' (~'"' | '""')* '"'

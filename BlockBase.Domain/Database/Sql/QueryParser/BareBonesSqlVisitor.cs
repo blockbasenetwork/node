@@ -7,6 +7,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 using BlockBase.Domain.Database.Sql.QueryParser;
 using System;
 using System.Collections.Generic;
@@ -84,6 +85,21 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitGet_structure_stmt(Get_structure_stmtContext context)
         {
             throw new NotImplementedException();
+        }
+
+        public override object VisitBegin_stmt(Begin_stmtContext context){
+            ThrowIfParserHasException(context);
+            return new BeginStatement();
+        }
+
+        public override object VisitCommit_stmt(Commit_stmtContext context){
+            ThrowIfParserHasException(context);
+            return new CommitStatement();
+        }
+
+        public override object VisitRollback_stmt(Rollback_stmtContext context){
+            ThrowIfParserHasException(context);
+            return new RollbackStatement();
         }
 
         public override object VisitCreate_database_stmt([NotNull] Create_database_stmtContext context)

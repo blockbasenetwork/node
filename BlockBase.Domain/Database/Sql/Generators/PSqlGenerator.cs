@@ -4,6 +4,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -25,6 +26,19 @@ namespace BlockBase.Domain.Database.Sql.Generators
         public string BuildString(UseDatabaseStatement useDatabaseStatement)
         {
             return "USE " + useDatabaseStatement.DatabaseName.Value;
+        }
+        public string BuildString(BeginStatement beginStatement)
+        {
+            return "BEGIN";
+        }
+        public string BuildString(CommitStatement commitStatement)
+        {
+            return "COMMIT";
+        }
+
+        public string BuildString(RollbackStatement rollbackStatement)
+        {
+            return "ROLLBACK";
         }
 
         public string BuildString(CreateTableStatement createTableStatement)
