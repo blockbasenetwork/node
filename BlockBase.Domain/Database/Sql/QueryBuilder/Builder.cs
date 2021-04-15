@@ -4,6 +4,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using System.Collections.Generic;
 
@@ -114,6 +115,15 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
 
                     case UseDatabaseStatement useDatabaseStatement:
                         statementText = generator.BuildString(useDatabaseStatement);
+                        break;
+                    case BeginStatement beginStatement:
+                        statementText = generator.BuildString(beginStatement);
+                        break;
+                    case CommitStatement commitStatement:
+                        statementText = generator.BuildString(commitStatement);
+                        break;
+                    case RollbackStatement rollbackStatement:
+                        statementText = generator.BuildString(rollbackStatement);
                         break;
                 }
                 transformedStatementsText.Add(statementText + ";");
