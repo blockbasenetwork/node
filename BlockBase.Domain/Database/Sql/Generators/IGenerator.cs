@@ -25,6 +25,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
         string BuildString(InsertRecordStatement insertRecordStatement);
         string BuildString(UpdateRecordStatement updateRecordStatement);
         string BuildStringToSimpleSelectStatement(UpdateRecordStatement updateRecordStatement);
+        string BuildString(TransactionStatement transactionStatement);
         string BuildString(DeleteRecordStatement deleteRecordStatement);
         string BuildString(AbstractExpression expression);
         string BuildString(ColumnDefinition columnDefinition);

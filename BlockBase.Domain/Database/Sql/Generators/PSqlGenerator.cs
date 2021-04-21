@@ -133,6 +133,32 @@ namespace BlockBase.Domain.Database.Sql.Generators
             return psqlString;
         }
 
+        public string BuildString(TransactionStatement transactionStatement){
+            var psqlString ="";
+            foreach(var operation in transactionStatement.OperationStatements){
+                if(operation is InsertRecordStatement insertRecordStatement){
+                    psqlString+= BuildString(insertRecordStatement) +";";
+                } else if(operation is UpdateRecordStatement updateRecordStatement){
+                    psqlString+= BuildString(updateRecordStatement)+";";
+                } else if(operation is DeleteRecordStatement deleteRecordStatement){
+                    psqlString+= BuildString(deleteRecordStatement)+";";
+                }
+            }
+            psqlString = psqlString.Remove(psqlString.Length-1);
+            return psqlString;
+        }   
+
+        /*private string BuildString(ISqlStatement operationStatement){
+            if(operationStatement is InsertRecordStatement insertRecordStatement){
+                return BuildString(insertRecordStatement);
+            } else if(operationStatement is UpdateRecordStatement updateRecordStatement){
+                return BuildString(updateRecordStatement);
+            } else if(operationStatement is DeleteRecordStatement deleteRecordStatement){
+                return BuildString(deleteRecordStatement);
+            }
+            return "";
+        }*/
+
         public string BuildString(SimpleSelectStatement simpleSelectStatement)
         {
             var psqlString = BuildString(simpleSelectStatement.SelectCoreStatement);

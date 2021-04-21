@@ -107,6 +107,10 @@ namespace BlockBase.DataProxy.Encryption
                     CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedRollbackStatement(rollbackStatement, _databaseInfoRecord.IV);
                     break;
+                case TransactionStatement transactionStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = new List<ISqlStatement>() {GetTransformedTransactionStatement(transactionStatement, _databaseInfoRecord.IV)};
+                    break;
 
             }
         }
@@ -127,6 +131,21 @@ namespace BlockBase.DataProxy.Encryption
             return new List<ISqlStatement>(){
                 new RollbackStatement()
             };
+        }
+
+        private ISqlStatement GetTransformedTransactionStatement(TransactionStatement transactionStatement, string databaseIV){
+            var transformedTransactionStatement = new TransactionStatement();
+            foreach(var operation in transactionStatement.OperationStatements){
+                if(operation is InsertRecordStatement){
+                    transformedTransactionStatement.OperationStatements.Add(GetTransformedInsertRecordStatement((InsertRecordStatement)operation,databaseIV));
+                } else if(operation is UpdateRecordStatement){
+                    transformedTransactionStatement.OperationStatements.AddRange(GetTransformedUpdateRecordStatement((UpdateRecordStatement)operation,databaseIV));
+                } else if(operation is DeleteRecordStatement){
+                    transformedTransactionStatement.OperationStatements.AddRange(GetTransformedDeleteRecordStatement((DeleteRecordStatement)operation,databaseIV));
+                }
+                
+            }
+            return transformedTransactionStatement;
         }
         private ISqlStatement GetTransformedIfStatment(IfStatement ifStatement, string databaseIV)
         {

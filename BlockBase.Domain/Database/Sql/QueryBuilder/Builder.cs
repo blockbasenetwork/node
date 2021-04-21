@@ -53,6 +53,9 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                 case IfStatement ifStatement:
                     sqlCommand = new IfSqlCommand(ifStatement);
                     break;
+                case TransactionStatement transactionStatement:
+                    sqlCommand = new TransactionSqlCommand(transactionStatement);
+                    break;
 
                 default:
                     sqlCommand = new GenericSqlCommand(statement);
@@ -116,14 +119,21 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder
                     case UseDatabaseStatement useDatabaseStatement:
                         statementText = generator.BuildString(useDatabaseStatement);
                         break;
+
                     case BeginStatement beginStatement:
                         statementText = generator.BuildString(beginStatement);
                         break;
+
                     case CommitStatement commitStatement:
                         statementText = generator.BuildString(commitStatement);
                         break;
+
                     case RollbackStatement rollbackStatement:
                         statementText = generator.BuildString(rollbackStatement);
+                        break;
+
+                    case TransactionStatement transactionStatement:
+                        statementText = generator.BuildString(transactionStatement);
                         break;
                 }
                 transformedStatementsText.Add(statementText + ";");

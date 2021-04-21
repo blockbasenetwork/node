@@ -116,12 +116,12 @@ namespace BlockBase.DataPersistence.Data
             }
         }
 
-        public async Task MovePendingTransactionToExecutedAsync(string databaseName, TransactionDB transaction)
+        public async Task MovePendingTransactionToExecutedAsync(string sidechainName, TransactionDB transaction)
         {
-            databaseName = ClearSpecialCharacters(databaseName);
+            sidechainName = ClearSpecialCharacters(sidechainName);
             using (var session = await MongoClient.StartSessionAsync())
             {
-                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + databaseName);
+                var sidechainDatabase = MongoClient.GetDatabase(_dbPrefix + sidechainName);
                 var pendingExecutionTransactionCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_PENDING_EXECUTION_TRANSACTIONS_COLLECTION_NAME);
                 var executedTransactionsCollection = sidechainDatabase.GetCollection<TransactionDB>(MongoDbConstants.REQUESTER_TRANSACTIONS_COLLECTION_NAME);
 

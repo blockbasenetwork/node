@@ -87,6 +87,21 @@ namespace BlockBase.Domain.Database.QueryParser
             throw new NotImplementedException();
         }
 
+        public override object VisitTransaction_sql_stmt(Transaction_sql_stmtContext context){
+            ThrowIfParserHasException(context);
+            var transactionStatement = new TransactionStatement();
+            foreach(var operationContext in context.operation_sql_stmt()){
+                if(operationContext.insert_stmt() != null){
+                    transactionStatement.OperationStatements.Add((InsertRecordStatement)(Visit(operationContext.insert_stmt())));
+                } else if(operationContext.update_stmt() != null){
+                    transactionStatement.OperationStatements.Add((UpdateRecordStatement)Visit(operationContext.update_stmt()));
+                } else if(operationContext.delete_stmt()!= null){
+                    transactionStatement.OperationStatements.Add((DeleteRecordStatement)Visit(operationContext.delete_stmt()));
+                }
+            }
+            return transactionStatement;
+        }
+
         public override object VisitBegin_stmt(Begin_stmtContext context){
             ThrowIfParserHasException(context);
             return new BeginStatement();

@@ -17,10 +17,11 @@ namespace BlockBase.Domain.Blockchain
         public string Json { get; set; }
         public string DatabaseName { get; set; }
         public byte[] BlockHash { get; set; }
+        public string TransactionGroupId { get; set;}
 
         public Transaction() { }
 
-        public Transaction(byte[] transactionHash, ulong sequenceNumber, string signature, byte[] blockHash, string json, string databaseName, ulong? timestamp = null)
+        public Transaction(byte[] transactionHash, ulong sequenceNumber, string signature, byte[] blockHash, string json, string databaseName, ulong? timestamp = null, string transactionGroupId = null)
         {
             TransactionHash = transactionHash;
             SequenceNumber = sequenceNumber;
@@ -29,6 +30,7 @@ namespace BlockBase.Domain.Blockchain
             Json = json;
             BlockHash = blockHash;
             DatabaseName = databaseName;
+            TransactionGroupId = transactionGroupId;
         }
 
         public TransactionProto ConvertToProto()
@@ -62,7 +64,7 @@ namespace BlockBase.Domain.Blockchain
 
         public object Clone()
         {
-            return new Transaction(TransactionHash, SequenceNumber, Signature, BlockHash, Json, DatabaseName, Timestamp);
+            return new Transaction(TransactionHash, SequenceNumber, Signature, BlockHash, Json, DatabaseName, Timestamp, TransactionGroupId);
         }
     }
 }

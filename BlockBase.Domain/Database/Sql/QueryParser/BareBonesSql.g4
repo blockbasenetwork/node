@@ -26,10 +26,17 @@ sql_stmt: (
 		| current_database_stmt
 		| list_databases_stmt
 		| if_stmt
-		| begin_stmt
-		| commit_stmt
-		| rollback_stmt
+		| transaction_sql_stmt
 	);
+
+operation_sql_stmt: (
+		| insert_stmt
+		| update_stmt
+		| delete_stmt
+		| if_stmt
+	);	
+
+transaction_sql_stmt: begin_stmt operation_sql_stmt ';' ( operation_sql_stmt ';' )* commit_stmt;
 
 use_database_stmt: K_USE database_name;
 
