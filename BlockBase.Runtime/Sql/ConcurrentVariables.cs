@@ -47,7 +47,7 @@ namespace BlockBase.Runtime.Sql
             }
         }
         
-        public ulong RollbackTransactionNumber()
+        public ulong ReloadTransactionNumber()
         {
             lock (locker)
             {

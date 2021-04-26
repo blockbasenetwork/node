@@ -285,7 +285,7 @@ namespace BlockBase.Runtime.Sql
         {
             if (transactions.Any())
             {
-                //await AddPendingTransactions(transactions.Select(p => p.transaction).ToList());
+                await AddPendingTransactions(transactions.Select(p => p.transaction).ToList());
                 try
                 {
                     var listOfWrappedTransactions = new List<KeyValuePair<string,List<(string statementType, Transaction transaction)>>?>();
@@ -315,7 +315,6 @@ namespace BlockBase.Runtime.Sql
                         }
                     }
                     _logger.LogDebug($"Executing transactions #{transactions.First().transaction.SequenceNumber} to # {transactions.Last().transaction.SequenceNumber}");
-                    await TryToExecuteTransactions(transactions, results, createQueryResult);
                 }
                 catch (Exception e)
                 {
@@ -404,12 +403,14 @@ namespace BlockBase.Runtime.Sql
             if (!opResult.Succeeded)
             {   
                 var failedTransactionList = new List<TransactionDB>();
-                foreach(var transaction in pendingTransactions){
+                foreach(var transaction in orderedTransactions){
                     failedTransactionList.Add(new TransactionDB().TransactionDBFromTransaction(transaction.transaction));
                 }
-                await _mongoDbRequesterService.RemovePendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, failedTransactionList);
-                var rollback = _concurrentVariables.RollbackTransactionNumber();
-                _logger.LogDebug($"Rolling back from #{rollback}");
+                if(failedTransactionList.Count>0){
+                    await _mongoDbRequesterService.RemovePendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, failedTransactionList);
+                    var rollback = _concurrentVariables.ReloadTransactionNumber();
+                    _logger.LogDebug($"Rolling back from #{rollback}");
+                }
                 return opResult;
             } else {
                 results.Add(createQueryResult(opResult.Succeeded, "SQL Query"));
@@ -437,7 +438,7 @@ namespace BlockBase.Runtime.Sql
             catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, new TransactionDB().TransactionDBFromTransaction(pendingTransaction));
-                var rollback = _concurrentVariables.RollbackTransactionNumber();
+                var rollback = _concurrentVariables.ReloadTransactionNumber();
                 _logger.LogDebug($"Rolling back to #{rollback}");
                 return new OpResult(false, e);
             }

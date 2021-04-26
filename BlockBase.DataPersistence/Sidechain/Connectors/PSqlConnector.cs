@@ -423,31 +423,34 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
 
             using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
             {
-                try
-                {
-                    await conn.OpenAsync();
-                    var transaction = conn.BeginTransaction();
-                    using (var command1 = new NpgsqlCommand(sqlCommand, conn))
+                await conn.OpenAsync();
+                using(var transaction = conn.BeginTransaction()){
+                    try
                     {
-                        await command1.ExecuteNonQueryAsync();
-                    }
+                            using (var command1 = new NpgsqlCommand(sqlCommand, conn))
+                            {
+                                await command1.ExecuteNonQueryAsync();
+                            }
 
-                    using (var command2 = new NpgsqlCommand($"INSERT INTO {TRANSACTION_INFO_TABLE_NAME} ({SEQUENCE_NUMBER_COLUMN_NAME}) VALUES ( {transactionNumer} );", conn))
+                            using (var command2 = new NpgsqlCommand($"INSERT INTO {TRANSACTION_INFO_TABLE_NAME} ({SEQUENCE_NUMBER_COLUMN_NAME}) VALUES ( {transactionNumer} );", conn))
+                            {
+                                await command2.ExecuteNonQueryAsync();
+                            }
+                            await transaction.CommitAsync();
+                        
+
+                    }
+                    catch (Exception e)
                     {
-                        await command2.ExecuteNonQueryAsync();
+                        _logger.LogWarning(e.Message, "Error executing command.");
+                        await transaction.RollbackAsync();
+                        throw e;
                     }
-                    await transaction.CommitAsync();
+                    finally
+                    {
 
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e.Message, "Error executing command.");
-                    throw e;
-                }
-                finally
-                {
-
-                    await conn.CloseAsync();
+                        await conn.CloseAsync();
+                    }
                 }
             }
 
@@ -463,34 +466,39 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
             using (NpgsqlConnection conn = new NpgsqlConnection(connectionString))
             {
                 await conn.OpenAsync();
-                var transaction = conn.BeginTransaction();
-                try
+                using(var transaction = conn.BeginTransaction())
                 {
-
-                    foreach (var transactionToExecute in transactionsToExecute)
+                    try
                     {
-                        using (var command1 = new NpgsqlCommand(transactionToExecute.Json, conn))
+
+                        foreach (var transactionToExecute in transactionsToExecute)
                         {
-                            await command1.ExecuteNonQueryAsync();
+                            if(transactionToExecute.Json != "BEGIN;" && transactionToExecute.Json != "COMMIT;"){
+                                using (var command1 = new NpgsqlCommand(transactionToExecute.Json, conn))
+                                {
+                                    await command1.ExecuteNonQueryAsync();
+
+                                }
+                            }
+                            
+                            using (var command2 = new NpgsqlCommand($"INSERT INTO {TRANSACTION_INFO_TABLE_NAME} ({SEQUENCE_NUMBER_COLUMN_NAME}) VALUES ( {transactionToExecute.SequenceNumber} );", conn))
+                            {
+                                await command2.ExecuteNonQueryAsync();
+                            }
                         }
 
-                        using (var command2 = new NpgsqlCommand($"INSERT INTO {TRANSACTION_INFO_TABLE_NAME} ({SEQUENCE_NUMBER_COLUMN_NAME}) VALUES ( {transactionToExecute.SequenceNumber} );", conn))
-                        {
-                            await command2.ExecuteNonQueryAsync();
-                        }
+                        await transaction.CommitAsync();
                     }
-
-                    await transaction.CommitAsync();
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e.Message, "Error executing command.");
-                    await transaction.RollbackAsync();
-                    throw e;
-                }
-                finally
-                {
-                    await conn.CloseAsync();
+                    catch (Exception e)
+                    {
+                        _logger.LogWarning(e.Message, "Error executing command.");
+                        await transaction.RollbackAsync();
+                        throw e;
+                    }
+                    finally
+                    {
+                        await conn.CloseAsync();
+                    }
                 }
             }
 

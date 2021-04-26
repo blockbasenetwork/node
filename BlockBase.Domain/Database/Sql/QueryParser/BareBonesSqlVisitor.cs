@@ -683,10 +683,10 @@ namespace BlockBase.Domain.Database.QueryParser
                 return ComparisonExpression.ComparisonOperatorEnum.SmallerThan;
             if (exprString.Contains(">"))
                 return ComparisonExpression.ComparisonOperatorEnum.BiggerThan;
-            if (exprString.Contains("="))
-                return ComparisonExpression.ComparisonOperatorEnum.Equal;
             if (exprString.Contains("!="))
                 return ComparisonExpression.ComparisonOperatorEnum.Different;
+            if (exprString.Contains("="))
+                return ComparisonExpression.ComparisonOperatorEnum.Equal;
 
             throw new FormatException("No comparison operator in string.");
         }
