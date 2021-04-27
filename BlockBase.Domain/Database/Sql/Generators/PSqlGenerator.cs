@@ -447,6 +447,12 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
                 case ComparisonExpression.ComparisonOperatorEnum.SmallerThan:
                     return "<";
+
+                case ComparisonExpression.ComparisonOperatorEnum.IsNot:
+                    return "IS NOT";
+
+                case ComparisonExpression.ComparisonOperatorEnum.Is:
+                    return "IS";
             }
             throw new FormatException("Comparison operator not recognized.");
         }

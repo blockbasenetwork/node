@@ -536,7 +536,11 @@ namespace BlockBase.DataPersistence.Sidechain.Connectors
                                 var recordValues = new List<string>();
                                 for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    recordValues.Add(reader[i].ToString());
+                                    if(reader.IsDBNull(i)) 
+                                        recordValues.Add(null);
+                                    else
+                                        recordValues.Add(reader[i].ToString());
+                                    
                                 }
                                 records.Add(recordValues);
                             }

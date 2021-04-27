@@ -522,29 +522,6 @@ namespace BlockBase.Domain.Database.QueryParser
             }
 
             var exprLength = expr.expr().Length;
-            // if (expr.K_CASE() != null && exprLength >= 2){
-            //     var whenThenExpressions = new List<WhenThenExpression>();
-            //     for(var expressionIndex = 0; expressionIndex < exprLength; expressionIndex = expressionIndex + 2){
-            //         if(exprLength%2 != 0 && expressionIndex == exprLength - 1) continue;
-            //         var newWhenThenExpression = new WhenThenExpression{
-            //             WhenExpression = (ComparisonExpression)Visit(expr.expr()[expressionIndex]),
-            //             ThenExpression = (LiteralValueExpression)Visit(expr.expr()[expressionIndex+1])
-            //         };
-            //         whenThenExpressions.Add(newWhenThenExpression);
-            //     }
-            //     if(exprLength%2 != 0){
-            //         return new CaseExpression(){
-            //             WhenThenExpressions = whenThenExpressions,
-            //             ElseExpression = (LiteralValueExpression)Visit(expr.expr().Last())
-            //         };
-            //     } else {
-            //         return new CaseExpression(){
-            //             WhenThenExpressions = whenThenExpressions,
-            //             ElseExpression = null
-            //         };
-            //     }
-                
-            // }
 
             var exprString = expr.GetText();
             if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null
@@ -556,6 +533,21 @@ namespace BlockBase.Domain.Database.QueryParser
                         (estring)Visit(expr.table_name().complex_name()),
                         (estring)Visit(expr.column_name().complex_name())),
                     new Value(expr.literal_value().GetText().Trim('\''), expr.literal_value().GetText().Contains("'")),
+                    GetComparisonOperatorFromString(exprString));
+
+                return comparisonExpression;
+
+
+            }
+
+            if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() == null
+                && (exprString.Contains("IS")))
+            {
+                var comparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(
+                        (estring)Visit(expr.table_name().complex_name()),
+                        (estring)Visit(expr.column_name().complex_name())),
+                    new Value(null),
                     GetComparisonOperatorFromString(exprString));
 
                 return comparisonExpression;
@@ -654,6 +646,8 @@ namespace BlockBase.Domain.Database.QueryParser
             var joinOperatorEnumList = new List<JoinOperationField.JoinOperatorEnum>();
             if (joinOperatorContext.K_NATURAL() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.NATURAL);
             if (joinOperatorContext.K_LEFT() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.LEFT);
+            if (joinOperatorContext.K_RIGHT() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.RIGHT);
+            if (joinOperatorContext.K_FULL() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.FULL);
             if (joinOperatorContext.K_OUTER() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.OUTER);
             if (joinOperatorContext.K_CROSS() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.CROSS);
             return joinOperatorEnumList;
@@ -687,6 +681,11 @@ namespace BlockBase.Domain.Database.QueryParser
                 return ComparisonExpression.ComparisonOperatorEnum.Different;
             if (exprString.Contains("="))
                 return ComparisonExpression.ComparisonOperatorEnum.Equal;
+            if (exprString.ToUpper().Contains("IS NOT"))
+                return ComparisonExpression.ComparisonOperatorEnum.IsNot;
+            if (exprString.ToUpper().Contains("IS"))
+                return ComparisonExpression.ComparisonOperatorEnum.Is;
+            
 
             throw new FormatException("No comparison operator in string.");
         }

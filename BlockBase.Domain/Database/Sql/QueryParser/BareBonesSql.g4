@@ -124,7 +124,7 @@ join_clause:
 
 join_operator:
 	','
-	| K_NATURAL? (K_LEFT K_OUTER? | K_INNER | K_CROSS)? K_JOIN;
+	| K_NATURAL? (K_FULL K_OUTER? | K_LEFT K_OUTER? | K_RIGHT K_OUTER? | K_INNER | K_CROSS)? K_JOIN;
 
 join_constraint: (
 		K_ON expr
@@ -158,6 +158,7 @@ column_constraint: (K_CONSTRAINT name)? (
 expr:  
 	literal_value
 	| table_name '.' column_name operator literal_value
+	| table_name '.' column_name ( K_IS K_NOT?) expr
 	| table_column_name operator table_column_name
 	| expr (K_AND | K_OR) expr
 	| '(' expr ')'
@@ -217,9 +218,12 @@ keyword:
 	| K_JOIN
 	| K_KEY
 	| K_LEFT
+	| K_RIGHT
+	| K_FULL
 	| K_LIMIT
 	| K_NATURAL
 	| K_NO
+	| K_IS
 	| K_NOT
 	| K_NULL
 	| K_OFFSET
@@ -344,9 +348,12 @@ K_INTO: I N T O;
 K_JOIN: J O I N;
 K_KEY: K E Y;
 K_LEFT: L E F T;
+K_RIGHT: R I G H T;
+K_FULL: F U L L;
 K_LIMIT: L I M I T;
 K_NATURAL: N A T U R A L;
 K_NO: N O;
+K_IS: I S;
 K_NOT: N O T;
 K_NULL: N U L L;
 K_OFFSET: O F F S E T;

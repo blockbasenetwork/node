@@ -271,6 +271,10 @@ namespace BlockBase.DataProxy.Encryption
 
                     if (columnInfoRecord != null)
                     {
+                        if(row[i] == null){
+                            decryptedResults[j].Add(null);
+                            continue;
+                        }
                         var dataType = columnInfoRecord.LData.DataType;
 
                         if (dataType.DataTypeName == DataTypeEnum.ENCRYPTED)
