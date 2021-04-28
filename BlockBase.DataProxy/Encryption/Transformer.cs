@@ -576,7 +576,9 @@ namespace BlockBase.DataProxy.Encryption
                             selectStatement.SelectCoreStatement.CaseExpressions.Add(columnCaseExpression);
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
-                            selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
+                            var tableOrSubqueryToInsert = new TableOrSubquery(new estring(tableInfoRecord.Name));
+                            var isDuplicate = selectStatement.SelectCoreStatement.TablesOrSubqueries.ToList().Exists( x => x.TableName.Value == tableOrSubqueryToInsert.TableName.Value);
+                            if(!isDuplicate) selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(tableOrSubqueryToInsert);
                         }
                     }
                     else
@@ -616,7 +618,9 @@ namespace BlockBase.DataProxy.Encryption
                             _isSelectStatementNeeded = true; //marciak - if not unique we need to use buckets so we need to execute a select stament before
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
                             selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
-                            selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
+                            var tableOrSubqueryToInsert = new TableOrSubquery(new estring(tableInfoRecord.Name));
+                            var isDuplicate = selectStatement.SelectCoreStatement.TablesOrSubqueries.ToList().Exists( x => x.TableName.Value == tableOrSubqueryToInsert.TableName.Value);
+                            if(!isDuplicate) selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(tableOrSubqueryToInsert);
                         }
                     }
 
@@ -858,6 +862,18 @@ namespace BlockBase.DataProxy.Encryption
             var leftColumnDataType = leftColumnInfoRecord.LData.DataType;
 
             ComparisonExpression transformedComparisonExpression;
+
+            if(comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Is || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.IsNot)
+            {
+                transformedComparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)),
+                    comparisonExpression.Value,
+                    comparisonExpression.ComparisonOperator);
+
+                transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)));
+                transformedSelectCoreStatement.TryAddTable(new estring(leftTableInfoRecord.Name));
+                return transformedComparisonExpression;
+            }
 
             if (comparisonExpression.Value == null)
             {

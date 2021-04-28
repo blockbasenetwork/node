@@ -423,6 +423,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
         public string BuildString(Value value)
         {
             if (value.IsText) return "'" + value.ValueToInsert + "'";
+            if (value.ValueToInsert == null) return "null";
             return value.ValueToInsert;
         }
 

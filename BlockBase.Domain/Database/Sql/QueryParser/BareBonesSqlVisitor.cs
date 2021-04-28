@@ -524,9 +524,14 @@ namespace BlockBase.Domain.Database.QueryParser
             var exprLength = expr.expr().Length;
 
             var exprString = expr.GetText();
+            var exprOperator = "";
+            if (expr.@operator() != null) exprOperator = expr.@operator().GetText();
+            else if (expr.K_IS() != null && expr.K_NOT()!= null) exprOperator = "IS NOT";
+            else if (expr.K_IS() != null && expr.K_NOT()== null) exprOperator = "IS";
+
             if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null
-                && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
-                || exprString.Contains(">=") || exprString.Contains("=") || exprString.Contains("!=")))
+                && (exprOperator.Contains("<") || exprOperator.Contains("<=") || exprOperator.Contains(">")
+                || exprOperator.Contains(">=") || exprOperator.Contains("=") || exprOperator.Contains("!=")))
             {
                 var comparisonExpression = new ComparisonExpression(
                     new TableAndColumnName(
@@ -536,19 +541,17 @@ namespace BlockBase.Domain.Database.QueryParser
                     GetComparisonOperatorFromString(exprString));
 
                 return comparisonExpression;
-
-
             }
-
+            
             if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() == null
-                && (exprString.Contains("IS")))
+                && (exprOperator.Contains("IS")))
             {
                 var comparisonExpression = new ComparisonExpression(
                     new TableAndColumnName(
                         (estring)Visit(expr.table_name().complex_name()),
                         (estring)Visit(expr.column_name().complex_name())),
                     new Value(null),
-                    GetComparisonOperatorFromString(exprString));
+                    GetComparisonOperatorFromString(exprOperator));
 
                 return comparisonExpression;
 

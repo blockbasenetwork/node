@@ -330,7 +330,7 @@ namespace BlockBase.DataProxy.Encryption
             switch (expression)
             {
                 case ComparisonExpression comparisonExpression:
-                    if (comparisonExpression.Value == null) return decryptedResults;
+                    if (comparisonExpression.Value == null || comparisonExpression.Value.ValueToInsert == null) return decryptedResults;
                     return FilterComparisonExpression(comparisonExpression, decryptedResults, columnNames);
 
                 case LogicalExpression logicalExpression:
