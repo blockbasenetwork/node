@@ -538,7 +538,7 @@ namespace BlockBase.Domain.Database.QueryParser
                         (estring)Visit(expr.table_name().complex_name()),
                         (estring)Visit(expr.column_name().complex_name())),
                     new Value(expr.literal_value().GetText().Trim('\''), expr.literal_value().GetText().Contains("'")),
-                    GetComparisonOperatorFromString(exprString));
+                    GetComparisonOperatorFromString(exprOperator));
 
                 return comparisonExpression;
             }
@@ -672,21 +672,21 @@ namespace BlockBase.Domain.Database.QueryParser
 
         private ComparisonExpression.ComparisonOperatorEnum GetComparisonOperatorFromString(string exprString)
         {
-            if (exprString.Contains("<="))
+            if (exprString =="<=")
                 return ComparisonExpression.ComparisonOperatorEnum.SmallerOrEqualThan;
-            if (exprString.Contains(">="))
+            if (exprString == ">=")
                 return ComparisonExpression.ComparisonOperatorEnum.BiggerOrEqualThan;
-            if (exprString.Contains("<"))
+            if (exprString == "<")
                 return ComparisonExpression.ComparisonOperatorEnum.SmallerThan;
-            if (exprString.Contains(">"))
+            if (exprString == ">")
                 return ComparisonExpression.ComparisonOperatorEnum.BiggerThan;
-            if (exprString.Contains("!="))
+            if (exprString == "!=")
                 return ComparisonExpression.ComparisonOperatorEnum.Different;
-            if (exprString.Contains("="))
+            if (exprString == "=")
                 return ComparisonExpression.ComparisonOperatorEnum.Equal;
-            if (exprString.ToUpper().Contains("IS NOT"))
+            if (exprString == "IS NOT")
                 return ComparisonExpression.ComparisonOperatorEnum.IsNot;
-            if (exprString.ToUpper().Contains("IS"))
+            if (exprString == "IS")
                 return ComparisonExpression.ComparisonOperatorEnum.Is;
             
 
