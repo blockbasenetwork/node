@@ -263,16 +263,18 @@ namespace BlockBase.Runtime.Sql
                     allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName, transactionGroupId)));
                 }
             }
-            else if(updateRecordStatement.CaseExpressions.Count != 0 && changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)// TODO need to decrypt rows in case the update statement is used with a CASE statement
+            else if(updateRecordStatement != null)// TODO need to decrypt rows in case the update statement is used with a CASE statement
             {
-                var transformedUpdateRecordStatement = changeRecordSqlCommand.TransformedSqlStatement[0] as UpdateRecordStatement;
-                results = await _connector.ExecuteQuery(_generator.BuildStringToSimpleSelectStatement(transformedUpdateRecordStatement), _databaseName);
-                var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, results, _databaseName);
-                    var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
+                if(updateRecordStatement.CaseExpressions.Count != 0 && changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement){
+                    var transformedUpdateRecordStatement = changeRecordSqlCommand.TransformedSqlStatement[0] as UpdateRecordStatement;
+                    results = await _connector.ExecuteQuery(_generator.BuildStringToSimpleSelectStatement(transformedUpdateRecordStatement), _databaseName);
+                    var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, results, _databaseName);
+                        var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
 
-                foreach (var changeRecordsToExecute in changesToExecute)
-                {
-                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName, transactionGroupId)));
+                    foreach (var changeRecordsToExecute in changesToExecute)
+                    {
+                        allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName, transactionGroupId)));
+                    }
                 }
             } 
             else 
