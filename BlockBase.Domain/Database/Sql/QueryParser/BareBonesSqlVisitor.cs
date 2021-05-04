@@ -405,6 +405,8 @@ namespace BlockBase.Domain.Database.QueryParser
             if (dataTypeContext.K_DURATION() != null) return new DataType() { DataTypeName = DataTypeEnum.DURATION };
             if (dataTypeContext.K_INT() != null) return new DataType() { DataTypeName = DataTypeEnum.INT };
             if (dataTypeContext.K_TEXT() != null) return new DataType() { DataTypeName = DataTypeEnum.TEXT };
+            if (dataTypeContext.K_BIGINT() != null) return new DataType() { DataTypeName = DataTypeEnum.BIGINT };
+            if (dataTypeContext.K_SERIAL() != null) return new DataType() { DataTypeName = DataTypeEnum.SERIAL };
             if (dataTypeContext.K_ENCRYPTED() != null)
             {
                 var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED };
@@ -570,7 +572,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     new TableAndColumnName(
                         (estring)Visit(expr.table_column_name()[1].table_name().complex_name()),
                         (estring)Visit(expr.table_column_name()[1].column_name().complex_name())),
-                    GetComparisonOperatorFromString(exprString));
+                    GetComparisonOperatorFromString(exprOperator));
 
                 return comparisonExpression;
             }

@@ -379,6 +379,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
         }
         public string BuildString(DataTypeEnum dataType)
         {
+            if (dataType == DataTypeEnum.DOUBLE) return "REAL";
             if (dataType == DataTypeEnum.DATETIME) return "TIMESTAMP";
             if (dataType == DataTypeEnum.DURATION) return "INTERVAL";
             if (dataType == DataTypeEnum.ENCRYPTED) return "TEXT";

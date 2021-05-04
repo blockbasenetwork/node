@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -453,10 +454,24 @@ namespace BlockBase.Runtime.Sql
             try
             {
                 var databaseName = pendingTransactions.First().DatabaseName;
-                if (databaseName != "")
+                if (databaseName != ""){
+                    var stopWatch = new Stopwatch();
+                    stopWatch.Start();
                     await _connector.ExecuteCommandsWithTransactionNumber(pendingTransactions, databaseName);
-                else
+                    stopWatch.Stop();
+                    // Get the elapsed time as a TimeSpan value.
+                    TimeSpan ts = stopWatch.Elapsed;
+
+                    // Format and display the TimeSpan value.
+                    string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+                        ts.Hours, ts.Minutes, ts.Seconds,
+                        ts.Milliseconds / 10);
+                    Console.WriteLine("RunTime " + elapsedTime);
+                }
+                else{
                     await _connector.ExecuteCommands(pendingTransactions.Select(t => t.Json).ToList(), databaseName);
+                }
+                    
 
                 var completeTransactions = ReHashAndSignTransactions(pendingTransactions);
 

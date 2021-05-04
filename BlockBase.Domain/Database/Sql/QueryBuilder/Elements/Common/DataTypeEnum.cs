@@ -9,6 +9,8 @@
         DECIMAL,
         DOUBLE,
         TEXT,
-        ENCRYPTED
+        ENCRYPTED,
+        BIGINT,
+        SERIAL
     }
 }

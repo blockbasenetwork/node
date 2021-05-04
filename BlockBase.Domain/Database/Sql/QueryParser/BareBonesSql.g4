@@ -142,6 +142,8 @@ data_type: (
 		| K_DOUBLE
 		| K_TEXT
 		| K_ENCRYPTED bucket_number? (K_RANGE bucket_range)?
+		| K_BIGINT
+		| K_SERIAL
 	);
 
 bucket_number: NUMERIC_LITERAL;
@@ -192,6 +194,8 @@ keyword:
 	| K_DECIMAL
 	| K_DOUBLE
 	| K_TEXT
+	| K_BIGINT
+	| K_SERIAL
 	| K_ENCRYPTED
 	| K_RANGE
 	| K_ADD
@@ -322,6 +326,8 @@ K_INT: I N T;
 K_DECIMAL: D E C I M A L;
 K_DOUBLE: D O U B L E;
 K_TEXT: T E X T;
+K_BIGINT: B I G I N T;
+K_SERIAL: S E R I A L;
 
 K_ENCRYPTED: E N C R Y P T E D;
 K_RANGE: R A N G E;

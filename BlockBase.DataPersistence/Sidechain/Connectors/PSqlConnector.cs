@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using BlockBase.Domain.Configurations;
 using BlockBase.DataPersistence.Data.MongoDbEntities;
 using BlockBase.Domain.Blockchain;
+using System.Diagnostics;
 
 namespace BlockBase.DataPersistence.Sidechain.Connectors
 {
