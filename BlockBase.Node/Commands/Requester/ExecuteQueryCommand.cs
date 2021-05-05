@@ -13,6 +13,7 @@ using BlockBase.Domain.Requests;
 using BlockBase.Domain.Configurations;
 using BlockBase.Utils.Crypto;
 using System.Text;
+using System.Diagnostics;
 
 namespace BlockBase.Node.Commands.Requester
 {
@@ -62,7 +63,18 @@ namespace BlockBase.Node.Commands.Requester
 
                 if (!_databaseKeyManager.DataSynced) return new CommandExecutionResponse(HttpStatusCode.BadRequest, new OperationResponse(false, "Passwords and main key not set."));
                 
+                var stopWatch = new Stopwatch();
+                stopWatch.Start();
                 var queryResults = await _sqlCommandManager.Execute(_queryRequest.Query);
+                stopWatch.Stop();
+                // Get the elapsed time as a TimeSpan value.
+                TimeSpan ts = stopWatch.Elapsed;
+
+                // Format and display the TimeSpan value.
+                string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+                    ts.Hours, ts.Minutes, ts.Seconds,
+                    ts.Milliseconds / 10);
+                Console.WriteLine("RunTime Total" + elapsedTime);
 
                 return new CommandExecutionResponse(HttpStatusCode.OK, new OperationResponse<IList<QueryResult>>(queryResults));
             }

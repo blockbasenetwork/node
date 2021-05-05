@@ -277,6 +277,11 @@ namespace BlockBase.Runtime.Sql
                         allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName, transactionGroupId)));
                     }
                 }
+                else 
+                {
+                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName, transactionGroupId)));
+                }
+
             } 
             else 
             {
@@ -466,7 +471,7 @@ namespace BlockBase.Runtime.Sql
                     string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
                         ts.Hours, ts.Minutes, ts.Seconds,
                         ts.Milliseconds / 10);
-                    Console.WriteLine("RunTime " + elapsedTime);
+                    Console.WriteLine("RunTime execute transactions in batch " + elapsedTime);
                 }
                 else{
                     await _connector.ExecuteCommands(pendingTransactions.Select(t => t.Json).ToList(), databaseName);
