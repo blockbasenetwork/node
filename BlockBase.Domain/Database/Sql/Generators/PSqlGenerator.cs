@@ -383,6 +383,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
             if (dataType == DataTypeEnum.DATETIME) return "TIMESTAMP";
             if (dataType == DataTypeEnum.DURATION) return "INTERVAL";
             if (dataType == DataTypeEnum.ENCRYPTED) return "TEXT";
+            if (dataType == DataTypeEnum.UUID) return "uuid";
             return dataType + "";
         }
 

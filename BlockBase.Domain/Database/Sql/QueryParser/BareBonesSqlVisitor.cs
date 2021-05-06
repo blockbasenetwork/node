@@ -407,6 +407,7 @@ namespace BlockBase.Domain.Database.QueryParser
             if (dataTypeContext.K_TEXT() != null) return new DataType() { DataTypeName = DataTypeEnum.TEXT };
             if (dataTypeContext.K_BIGINT() != null) return new DataType() { DataTypeName = DataTypeEnum.BIGINT };
             if (dataTypeContext.K_SERIAL() != null) return new DataType() { DataTypeName = DataTypeEnum.SERIAL };
+            if (dataTypeContext.K_UUID() != null) return new DataType() { DataTypeName = DataTypeEnum.UUID };
             if (dataTypeContext.K_ENCRYPTED() != null)
             {
                 var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED };

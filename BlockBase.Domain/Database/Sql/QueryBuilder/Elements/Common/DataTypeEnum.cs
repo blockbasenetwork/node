@@ -11,6 +11,7 @@
         TEXT,
         ENCRYPTED,
         BIGINT,
-        SERIAL
+        SERIAL,
+        UUID
     }
 }
