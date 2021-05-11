@@ -44,6 +44,8 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions
 
         public enum ComparisonOperatorEnum
         {
+            Is,
+            IsNot,
             SmallerThan,
             SmallerOrEqualThan,
             BiggerThan,

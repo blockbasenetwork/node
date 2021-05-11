@@ -26,11 +26,27 @@ sql_stmt: (
 		| current_database_stmt
 		| list_databases_stmt
 		| if_stmt
+		| transaction_sql_stmt
 	);
+
+operation_sql_stmt: (
+		| insert_stmt
+		| update_stmt
+		| delete_stmt
+		| if_stmt
+	);	
+
+transaction_sql_stmt: begin_stmt operation_sql_stmt ';' ( operation_sql_stmt ';' )* commit_stmt;
 
 use_database_stmt: K_USE database_name;
 
 current_database_stmt: K_CURRENT_DATABASE;
+
+begin_stmt: K_BEGIN;
+
+commit_stmt: K_COMMIT;
+
+rollback_stmt: K_ROLLBACK;
 
 list_databases_stmt: K_LIST_DATABASES;
 
@@ -65,9 +81,7 @@ insert_stmt:
 	);
 
 update_stmt:
-	K_UPDATE table_name K_SET column_name '=' literal_value (
-		',' column_name '=' literal_value
-	)* (K_WHERE expr)?;
+	K_UPDATE table_name K_SET column_name '=' ( expr | case_expr ) (',' column_name '=' ( expr | case_expr ))* (K_WHERE expr)?;
 
 delete_stmt: K_DELETE K_FROM table_name ( K_WHERE expr)?;
 
@@ -87,7 +101,7 @@ simple_select_stmt:
 	)?;
 
 select_core:
-	K_SELECT ( K_DISTINCT )? result_column (',' result_column)* 
+	K_SELECT ( K_DISTINCT )? (result_column | case_expr) (',' (result_column | case_expr))* 
      K_FROM (table_or_subquery (',' table_or_subquery)* | join_clause)
 	 (K_WHERE expr | K_ENCRYPTED)?;
 
@@ -110,7 +124,7 @@ join_clause:
 
 join_operator:
 	','
-	| K_NATURAL? (K_LEFT K_OUTER? | K_INNER | K_CROSS)? K_JOIN;
+	| K_NATURAL? (K_FULL K_OUTER? | K_LEFT K_OUTER? | K_RIGHT K_OUTER? | K_INNER | K_CROSS)? K_JOIN;
 
 join_constraint: (
 		K_ON expr
@@ -128,6 +142,9 @@ data_type: (
 		| K_DOUBLE
 		| K_TEXT
 		| K_ENCRYPTED bucket_number? (K_RANGE bucket_range)?
+		| K_BIGINT
+		| K_SERIAL
+		| K_UUID
 	);
 
 bucket_number: NUMERIC_LITERAL;
@@ -142,12 +159,19 @@ column_constraint: (K_CONSTRAINT name)? (
 	);
 
 expr:  
-	table_name '.' column_name operator literal_value
+	literal_value
+	| table_name '.' column_name operator literal_value
+	| table_name '.' column_name ( K_IS K_NOT?) expr
 	| table_column_name operator table_column_name
 	| expr (K_AND | K_OR) expr
-	| '(' expr ')';
+	| '(' expr ')'
+	| expr K_NOT? K_IN ( '(' ( expr ( ',' expr )*
+                          )? 
+                      ')'
+                    | ( database_name '.' )? table_name );
 
-
+case_expr:
+	K_CASE table_column_name? ( K_WHEN expr K_THEN expr )+ ( K_ELSE expr )? K_END result_column?;
 
 foreign_key_clause:
 	K_REFERENCES foreign_table (
@@ -171,6 +195,9 @@ keyword:
 	| K_DECIMAL
 	| K_DOUBLE
 	| K_TEXT
+	| K_BIGINT
+	| K_SERIAL
+	| K_UUID
 	| K_ENCRYPTED
 	| K_RANGE
 	| K_ADD
@@ -197,9 +224,12 @@ keyword:
 	| K_JOIN
 	| K_KEY
 	| K_LEFT
+	| K_RIGHT
+	| K_FULL
 	| K_LIMIT
 	| K_NATURAL
 	| K_NO
+	| K_IS
 	| K_NOT
 	| K_NULL
 	| K_OFFSET
@@ -218,7 +248,15 @@ keyword:
 	| K_UPDATE
 	| K_USING
 	| K_VALUES
-	| K_WHERE;
+	| K_WHERE
+	| K_CASE
+	| K_WHEN
+	| K_THEN
+	| K_ELSE
+	| K_END
+	| K_BEGIN
+	| K_COMMIT
+	| K_ROLLBACK;
 
 name: complex_name;
 
@@ -290,6 +328,9 @@ K_INT: I N T;
 K_DECIMAL: D E C I M A L;
 K_DOUBLE: D O U B L E;
 K_TEXT: T E X T;
+K_BIGINT: B I G I N T;
+K_SERIAL: S E R I A L;
+K_UUID : U U I D;
 
 K_ENCRYPTED: E N C R Y P T E D;
 K_RANGE: R A N G E;
@@ -316,9 +357,12 @@ K_INTO: I N T O;
 K_JOIN: J O I N;
 K_KEY: K E Y;
 K_LEFT: L E F T;
+K_RIGHT: R I G H T;
+K_FULL: F U L L;
 K_LIMIT: L I M I T;
 K_NATURAL: N A T U R A L;
 K_NO: N O;
+K_IS: I S;
 K_NOT: N O T;
 K_NULL: N U L L;
 K_OFFSET: O F F S E T;
@@ -338,6 +382,16 @@ K_UPDATE: U P D A T E;
 K_USING: U S I N G;
 K_VALUES: V A L U E S;
 K_WHERE: W H E R E;
+
+K_CASE: C A S E;
+K_WHEN: W H E N;
+K_THEN: T H E N;
+K_END: E N D;
+K_ELSE: E L S E;
+
+K_BEGIN: B E G I N;
+K_COMMIT: C O M M I T;
+K_ROLLBACK: R O L L B A C K;
 
 IDENTIFIER:
 	'"' (~'"' | '""')* '"'

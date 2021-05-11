@@ -8,21 +8,30 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
     public class UpdateRecordStatement : IChangeRecordStatement
     {
         public estring TableName { get; set; }
-        public Dictionary<estring, Value> ColumnNamesAndUpdateValues { get; set; }
+        public Dictionary<estring, AbstractExpression> ColumnNamesAndUpdateValues { get; set; }
 
         public AbstractExpression WhereExpression { get; set; }
+        public IList<AbstractExpression> CaseExpressions { get; set; }
 
         public UpdateRecordStatement()
         {
-            ColumnNamesAndUpdateValues = new Dictionary<estring, Value>();
+            ColumnNamesAndUpdateValues = new Dictionary<estring, AbstractExpression>();
+            CaseExpressions = new List<AbstractExpression>();
         }
 
-        public UpdateRecordStatement(estring tableName, Dictionary<estring, Value> columnNamesAndUpdateValues, AbstractExpression whereClause)
+        public UpdateRecordStatement(estring tableName, Dictionary<estring, AbstractExpression> columnNamesAndUpdateValues, AbstractExpression whereClause)
         {
             TableName = tableName;
             ColumnNamesAndUpdateValues = columnNamesAndUpdateValues;
             WhereExpression = whereClause;
         }
+
+        /*public UpdateRecordStatement(estring tableName, Dictionary<estring, AbstractExpression> columnNamesAndUpdateValues, AbstractExpression caseExpression)
+        {
+            TableName = tableName;
+            ColumnNamesAndUpdateValues = columnNamesAndUpdateValues;
+            CaseExpression = caseExpression;
+        }*/
 
         public ISqlStatement Clone()
         {
@@ -30,7 +39,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record
             {
                 TableName = TableName.Clone(),
                 WhereExpression = WhereExpression.Clone(),
-                ColumnNamesAndUpdateValues = new Dictionary<estring, Value>()
+                ColumnNamesAndUpdateValues = new Dictionary<estring, AbstractExpression>()
             };
 
             foreach (var entry in ColumnNamesAndUpdateValues)

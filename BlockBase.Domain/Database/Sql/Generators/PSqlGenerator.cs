@@ -4,6 +4,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -25,6 +26,19 @@ namespace BlockBase.Domain.Database.Sql.Generators
         public string BuildString(UseDatabaseStatement useDatabaseStatement)
         {
             return "USE " + useDatabaseStatement.DatabaseName.Value;
+        }
+        public string BuildString(BeginStatement beginStatement)
+        {
+            return "BEGIN";
+        }
+        public string BuildString(CommitStatement commitStatement)
+        {
+            return "COMMIT";
+        }
+
+        public string BuildString(RollbackStatement rollbackStatement)
+        {
+            return "ROLLBACK";
         }
 
         public string BuildString(CreateTableStatement createTableStatement)
@@ -92,6 +106,8 @@ namespace BlockBase.Domain.Database.Sql.Generators
             var psqlString = "UPDATE " + updateRecordStatement.TableName.Value + " SET ";
 
             var first = true;
+
+            //TODO BUilD FROM CASE EXPRESSION
             foreach (var keyValuePair in updateRecordStatement.ColumnNamesAndUpdateValues)
             {
                 if (first) first = false;
@@ -117,6 +133,32 @@ namespace BlockBase.Domain.Database.Sql.Generators
             return psqlString;
         }
 
+        public string BuildString(TransactionStatement transactionStatement){
+            var psqlString ="";
+            foreach(var operation in transactionStatement.OperationStatements){
+                if(operation is InsertRecordStatement insertRecordStatement){
+                    psqlString+= BuildString(insertRecordStatement) +";";
+                } else if(operation is UpdateRecordStatement updateRecordStatement){
+                    psqlString+= BuildString(updateRecordStatement)+";";
+                } else if(operation is DeleteRecordStatement deleteRecordStatement){
+                    psqlString+= BuildString(deleteRecordStatement)+";";
+                }
+            }
+            psqlString = psqlString.Remove(psqlString.Length-1);
+            return psqlString;
+        }   
+
+        /*private string BuildString(ISqlStatement operationStatement){
+            if(operationStatement is InsertRecordStatement insertRecordStatement){
+                return BuildString(insertRecordStatement);
+            } else if(operationStatement is UpdateRecordStatement updateRecordStatement){
+                return BuildString(updateRecordStatement);
+            } else if(operationStatement is DeleteRecordStatement deleteRecordStatement){
+                return BuildString(deleteRecordStatement);
+            }
+            return "";
+        }*/
+
         public string BuildString(SimpleSelectStatement simpleSelectStatement)
         {
             var psqlString = BuildString(simpleSelectStatement.SelectCoreStatement);
@@ -141,13 +183,31 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
         public string BuildString(SelectCoreStatement selectCoreStatement)
         {
+            //TODO build string for case statement 
             var psqlString = "SELECT ";
 
             if (selectCoreStatement.DistinctFlag) psqlString += "DISTINCT ";
 
             for (int i = 0; i < selectCoreStatement.ResultColumns.Count; i++)
             {
+                var isCase = false;
                 if (i != 0) psqlString += ", ";
+                if(selectCoreStatement.CaseExpressions.Count != 0){
+                    foreach(var expression in selectCoreStatement.CaseExpressions){
+                        var caseExpression = expression as CaseExpression;
+                        var whenThenExpressionsList = new List<WhenThenExpression>();
+                        whenThenExpressionsList.AddRange(caseExpression.WhenThenExpressions);
+                        //var caseFromResultColumn = whenThenExpressionsList.Find(e => e.WhenExpression.LeftTableNameAndColumnName.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName) 
+                        //&& e.WhenExpression.LeftTableNameAndColumnName.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName));
+                        if(caseExpression.ResultColumn.ColumnName.Equals(selectCoreStatement.ResultColumns[i].ColumnName)
+                        && caseExpression.ResultColumn.TableName.Equals(selectCoreStatement.ResultColumns[i].TableName)){
+                            psqlString += BuildString(caseExpression);
+                            psqlString += selectCoreStatement.ResultColumns[i].ColumnName.Value;
+                            isCase = true;
+                        }
+                    }
+                }
+                if(isCase) continue;
                 psqlString += BuildString(selectCoreStatement.ResultColumns[i]);
             }
 
@@ -169,6 +229,40 @@ namespace BlockBase.Domain.Database.Sql.Generators
            
             if (selectCoreStatement.WhereExpression != null)
                 psqlString += " WHERE " + BuildString(selectCoreStatement.WhereExpression);
+
+            return psqlString;
+        }
+
+        public string BuildStringToSimpleSelectStatement(UpdateRecordStatement updateRecordStatement){
+            var psqlString = "SELECT ";
+
+            var commaAuxiliar = 0;
+
+            foreach(var entry in updateRecordStatement.ColumnNamesAndUpdateValues){
+                if(commaAuxiliar!=0) psqlString += ", ";
+                commaAuxiliar++;
+                var caseExpression = entry.Value as CaseExpression;
+                var commaWhenAuxiliar = 0;
+                foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                    ComparisonExpression whenExpression = null;
+                    if(whenThenExpression.WhenExpression is ComparisonExpression comparisonExpression){
+                        whenExpression = comparisonExpression;
+                    }else if(whenThenExpression.WhenExpression is LogicalExpression logicalExpression){
+                        var leftExpression = logicalExpression.LeftExpression as ComparisonExpression;
+                        whenExpression = leftExpression;
+                    }
+                    if(commaWhenAuxiliar!= 0) psqlString += ", ";
+                    commaWhenAuxiliar++;
+                    var resultColumn = whenExpression.LeftTableNameAndColumnName;
+                    psqlString += BuildString(new ResultColumn(resultColumn.TableName,resultColumn.ColumnName));
+                }
+                if(entry.Key != null){
+                    psqlString += ", " +BuildString(new ResultColumn(updateRecordStatement.TableName, new estring(entry.Key.Value)));
+                }
+                psqlString += ", " +BuildString(caseExpression);
+            }
+
+            psqlString += "FROM " +updateRecordStatement.TableName.Value +";";
 
             return psqlString;
         }
@@ -253,6 +347,23 @@ namespace BlockBase.Domain.Database.Sql.Generators
                    + logicalExpression.LogicalOperator + " "
                    + BuildString(logicalExpression.RightExpression);
 
+            else if (expression is LiteralValueExpression literalValueExpression)
+                exprString = "'" + literalValueExpression.LiteralValue.ValueToInsert + "'";
+
+            else if (expression is CaseExpression caseExpression) {
+                exprString = " CASE";
+                foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                    exprString += BuildString(whenThenExpression);
+                }
+                if(caseExpression.ElseExpression != null){
+                    exprString += " ELSE " +BuildString(caseExpression.ElseExpression);
+                }
+                exprString += " END ";
+            }
+            else if (expression is WhenThenExpression whenThenExpression)
+                exprString = " WHEN " + BuildString(whenThenExpression.WhenExpression) + " THEN "  +BuildString(whenThenExpression.ThenExpression);
+                
+
             if (expression.HasParenthesis) return "(" + exprString + ")";
             else return exprString;
         }
@@ -268,9 +379,11 @@ namespace BlockBase.Domain.Database.Sql.Generators
         }
         public string BuildString(DataTypeEnum dataType)
         {
+            if (dataType == DataTypeEnum.DOUBLE) return "REAL";
             if (dataType == DataTypeEnum.DATETIME) return "TIMESTAMP";
             if (dataType == DataTypeEnum.DURATION) return "INTERVAL";
             if (dataType == DataTypeEnum.ENCRYPTED) return "TEXT";
+            if (dataType == DataTypeEnum.UUID) return "uuid";
             return dataType + "";
         }
 
@@ -312,6 +425,7 @@ namespace BlockBase.Domain.Database.Sql.Generators
         public string BuildString(Value value)
         {
             if (value.IsText) return "'" + value.ValueToInsert + "'";
+            if (value.ValueToInsert == null) return "null";
             return value.ValueToInsert;
         }
 
@@ -336,6 +450,12 @@ namespace BlockBase.Domain.Database.Sql.Generators
 
                 case ComparisonExpression.ComparisonOperatorEnum.SmallerThan:
                     return "<";
+
+                case ComparisonExpression.ComparisonOperatorEnum.IsNot:
+                    return "IS NOT";
+
+                case ComparisonExpression.ComparisonOperatorEnum.Is:
+                    return "IS";
             }
             throw new FormatException("Comparison operator not recognized.");
         }

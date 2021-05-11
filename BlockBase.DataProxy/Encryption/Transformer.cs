@@ -12,6 +12,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
 using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.ComparisonExpression;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using static BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions.LogicalExpression;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 
 namespace BlockBase.DataProxy.Encryption
 {
@@ -94,11 +95,58 @@ namespace BlockBase.DataProxy.Encryption
                     CheckIfDatabaseAlreadyChosen();
                     command.TransformedSqlStatement = GetTransformedDeleteRecordStatement(deleteRecordStatement, _databaseInfoRecord.IV);
                     break;
+                case BeginStatement beginStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = GetTransformedBeginStatement(beginStatement, _databaseInfoRecord.IV);
+                    break;
+                case CommitStatement commitStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = GetTransformedCommitStatement(commitStatement, _databaseInfoRecord.IV);
+                    break;
+                case RollbackStatement rollbackStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = GetTransformedRollbackStatement(rollbackStatement, _databaseInfoRecord.IV);
+                    break;
+                case TransactionStatement transactionStatement:
+                    CheckIfDatabaseAlreadyChosen();
+                    command.TransformedSqlStatement = new List<ISqlStatement>() {GetTransformedTransactionStatement(transactionStatement, _databaseInfoRecord.IV)};
+                    break;
 
             }
         }
         #region Transform SqlStatements
 
+        private List<ISqlStatement> GetTransformedBeginStatement(BeginStatement beginStatement, string databaseIV){
+            return new List<ISqlStatement>(){
+                new BeginStatement()
+            };
+        }
+
+        private List<ISqlStatement> GetTransformedCommitStatement(CommitStatement commitStatement, string databaseIV){
+            return new List<ISqlStatement>(){
+                new CommitStatement()
+            };
+        }
+        private List<ISqlStatement> GetTransformedRollbackStatement(RollbackStatement rollbackStatement, string databaseIV){
+            return new List<ISqlStatement>(){
+                new RollbackStatement()
+            };
+        }
+
+        private ISqlStatement GetTransformedTransactionStatement(TransactionStatement transactionStatement, string databaseIV){
+            var transformedTransactionStatement = new TransactionStatement();
+            foreach(var operation in transactionStatement.OperationStatements){
+                if(operation is InsertRecordStatement){
+                    transformedTransactionStatement.OperationStatements.Add(GetTransformedInsertRecordStatement((InsertRecordStatement)operation,databaseIV));
+                } else if(operation is UpdateRecordStatement){
+                    transformedTransactionStatement.OperationStatements.AddRange(GetTransformedUpdateRecordStatement((UpdateRecordStatement)operation,databaseIV));
+                } else if(operation is DeleteRecordStatement){
+                    transformedTransactionStatement.OperationStatements.AddRange(GetTransformedDeleteRecordStatement((DeleteRecordStatement)operation,databaseIV));
+                }
+                
+            }
+            return transformedTransactionStatement;
+        }
         private ISqlStatement GetTransformedIfStatment(IfStatement ifStatement, string databaseIV)
         {
             return GetTransformedSimpleSelectStatement(ifStatement.SimpleSelectStatement, databaseIV);
@@ -329,66 +377,119 @@ namespace BlockBase.DataProxy.Encryption
         }
         private ISqlStatement GetTransformedSelectCoreStatement(SelectCoreStatement selectCoreStatement, string databaseIV)
         {
+            //TODO transform for case statement
             var transformedSelectStatement = new SelectCoreStatement();
+            var listOfResultColumnsFromCaseExpressions = new List<ResultColumn>();
+            var listOfCaseExpressions = new List<CaseExpression>();
+            var listOfAllResultColumns = new List<ResultColumn>();
 
-            foreach (var resultColumn in selectCoreStatement.ResultColumns)
+            listOfAllResultColumns.AddRange(selectCoreStatement.ResultColumns);
+
+            if(selectCoreStatement.CaseExpressions.Count != 0){
+                foreach(var abstractExpression in selectCoreStatement.CaseExpressions){
+                    var caseExpression = abstractExpression as CaseExpression;
+                    if(!listOfAllResultColumns.Contains(caseExpression.ResultColumn)){
+                        listOfAllResultColumns.Add(caseExpression.ResultColumn);
+        
+                    }
+                    listOfResultColumnsFromCaseExpressions.Add(caseExpression.ResultColumn);
+                    listOfCaseExpressions.Add(caseExpression);
+                }
+            }
+
+            foreach (var resultColumn in listOfAllResultColumns)
             {
                 var tableInfoRecord = GetInfoRecordThrowErrorIfNotExists(resultColumn.TableName, databaseIV);
-
-                if (!resultColumn.AllColumnsfFlag)
-                {
-                    var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(resultColumn.ColumnName, tableInfoRecord.IV);
-
-                    transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                if(listOfResultColumnsFromCaseExpressions.Contains(resultColumn)){
+                    if (!resultColumn.AllColumnsfFlag)
                     {
-                        TableName = new estring(tableInfoRecord.Name),
-                        ColumnName = new estring(columnInfoRecord.Name),
-                        AllColumnsfFlag = false
-                    });
-
-                    if (columnInfoRecord.LData.EncryptedIVColumnName != null)
-                    {
-
-                        transformedSelectStatement.ResultColumns.Add(new ResultColumn()
-                        {
-                            TableName = new estring(tableInfoRecord.Name),
-                            ColumnName = new estring(columnInfoRecord.LData.EncryptedIVColumnName),
+                        var caseExpression = listOfCaseExpressions.FirstOrDefault(x => x.ResultColumn.Equals(resultColumn));
+                        var columnInfoRecordIsNotNull = false;
+                        foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                            InfoRecord columnInfoRecord = null;
+                            if(whenThenExpression.WhenExpression is ComparisonExpression comparisonExpression){
+                                columnInfoRecord = GetInfoRecordReturnNullIfNotExists(comparisonExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
+                            }else if(whenThenExpression.WhenExpression is LogicalExpression logicalExpression){
+                                var leftExpression = logicalExpression.LeftExpression as ComparisonExpression;
+                                columnInfoRecord = GetInfoRecordReturnNullIfNotExists(leftExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
+                            }
+                            
+                            
+                            columnInfoRecordIsNotNull = columnInfoRecord != null;
+                        }
+                        var newResultColumn = new ResultColumn(){
+                            TableName = resultColumn.TableName,
+                            ColumnName = resultColumn.ColumnName,
                             AllColumnsfFlag = false
-                        });
+                        };
+                        if(columnInfoRecordIsNotNull  && !transformedSelectStatement.ResultColumns.Contains(newResultColumn)){
+                            transformedSelectStatement.ResultColumns.Add(newResultColumn);
+                        }
                     }
-                }
+                } 
+                else {
 
-                else
-                {
-                    var columnInfoRecords = _encryptor.FindChildren(tableInfoRecord.IV);
-
-                    foreach (var columnInfoRecord in columnInfoRecords)
+                    if (!resultColumn.AllColumnsfFlag)
                     {
-                        transformedSelectStatement.ResultColumns.Add(new ResultColumn()
-                        {
-                            TableName = new estring(tableInfoRecord.Name),
-                            ColumnName = new estring(columnInfoRecord.Name),
-                            AllColumnsfFlag = false
-                        });
 
-                        if (columnInfoRecord.LData.EncryptedIVColumnName != null)
-                        {
+                        var columnInfoRecord = GetInfoRecordReturnNullIfNotExists(resultColumn.ColumnName, tableInfoRecord.IV);
 
+                        if(columnInfoRecord != null){
                             transformedSelectStatement.ResultColumns.Add(new ResultColumn()
                             {
                                 TableName = new estring(tableInfoRecord.Name),
-                                ColumnName = new estring(columnInfoRecord.LData.EncryptedIVColumnName),
+                                ColumnName = new estring(columnInfoRecord.Name),
                                 AllColumnsfFlag = false
                             });
+
+                            if (columnInfoRecord.LData.EncryptedIVColumnName != null)
+                            {
+                                transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                                {
+                                    TableName = new estring(tableInfoRecord.Name),
+                                    ColumnName = new estring(columnInfoRecord.LData.EncryptedIVColumnName),
+                                    AllColumnsfFlag = false
+                                });
+                            }
+                        }
+                    }
+
+                    else
+                    {
+                        var columnInfoRecords = _encryptor.FindChildren(tableInfoRecord.IV);
+
+                        foreach (var columnInfoRecord in columnInfoRecords)
+                        {
+                            transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                            {
+                                TableName = new estring(tableInfoRecord.Name),
+                                ColumnName = new estring(columnInfoRecord.Name),
+                                AllColumnsfFlag = false
+                            });
+
+                            if (columnInfoRecord.LData.EncryptedIVColumnName != null)
+                            {
+
+                                transformedSelectStatement.ResultColumns.Add(new ResultColumn()
+                                {
+                                    TableName = new estring(tableInfoRecord.Name),
+                                    ColumnName = new estring(columnInfoRecord.LData.EncryptedIVColumnName),
+                                    AllColumnsfFlag = false
+                                });
+                            }
                         }
                     }
                 }
-
             }
 
             if (selectCoreStatement.JoinClause != null) transformedSelectStatement.JoinClause = GetTransformedJoinClause(selectCoreStatement.JoinClause, databaseIV);
 
+            foreach(var caseExpression in listOfCaseExpressions){
+                transformedSelectStatement.CaseExpressions.Add(GetTransformedExpression(caseExpression, databaseIV, transformedSelectStatement));
+            }
             transformedSelectStatement.TablesOrSubqueries = selectCoreStatement.TablesOrSubqueries.Select(t => GetTransformedTableOrSubquery(t, databaseIV)).ToList();
+
+            //transformedSelectStatement.CaseExpression = GetTransformedExpression(selectCoreStatement.CaseExpression, databaseIV, transformedSelectStatement);
 
             transformedSelectStatement.WhereExpression = GetTransformedExpression(selectCoreStatement.WhereExpression, databaseIV, transformedSelectStatement);
 
@@ -397,6 +498,7 @@ namespace BlockBase.DataProxy.Encryption
 
         private IList<ISqlStatement> GetTransformedUpdateRecordStatement(UpdateRecordStatement updateRecordStatement, string databaseIV)
         {
+            //TODO: UPDATE FOR OTHER EXPRESSIONS IN VALUE
             _isSelectStatementNeeded = false;
             var sqlStatements = new List<ISqlStatement>();
 
@@ -408,49 +510,229 @@ namespace BlockBase.DataProxy.Encryption
 
             transformedUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
-            foreach (var columnValue in updateRecordStatement.ColumnNamesAndUpdateValues)
+            foreach (var columnValue in updateRecordStatement.ColumnNamesAndUpdateValues) //TODO remove or put case values in columnname?
             {
                 var columnInfoRecord = GetInfoRecordThrowErrorIfNotExists(columnValue.Key, tableInfoRecord.IV);
 
                 var columnDataType = columnInfoRecord.LData.DataType;
+                
 
-                if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                if (columnValue.Value is CaseExpression)
                 {
-                    if (columnInfoRecord.LData.EncryptedIVColumnName == null)
+                    var columnCaseExpression = (CaseExpression)columnValue.Value;
+                    if(columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                    {
+                        if(columnInfoRecord.LData.EncryptedIVColumnName == null)
+                        {
+                            var listOfWhenThenExpressions = new List<WhenThenExpression>();
+                            foreach(var whenThenExpression in columnCaseExpression.WhenThenExpressions)
+                            {
+                                var encryptedWhenThenExpression = new WhenThenExpression(
+                                    whenThenExpression.WhenExpression,
+                                    new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(whenThenExpression.ThenExpression.LiteralValue.ValueToInsert,columnInfoRecord), true))
+                                );
+                                listOfWhenThenExpressions.Add(encryptedWhenThenExpression);
+                            }
+                            LiteralValueExpression elseExpression = null;
+                            if(columnCaseExpression.ElseExpression != null){
+                                elseExpression = new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(columnCaseExpression.ElseExpression.LiteralValue.ValueToInsert, columnInfoRecord), true));
+                            }
+                            transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                            new estring(columnInfoRecord.Name),
+                            new CaseExpression(listOfWhenThenExpressions, elseExpression)  
+                            );
+                        }
+                        else
+                        {
+                            var listOfWhenThenExpressions = new List<WhenThenExpression>();
+                            foreach(var whenThenExpression in columnCaseExpression.WhenThenExpressions)
+                            {
+                                var encryptedWhenThenExpression = new WhenThenExpression(
+                                    GetTransformedWhenExpression(whenThenExpression.WhenExpression as ComparisonExpression, databaseIV) as ComparisonExpression,
+                                    new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(whenThenExpression.ThenExpression.LiteralValue.ValueToInsert,columnInfoRecord), true))
+                                );
+                                InfoRecord whenColumnInfoRecord = null;
+                                if(whenThenExpression.WhenExpression is ComparisonExpression comparisonExpression){
+                                    whenColumnInfoRecord = GetInfoRecordReturnNullIfNotExists(comparisonExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
+                                }else if(whenThenExpression.WhenExpression is LogicalExpression logicalExpression){
+                                    var leftExpression = logicalExpression.LeftExpression as ComparisonExpression;
+                                    whenColumnInfoRecord = GetInfoRecordReturnNullIfNotExists(leftExpression.LeftTableNameAndColumnName.ColumnName, tableInfoRecord.IV);
+                                }
+                                selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(whenColumnInfoRecord.Name)));
+                                if(whenColumnInfoRecord.LData.EncryptedIVColumnName!=null) selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(whenColumnInfoRecord.LData.EncryptedIVColumnName)));
+                                listOfWhenThenExpressions.Add(encryptedWhenThenExpression);
+                            }
+                            LiteralValueExpression elseExpression = null;
+                            if(columnCaseExpression.ElseExpression != null){
+                                elseExpression = new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(columnCaseExpression.ElseExpression.LiteralValue.ValueToInsert, columnInfoRecord), true));
+                            }
+                            
+            
+                            transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                            new estring(columnInfoRecord.Name),
+                            new CaseExpression(listOfWhenThenExpressions, elseExpression)  
+                            );
+                            _isSelectStatementNeeded = true; 
+                            selectStatement.SelectCoreStatement.CaseExpressions.Add(columnCaseExpression);
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+                            var tableOrSubqueryToInsert = new TableOrSubquery(new estring(tableInfoRecord.Name));
+                            var isDuplicate = selectStatement.SelectCoreStatement.TablesOrSubqueries.ToList().Exists( x => x.TableName.Value == tableOrSubqueryToInsert.TableName.Value);
+                            if(!isDuplicate) selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(tableOrSubqueryToInsert);
+                        }
+                    }
+                    else
+                    {
+                        foreach(var whenThenExpression in columnCaseExpression.WhenThenExpressions){
+                            InfoRecord tableInfoRecordForWhen = null;
+                            if(whenThenExpression.WhenExpression is ComparisonExpression comparisonExpression){
+                                tableInfoRecordForWhen = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.LeftTableNameAndColumnName.TableName, databaseIV);
+                                comparisonExpression.LeftTableNameAndColumnName.TableName = new estring(tableInfoRecordForWhen.Name);
+                            }else if(whenThenExpression.WhenExpression is LogicalExpression logicalExpression){
+                                var leftExpression = logicalExpression.LeftExpression as ComparisonExpression;
+                                tableInfoRecordForWhen = GetInfoRecordThrowErrorIfNotExists(leftExpression.LeftTableNameAndColumnName.ColumnName, databaseIV);
+                                (logicalExpression.LeftExpression as ComparisonExpression).LeftTableNameAndColumnName.TableName = new estring(tableInfoRecordForWhen.Name);
+                            }
+                            
+                        }
+                        //if (columnCaseExpression.LiteralValue.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnLiteralValue.LiteralValue.IsText = true;
                         transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
-                           new estring(columnInfoRecord.Name),
-                           new Value(_encryptor.EncryptUniqueValue(columnValue.Value.ValueToInsert, columnInfoRecord), true)
-                           );
+                            new estring(columnInfoRecord.Name),
+                            columnValue.Value
+                            );
+                    }
+                } 
+                else 
+                {
+                    var columnLiteralValue = (LiteralValueExpression)columnValue.Value;
+                    if (columnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+                    {
+                        if (columnInfoRecord.LData.EncryptedIVColumnName == null)
+                            transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                            new estring(columnInfoRecord.Name),
+                            new LiteralValueExpression(new Value(_encryptor.EncryptUniqueValue(columnLiteralValue.LiteralValue.ValueToInsert, columnInfoRecord), true))
+                            );
+
+                        else
+                        {
+                            _isSelectStatementNeeded = true; //marciak - if not unique we need to use buckets so we need to execute a select stament before
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
+                            selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
+                            var tableOrSubqueryToInsert = new TableOrSubquery(new estring(tableInfoRecord.Name));
+                            var isDuplicate = selectStatement.SelectCoreStatement.TablesOrSubqueries.ToList().Exists( x => x.TableName.Value == tableOrSubqueryToInsert.TableName.Value);
+                            if(!isDuplicate) selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(tableOrSubqueryToInsert);
+                        }
+                    }
 
                     else
                     {
-                        _isSelectStatementNeeded = true; //marciak - if not unique we need to use buckets so we need to execute a select stament before
-                        selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.Name)));
-                        selectStatement.SelectCoreStatement.ResultColumns.Add(new ResultColumn(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)));
-                        selectStatement.SelectCoreStatement.TablesOrSubqueries.Add(new TableOrSubquery(new estring(tableInfoRecord.Name)));
+                        if (columnLiteralValue.LiteralValue.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnLiteralValue.LiteralValue.IsText = true;
+                        transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                            new estring(columnInfoRecord.Name),
+                            columnValue.Value
+                            );
                     }
                 }
-
-                else
-                {
-                    if (columnValue.Value.ValueToInsert.ToLower() != "null" && ( columnDataType.DataTypeName == DataTypeEnum.TEXT || columnDataType.DataTypeName == DataTypeEnum.DATETIME)) columnValue.Value.IsText = true;
-                    transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(
-                           new estring(columnInfoRecord.Name),
-                           columnValue.Value
-                           );
-                }
             }
-
+            
             selectStatement.SelectCoreStatement.WhereExpression = GetTransformedExpression(updateRecordStatement.WhereExpression, databaseIV, selectStatement.SelectCoreStatement);
+
             if (_isSelectStatementNeeded) sqlStatements.Add(selectStatement);
 
             if (transformedUpdateRecordStatement.ColumnNamesAndUpdateValues.Count != 0)
             {
                 if (selectStatement.SelectCoreStatement.WhereExpression != null) transformedUpdateRecordStatement.WhereExpression = selectStatement.SelectCoreStatement.WhereExpression.Clone();
+                if (selectStatement.SelectCoreStatement.CaseExpressions.Count != 0) 
+                {
+                    (transformedUpdateRecordStatement.CaseExpressions as List<AbstractExpression>).AddRange(selectStatement.SelectCoreStatement.CaseExpressions);
+
+                }
                 sqlStatements.Add(transformedUpdateRecordStatement);
             }
 
             return sqlStatements;
+        }
+
+        private AbstractExpression GetTransformedWhenExpression(ComparisonExpression comparisonExpression, string databaseIV)
+        {
+            var leftTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.LeftTableNameAndColumnName.TableName, databaseIV);
+
+            var leftColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.LeftTableNameAndColumnName.ColumnName, leftTableInfoRecord.IV);
+
+            var leftColumnDataType = leftColumnInfoRecord.LData.DataType;
+
+            ComparisonExpression transformedComparisonExpression;
+
+            if (comparisonExpression.Value == null)
+            {
+                // marciak - it's not possible to compare encrypted data column with another column, because for that it would be needed to get all the other column values and calculate the bucket for each
+                if (leftColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
+                var rightTableInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.TableName, databaseIV);
+                var rightColumnInfoRecord = GetInfoRecordThrowErrorIfNotExists(comparisonExpression.RightTableNameAndColumnName.ColumnName, rightTableInfoRecord.IV);
+
+                var rightColumnDataType = rightColumnInfoRecord.LData.DataType; ;
+                if (rightColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED) throw new Exception("Can't compare encrypted data column with another column.");
+
+                transformedComparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)),
+                    new TableAndColumnName(new estring(rightTableInfoRecord.Name), new estring(rightColumnInfoRecord.Name)),
+                    comparisonExpression.ComparisonOperator);
+                return transformedComparisonExpression;
+            }
+
+            if (comparisonExpression.Value.ValueToInsert.ToLower() != "null" && (leftColumnDataType.DataTypeName == DataTypeEnum.TEXT || leftColumnDataType.DataTypeName == DataTypeEnum.DATETIME)) comparisonExpression.Value.IsText = true;
+
+            transformedComparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)),
+                    comparisonExpression.Value,
+                    comparisonExpression.ComparisonOperator);
+
+            if (leftColumnDataType.DataTypeName == DataTypeEnum.ENCRYPTED)
+            {
+                var isColumnUnique = leftColumnInfoRecord.LData.EncryptedIVColumnName == null;
+
+                // marciak - if = or !=
+                if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Equal || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Different)
+                {
+                    if (!isColumnUnique)
+                    {
+                        if (leftColumnInfoRecord.LData.EncryptedEqualityColumnName != null)
+                        {
+                            transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedEqualityColumnName);
+                            transformedComparisonExpression.Value = new Value(_encryptor.CreateEqualityBktValue(comparisonExpression.Value.ValueToInsert, leftColumnInfoRecord, leftColumnDataType), true);
+                        }
+                        // marciak - range bucket value is used if equality bucket value was not specified
+                        else
+                        {
+                            if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))
+                            {
+                                transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedRangeColumnName);
+                                transformedComparisonExpression.Value = new Value(_encryptor.GetEqualRangeBktValue(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType), true);
+                            }
+                        }
+                    }
+                    else
+                        transformedComparisonExpression.Value = new Value(_encryptor.EncryptUniqueValue(comparisonExpression.Value.ValueToInsert, leftColumnInfoRecord), true);
+                }
+                else
+                {
+                    transformedComparisonExpression.LeftTableNameAndColumnName.ColumnName = new estring(leftColumnInfoRecord.LData.EncryptedRangeColumnName);
+                    if (double.TryParse(comparisonExpression.Value.ValueToInsert, out double valueDoubleToInsert))
+                    {
+                        IList<string> bktValues;
+                        if (comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerOrEqualThan || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.BiggerThan)
+                            bktValues = _encryptor.GetRangeBktValues(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType, true);
+                        else
+                            bktValues = _encryptor.GetRangeBktValues(valueDoubleToInsert, leftColumnInfoRecord, leftColumnDataType, false);
+
+                        return TransformBktValuesInLogicalExpression(bktValues, transformedComparisonExpression.LeftTableNameAndColumnName);
+                    }
+                    else
+                        throw new Exception("Tried to compare variable that is not a number.");
+                }
+            }
+
+            return transformedComparisonExpression;
         }
 
         private IList<ISqlStatement> GetTransformedDeleteRecordStatement(DeleteRecordStatement deleteRecordStatement, string databaseIV)
@@ -532,6 +814,8 @@ namespace BlockBase.DataProxy.Encryption
         {
             switch (expression)
             {
+                case LiteralValueExpression literalValueExpression: //TODO Need to transform 
+                    return literalValueExpression;
                 case ComparisonExpression comparisonExpression:
                     return GetTransformedComparisonExpression(comparisonExpression, databaseIV, transformedSelectCoreStatement);
 
@@ -544,6 +828,27 @@ namespace BlockBase.DataProxy.Encryption
                         HasParenthesis = logicalExpression.HasParenthesis
                     };
                     return newLogicalExpression;
+                case CaseExpression caseExpression:
+                    
+                    var listOfWhenThenExpressions = new List<WhenThenExpression>();
+                    foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                        listOfWhenThenExpressions.Add(GetTransformedExpression(whenThenExpression, databaseIV, transformedSelectCoreStatement) as WhenThenExpression);
+                    }
+                    var newCaseExpression = new CaseExpression(){
+                        WhenThenExpressions = listOfWhenThenExpressions,
+                        ElseExpression = GetTransformedExpression(caseExpression.ElseExpression, databaseIV, transformedSelectCoreStatement) as LiteralValueExpression,
+                        ResultColumn = caseExpression.ResultColumn  // am i supposed to transform the result column? 
+                    };
+
+                    return newCaseExpression;
+                case WhenThenExpression whenThenExpression:
+                    var newWhenThenExpression = new WhenThenExpression
+                    {
+                        WhenExpression = GetTransformedExpression(whenThenExpression.WhenExpression, databaseIV, transformedSelectCoreStatement),
+                        ThenExpression = GetTransformedExpression(whenThenExpression.ThenExpression, databaseIV, transformedSelectCoreStatement) as LiteralValueExpression,
+                        HasParenthesis = whenThenExpression.HasParenthesis
+                    };
+                    return newWhenThenExpression;
             }
             return null;
         }
@@ -557,6 +862,18 @@ namespace BlockBase.DataProxy.Encryption
             var leftColumnDataType = leftColumnInfoRecord.LData.DataType;
 
             ComparisonExpression transformedComparisonExpression;
+
+            if(comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.Is || comparisonExpression.ComparisonOperator == ComparisonOperatorEnum.IsNot)
+            {
+                transformedComparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)),
+                    comparisonExpression.Value,
+                    comparisonExpression.ComparisonOperator);
+
+                transformedSelectCoreStatement.TryAddResultColumn(new TableAndColumnName(new estring(leftTableInfoRecord.Name), new estring(leftColumnInfoRecord.Name)));
+                transformedSelectCoreStatement.TryAddTable(new estring(leftTableInfoRecord.Name));
+                return transformedComparisonExpression;
+            }
 
             if (comparisonExpression.Value == null)
             {
@@ -799,9 +1116,9 @@ namespace BlockBase.DataProxy.Encryption
         {
             return new UpdateRecordStatement(
                     INFO_TABLE_NAME,
-                    new Dictionary<estring, Value>() {
-                        { NAME, new Value(name, true) },
-                        { KEY_NAME, keyName != null ? new Value(keyName, true) : new Value("null", false) }
+                    new Dictionary<estring, AbstractExpression>() {
+                        { NAME, new LiteralValueExpression(new Value(name, true)) },
+                        { KEY_NAME, keyName != null ? new LiteralValueExpression(new Value(keyName, true)) : new LiteralValueExpression(new Value("null", false)) }
                     },
                     new ComparisonExpression(new TableAndColumnName(INFO_TABLE_NAME, IV),
                         new Value(iv, true),
@@ -841,6 +1158,13 @@ namespace BlockBase.DataProxy.Encryption
         {
             var infoRecord = _encryptor.FindInfoRecord(name, parentIV);
             if (infoRecord == null) throw new Exception("Relation '" + name.Value + "' does not exist.");
+            return infoRecord;
+        }
+
+        private InfoRecord GetInfoRecordReturnNullIfNotExists(estring name, string parentIV)
+        {
+            var infoRecord = _encryptor.FindInfoRecord(name, parentIV);
+            if (infoRecord == null) return null;
             return infoRecord;
         }
 

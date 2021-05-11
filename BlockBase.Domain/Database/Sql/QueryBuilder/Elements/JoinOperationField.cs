@@ -31,6 +31,8 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements
         {
             NATURAL,
             LEFT,
+            RIGHT,
+            FULL,
             OUTER,
             INNER,
             CROSS

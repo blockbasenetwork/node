@@ -65,9 +65,20 @@ namespace BlockBase.DataProxy.Encryption
         {
             var originalChangeRecordStatement = (IChangeRecordStatement)changeRecordSqlCommand.OriginalSqlStatement;
             var transformedSimpleSelectStatement = (SimpleSelectStatement)changeRecordSqlCommand.TransformedSqlStatement[0];
+            var originalUpdateStatement = changeRecordSqlCommand.OriginalSqlStatement as UpdateRecordStatement;
 
             var decryptedResults = DecryptRows(transformedSimpleSelectStatement, allResults, databaseName, out IList<TableAndColumnName> columnNames);
-            var filteredResults = FilterExpression(originalChangeRecordStatement.WhereExpression, decryptedResults, columnNames);
+            IList<IList<string>> filteredResults;
+            if(originalUpdateStatement.CaseExpressions.Count != 0){ //TODO Only deals with 1 case at a time
+                var firstCaseExpression = originalUpdateStatement.CaseExpressions.FirstOrDefault() as CaseExpression;
+                var firstWhenThenExpression = firstCaseExpression.WhenThenExpressions.FirstOrDefault() as WhenThenExpression;
+                filteredResults = FilterExpression(firstWhenThenExpression.WhenExpression, decryptedResults, columnNames);
+                if(firstCaseExpression.ElseExpression!= null){
+                    (filteredResults as List<IList<string>>).AddRange(FilterExpression(firstCaseExpression.ElseExpression,decryptedResults,columnNames));
+                }
+            } else {
+                filteredResults = FilterExpression(originalChangeRecordStatement.WhereExpression, decryptedResults, columnNames);
+            }
 
             var databaseInfoRecord = _encryptor.FindInfoRecord(new estring(databaseName), null);
             var tableInfoRecord = _encryptor.FindInfoRecord(originalChangeRecordStatement.TableName, databaseInfoRecord.IV);
@@ -118,10 +129,8 @@ namespace BlockBase.DataProxy.Encryption
             return changeRecordStatements;
         }
 
-        private IList<UpdateRecordStatement> GetAdditionalUpdateRecordStatements(UpdateRecordStatement originalUpdateRecordStatement, IList<TableAndColumnName> columnNames, InfoRecord tableInfoRecord, IList<IList<string>> filteredResults)
-        {
+        private IList<UpdateRecordStatement> GetAdditionalUpdateWithCaseRecordStatements(UpdateRecordStatement originalUpdateRecordStatement, IList <TableAndColumnName> columnNames, InfoRecord tableInfoRecord, IList<IList<string>> filteredResults){
             var updateRecordStatements = new List<UpdateRecordStatement>();
-
             foreach (var columnValue in originalUpdateRecordStatement.ColumnNamesAndUpdateValues)
             {
                 var columnInfoRecord = _encryptor.FindInfoRecord(columnValue.Key, tableInfoRecord.IV);
@@ -135,9 +144,9 @@ namespace BlockBase.DataProxy.Encryption
                     var additionalUpdateRecordStatement = new UpdateRecordStatement();
                     additionalUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
 
-                    var encryptedValue = new Value(_encryptor.EncryptNormalValue(columnValue.Value.ValueToInsert, columnInfoRecord, out string generatedIV), true);
-                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), encryptedValue);
-                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new Value(generatedIV, true));
+                    var encryptedValue = new Value(_encryptor.EncryptNormalValue(((LiteralValueExpression)columnValue.Value).LiteralValue.ValueToInsert, columnInfoRecord, out string generatedIV), true);
+                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), new LiteralValueExpression(encryptedValue));
+                    additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new LiteralValueExpression(new Value(generatedIV, true)));
 
                     var oldIV = row[ivIndexColumn];
                     additionalUpdateRecordStatement.WhereExpression = new ComparisonExpression(
@@ -147,6 +156,78 @@ namespace BlockBase.DataProxy.Encryption
 
                     updateRecordStatements.Add(additionalUpdateRecordStatement);
                 }
+            }
+            return updateRecordStatements;
+            
+        }
+
+        private IList<UpdateRecordStatement> GetAdditionalUpdateRecordStatements(UpdateRecordStatement originalUpdateRecordStatement, IList<TableAndColumnName> columnNames, InfoRecord tableInfoRecord, IList<IList<string>> filteredResults)
+        {
+            //if(originalUpdateRecordStatement.CaseExpressions.Count!=0){
+            //   return GetAdditionalUpdateWithCaseRecordStatements(originalUpdateRecordStatement, columnNames, tableInfoRecord, filteredResults);
+            //}
+            var updateRecordStatements = new List<UpdateRecordStatement>();
+            foreach (var columnValue in originalUpdateRecordStatement.ColumnNamesAndUpdateValues)
+            {
+                if(columnValue.Value is CaseExpression caseExpression)
+                {
+                    var columnInfoRecord = _encryptor.FindInfoRecord(columnValue.Key, tableInfoRecord.IV);
+                    if (columnInfoRecord.LData.EncryptedIVColumnName == null) continue;
+
+                    var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                    var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName + "." + columnInfoRecord.LData.EncryptedIVColumnName);
+                    //foreach (var row in filteredResults)
+                    //{
+                        foreach(var whenThenExpression in caseExpression.WhenThenExpressions){
+                            var additionalUpdateRecordStatement = new UpdateRecordStatement();
+                            additionalUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
+
+                            var encryptedValue = new Value(_encryptor.EncryptNormalValue(((LiteralValueExpression)whenThenExpression.ThenExpression).LiteralValue.ValueToInsert, columnInfoRecord, out string generatedIV), true);
+                            additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), new LiteralValueExpression(encryptedValue));
+                            additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new LiteralValueExpression(new Value(generatedIV, true)));
+
+                            additionalUpdateRecordStatement.WhereExpression = whenThenExpression.WhenExpression;
+
+                            updateRecordStatements.Add(additionalUpdateRecordStatement);
+                        }
+                        if(caseExpression.ElseExpression != null){
+                            var additionalUpdateRecordStatement = new UpdateRecordStatement();
+                            additionalUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
+
+                            var encryptedValue = new Value(_encryptor.EncryptNormalValue(((LiteralValueExpression)caseExpression.ElseExpression).LiteralValue.ValueToInsert, columnInfoRecord, out string generatedIV), true);
+                            additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), new LiteralValueExpression(encryptedValue));
+                            additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new LiteralValueExpression(new Value(generatedIV, true)));
+
+                            updateRecordStatements.Add(additionalUpdateRecordStatement);
+                        }
+                    //}
+                } 
+                else {
+                    var columnInfoRecord = _encryptor.FindInfoRecord(columnValue.Key, tableInfoRecord.IV);
+                    if (columnInfoRecord.LData.EncryptedIVColumnName == null) continue;
+
+                    var decryptedTableName = tableInfoRecord.KeyName != null ? _encryptor.DecryptName(tableInfoRecord) : tableInfoRecord.Name;
+                    var ivIndexColumn = columnNames.Select(c => c.ToString()).ToList().IndexOf(decryptedTableName + "." + columnInfoRecord.LData.EncryptedIVColumnName);
+
+                    foreach (var row in filteredResults)
+                    {
+                        var additionalUpdateRecordStatement = new UpdateRecordStatement();
+                        additionalUpdateRecordStatement.TableName = new estring(tableInfoRecord.Name);
+
+                        var encryptedValue = new Value(_encryptor.EncryptNormalValue(((LiteralValueExpression)columnValue.Value).LiteralValue.ValueToInsert, columnInfoRecord, out string generatedIV), true);
+                        additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.Name), new LiteralValueExpression(encryptedValue));
+                        additionalUpdateRecordStatement.ColumnNamesAndUpdateValues.Add(new estring(columnInfoRecord.LData.EncryptedIVColumnName), new LiteralValueExpression(new Value(generatedIV, true)));
+
+                        var oldIV = row[ivIndexColumn];
+                        additionalUpdateRecordStatement.WhereExpression = new ComparisonExpression(
+                            new TableAndColumnName(new estring(tableInfoRecord.Name), new estring(columnInfoRecord.LData.EncryptedIVColumnName)),
+                            new Value(oldIV, true),
+                            ComparisonExpression.ComparisonOperatorEnum.Equal);
+
+                        updateRecordStatements.Add(additionalUpdateRecordStatement);
+                    }
+                }
+                
             }
 
             return updateRecordStatements;
@@ -190,6 +271,10 @@ namespace BlockBase.DataProxy.Encryption
 
                     if (columnInfoRecord != null)
                     {
+                        if(row[i] == null){
+                            decryptedResults[j].Add(null);
+                            continue;
+                        }
                         var dataType = columnInfoRecord.LData.DataType;
 
                         if (dataType.DataTypeName == DataTypeEnum.ENCRYPTED)
@@ -199,7 +284,14 @@ namespace BlockBase.DataProxy.Encryption
                             {
                                 var ivColumn = selectCoreStatement.ResultColumns.Where(r => r.ColumnName.Value == columnInfoRecord.LData.EncryptedIVColumnName).SingleOrDefault();
                                 var columnIVIndex = selectCoreStatement.ResultColumns.IndexOf(ivColumn);
-                                decryptedValue = _encryptor.DecryptNormalValue(row[i], columnInfoRecord, row[columnIVIndex]);
+                                if(selectCoreStatement.CaseExpressions.Count != 0) 
+                                {
+                                    decryptedValue = _encryptor.DecryptUniqueValue(row[i], columnInfoRecord);
+                                }
+                                else {
+                                    decryptedValue = _encryptor.DecryptNormalValue(row[i], columnInfoRecord, row[columnIVIndex]);
+                                }
+                                
                             }
                             else decryptedValue = _encryptor.DecryptUniqueValue(row[i], columnInfoRecord);
                             decryptedResults[j].Add(decryptedValue);
@@ -238,7 +330,7 @@ namespace BlockBase.DataProxy.Encryption
             switch (expression)
             {
                 case ComparisonExpression comparisonExpression:
-                    if (comparisonExpression.Value == null) return decryptedResults;
+                    if (comparisonExpression.Value == null || comparisonExpression.Value.ValueToInsert == null) return decryptedResults;
                     return FilterComparisonExpression(comparisonExpression, decryptedResults, columnNames);
 
                 case LogicalExpression logicalExpression:

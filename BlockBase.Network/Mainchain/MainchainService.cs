@@ -15,6 +15,7 @@ using EosSharp.Core;
 using EosSharp.Core.Helpers;
 using Newtonsoft.Json;
 using Cryptography.ECDSA;
+using System.Globalization;
 
 namespace BlockBase.Network.Mainchain
 {
@@ -89,7 +90,7 @@ namespace BlockBase.Network.Mainchain
             decimal stake = 0;
 
             var stakeString = stakeInTable.Stake?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-            decimal.TryParse(stakeString, out stake);
+            decimal.TryParse(stakeString, NumberStyles.Any, CultureInfo.InvariantCulture, out stake);
 
             return new AccountStake()
             {
@@ -558,7 +559,9 @@ namespace BlockBase.Network.Mainchain
                 }
             };
 
-            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+            var privateKeyBytes = CryptoHelper.GetPrivateKeyBytesWithoutCheckSum(NodeConfigurations.ActivePrivateKey);
+            var publicKey = CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true));
+            var signedTransaction = await EosStub.SignTransaction(transaction, publicKey);
             return await AddBlockByteVerifyTransactionAndSignature(owner, producerName, byteInHexadecimal, signedTransaction.PackedTransaction);
 
         }
@@ -580,7 +583,9 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<string> SignHistoryValidation(string owner, string accountName, string producerToValidade, string byteInHexadecimal, Transaction transaction, string permission = "active")
         {
-            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+            var privateKeyBytes = CryptoHelper.GetPrivateKeyBytesWithoutCheckSum(NodeConfigurations.ActivePrivateKey);
+            var publicKey = CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true));
+            var signedTransaction = await EosStub.SignTransaction(transaction, publicKey);
 
             var opResult = await TryAgain(async () => await EosStub.SendTransaction(
                    EosMethodNames.ADD_HIST_SIG,
@@ -640,7 +645,9 @@ namespace BlockBase.Network.Mainchain
 
         public async Task<string> SignVerifyTransactionAndAddToContract(string owner, string account, string blockHash, Transaction transaction, string permission = "active")
         {
-            var signedTransaction = await EosStub.SignTransaction(transaction, NodeConfigurations.ActivePublicKey);
+            var privateKeyBytes = CryptoHelper.GetPrivateKeyBytesWithoutCheckSum(NodeConfigurations.ActivePrivateKey);
+            var publicKey = CryptoHelper.PubKeyBytesToString(Secp256K1Manager.GetPublicKey(privateKeyBytes, true));
+            var signedTransaction = await EosStub.SignTransaction(transaction, publicKey);
             return await AddVerifyTransactionAndSignature(owner, account, blockHash, signedTransaction.Signatures.FirstOrDefault(), signedTransaction.PackedTransaction);
         }
 

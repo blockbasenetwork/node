@@ -13,9 +13,12 @@ using BlockBase.Domain.Configurations;
 using BlockBase.Domain.Database.Sql.Generators;
 using BlockBase.Domain.Database.Sql.QueryBuilder;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 using BlockBase.Domain.Database.Sql.SqlCommand;
 using BlockBase.Domain.Results;
 using BlockBase.Runtime.Network;
@@ -90,39 +93,66 @@ namespace BlockBase.Runtime.Sql
 
                         switch (sqlCommand)
                         {
+                            
                             case ReadQuerySqlCommand readQuerySql:
+                                var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
+                                var simpleSelectStatement = (SimpleSelectStatement)readQuerySql.OriginalSqlStatement;
+                                if(simpleSelectStatement.SelectCoreStatement.CaseExpressions.Count != 0){
+                                    foreach(var expression in transformedSelectStatement.SelectCoreStatement.CaseExpressions){
+                                        var caseExpression = expression as CaseExpression;
+                                        simpleSelectStatement.SelectCoreStatement.ResultColumns.Add(caseExpression.ResultColumn);
+                                    }
+                                }
                                 await SaveAndExecuteExistingTransactions(allPendingTransactions, results, createQueryResult);
                                 allPendingTransactions = new List<(string statementType, Transaction transaction)>();
-                                var transformedSelectStatement = ((SimpleSelectStatement)readQuerySql.TransformedSqlStatement[0]);
+                                
                                 var namesAndResults = await ExecuteSelectStatement(
                                     builder,
-                                    (SimpleSelectStatement)readQuerySql.OriginalSqlStatement,
+                                    simpleSelectStatement,//(SimpleSelectStatement)readQuerySql.OriginalSqlStatement,
                                     transformedSelectStatement,
                                     readQuerySql.TransformedSqlStatementText[0]);
 
                                 results.Add(new QueryResult(namesAndResults.ResultRows, namesAndResults.ColumnNames));
                                 break;
-
-                            case ChangeRecordSqlCommand changeRecordSqlCommand:
-                                sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
-                                // marciak - some updates and deletes require a select statement prior to execution
-                                // marciak - this select will be used to identify the actual rows that will be changed
-                                if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
-                                {
-                                    resultsList = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
-                                    var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, resultsList, _databaseName);
-
-                                    var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
-
-                                    foreach (var changeRecordsToExecute in changesToExecute)
-                                    {
-                                        allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName)));
+                            case TransactionSqlCommand transactionSqlCommand:
+                                var transactionStatement = (TransactionStatement)transactionSqlCommand.OriginalSqlStatement;
+                                string[] sqlTextsToExecute = transactionSqlCommand.TransformedSqlStatementText[0].Split(";");
+                                var listOfSqlText = sqlTextsToExecute.ToList();
+                                listOfSqlText.RemoveAt(listOfSqlText.Count-1);
+                                listOfSqlText = listOfSqlText.Select(x => x + ";").ToList();
+                                var transactionGroupId = Guid.NewGuid().ToString();
+                                allPendingTransactions.Add(("begin", CreateTransaction("BEGIN;", _databaseName, transactionGroupId)));
+                                resultsList = new List<IList<string>>();
+                                var operationStatementCount = transactionStatement.OperationStatements.Count;
+                                for(int i = 0; i < operationStatementCount; i++){
+                                    var operation = transactionStatement.OperationStatements[i];
+                                    if(operation.GetStatementType() == "insert record"){
+                                        allPendingTransactions.Add((operation.GetStatementType(), CreateTransaction(listOfSqlText.ElementAt(i), _databaseName, transactionGroupId)));
+                                    } else if(operation.GetStatementType() == "update record"){
+                                        var updateOperation = (UpdateRecordStatement)operation;
+                                        var newChangeRecordSqlCommand = new ChangeRecordSqlCommand(updateOperation);
+                                        newChangeRecordSqlCommand.TransformedSqlStatementText = new List<string>();
+                                        newChangeRecordSqlCommand.TransformedSqlStatementText.Add(listOfSqlText.ElementAt(i));
+                                        newChangeRecordSqlCommand.TransformedSqlStatement = new List<ISqlStatement>();
+                                        newChangeRecordSqlCommand.TransformedSqlStatement.Add(updateOperation);
+                                        await ChangeRecordSqlCommandMethod(newChangeRecordSqlCommand,resultsList,allPendingTransactions, transactionGroupId);
+                                    } else if(operation.GetStatementType() == "delete record"){
+                                        var deleteOperation = (DeleteRecordStatement)operation;
+                                        var newChangeRecordSqlCommand = new ChangeRecordSqlCommand(deleteOperation);
+                                        newChangeRecordSqlCommand.TransformedSqlStatementText = new List<string>();
+                                        newChangeRecordSqlCommand.TransformedSqlStatementText.Add(listOfSqlText.ElementAt(i));
+                                        newChangeRecordSqlCommand.TransformedSqlStatement = new List<ISqlStatement>();
+                                        newChangeRecordSqlCommand.TransformedSqlStatement.Add(deleteOperation);
+                                        await ChangeRecordSqlCommandMethod(newChangeRecordSqlCommand,resultsList,allPendingTransactions, transactionGroupId);
                                     }
+                                    
                                 }
-                                else
-                                {
-                                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName)));
-                                }
+                                allPendingTransactions.Add(("commit", CreateTransaction("COMMIT;", _databaseName, transactionGroupId)));
+                                break;
+                            case ChangeRecordSqlCommand changeRecordSqlCommand:
+                                
+                                resultsList = new List<IList<string>>();
+                                await ChangeRecordSqlCommandMethod(changeRecordSqlCommand,resultsList,allPendingTransactions);
                                 break;
 
 
@@ -216,6 +246,48 @@ namespace BlockBase.Runtime.Sql
             return results;
         }
 
+        private async Task ChangeRecordSqlCommandMethod(ChangeRecordSqlCommand changeRecordSqlCommand, IList<IList<string>> results, List<(string statementType, Transaction transaction)> allPendingTransactions, string transactionGroupId = null){
+            var sqlTextToExecute = changeRecordSqlCommand.TransformedSqlStatementText[0];
+            var updateRecordStatement = changeRecordSqlCommand.TransformedSqlStatement[0] as UpdateRecordStatement;
+            // marciak - some updates and deletes require a select statement prior to execution
+            // marciak - this select will be used to identify the actual rows that will be changed
+            if (changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement)
+            {
+                results = await _connector.ExecuteQuery(sqlTextToExecute, _databaseName);
+                var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, results, _databaseName);
+
+                var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
+
+                foreach (var changeRecordsToExecute in changesToExecute)
+                {
+                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName, transactionGroupId)));
+                }
+            }
+            else if(updateRecordStatement != null)// TODO need to decrypt rows in case the update statement is used with a CASE statement
+            {
+                if(updateRecordStatement.CaseExpressions.Count != 0 && changeRecordSqlCommand.TransformedSqlStatement[0] is SimpleSelectStatement){
+                    var transformedUpdateRecordStatement = changeRecordSqlCommand.TransformedSqlStatement[0] as UpdateRecordStatement;
+                    results = await _connector.ExecuteQuery(_generator.BuildStringToSimpleSelectStatement(transformedUpdateRecordStatement), _databaseName);
+                    var finalListOfChanges = _infoPostProcessing.UpdateChangeRecordStatement(changeRecordSqlCommand, results, _databaseName);
+                        var changesToExecute = finalListOfChanges.Select(u => u is UpdateRecordStatement up ? _generator.BuildString(up) : _generator.BuildString((DeleteRecordStatement)u)).ToList();
+
+                    foreach (var changeRecordsToExecute in changesToExecute)
+                    {
+                        allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(changeRecordsToExecute, _databaseName, transactionGroupId)));
+                    }
+                }
+                else 
+                {
+                    allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName, transactionGroupId)));
+                }
+
+            } 
+            else 
+            {
+                allPendingTransactions.Add((changeRecordSqlCommand.OriginalSqlStatement.GetStatementType(), CreateTransaction(sqlTextToExecute, _databaseName, transactionGroupId)));
+            }
+        }
+
         private async Task SaveAndExecuteExistingTransactions(List<(string statementType, Transaction transaction)> transactions, IList<QueryResult> results, CreateQueryResultDelegate createQueryResult)
         {
             if (transactions.Any())
@@ -223,8 +295,33 @@ namespace BlockBase.Runtime.Sql
                 await AddPendingTransactions(transactions.Select(p => p.transaction).ToList());
                 try
                 {
+                    var listOfWrappedTransactions = new List<KeyValuePair<string,List<(string statementType, Transaction transaction)>>?>();
+
+                    KeyValuePair<string, List<(string statementType, Transaction transaction)>>? currentValuePair = null;
+                    
+                    foreach(var t in transactions){
+                        var transaction = t.transaction;
+                        if(currentValuePair == null){
+                            currentValuePair = new KeyValuePair<string, List<(string statementType, Transaction transaction)>>(transaction.TransactionGroupId, new List<(string statementType, Transaction transaction)>());
+                            listOfWrappedTransactions.Add(currentValuePair);
+                        }
+                        if(transaction.TransactionGroupId == currentValuePair.Value.Key){
+                            currentValuePair.Value.Value.Add(t);
+                        } else {
+                            currentValuePair = new KeyValuePair<string, List<(string statementType, Transaction transaction)>>(transaction.TransactionGroupId, new List<(string statementType, Transaction transaction)>());
+                            currentValuePair.Value.Value.Add(t);
+                            listOfWrappedTransactions.Add(currentValuePair);
+                        }
+                        
+                    }
+                    foreach(var wrappedTransactions in listOfWrappedTransactions){
+                        if(wrappedTransactions.Value.Key == null){
+                            await TryToExecuteTransactions(wrappedTransactions.Value.Value, results, createQueryResult);
+                        } else {
+                            await TryToExecuteTransactionsInBatchOnly(wrappedTransactions.Value.Value, results, createQueryResult, wrappedTransactions.Value.Key);
+                        }
+                    }
                     _logger.LogDebug($"Executing transactions #{transactions.First().transaction.SequenceNumber} to # {transactions.Last().transaction.SequenceNumber}");
-                    await TryToExecuteTransactions(transactions, results, createQueryResult);
                 }
                 catch (Exception e)
                 {
@@ -296,6 +393,38 @@ namespace BlockBase.Runtime.Sql
             if (opResult.Succeeded) results.Add(createQueryResult(opResult.Succeeded, "SQL Query")); ;
         }
 
+        private async Task<OpResult> TryToExecuteTransactionsInBatchOnly(List<(string statementType, Transaction transaction)> pendingTransactions, IList<QueryResult> results, CreateQueryResultDelegate createQueryResult, string transactionGroupId)
+        {
+            var orderedTransactions = pendingTransactions.OrderBy(t => t.transaction.SequenceNumber).ToList();
+            OpResult opResult = null;
+            while (orderedTransactions.Any())
+            {
+                var firstTransaction = orderedTransactions.First();
+                var groupedTransactionsByDatabaseName = orderedTransactions.TakeWhile(t => t.transaction.DatabaseName == firstTransaction.transaction.DatabaseName).ToList();
+                opResult = await TryToExecutePendingTransactionsInBatch(groupedTransactionsByDatabaseName.Select(t => t.transaction).ToList());
+                if (!opResult.Succeeded) break;
+                orderedTransactions = orderedTransactions.Except(groupedTransactionsByDatabaseName).ToList();
+            }
+
+            //If fails in batch removes from mongo
+            if (!opResult.Succeeded)
+            {   
+                var failedTransactionList = new List<TransactionDB>();
+                foreach(var transaction in orderedTransactions){
+                    failedTransactionList.Add(new TransactionDB().TransactionDBFromTransaction(transaction.transaction));
+                }
+                if(failedTransactionList.Count>0){
+                    await _mongoDbRequesterService.RemovePendingExecutionTransactionsAsync(_nodeConfigurations.AccountName, failedTransactionList);
+                    var rollback = _concurrentVariables.ReloadTransactionNumber();
+                    _logger.LogDebug($"Rolling back from #{rollback}");
+                }
+                return opResult;
+            } else {
+                results.Add(createQueryResult(opResult.Succeeded, "SQL Query"));
+                return opResult;
+            } 
+        }
+
         //marciak - tries to execute queries if succeeds moves transactions to executed else removes the transactions
         private async Task<OpResult> TryToExecutePendingTransaction(Transaction pendingTransaction)
         {
@@ -316,7 +445,7 @@ namespace BlockBase.Runtime.Sql
             catch (Exception e)
             {
                 await _mongoDbRequesterService.RemovePendingExecutionTransactionAsync(_nodeConfigurations.AccountName, new TransactionDB().TransactionDBFromTransaction(pendingTransaction));
-                var rollback = _concurrentVariables.RollbackTransactionNumber();
+                var rollback = _concurrentVariables.ReloadTransactionNumber();
                 _logger.LogDebug($"Rolling back to #{rollback}");
                 return new OpResult(false, e);
             }
@@ -324,24 +453,26 @@ namespace BlockBase.Runtime.Sql
 
         private async Task<OpResult> TryToExecutePendingTransactionsInBatch(List<Transaction> pendingTransactions)
         {
+            //TODO - rpinto we need to check what happens when an operation fails and how that is dealt regarding the removal of the transaction from the
+            // pending transactions and also its broadcast or not to the providers.
             try
             {
                 var databaseName = pendingTransactions.First().DatabaseName;
                 if (databaseName != "")
                     await _connector.ExecuteCommandsWithTransactionNumber(pendingTransactions, databaseName);
                 else
-                    await _connector.ExecuteCommands(pendingTransactions.Select(t => t.Json).ToList(), databaseName);
+                    await _connector.ExecuteCommands(pendingTransactions.Select(t => t.Json).ToList(), databaseName);              
 
                 var completeTransactions = ReHashAndSignTransactions(pendingTransactions);
 
-                var transactionsToInsertInDb = new List<TransactionDB>();
+                var transactionsInsertedInDb = new List<TransactionDB>();
                 foreach (var transaction in completeTransactions)
                 {
                     var transactionDB = new TransactionDB().TransactionDBFromTransaction(transaction);
-                    transactionsToInsertInDb.Add(transactionDB);
+                    transactionsInsertedInDb.Add(transactionDB);
                 }
 
-                await _mongoDbRequesterService.MovePendingTransactionsToExecutedAsync(_nodeConfigurations.AccountName, transactionsToInsertInDb);
+                await _mongoDbRequesterService.MovePendingTransactionsToExecutedAsync(_nodeConfigurations.AccountName, transactionsInsertedInDb);
                 foreach (var transactionToSend in completeTransactions)
                 {
                     _transactionsManager.AddScriptTransactionToSend(transactionToSend);
@@ -361,12 +492,18 @@ namespace BlockBase.Runtime.Sql
             var pendingTransactions = await _mongoDbRequesterService.RetrievePendingTransactions(_nodeConfigurations.AccountName);
             foreach (var pendingTransaction in pendingTransactions)
             {
-                if (pendingTransaction != null && !await _sqlExecutionHelper.HasTransactionBeenExecuted(pendingTransaction))
-                    await TryToExecutePendingTransaction(pendingTransaction.TransactionFromTransactionDB());
+                if (pendingTransaction != null) {
+                    if(!await _sqlExecutionHelper.HasTransactionBeenExecuted(pendingTransaction)){
+                        await TryToExecutePendingTransaction(pendingTransaction.TransactionFromTransactionDB());
+                    } else {
+                        await _mongoDbRequesterService.MovePendingTransactionToExecutedAsync(_nodeConfigurations.AccountName, pendingTransaction);
+                    }
+                }
             }
         }
+        
 
-        private Transaction CreateTransaction(string json, string databaseName)
+        private Transaction CreateTransaction(string json, string databaseName, string transactionGroupId = null)
         {
             var sequenceNumber = Convert.ToUInt64(_concurrentVariables.GetNextTransactionNumber());
 
@@ -378,7 +515,8 @@ namespace BlockBase.Runtime.Sql
                 Timestamp = (ulong)((DateTimeOffset)DateTime.UtcNow).ToUnixTimeSeconds(),
                 TransactionHash = new byte[0],
                 Signature = "",
-                DatabaseName = databaseName
+                DatabaseName = databaseName,
+                TransactionGroupId = transactionGroupId
             };
 
             var serializedTransaction = JsonConvert.SerializeObject(transaction);

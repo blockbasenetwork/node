@@ -11,6 +11,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         public IList<TableOrSubquery> TablesOrSubqueries { get; set; }
         public JoinClause JoinClause { get; set; }
         public AbstractExpression WhereExpression { get; set; }
+        public IList<AbstractExpression> CaseExpressions { get; set; }
         public bool DistinctFlag { get; set; }
         public bool Encrypted{ get; set; }
 
@@ -20,6 +21,7 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
             DistinctFlag = false;
             ResultColumns = new List<ResultColumn>();
             TablesOrSubqueries = new List<TableOrSubquery>();
+            CaseExpressions = new List<AbstractExpression>();
         }
 
         public SelectCoreStatement Clone()
@@ -60,6 +62,11 @@ namespace BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table
         {
             WhereExpression = expression;
         }
+
+        /*public void AddCaseExpression(CaseExpression expression)
+        {
+            CaseExpressions = expression;
+        }*/
 
         public string GetStatementType()
         {

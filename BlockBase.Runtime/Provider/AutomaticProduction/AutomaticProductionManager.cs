@@ -179,7 +179,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (bbtBalanceTable != null)
             {
                 var bbtBalanceString = bbtBalanceTable.FirstOrDefault()?.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-                decimal.TryParse(bbtBalanceString, out bbtBalance);
+                decimal.TryParse(bbtBalanceString, NumberStyles.Any, CultureInfo.InvariantCulture, out bbtBalance);
             }
 
             if (accountStake?.Stake >= stake) return true;
@@ -220,6 +220,7 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             var contractInfo = await _mainchainService.RetrieveContractInformation(sidechain);
             var contractState = await _mainchainService.RetrieveContractState(sidechain);
             var clientInfo = await _mainchainService.RetrieveClientTable(sidechain);
+            var reservedSeats = await _mainchainService.RetrieveReservedSeatsTable(sidechain);
 
             //verify if had access to chain information
             if (contractInfo == null || producers == null || candidates == null || contractState == null || clientInfo == null)
@@ -250,7 +251,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (
                 _providerConfigurations.AutomaticProduction.FullNode.IsActive
                 && (_providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.FullNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
-                && contractInfo.NumberOfFullProducersRequired > 0)
+                && (contractInfo.NumberOfFullProducersRequired > 0
+                    || reservedSeats.Any(r => r.Key == _nodeConfigurations.AccountName && r.ProducerType == (uint)ProducerTypeEnum.Full))
+                )
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.FullNode.MaxStakeToMonthlyIncomeRatio);
                 decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockFullProducers / 10000, 4);
@@ -274,7 +277,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
             if (
                 _providerConfigurations.AutomaticProduction.HistoryNode.IsActive
                 && (_providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB == 0 || _providerConfigurations.AutomaticProduction.HistoryNode.MaxSidechainGrowthPerMonthInMB >= maxSidechainGrowthPerMonthInMB)
-                && contractInfo.NumberOfHistoryProducersRequired > 0)
+                && (contractInfo.NumberOfHistoryProducersRequired > 0
+                || reservedSeats.Any(r => r.Key == _nodeConfigurations.AccountName && r.ProducerType == (uint)ProducerTypeEnum.History))
+                )
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.HistoryNode.MaxStakeToMonthlyIncomeRatio);
                 decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockHistoryProducers / 10000, 4);
@@ -295,7 +300,9 @@ namespace BlockBase.Runtime.Provider.AutomaticProduction
                 }
             }
 
-            if (_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive && contractInfo.NumberOfValidatorProducersRequired > 0)
+            if (_providerConfigurations.AutomaticProduction.ValidatorNode.IsActive && (contractInfo.NumberOfValidatorProducersRequired > 0
+                || reservedSeats.Any(r => r.Key == _nodeConfigurations.AccountName && r.ProducerType == (uint)ProducerTypeEnum.Validator))
+                )
             {
                 decimal maxStakeToMonthlyIncomeRatio = Convert.ToDecimal(_providerConfigurations.AutomaticProduction.ValidatorNode.MaxStakeToMonthlyIncomeRatio);
                 decimal minPaymentPerBlock = Math.Round((decimal)contractInfo.MinPaymentPerBlockValidatorProducers / 10000, 4);

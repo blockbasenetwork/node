@@ -7,6 +7,7 @@ using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Common.Expressions;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Database;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Record;
 using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Table;
+using BlockBase.Domain.Database.Sql.QueryBuilder.Elements.Transaction;
 using BlockBase.Domain.Database.Sql.QueryParser;
 using System;
 using System.Collections.Generic;
@@ -84,6 +85,36 @@ namespace BlockBase.Domain.Database.QueryParser
         public override object VisitGet_structure_stmt(Get_structure_stmtContext context)
         {
             throw new NotImplementedException();
+        }
+
+        public override object VisitTransaction_sql_stmt(Transaction_sql_stmtContext context){
+            ThrowIfParserHasException(context);
+            var transactionStatement = new TransactionStatement();
+            foreach(var operationContext in context.operation_sql_stmt()){
+                if(operationContext.insert_stmt() != null){
+                    transactionStatement.OperationStatements.Add((InsertRecordStatement)(Visit(operationContext.insert_stmt())));
+                } else if(operationContext.update_stmt() != null){
+                    transactionStatement.OperationStatements.Add((UpdateRecordStatement)Visit(operationContext.update_stmt()));
+                } else if(operationContext.delete_stmt()!= null){
+                    transactionStatement.OperationStatements.Add((DeleteRecordStatement)Visit(operationContext.delete_stmt()));
+                }
+            }
+            return transactionStatement;
+        }
+
+        public override object VisitBegin_stmt(Begin_stmtContext context){
+            ThrowIfParserHasException(context);
+            return new BeginStatement();
+        }
+
+        public override object VisitCommit_stmt(Commit_stmtContext context){
+            ThrowIfParserHasException(context);
+            return new CommitStatement();
+        }
+
+        public override object VisitRollback_stmt(Rollback_stmtContext context){
+            ThrowIfParserHasException(context);
+            return new RollbackStatement();
         }
 
         public override object VisitCreate_database_stmt([NotNull] Create_database_stmtContext context)
@@ -203,20 +234,31 @@ namespace BlockBase.Domain.Database.QueryParser
             var updateRecordStatement = new UpdateRecordStatement()
             {
                 TableName = (estring)Visit(context.table_name().complex_name()),
-                ColumnNamesAndUpdateValues = new Dictionary<estring, Value>()
+                ColumnNamesAndUpdateValues = new Dictionary<estring, AbstractExpression>()
             };
 
             if (context.K_WHERE() != null)
             {
-                updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+                updateRecordStatement.WhereExpression = (AbstractExpression)Visit(context.expr().Last());
             }
 
-            for (int i = 0; i < context.literal_value().Length; i++)
+            var expressions = context.expr();
+            var expressionLength = context.K_WHERE() != null ? expressions.Length-1 : expressions.Length;
+            for (int i = 0; i < expressionLength; i++)
             {
                 updateRecordStatement.ColumnNamesAndUpdateValues.Add(
                     (estring)Visit(context.column_name()[i].complex_name()),
-                    new Value(context.literal_value()[i].GetText().Trim('\''))
+                    (AbstractExpression)Visit(expressions[i])
+                    //new Value(context.expr()[i].GetText().Trim('\''))
                     );
+            }
+            var caseExpressions = context.case_expr();
+            for(int i = 0; i < caseExpressions.Length; i++){
+                updateRecordStatement.ColumnNamesAndUpdateValues.Add(
+                    (estring)Visit(context.column_name()[i].complex_name()),
+                    (AbstractExpression)Visit(caseExpressions[i])
+                );
+                updateRecordStatement.CaseExpressions.Add((AbstractExpression)Visit(caseExpressions[i]));
             }
 
             return updateRecordStatement;
@@ -253,7 +295,6 @@ namespace BlockBase.Domain.Database.QueryParser
 
         public override object VisitSelect_core(Select_coreContext context)
         {
-            
             ThrowIfParserHasException(context);
             var selectCoreStatement = new SelectCoreStatement();
             if (context.K_DISTINCT() != null) selectCoreStatement.DistinctFlag = true;
@@ -267,7 +308,16 @@ namespace BlockBase.Domain.Database.QueryParser
                 selectCoreStatement.TablesOrSubqueries.Add((TableOrSubquery)Visit(tableOrSubqueryContext));
             }
             if (context.join_clause() != null) selectCoreStatement.JoinClause = (JoinClause)Visit(context.join_clause());
-            if (context.expr() != null) selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+            if (context.case_expr().Length != 0){
+                foreach(var contextExpr in context.case_expr()){
+                    if(contextExpr.K_CASE() != null) {
+                        selectCoreStatement.CaseExpressions.Add((AbstractExpression)Visit(contextExpr));
+                    }
+                }
+            }
+            if (context.expr() != null){
+                selectCoreStatement.WhereExpression = (AbstractExpression)Visit(context.expr());
+            }
             if (context.K_ENCRYPTED() != null) selectCoreStatement.Encrypted = true;
             return selectCoreStatement;
         }
@@ -355,6 +405,9 @@ namespace BlockBase.Domain.Database.QueryParser
             if (dataTypeContext.K_DURATION() != null) return new DataType() { DataTypeName = DataTypeEnum.DURATION };
             if (dataTypeContext.K_INT() != null) return new DataType() { DataTypeName = DataTypeEnum.INT };
             if (dataTypeContext.K_TEXT() != null) return new DataType() { DataTypeName = DataTypeEnum.TEXT };
+            if (dataTypeContext.K_BIGINT() != null) return new DataType() { DataTypeName = DataTypeEnum.BIGINT };
+            if (dataTypeContext.K_SERIAL() != null) return new DataType() { DataTypeName = DataTypeEnum.SERIAL };
+            if (dataTypeContext.K_UUID() != null) return new DataType() { DataTypeName = DataTypeEnum.UUID };
             if (dataTypeContext.K_ENCRYPTED() != null)
             {
                 var dataType = new DataType() { DataTypeName = DataTypeEnum.ENCRYPTED };
@@ -389,10 +442,68 @@ namespace BlockBase.Domain.Database.QueryParser
             return new Tuple<int, int, int>(size, min, max);
         }
 
+        public override object VisitCase_expr(Case_exprContext caseExpr)
+        {
+            ThrowIfParserHasException(caseExpr);
+            var exprLength = caseExpr.expr().Length;
+            var whenThenExpressions = new List<WhenThenExpression>();
+            
+            
+            for(var expressionIndex = 0; expressionIndex < exprLength; expressionIndex = expressionIndex + 2){
+                if(exprLength%2 != 0 && expressionIndex == exprLength - 1) continue;
+                var newWhenThenExpression = new WhenThenExpression{
+                    WhenExpression = (ComparisonExpression)Visit(caseExpr.expr()[expressionIndex]),
+                    ThenExpression = (LiteralValueExpression)Visit(caseExpr.expr()[expressionIndex+1])
+                };
+                whenThenExpressions.Add(newWhenThenExpression);
+            }
+            estring tableName = null;
+            if(whenThenExpressions.FirstOrDefault().WhenExpression is ComparisonExpression comparisonExpression){
+                tableName = comparisonExpression.LeftTableNameAndColumnName.TableName;
+            }else if(whenThenExpressions.FirstOrDefault().WhenExpression  is LogicalExpression logicalExpression){
+                var leftExpression = logicalExpression.LeftExpression as ComparisonExpression;
+                tableName = leftExpression.LeftTableNameAndColumnName.TableName;
+            }
+            var tableNameWhen = whenThenExpressions.FirstOrDefault().WhenExpression as ComparisonExpression;
+            if(caseExpr.K_ELSE() !=null && caseExpr.result_column() != null){ 
+                return new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr().LastOrDefault()),
+                    ResultColumn = (ResultColumn)Visit(caseExpr.result_column())
+                };
+            } else if(caseExpr.result_column() != null && caseExpr.K_ELSE() ==null){
+                var auxExpression = new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = null,
+                    ResultColumn = (ResultColumn)Visit(caseExpr.result_column())
+                };
+                return auxExpression;
+            } else if(caseExpr.result_column() == null && caseExpr.K_ELSE() != null){
+                return new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = (LiteralValueExpression)Visit(caseExpr.expr().LastOrDefault()),
+                    ResultColumn = new ResultColumn(){
+                        TableName = tableName,
+                        ColumnName = new estring("caseColumn"),
+                        AllColumnsfFlag = false
+                    }
+                };
+            } else {
+                return new CaseExpression(){
+                    WhenThenExpressions = whenThenExpressions,
+                    ElseExpression = null,
+                    ResultColumn = new ResultColumn(){
+                        TableName = tableName,
+                        ColumnName = new estring("caseColumn"),
+                        AllColumnsfFlag = false
+                    }
+                };
+            }
+        }
+
         public override object VisitExpr(ExprContext expr)
         {
             ThrowIfParserHasException(expr);
-
             if (expr.K_AND() != null && expr.expr().Length == 2)
             {
                 return new LogicalExpression()
@@ -413,17 +524,37 @@ namespace BlockBase.Domain.Database.QueryParser
                 };
             }
 
+            var exprLength = expr.expr().Length;
+
             var exprString = expr.GetText();
+            var exprOperator = "";
+            if (expr.@operator() != null) exprOperator = expr.@operator().GetText();
+            else if (expr.K_IS() != null && expr.K_NOT()!= null) exprOperator = "IS NOT";
+            else if (expr.K_IS() != null && expr.K_NOT()== null) exprOperator = "IS";
+
             if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() != null
-                && (exprString.Contains("<") || exprString.Contains("<=") || exprString.Contains(">")
-                || exprString.Contains(">=") || exprString.Contains("=") || exprString.Contains("!=")))
+                && (exprOperator.Contains("<") || exprOperator.Contains("<=") || exprOperator.Contains(">")
+                || exprOperator.Contains(">=") || exprOperator.Contains("=") || exprOperator.Contains("!=")))
             {
                 var comparisonExpression = new ComparisonExpression(
                     new TableAndColumnName(
                         (estring)Visit(expr.table_name().complex_name()),
                         (estring)Visit(expr.column_name().complex_name())),
                     new Value(expr.literal_value().GetText().Trim('\''), expr.literal_value().GetText().Contains("'")),
-                    GetComparisonOperatorFromString(exprString));
+                    GetComparisonOperatorFromString(exprOperator));
+
+                return comparisonExpression;
+            }
+            
+            if (expr.table_name() != null && expr.column_name() != null && expr.literal_value() == null
+                && (exprOperator.Contains("IS")))
+            {
+                var comparisonExpression = new ComparisonExpression(
+                    new TableAndColumnName(
+                        (estring)Visit(expr.table_name().complex_name()),
+                        (estring)Visit(expr.column_name().complex_name())),
+                    new Value(null),
+                    GetComparisonOperatorFromString(exprOperator));
 
                 return comparisonExpression;
 
@@ -442,7 +573,7 @@ namespace BlockBase.Domain.Database.QueryParser
                     new TableAndColumnName(
                         (estring)Visit(expr.table_column_name()[1].table_name().complex_name()),
                         (estring)Visit(expr.table_column_name()[1].column_name().complex_name())),
-                    GetComparisonOperatorFromString(exprString));
+                    GetComparisonOperatorFromString(exprOperator));
 
                 return comparisonExpression;
             }
@@ -455,7 +586,8 @@ namespace BlockBase.Domain.Database.QueryParser
                 return exprWithParenthesis;
             }
 
-            return null;
+            //If nothing else than it is literal value expression
+            return new LiteralValueExpression(new Value(expr.literal_value().GetText().Trim('\''), expr.literal_value().GetText().Contains("'")));
         }
 
         public override object VisitOrdering_term(Ordering_termContext orderingTermContext)
@@ -520,6 +652,8 @@ namespace BlockBase.Domain.Database.QueryParser
             var joinOperatorEnumList = new List<JoinOperationField.JoinOperatorEnum>();
             if (joinOperatorContext.K_NATURAL() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.NATURAL);
             if (joinOperatorContext.K_LEFT() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.LEFT);
+            if (joinOperatorContext.K_RIGHT() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.RIGHT);
+            if (joinOperatorContext.K_FULL() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.FULL);
             if (joinOperatorContext.K_OUTER() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.OUTER);
             if (joinOperatorContext.K_CROSS() != null) joinOperatorEnumList.Add(JoinOperationField.JoinOperatorEnum.CROSS);
             return joinOperatorEnumList;
@@ -541,18 +675,23 @@ namespace BlockBase.Domain.Database.QueryParser
 
         private ComparisonExpression.ComparisonOperatorEnum GetComparisonOperatorFromString(string exprString)
         {
-            if (exprString.Contains("<="))
+            if (exprString =="<=")
                 return ComparisonExpression.ComparisonOperatorEnum.SmallerOrEqualThan;
-            if (exprString.Contains(">="))
+            if (exprString == ">=")
                 return ComparisonExpression.ComparisonOperatorEnum.BiggerOrEqualThan;
-            if (exprString.Contains("<"))
+            if (exprString == "<")
                 return ComparisonExpression.ComparisonOperatorEnum.SmallerThan;
-            if (exprString.Contains(">"))
+            if (exprString == ">")
                 return ComparisonExpression.ComparisonOperatorEnum.BiggerThan;
-            if (exprString.Contains("="))
-                return ComparisonExpression.ComparisonOperatorEnum.Equal;
-            if (exprString.Contains("!="))
+            if (exprString == "!=")
                 return ComparisonExpression.ComparisonOperatorEnum.Different;
+            if (exprString == "=")
+                return ComparisonExpression.ComparisonOperatorEnum.Equal;
+            if (exprString == "IS NOT")
+                return ComparisonExpression.ComparisonOperatorEnum.IsNot;
+            if (exprString == "IS")
+                return ComparisonExpression.ComparisonOperatorEnum.Is;
+            
 
             throw new FormatException("No comparison operator in string.");
         }

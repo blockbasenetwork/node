@@ -10,4 +10,5 @@ message TransactionProto {
   string Json = 5;
   bytes BlockHash = 6;
   string DatabaseName = 7;
+  string TransactionGroupId = 8;
 }
