@@ -180,7 +180,7 @@ foreign_key_clause:
 
 signed_number: ( '+' | '-')? NUMERIC_LITERAL;
 
-literal_value: NUMERIC_LITERAL | STRING_LITERAL | K_NULL;
+literal_value: signed_number | STRING_LITERAL | K_NULL ;
 
 keyword:
 	K_USE
