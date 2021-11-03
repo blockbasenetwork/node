@@ -228,6 +228,7 @@ namespace BlockBase.Domain.Eos
         public const string MAINNET_ID = "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906";
         public const string JUNGLE_ID = "e70aaab8997e1dfce58fbfac80cbbb8fecec7b99cf982a9444273cbc64c41473";
         public const string JUNGLE3_ID = "2a02a0053e5a8cf73a56ba0fda11e4d92e0238a4a2aa74fccf46d5a910746840";
+        public const string TELOS_ID = "4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11";
     }
 
     public class EosNetworkNames
@@ -235,6 +236,7 @@ namespace BlockBase.Domain.Eos
         public const string MAINNET = "Mainnet";
         public const string JUNGLE = "Jungle";
         public const string JUNGLE3 = "Jungle3";
+        public const string TELOS = "Telos";
         public static string GetNetworkName(string networkId)
         {
             switch(networkId)
@@ -245,6 +247,8 @@ namespace BlockBase.Domain.Eos
                     return JUNGLE3;
                 case EosNetworkIds.MAINNET_ID:
                     return MAINNET;
+                case EosNetworkIds.TELOS_ID:
+                    return TELOS;
                 default:
                     return "All";
             }
